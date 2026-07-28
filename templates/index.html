@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LeagueasyMode Telemetry</title>
+    <style>
+        :root {
+            --bg-color: #0b0c10;
+            --panel-bg: #1a1c23;
+            --border-color: #2c2f38;
+            --text-main: #e0e6ed;
+            --text-dim: #8b92a5;
+            --color-critical: #ff3333;
+            --color-tactical: #3388ff;
+            --color-info: #29b6f6;
+            --color-good: #00cc66;
+            --font-mono: 'SF Mono', Consolas, 'Liberation Mono', Menlo, monospace;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: var(--font-mono);
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* --- INIT OVERLAY --- */
+        #init-overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(11, 12, 16, 0.95);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+        
+        #init-overlay button {
+            background: var(--color-tactical);
+            color: white;
+            border: none;
+            padding: 1.5rem 3rem;
+            font-size: 1.5rem;
+            font-family: var(--font-mono);
+            font-weight: bold;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: 0.2s;
+        }
+        
+        #init-overlay button:hover { background: #2266cc; }
+
+        /* --- DASHBOARD LAYOUT --- */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 2rem;
+            background: #111217;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .status-dot {
+            display: inline-block;
+            width: 12px; height: 12px;
+            border-radius: 50%;
+            background: var(--color-critical);
+            margin-right: 8px;
+        }
+        .status-dot.connected { background: var(--color-good); }
+
+        .time-display {
+            font-size: 2.5rem;
+            font-weight: bold;
+            letter-spacing: 2px;
+        }
+
+        .grid-container {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 1fr;
+            grid-template-rows: auto auto 1fr;
+            gap: 1.5rem;
+            padding: 1.5rem;
+            overflow-y: auto;
+        }
+
+        @media (min-width: 800px) {
+            .grid-container {
+                grid-template-columns: 1fr 1fr;
+                grid-template-rows: auto 1fr;
+            }
+            .panel-alerts { grid-column: span 2; }
+        }
+
+        .panel {
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 1.5rem;
+        }
+
+        .panel-title {
+            color: var(--text-dim);
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 1rem;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 0.5rem;
+        }
+
+        /* --- DATA ROWS --- */
+        .data-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.75rem;
+            font-size: 1.2rem;
+        }
+        .data-label { color: var(--text-dim); }
+        .data-value { font-weight: bold; }
+
+        .highlight-red { color: var(--color-critical); }
+        .highlight-blue { color: var(--color-tactical); }
+        .highlight-tactical { color: var(--color-info); }
+
+        /* --- ALERT FEED --- */
+        .alerts-feed {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .alert-card {
+            background: #20232a;
+            border-left: 5px solid var(--color-info);
+            padding: 1rem;
+            border-radius: 4px;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        .alert-card.priority-1 { border-color: var(--color-critical); background: rgba(255, 51, 51, 0.1); }
+        .alert-card.priority-2 { border-color: var(--color-tactical); }
+        
+        .alert-header { display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--text-dim); margin-bottom: 0.4rem; }
+        .alert-title { font-weight: bold; color: var(--text-main); }
+        .alert-body { font-size: 1.1rem; }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(-20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Autoplay Policy Unlocker -->
+    <div id="init-overlay">
+        <h1 style="margin-bottom: 1rem; color: var(--text-dim);">LeagueasyMode Telemetry</h1>
+        <button onclick="initSystem()">INITIALIZE TERMINAL</button>
+        <p style="margin-top: 1rem; color: var(--text-dim); font-size: 0.9rem;">Click to unlock Web Audio & Speech APIs</p>
+    </div>
+
+    <!-- Header -->
+    <div class="header">
+        <div>
+            <span id="conn-dot" class="status-dot"></span>
+            <span id="conn-status" style="font-weight: bold; color: var(--text-dim);">AWAITING CLIENT</span>
+        </div>
+        <div id="game-time" class="time-display">00:00</div>
+    </div>
+
+    <!-- Main Grid -->
+    <div class="grid-container">
+        
+        <!-- Matchup Data -->
+        <div class="panel">
+            <div class="panel-title">Current Matchup</div>
+            <div class="data-row">
+                <span class="data-label">My Level:</span>
+                <span id="my-level" class="data-value">-</span>
+            </div>
+            <div class="data-row">
+                <span class="data-label">Opponent Lvl:</span>
+                <span id="opp-level" class="data-value">-</span>
+            </div>
+            <div class="data-row" style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border-color);">
+                <span class="data-label">Enemy JG Status:</span>
+                <span id="enemy-jg" class="data-value">-</span>
+            </div>
+        </div>
+
+        <!-- Macro Objectives -->
+        <div class="panel">
+            <div class="panel-title">Macro Objectives</div>
+            <div class="data-row">
+                <span class="data-label">Next Dragon:</span>
+                <span id="next-dragon" class="data-value highlight-blue">05:00</span>
+            </div>
+            <div class="data-row" id="grubs-container">
+                <span class="data-label">Void Grubs:</span>
+                <span id="next-grubs" class="data-value highlight-tactical">05:00</span>
+            </div>
+            <div class="data-row" id="herald-container" style="display: none;">
+                <span class="data-label">Rift Herald:</span>
+                <span id="next-herald" class="data-value highlight-tactical">14:00</span>
+            </div>
+            <div class="data-row" id="baron-container" style="display: none;">
+                <span class="data-label">Baron Nashor:</span>
+                <span id="next-baron" class="data-value highlight-red">20:00</span>
+            </div>
+        </div>
+
+        <!-- Alert Log -->
+        <div class="panel panel-alerts">
+            <div class="panel-title">Tactical Feed</div>
+            <div id="alerts-feed" class="alerts-feed">
+                <!-- Alerts inject here -->
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // ==========================================
+        // SYNTHETIC AUDIO ENGINE
+        // ==========================================
+        let audioCtx;
+
+        function initSystem() {
+            document.getElementById('init-overlay').style.display = 'none';
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            
+            // Prime speech engine
+            let msg = new SpeechSynthesisUtterance("");
+            msg.volume = 0;
+            window.speechSynthesis.speak(msg);
+            
+            startPolling();
+        }
+
+        function playSound(type) {
+            if (!audioCtx) return;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            if (type === 'alert') {
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(600, audioCtx.currentTime);
+                osc.frequency.setValueAtTime(800, audioCtx.currentTime + 0.1);
+                gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.3);
+            } else {
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(880, audioCtx.currentTime);
+                gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.8);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.8);
+            }
+        }
+
+        let speechQueue = [];
+        let isSpeaking = false;
+
+        function speak(text) {
+            speechQueue.push(text);
+            processSpeechQueue();
+        }
+
+        function processSpeechQueue() {
+            if (isSpeaking || speechQueue.length === 0) return;
+            isSpeaking = true;
+            
+            let text = speechQueue.shift();
+            let utterance = new SpeechSynthesisUtterance(text);
+            utterance.rate = 1.1;
+            utterance.pitch = 1.0;
+            
+            utterance.onend = () => {
+                isSpeaking = false;
+                processSpeechQueue();
+            };
+            
+            window.speechSynthesis.speak(utterance);
+        }
+
+        // ==========================================
+        // DATA POLLING & UI UPDATES
+        // ==========================================
+        let lastAlertId = 0.0;
+        
+        function formatTime(seconds) {
+            if (!seconds || seconds <= 0) return "00:00";
+            let m = Math.floor(seconds / 60);
+            let s = Math.floor(seconds % 60);
+            return (m < 10 ? "0" : "") + m + ":" + (s < 10 ? "0" : "") + s;
+        }
+
+        function updateUI(state) {
+            // Connection Status
+            const dot = document.getElementById('conn-dot');
+            const status = document.getElementById('conn-status');
+            if (state.connected) {
+                dot.className = "status-dot connected";
+                status.innerText = "CLIENT SYNCED";
+                status.style.color = "var(--color-good)";
+            } else {
+                dot.className = "status-dot";
+                status.innerText = "WAITING FOR MATCH...";
+                status.style.color = "var(--text-dim)";
+            }
+
+            // Game Time
+            document.getElementById('game-time').innerText = formatTime(state.game_time);
+
+            // Matchup Stats
+            document.getElementById('my-level').innerText = state.my_level || "-";
+            
+            let oppLvlStr = "-";
+            if (state.my_opponent) {
+                oppLvlStr = state.my_opponent.level + " (" + state.my_opponent.championName + ")";
+            }
+            document.getElementById('opp-level').innerText = oppLvlStr;
+
+            const jgEl = document.getElementById('enemy-jg');
+            const jgLvl = state.enemy_jg_level ? ` (Lvl ${state.enemy_jg_level})` : "";
+            
+            if (state.enemy_jg_alive) {
+                jgEl.innerText = "ALIVE" + jgLvl;
+                jgEl.className = "data-value highlight-red";
+            } else {
+                jgEl.innerText = "DEAD" + jgLvl;
+                jgEl.className = "data-value highlight-blue";
+            }
+
+            // Objectives & Dynamic Clutter Reduction
+            const gameTime = state.game_time;
+            
+            document.getElementById('next-dragon').innerText = formatTime(state.next_dragon_time);
+
+            const grubsEl = document.getElementById('next-grubs');
+            if (grubsEl) {
+                grubsEl.innerText = gameTime < 300 ? formatTime(300 - gameTime) : "ACTIVE / DONE";
+            }
+
+            const heraldRow = document.getElementById('herald-container');
+            if (heraldRow) {
+                if (gameTime > 600) {
+                    heraldRow.style.display = 'flex';
+                    document.getElementById('next-herald').innerText = formatTime(Math.max(0, 840 - gameTime));
+                } else {
+                    heraldRow.style.display = 'none';
+                }
+            }
+
+            const baronRow = document.getElementById('baron-container');
+            if (baronRow) {
+                if (gameTime > 900) {
+                    baronRow.style.display = 'flex';
+                    document.getElementById('next-baron').innerText = formatTime(Math.max(0, 1200 - gameTime));
+                } else {
+                    baronRow.style.display = 'none';
+                }
+            }
+        }
+
+        function processAlerts(alerts) {
+            const feed = document.getElementById('alerts-feed');
+            
+            alerts.forEach(alert => {
+                playSound(alert.sound);
+                if (alert.speech) speak(alert.speech);
+
+                const card = document.createElement('div');
+                card.className = `alert-card priority-${alert.priority}`;
+                
+                const timeStr = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'});
+                
+                card.innerHTML = `
+                    <div class="alert-header">
+                        <span class="alert-title">${alert.title}</span>
+                        <span>${timeStr}</span>
+                    </div>
+                    <div class="alert-body">${alert.text}</div>
+                `;
+                
+                feed.insertBefore(card, feed.firstChild);
+                
+                if (feed.children.length > 10) {
+                    feed.removeChild(feed.lastChild);
+                }
+
+                lastAlertId = Math.max(lastAlertId, alert.id);
+            });
+        }
+
+        function startPolling() {
+            setInterval(() => {
+                fetch(`/api/state?last_alert_id=${lastAlertId}`)
+                    .then(res => res.json())
+                    .then(data => {
+                        updateUI(data.state);
+                        if (data.alerts && data.alerts.length > 0) {
+                            processAlerts(data.alerts);
+                        }
+                    })
+                    .catch(err => console.error("Telemetry Endpoint Unreachable"));
+            }, 500);
+        }
+    </script>
+</body>
+</html>
