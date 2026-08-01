@@ -20,3 +20,15 @@ rules:
   AntiIdlePacing:
     enabled: true
     priority: 2
+  SmiteEfficiency:
+    enabled: true
+    priority: 2
+  ObjectiveSync:
+    enabled: true
+    priority: 1
+  CrossMapInvader:
+    enabled: true
+    priority: 1
+  BountyTracker:
+    enabled: true
+    priority: 2
