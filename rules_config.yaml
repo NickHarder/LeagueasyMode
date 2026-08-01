@@ -1,0 +1,22 @@
+rules:
+  CheeseCheck:
+    enabled: true
+  LevelPriority:
+    enabled: true
+  EarlyJungleVision:
+    enabled: true
+  CannonWaves:
+    enabled: true
+  RecallDeadline:
+    enabled: true
+  TempoReset:
+    enabled: true
+  GoldBreakpoints:
+    enabled: true
+    priority: 3
+  EnemyNetWorth:
+    enabled: true
+    priority: 2
+  AntiIdlePacing:
+    enabled: true
+    priority: 2

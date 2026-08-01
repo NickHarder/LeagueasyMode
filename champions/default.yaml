@@ -1,0 +1,83 @@
+TOP:
+  default_build: "Core"
+  builds:
+    Core:
+      - item: "Boots"
+        cost: 300
+        priority: high
+
+      - item: "Long Sword"
+        cost: 350
+        priority: medium
+
+      - item: "Ruby Crystal"
+        cost: 400
+        priority: medium
+
+
+JUNGLE:
+  default_build: "Core"
+  builds:
+    Core:
+      - item: "Boots"
+        cost: 300
+        priority: high
+
+      - item: "Long Sword"
+        cost: 350
+        priority: medium
+
+      - item: "Ruby Crystal"
+        cost: 400
+        priority: medium
+
+
+MID:
+  default_build: "Core"
+  builds:
+    Core:
+      - item: "Boots"
+        cost: 300
+        priority: high
+
+      - item: "Amplifying Tome"
+        cost: 400
+        priority: medium
+
+      - item: "Sapphire Crystal"
+        cost: 300
+        priority: medium
+
+
+ADC:
+  default_build: "Core"
+  builds:
+    Core:
+      - item: "Dagger"
+        cost: 250
+        priority: high
+
+      - item: "Long Sword"
+        cost: 350
+        priority: medium
+
+      - item: "Pickaxe"
+        cost: 875
+        priority: medium
+
+
+SUPPORT:
+  default_build: "Core"
+  builds:
+    Core:
+      - item: "Boots"
+        cost: 300
+        priority: high
+
+      - item: "Ruby Crystal"
+        cost: 400
+        priority: medium
+
+      - item: "Kindlegem"
+        cost: 800
+        priority: medium
