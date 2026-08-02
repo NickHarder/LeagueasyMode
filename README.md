@@ -1,122 +1,133 @@
-# Building LeagueasyMode Without Reading the Docs (An AI-Driven Experiment)
+# LeagueasyMode: Post-Mortem & Technical Retrospective
 
-## 1. Introduction: The Vibe Coding Era
-
-Welcome to modern software engineering, where the primary qualification is knowing how to talk to a robot while staring blankly at a blinking cursor. Why spend precious hours reading API documentation, studying rate limits, or understanding architectural best practices when you can just manifest a full-stack Flask application through pure conversational bluffing?
-
-This is the birth story of **LeagueasyMode**—a high-end, role-specific tactical telemetry cockpit designed for a Raspberry Pi kiosk. It polls the local Riot Live Client Data API at 10Hz to feed your ears audio-first tactical alerts instead of cluttering your screen. The catch? I built the entire thing without ever opening a single page of official documentation. And trust me, it went about as smoothly as a first-time Yasuo in your ranked promos.
+*Note: This repository is archived and no longer under active development. This document serves as the project's technical retrospective, design log, and architectural post-mortem.*
 
 ---
 
-## 2. Why Your Mac "Cackles" (The Hardware Bottleneck)
+## Executive Summary
 
-If you tested the dashboard directly in a browser on your Mac while League was running, you ran right into a classic hardware bottleneck. League of Legends consumes massive amounts of CPU/GPU resources and hooks heavily into macOS CoreAudio. When you layer browser-based speech synthesis (`window.speechSynthesis`) and the Web Audio API on top of an already stressed Mac running a full-screen game, the audio buffer underruns. This results in that digital static, popping, and demonic "cackling" sound.
+LeagueasyMode began as an experimental weekend project: a real-time, audio-first tactical telemetry engine for League of Legends Junglers. The goal was to offload macro calculations—such as recall deadlines, cannon wave crash timings, objective vision prep, and opponent power spikes—to a secondary "decoupled" HUD running on an external device (a mobile phone or Raspberry Pi kiosk).
 
-This is the exact justification for our hardware-decoupled architecture: your Mac should never render the UI or touch the audio engine. Offloading this entirely to the Raspberry Pi and its dedicated portable monitor keeps your Mac completely silent and focused strictly on running the game.
+The core technical experiment was two-fold:
 
----
+1. Could I build a full-stack, low-latency telemetry application using AI pair programming ("vibe coding") without ever reading the official Riot API documentation?
+2. Could I engineer an external, low-overhead secondary screen that bypassed the performance hits and screen clutter of traditional commercial desktop overlays?
 
-## 3. The Tech Stack & The Blind Spots: Pros & Cons of Zero-Doc AI Development
-
-* **The Stack:** Python, Flask, a 10Hz loop hitting the local Riot Live Client Data API (`[https://127.0.0.1:2999/liveclientdata/](https://127.0.0.1:2999/liveclientdata/)`), and a browser-based Web Audio/TTS engine running on a secondary Raspberry Pi kiosk.
-* **The Pro (Ludicrous Speed):** Bootstrapping a server, handling self-signed SSL handshake certificates, and spitting out clean Flask boilerplate happens at the speed of thought. You skip the tedious setup phase entirely and jump straight into feeling like a hacker in a movie.
-* **The Con (The Reality Check):** Building completely blind means you find out about architectural roadblocks only *after* you slam face-first into them. For instance, discovering mid-way through development that Riot intentionally hides live team gold and net worth server-side for competitive integrity. Cue a sudden, dramatic pivot to item component costs and pacing deltas because the API straight-up refuses to give us the numbers we want.
+Ultimately, the project reached a hard technical ceiling imposed by Riot's local API security boundaries. Combined with an upcoming personal PC hardware upgrade, the project achieved its educational goals and was gracefully archived.
 
 ---
 
-## 4. Engineering Around API Constraints & Failed Architectural Attempts
+## The Hardware Constraint: My 2020 Intel Mac
 
-When you don't read the manual, you learn the hard way what developers are actually allowed to do and what hardware will tolerate.
+The catalyst for LeagueasyMode was a severe hardware bottleneck. I was playing on a 2020 Intel Mac. League of Legends taxes the CPU and GPU heavily on older Intel Mac hardware, especially when managing macOS CoreAudio pipelines under high load.
 
-### Failed Attempt 1: Native macOS Notifications (`osascript & afplay`)
+When I initially tested browser-based speech synthesis (`window.speechSynthesis`) and the Web Audio API directly on the host machine while playing, the system experienced severe audio buffer underruns. The result was digital static, popping, and a distorted "cackling" sound whenever an alert triggered.
 
-* **The Bug:** macOS aggressively suppresses notification banners when an external monitor is used in clamshell mode (laptop closed) or a full-screen game is running.
-* **The Audio Mess:** Shell commands fire asynchronously. If two alerts triggered simultaneously (e.g., a chime and a voice callout), they played over each other in a garbled mess.
-* **The Polling Lag:** Standard Python HTTP requests required a TLS handshake for every loop. Every loop iteration was firing four separate `requests.get()` HTTPS calls to `127.0.0.1:2999`. Without a persistent connection session, Python was forced to open, negotiate SSL/TLS handshakes, and tear down four TCP connections per second. On macOS, those handshakes alone took 200ms–800ms per loop, and combined with `time.sleep(1.0)`, your actual loop cycle was lagging up to 2 seconds behind real-time.
+This forced an architectural decision: **Hardware Decoupling**.
 
-### The Fix for Polling Lag:
-
-We initialize a persistent `requests.Session()` with connection pooling and drop the loop sleep to 0.1s (10 FPS polling). Polling latency drops from ~1500ms down to ~10ms.
-
-### Failed Attempt 2: The GUI Overlay (`Tkinter` / `PyQt`)
-
-* **The Apple Silicon Bottleneck:** Forcing a transparent, always-on-top Python window over a high-refresh-rate Metal application (League) nukes Mac performance. It causes micro-stutters.
-* **The Window Manager:** macOS "Spaces" frequently isolate full-screen apps, hiding the overlay anyway.
-
-### The Ban Hammer Reality (Chat Automation):
-
-My initial million-dollar idea was simple: have the app automatically type strategic callouts into team chat. Turns out, Riot has this little thing called "Terms of Service" that strictly prohibits third-party tools from automating chat inputs or actions. Automated chat injection is a one-way ticket to a permanent ban, so we kept it strictly read-only and passive.
+The host machine running League of Legends had to act purely as a headless data scraper. It could not render a GUI, and it could not process audio. The UI rendering and audio synthesis had to be offloaded entirely to a secondary client (a mobile browser or Raspberry Pi kiosk) hitting a local Flask server over the network.
 
 ---
 
-## 5. The Hardware Decoupling & The "Sim-Racer" Setup
+## Architecture & Technical Engineering
 
-* **Realization:** The Mac shouldn't render the UI or process the audio. It should only be the data scraper.
-* **Solution:** Built a lightweight Flask local web server. The Python engine uses a persistent HTTP `requests.Session()` (dropping polling latency from ~1500ms to ~10ms).
-* **The Final Hardware Stack:** A Raspberry Pi connected to a portable monitor, booting directly into Chromium Kiosk Mode (full-screen, no desktop). It hits the Mac's local IP (`[http://192.168.](http://192.168.)x.x:5000`).
-* **Why it wins:** 0% FPS impact on the Mac. The browser handles a synchronous Web Audio/Speech API queue so voice lines play back-to-back perfectly.
+```text
++---------------------------------------------------+
+|                  PRIMARY MACHINE                  |
+|  +--------------------+     +------------------+  |
+|  | League of Client   |     |  Python Backend  |  |
+|  | Local API (:2999)  | <-> |  (app.py / Flask)|  |
+|  +--------------------+     +--------+---------+  |
++--------------------------------------|------------+
+                                       | HTTP / JSON (Local Network)
+                                       v
++---------------------------------------------------+
+|                 SECONDARY DEVICE                  |
+|  +---------------------------------------------+  |
+|  |  Kiosk Browser (Phone / Pi)                 |  |
+|  |  - Glassmorphic Telemetry HUD               |  |
+|  |  - Web Audio API / TTS Priority Queue       |  |
+|  +---------------------------------------------+  |
++---------------------------------------------------+
 
----
+```
 
-## 6. Solving the Audio Overlap and Notification Clutter
+### 1. Slashing Latency: Connection Pooling
 
-* **Notification Collapse Fix (Rate Limiter & Priority Queue):** macOS groups notifications when too many arrive quickly. To fix this, we built an async Notification Queue Manager. Visual macOS banners are rate-limited to a minimum 3.0-second gap so macOS never collapses them into stacked cards.
-* **Custom Audio Chime Library:** Instead of generic beeps, the script hooks directly into native sound systems. Every alert type has its own distinct chime (Glass, Hero, Submarine, Ping, Tink, Basso). You can recognize what happened just by listening.
-* **Synchronous Queue Worker:** Inside the background worker thread, audio elements run sequentially without background amp overlapping. This forces audio to play cleanly back-to-back in exact chronological order without overlapping.
-* **Staleness Drop (`MAX_STALE_AGE`):** If a low-priority chime sits in the queue behind a longer voice callout for more than 1.5 seconds, the engine automatically discards its voice line. This guarantees you never hear an 8-second recall warning 4 seconds late.
-* **Priority Sorting:** Emergency alerts (e.g., Low HP / Level 6 Spikes) jump to the front of the queue ahead of lower-priority item buys or CS checks.
+Initially, standard HTTP GET requests to Riot's local API (`[https://127.0.0.1:2999/liveclientdata/allgamedata](https://127.0.0.1:2999/liveclientdata/allgamedata)`) suffered from severe latency. Every iteration of the loop was initiating a new TLS handshake to port 2999. On macOS, these handshakes added 200ms–800ms per call.
 
----
+By refactoring the backend to use a persistent `requests.Session()` with connection pooling and dropping the loop sleep interval to 0.1s, connection handshakes were reused. Polling latency dropped from ~1500ms down to ~10ms, allowing a stable 10Hz telemetry loop.
 
-## 7. Design Philosophy & Dynamic Objectives
+### 2. The Audio Queue Manager
 
-* **Design Philosophy:** "Zero Redundancy & High Contrast." The UI mimics a Grafana dashboard or stock terminal—dark backgrounds, monospace fonts for jitter-free timers, strict color-coding. Rule design: The game already yells "PENTAKILL" and shows objective graphics. This tool only tracks hidden Master+ macro windows that require manual tab-checking or mental math.
-* **Dynamic Objectives & Clutter Reduction:** Seeing a 20-minute timer for Baron when you're sitting at 3 minutes in lane is useless visual noise. We redesigned the Macro Objectives panel:
-* **Early/Mid Game Focus:** It prioritizes Dragon and Void Grubs (which spawn at 5:00).
-* **Dynamic Reveal:** Rift Herald and Baron Nashor automatically hide themselves or stay grayed out with clean status tags until the game clock actually approaches their spawn windows (Herald at 14:00, Baron at 20:00).
+To prevent overlapping audio, a synchronous queue worker was implemented in the frontend:
 
+* **Priority Sorting:** Critical alerts (e.g., Level 6 power spikes, low HP) immediately bypass lower-priority alerts.
+* **Staleness Expiration (`MAX_STALE_AGE`):** If a low-priority TTS alert waits longer than 1.5 seconds behind a long voice line, it is dropped. This prevents hearing stale information (like a recall prompt) seconds after the window has closed.
+* **Rate-Limiting:** Visual cards and audio alerts are throttled to prevent stacked card collapses and speech overlapping.
 
+### 3. Rule Engine Execution
 
----
+The backend `EventBus` continuously evaluated game state snapshots against a modular rule manifest:
 
-## 8. The "LeagueasyMode" Rules Engine
-
-These are the strict tactical rules the Python engine evaluates 10 times a second:
-
-### Pre-Game & Early Lane (0:00 – 3:00)
-
-* **Pre-Match Cheese Check (0:15):** Scrapes the direct lane opponent's summoner spells. If they took Ignite, Exhaust, or Barrier instead of Teleport/Flash, it triggers a "Cheese Risk" alert.
-* **Level 2 & 3 Priority Tracker:** Constantly compares your XP level to your direct opponent. If they hit Level 2 or Level 3 before you do, an instant critical chime fires to back off.
-* **Early Scuttle Sync (2:35):** Alerts that Scuttles are spawning in 20 seconds (at 2:55) to prep jungle pathing or lane priority.
-* **Level 1 Ward Expiration (2:50):** Assumes standard 1:20 ward placements. Level 1 Yellow Trinkets last exactly 90 seconds, so a 2:50 alert signals that the map is dark and early gank windows are wide open.
-
-### Mid-Game Macro & Lane Management
-
-* **Hard 8-Second Recall Deadline:** (Tracks direct opponent only). If the enemy laner dies, it watches their respawn timer. Exactly at the 8.0s mark, it alerts you. This is the absolute deadline to start your recall if you want to base and get back to lane without losing plates.
-* **Cannon Wave Crash Windows (Pre-15 mins):** Cannon waves spawn every 90 seconds (2:05, 3:35, 5:05...). The engine pings you 15 seconds before a cannon wave spawns at the enemy base. This is the optimal Master-tier window to crash your wave and recall.
-* **Bounty Shutdown Tracker:** Scans the enemy team for high-net-worth targets. If an enemy accumulates a 700g+ bounty, it fires a tactical alert to shift the team's win-condition focus to shutting them down.
-
-### Objectives & Late Game
-
-* **120-Second Vision Prep:** Alerts 2 minutes before a Dragon or Baron spawns. This is the exact macro window required to base, buy Control Wards, and walk to the river to establish a choke point.
-* **60-Second Coinflip Check:** 1 minute before Dragon/Baron, it checks if the enemy Jungler is alive or dead. If alive, it warns of a "Coinflip Risk." If you are the Jungler, it adds a reminder to save Smite.
-* **Inhibitor 60s Rally Warning:** Tracks destroyed inhibitors. Exactly 4 minutes after destruction, it warns that the inhibitor respawns in 60 seconds (at the 5:00 mark) so you can rally the team to push.
-* **Hyper-Carry Level 16 Timebomb:** Monitors late-game scaling threats (Kayle, Kassadin, Smolder, Vayne, Vladimir). When they hit Level 16, a critical alert fires, signaling the enemy team has hit their ultimate power spike.
+* **Pre-Match Cheese Check:** Evaluated opponent summoner spells at 0:15 for aggressive combat choices (Ignite/Exhaust) over TP/Flash.
+* **Level 2/3 Priority:** Tracked XP deltas between laners to signal instant retreat when the opponent hit power spikes first.
+* **Hard 8-Second Recall Deadline:** Calculated opponent death timers and walk-back times to signal the exact second a player must hit 'B' to avoid losing turret plates.
+* **Cannon Wave Crash Windows:** Signaled cannon wave spawns 15 seconds prior to arrival at the enemy base, identifying optimal recall windows.
 
 ---
 
-## 9. Implementation Roadmap
+## The Realization: Local API vs. Overwolf GEP
 
-* **Phase 1: Local Foundation:** Setup of project environment, clean directory structure, and requirements dependencies.
-* **Phase 2: The Core Engine (`app.py`):** Writing the Python backend using a persistent HTTP session, implementing the Master+ rule set, and exposing JSON data via Flask (`/api/state`).
-* **Phase 3: The Telemetry Dashboard (`templates/index.html`):** Building the responsive single-file CSS/JS frontend layout, Grafana-inspired aesthetic, and browser-based Web Audio/Speech API queue handlers.
-* **Phase 4: Raspberry Pi Kiosk Deployment:** Configuring the Raspberry Pi OS to boot directly into Chromium's Kiosk Mode, auto-loading the Mac's local IP address on startup.
-* **Phase 5: GitHub Packaging:** Cleaning up the project codebase for open-source distribution with a robust `README.md` and `.gitignore`.
+As I moved into Phase 4 (Advanced Macro and Jungle Tracking), I attempted to implement features like precise jungle camp respawn tracking, camp sequencing, and minion wave state analysis.
+
+This is where I hit a fundamental wall regarding how third-party tools access League of Legends data:
+
+1. **Riot's Native Local API (Port 2999):** This is what LeagueasyMode used. It is local, lightweight, and completely detached from game memory. However, Riot intentionally cripples this API for competitive integrity. It hides minor jungle camp respawn timers, minion wave positions, and real-time team net worth.
+2. **Overwolf's Game Events Provider (GEP) API:** Commercial apps (Blitz, Mobalytics, Porofessor) do not rely on port 2999. They are built on Overwolf, which has an official partnership with Riot allowing memory-level event hooks. The Overwolf GEP broadcasts exact minor camp states (`jungle_camp_0`, `alive: false`, `icon_status: 1`), exact minion kills, and real-time gold metrics.
+
+I faced a choice:
+
+* **Option A:** Rewrite the entire backend into Node.js/Electron and build a full Overwolf Desktop Application. This would give me perfect data, but it would completely destroy the lightweight, zero-bloat, secondary-screen nature of the project. I would end up building a worse version of Mobalytics.
+* **Option B:** Stay on the local Flask API and rely on CS math heuristics (`+4 CS` delta tracking) to guess camp clears, which is inherently fragile and prone to desync.
 
 ---
 
-## 10. Conclusion: Lessons Learned from the Vibe Coding Frontier
+## Post-Mortem & Conclusion
 
-Can you build a functional, highly specialized real-time telemetry tool completely through AI conversation without ever cracking open a documentation file? Absolutely.
+When evaluating whether to refactor the project for Overwolf, three realities became clear:
 
-Does it make for a wildly entertaining engineering process full of blind optimism and sudden architectural panic? You bet. While skipping the docs means you will inevitably step on rakes that could have easily been avoided, it also forces you to invent clever hardware-decoupled workarounds you would never have thought of otherwise.
+1. **The Niche Was Too Small:** The target audience for this tool—players who want a competitive macro coach, have a PC too weak to run Overwolf overlays, but possess the technical skill to host a local Python Flask server and connect a mobile device over LAN—is virtually non-existent.
+2. **Hardware Upgrade:** I am upgrading my primary PC. The original hardware constraint (the 2020 Intel Mac struggling with CoreAudio and League simultaneously) will no longer exist, eliminating my own core use case for an external server.
+3. **Reinventing the Wheel:** Commercial tools backed by engineering teams already handle Overwolf event parsing at scale. Continuing to reverse-engineer jungle camps via CS deltas was an exercise in diminishing returns.
+
+### Accomplishments Summary
+
+* **Engineered a 10Hz Local API Scraper:** Built a zero-lag TLS connection pool pulling real-time telemetry from port 2999.
+* **Implemented Hardware-Decoupled Audio:** Solved Mac CoreAudio bottlenecking by offloading Web Audio and TTS synthesis to a secondary network client.
+* **Built a Zero-Read HUD:** Designed a responsive, glassmorphic UI optimized for peripheral vision and color-coded state indicators.
+* **Designed a Modular Macro Rule Bus:** Created isolated, state-aware rules for level spikes, recall windows, and objective prep.
+
+### What I Learned
+
+This project was a massive success as an educational exercise. I gained deep experience in backend event-bus architecture, connection pooling, browser speech synthesis queues, mobile wake-lock workarounds, and modern AI-assisted rapid prototyping ("vibe coding").
+
+Recognizing when a project has served its learning purpose—and choosing to archive it rather than maintain a redundant tool—is a core part of engineering maturity.
+
+---
+
+## Final Project Status & Roadmap
+
+| Feature / Module | Status | Notes |
+| --- | --- | --- |
+| **Persistent API Poller** | Completed | 10Hz, low-latency TLS connection pool |
+| **Event-Bus Architecture** | Completed | Modular rule execution pipeline |
+| **Decoupled Web HUD** | Completed | Single-file HTML5/JS UI with Web Audio/TTS |
+| **NoSleep / Mobile WakeLock** | Completed | Solved display sleep over HTTP via video loop |
+| **Rule: CheeseCheck** | Completed | Tracks aggressive opponent summoner spell choices |
+| **Rule: RecallDeadline** | Completed | Calculates death-timer recall windows |
+| **Rule: CannonWaves** | Completed | Tracks wave crash recall opportunities |
+| **Rule: ObjectiveSync** | Completed | 120s/60s vision and prep timers |
+| **Jungle Camp Sequencer** | Deprecated | Blocked by Local API limitations (requires Overwolf GEP) |
+| **Wave Reader Matrix** | Deprecated | Blocked by Vanguard/Memory boundaries |
+| **Champion Roster Rules** | Deprecated | Archived due to project sunset |
