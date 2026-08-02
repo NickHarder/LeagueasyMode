@@ -1,24 +1,37 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LeagueasyMode Telemetry</title>
+    <title>LeagueasyMode HUD</title>
     <style>
         :root {
-            --bg-color: #0b0c10;
-            --panel-bg: #1a1c23;
-            --border-color: #2c2f38;
-            --text-main: #e0e6ed;
-            --text-dim: #8b92a5;
-            --color-critical: #ff3333;
-            --color-tactical: #3388ff;
-            --color-info: #29b6f6;
-            --color-good: #00cc66;
+            /* OBS Transparent Base */
+            --bg-color: transparent;
+
+            /* Frosted Glass Panels */
+            --panel-bg: rgba(10, 12, 16, 0.75);
+            --panel-border: rgba(255, 255, 255, 0.08);
+
+            /* High Contrast Typography */
+            --text-main: #ffffff;
+            --text-dim: #94a0b8;
+
+            /* HUD Neon Colors */
+            --color-critical: #ff2a2a;
+            --color-tactical: #00e5ff;
+            --color-info: #3388ff;
+            --color-good: #00ff88;
+
             --font-mono: 'SF Mono', Consolas, 'Liberation Mono', Menlo, monospace;
         }
 
-        * { box-sizing: border-box; margin: 0; padding: 0; }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
 
         body {
             background-color: var(--bg-color);
@@ -28,92 +41,147 @@
             overflow: hidden;
             display: flex;
             flex-direction: column;
+            /* Keeps the HUD clamped to the side in a full-screen window */
+            padding: 20px;
+            max-width: 500px;
         }
 
-        /* --- INIT OVERLAY --- */
+        /* --- INIT OVERLAY (System Boot) --- */
         #init-overlay {
             position: absolute;
-            top: 0; left: 0; width: 100vw; height: 100vh;
-            background: rgba(11, 12, 16, 0.95);
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(5, 6, 8, 0.98);
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             z-index: 9999;
         }
-        
+
         #init-overlay button {
-            background: var(--color-tactical);
-            color: white;
-            border: none;
-            padding: 1.5rem 3rem;
-            font-size: 1.5rem;
+            background: transparent;
+            color: var(--color-tactical);
+            border: 2px solid var(--color-tactical);
+            padding: 1rem 3rem;
+            font-size: 1.2rem;
             font-family: var(--font-mono);
             font-weight: bold;
+            letter-spacing: 2px;
             cursor: pointer;
             border-radius: 4px;
-            transition: 0.2s;
+            transition: all 0.3s ease;
+            box-shadow: 0 0 15px rgba(0, 229, 255, 0.2);
         }
-        
-        #init-overlay button:hover { background: #2266cc; }
 
-        /* --- DASHBOARD LAYOUT --- */
+        #init-overlay button:hover {
+            background: var(--color-tactical);
+            color: #000;
+            box-shadow: 0 0 25px rgba(0, 229, 255, 0.5);
+        }
+
+        /* --- HUD HEADER --- */
         .header {
             display: flex;
             justify-content: space-between;
-            align-items: center;
-            padding: 1rem 2rem;
-            background: #111217;
-            border-bottom: 1px solid var(--border-color);
+            align-items: flex-end;
+            padding: 1rem;
+            background: var(--panel-bg);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid var(--panel-border);
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+        }
+
+        .status-container {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
         }
 
         .status-dot {
             display: inline-block;
-            width: 12px; height: 12px;
+            width: 10px;
+            height: 10px;
             border-radius: 50%;
             background: var(--color-critical);
             margin-right: 8px;
+            box-shadow: 0 0 8px var(--color-critical);
         }
-        .status-dot.connected { background: var(--color-good); }
+
+        .status-dot.connected {
+            background: var(--color-good);
+            box-shadow: 0 0 8px var(--color-good);
+        }
 
         .time-display {
-            font-size: 2.5rem;
-            font-weight: bold;
+            font-size: 2.2rem;
+            font-weight: 800;
             letter-spacing: 2px;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8);
+            line-height: 1;
         }
 
-        .grid-container {
-            flex: 1;
-            display: grid;
-            grid-template-columns: 1fr;
-            grid-template-rows: auto auto 1fr;
-            gap: 1.5rem;
-            padding: 1.5rem;
+        /* --- TOGGLES (Roadmap Phase 2) --- */
+        .hud-controls {
+            display: flex;
+            gap: 12px;
+            font-size: 0.75rem;
+            color: var(--text-dim);
+            margin-top: 8px;
+        }
+
+        .hud-controls label {
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            transition: color 0.2s;
+        }
+
+        .hud-controls label:hover {
+            color: var(--text-main);
+        }
+
+        .hud-controls input {
+            accent-color: var(--color-tactical);
+        }
+
+        /* --- HUD PANELS --- */
+        .panel-container {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
             overflow-y: auto;
+            /* Hide scrollbar for cleaner OBS feed */
+            scrollbar-width: none;
         }
 
-        @media (min-width: 800px) {
-            .grid-container {
-                grid-template-columns: 1fr 1fr;
-                grid-template-rows: auto 1fr;
-            }
-            .panel-alerts { grid-column: span 2; }
+        .panel-container::-webkit-scrollbar {
+            display: none;
         }
 
         .panel {
             background: var(--panel-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 6px;
-            padding: 1.5rem;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid var(--panel-border);
+            border-radius: 8px;
+            padding: 1.25rem;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
         }
 
         .panel-title {
             color: var(--text-dim);
-            font-size: 0.85rem;
+            font-size: 0.75rem;
             text-transform: uppercase;
-            letter-spacing: 1px;
+            letter-spacing: 2px;
             margin-bottom: 1rem;
-            border-bottom: 1px solid var(--border-color);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
             padding-bottom: 0.5rem;
         }
 
@@ -121,67 +189,126 @@
         .data-row {
             display: flex;
             justify-content: space-between;
-            margin-bottom: 0.75rem;
-            font-size: 1.2rem;
+            align-items: center;
+            margin-bottom: 0.6rem;
+            font-size: 1.1rem;
         }
-        .data-label { color: var(--text-dim); }
-        .data-value { font-weight: bold; }
 
-        .highlight-red { color: var(--color-critical); }
-        .highlight-blue { color: var(--color-tactical); }
-        .highlight-tactical { color: var(--color-info); }
+        .data-label {
+            color: var(--text-dim);
+        }
+
+        .data-value {
+            font-weight: bold;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+        }
+
+        .highlight-red {
+            color: var(--color-critical);
+            text-shadow: 0 0 8px rgba(255, 42, 42, 0.4);
+        }
+
+        .highlight-blue {
+            color: var(--color-tactical);
+            text-shadow: 0 0 8px rgba(0, 229, 255, 0.4);
+        }
+
+        .highlight-tactical {
+            color: var(--color-info);
+        }
 
         /* --- ALERT FEED --- */
         .alerts-feed {
             display: flex;
             flex-direction: column;
             gap: 0.75rem;
-            max-height: 300px;
-            overflow-y: auto;
         }
 
         .alert-card {
-            background: #20232a;
-            border-left: 5px solid var(--color-info);
+            background: rgba(20, 23, 30, 0.85);
+            border-left: 4px solid var(--color-info);
             padding: 1rem;
-            border-radius: 4px;
-            animation: slideIn 0.3s ease-out;
+            border-radius: 4px 6px 6px 4px;
+            animation: alertPop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
         }
 
-        .alert-card.priority-1 { border-color: var(--color-critical); background: rgba(255, 51, 51, 0.1); }
-        .alert-card.priority-2 { border-color: var(--color-tactical); }
-        
-        .alert-header { display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--text-dim); margin-bottom: 0.4rem; }
-        .alert-title { font-weight: bold; color: var(--text-main); }
-        .alert-body { font-size: 1.1rem; }
+        .alert-card.priority-1 {
+            border-color: var(--color-critical);
+            background: linear-gradient(90deg, rgba(255, 42, 42, 0.15) 0%, rgba(20, 23, 30, 0.85) 50%);
+            box-shadow: 0 4px 15px rgba(255, 42, 42, 0.2);
+        }
 
-        @keyframes slideIn {
-            from { opacity: 0; transform: translateX(-20px); }
-            to { opacity: 1; transform: translateX(0); }
+        .alert-card.priority-2 {
+            border-color: var(--color-tactical);
+            background: linear-gradient(90deg, rgba(0, 229, 255, 0.1) 0%, rgba(20, 23, 30, 0.85) 50%);
+            box-shadow: 0 4px 15px rgba(0, 229, 255, 0.15);
+        }
+
+        .alert-header {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.75rem;
+            color: var(--text-dim);
+            margin-bottom: 0.5rem;
+            letter-spacing: 1px;
+        }
+
+        .alert-title {
+            font-weight: bold;
+            color: var(--text-main);
+        }
+
+        .alert-body {
+            font-size: 1.05rem;
+            line-height: 1.4;
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+        }
+
+        @keyframes alertPop {
+            0% {
+                opacity: 0;
+                transform: translateX(-30px) scale(0.95);
+            }
+
+            100% {
+                opacity: 1;
+                transform: translateX(0) scale(1);
+            }
         }
     </style>
 </head>
+
 <body>
 
     <!-- Autoplay Policy Unlocker -->
     <div id="init-overlay">
-        <h1 style="margin-bottom: 1rem; color: var(--text-dim);">LeagueasyMode Telemetry</h1>
-        <button onclick="initSystem()">INITIALIZE TERMINAL</button>
-        <p style="margin-top: 1rem; color: var(--text-dim); font-size: 0.9rem;">Click to unlock Web Audio & Speech APIs</p>
+        <h1 style="margin-bottom: 1.5rem; color: #fff; letter-spacing: 2px;">SYS.BOOT</h1>
+        <button onclick="initSystem()">ENGAGE ENGINE</button>
+        <p style="margin-top: 1rem; color: var(--text-dim); font-size: 0.9rem;">Click to unlock Web Audio, Speech & Wake
+            Lock APIs</p>
     </div>
 
-    <!-- Header -->
+    <!-- HUD Header -->
     <div class="header">
-        <div>
-            <span id="conn-dot" class="status-dot"></span>
-            <span id="conn-status" style="font-weight: bold; color: var(--text-dim);">AWAITING CLIENT</span>
+        <div class="status-container">
+            <div>
+                <span id="conn-dot" class="status-dot"></span>
+                <span id="conn-status" style="font-weight: bold; font-size: 0.9rem; color: var(--text-dim);">AWAITING
+                    TELEMETRY</span>
+            </div>
+
+            <!-- Audio Toggles -->
+            <div class="hud-controls">
+                <label><input type="checkbox" id="toggle-sfx" checked> SFX</label>
+                <label><input type="checkbox" id="toggle-tts" checked> VOICE</label>
+            </div>
         </div>
         <div id="game-time" class="time-display">00:00</div>
     </div>
 
-    <!-- Main Grid -->
-    <div class="grid-container">
-        
+    <div class="panel-container">
+
         <!-- Matchup Data -->
         <div class="panel">
             <div class="panel-title">Current Matchup</div>
@@ -190,11 +317,12 @@
                 <span id="my-level" class="data-value">-</span>
             </div>
             <div class="data-row">
-                <span class="data-label">Opponent Lvl:</span>
+                <span class="data-label">Opponent:</span>
                 <span id="opp-level" class="data-value">-</span>
             </div>
-            <div class="data-row" style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border-color);">
-                <span class="data-label">Enemy JG Status:</span>
+            <div class="data-row"
+                style="margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid rgba(255,255,255,0.05);">
+                <span class="data-label">Enemy JG:</span>
                 <span id="enemy-jg" class="data-value">-</span>
             </div>
         </div>
@@ -208,11 +336,11 @@
             </div>
             <div class="data-row" id="grubs-container">
                 <span class="data-label">Void Grubs:</span>
-                <span id="next-grubs" class="data-value highlight-tactical">05:00</span>
+                <span id="next-grubs" class="data-value highlight-tactical">08:00</span>
             </div>
             <div class="data-row" id="herald-container" style="display: none;">
                 <span class="data-label">Rift Herald:</span>
-                <span id="next-herald" class="data-value highlight-tactical">14:00</span>
+                <span id="next-herald" class="data-value highlight-tactical">15:00</span>
             </div>
             <div class="data-row" id="baron-container" style="display: none;">
                 <span class="data-label">Baron Nashor:</span>
@@ -221,7 +349,7 @@
         </div>
 
         <!-- Alert Log -->
-        <div class="panel panel-alerts">
+        <div class="panel" style="flex: 1; display: flex; flex-direction: column;">
             <div class="panel-title">Tactical Feed</div>
             <div id="alerts-feed" class="alerts-feed">
                 <!-- Alerts inject here -->
@@ -232,24 +360,54 @@
 
     <script>
         // ==========================================
+        // SCREEN WAKE LOCK
+        // ==========================================
+        let wakeLock = null;
+
+        async function requestWakeLock() {
+            try {
+                if ('wakeLock' in navigator) {
+                    wakeLock = await navigator.wakeLock.request('screen');
+                    console.log('Screen Wake Lock active');
+                }
+            } catch (err) {
+                console.error(`Wake Lock error: ${err.name}, ${err.message}`);
+            }
+        }
+
+        // Re-acquire the lock if you minimize the browser and come back
+        document.addEventListener('visibilitychange', () => {
+            if (wakeLock !== null && document.visibilityState === 'visible') {
+                requestWakeLock();
+            }
+        });
+
+        // ==========================================
         // SYNTHETIC AUDIO ENGINE
         // ==========================================
         let audioCtx;
 
+        // Element caching
+        const toggleSFX = document.getElementById('toggle-sfx');
+        const toggleTTS = document.getElementById('toggle-tts');
+
         function initSystem() {
             document.getElementById('init-overlay').style.display = 'none';
             audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            
+
             // Prime speech engine
             let msg = new SpeechSynthesisUtterance("");
             msg.volume = 0;
             window.speechSynthesis.speak(msg);
-            
+
+            // Lock the screen awake!
+            requestWakeLock();
+
             startPolling();
         }
 
         function playSound(type) {
-            if (!audioCtx) return;
+            if (!audioCtx || !toggleSFX.checked) return;
             const osc = audioCtx.createOscillator();
             const gain = audioCtx.createGain();
             osc.connect(gain);
@@ -257,8 +415,8 @@
 
             if (type === 'alert') {
                 osc.type = 'square';
-                osc.frequency.setValueAtTime(600, audioCtx.currentTime);
-                osc.frequency.setValueAtTime(800, audioCtx.currentTime + 0.1);
+                osc.frequency.setValueAtTime(400, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(800, audioCtx.currentTime + 0.15);
                 gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
                 gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
                 osc.start();
@@ -266,10 +424,10 @@
             } else {
                 osc.type = 'sine';
                 osc.frequency.setValueAtTime(880, audioCtx.currentTime);
-                gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.8);
+                gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.6);
                 osc.start();
-                osc.stop(audioCtx.currentTime + 0.8);
+                osc.stop(audioCtx.currentTime + 0.6);
             }
         }
 
@@ -277,6 +435,7 @@
         let isSpeaking = false;
 
         function speak(text) {
+            if (!toggleTTS.checked) return;
             speechQueue.push(text);
             processSpeechQueue();
         }
@@ -284,17 +443,17 @@
         function processSpeechQueue() {
             if (isSpeaking || speechQueue.length === 0) return;
             isSpeaking = true;
-            
+
             let text = speechQueue.shift();
             let utterance = new SpeechSynthesisUtterance(text);
-            utterance.rate = 1.1;
-            utterance.pitch = 1.0;
-            
+            utterance.rate = 1.15;
+            utterance.pitch = 0.95;
+
             utterance.onend = () => {
                 isSpeaking = false;
                 processSpeechQueue();
             };
-            
+
             window.speechSynthesis.speak(utterance);
         }
 
@@ -302,7 +461,7 @@
         // DATA POLLING & UI UPDATES
         // ==========================================
         let lastAlertId = 0.0;
-        
+
         function formatTime(seconds) {
             if (!seconds || seconds <= 0) return "00:00";
             let m = Math.floor(seconds / 60);
@@ -316,29 +475,28 @@
             const status = document.getElementById('conn-status');
             if (state.connected) {
                 dot.className = "status-dot connected";
-                status.innerText = "CLIENT SYNCED";
+                status.innerText = "TELEMETRY SYNCED";
                 status.style.color = "var(--color-good)";
             } else {
                 dot.className = "status-dot";
-                status.innerText = "WAITING FOR MATCH...";
+                status.innerText = "AWAITING MATCH...";
                 status.style.color = "var(--text-dim)";
             }
 
-            // Game Time
             document.getElementById('game-time').innerText = formatTime(state.game_time);
 
             // Matchup Stats
             document.getElementById('my-level').innerText = state.my_level || "-";
-            
+
             let oppLvlStr = "-";
             if (state.my_opponent) {
-                oppLvlStr = state.my_opponent.level + " (" + state.my_opponent.championName + ")";
+                oppLvlStr = "Lvl " + state.my_opponent.level + " (" + state.my_opponent.championName + ")";
             }
             document.getElementById('opp-level').innerText = oppLvlStr;
 
             const jgEl = document.getElementById('enemy-jg');
             const jgLvl = state.enemy_jg_level ? ` (Lvl ${state.enemy_jg_level})` : "";
-            
+
             if (state.enemy_jg_alive) {
                 jgEl.innerText = "ALIVE" + jgLvl;
                 jgEl.className = "data-value highlight-red";
@@ -347,31 +505,53 @@
                 jgEl.className = "data-value highlight-blue";
             }
 
-            // Objectives & Dynamic Clutter Reduction
+            // ==========================================
+            // MACRO OBJECTIVES (2026 Meta Dynamic Tracker)
+            // ==========================================
             const gameTime = state.game_time;
-            
-            document.getElementById('next-dragon').innerText = formatTime(state.next_dragon_time);
 
-            const grubsEl = document.getElementById('next-grubs');
-            if (grubsEl) {
-                grubsEl.innerText = gameTime < 300 ? formatTime(300 - gameTime) : "ACTIVE / DONE";
+            // 1. Dragon (Uses dynamic tracker from backend)
+            const drakeTime = state.next_dragon_time || 300;
+            if (gameTime < drakeTime) {
+                document.getElementById('next-dragon').innerText = "Spawns @ " + formatTime(drakeTime);
+            } else {
+                document.getElementById('next-dragon').innerText = "ACTIVE";
             }
 
-            const heraldRow = document.getElementById('herald-container');
-            if (heraldRow) {
-                if (gameTime > 600) {
-                    heraldRow.style.display = 'flex';
-                    document.getElementById('next-herald').innerText = formatTime(Math.max(0, 840 - gameTime));
+            // 2. Void Grubs (Spawns 8:00 [480s], vanishes when Herald arrives at 15:00 [900s])
+            const grubsRow = document.getElementById('grubs-container');
+            if (grubsRow) {
+                if (gameTime < 480) {
+                    document.getElementById('next-grubs').innerText = "Spawns @ 08:00";
+                } else if (gameTime < 900) {
+                    document.getElementById('next-grubs').innerText = "ACTIVE";
                 } else {
-                    heraldRow.style.display = 'none';
+                    grubsRow.style.display = 'none'; // Clear from HUD
                 }
             }
 
+            // 3. Rift Herald (Spawns 15:00 [900s], vanishes at 19:45 [1185s])
+            const heraldRow = document.getElementById('herald-container');
+            if (heraldRow) {
+                if (gameTime >= 480 && gameTime < 1185) { // Show on UI once Grubs spawn
+                    heraldRow.style.display = 'flex';
+                    document.getElementById('next-herald').innerText = gameTime < 900 ? "Spawns @ 15:00" : "ACTIVE";
+                } else {
+                    heraldRow.style.display = 'none'; // Clear from HUD
+                }
+            }
+
+            // 4. Baron Nashor (Spawns 20:00 [1200s], uses dynamic backend tracker after)
             const baronRow = document.getElementById('baron-container');
             if (baronRow) {
-                if (gameTime > 900) {
+                if (gameTime >= 900) { // Show on UI once Herald spawns
                     baronRow.style.display = 'flex';
-                    document.getElementById('next-baron').innerText = formatTime(Math.max(0, 1200 - gameTime));
+                    const bTime = state.next_baron_time || 1200;
+                    if (gameTime < bTime) {
+                        document.getElementById('next-baron').innerText = "Spawns @ " + formatTime(bTime);
+                    } else {
+                        document.getElementById('next-baron').innerText = "ACTIVE";
+                    }
                 } else {
                     baronRow.style.display = 'none';
                 }
@@ -380,16 +560,16 @@
 
         function processAlerts(alerts) {
             const feed = document.getElementById('alerts-feed');
-            
+
             alerts.forEach(alert => {
                 playSound(alert.sound);
                 if (alert.speech) speak(alert.speech);
 
                 const card = document.createElement('div');
                 card.className = `alert-card priority-${alert.priority}`;
-                
-                const timeStr = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'});
-                
+
+                const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
                 card.innerHTML = `
                     <div class="alert-header">
                         <span class="alert-title">${alert.title}</span>
@@ -397,10 +577,10 @@
                     </div>
                     <div class="alert-body">${alert.text}</div>
                 `;
-                
+
                 feed.insertBefore(card, feed.firstChild);
-                
-                if (feed.children.length > 10) {
+
+                if (feed.children.length > 6) {
                     feed.removeChild(feed.lastChild);
                 }
 
@@ -423,4 +603,5 @@
         }
     </script>
 </body>
+
 </html>

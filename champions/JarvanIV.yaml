@@ -1,0 +1,31 @@
+JUNGLE:
+  default_build: "Bruiser"
+  
+  builds:
+    Bruiser:
+      - item: "Tiamat"
+        cost: 1200
+        priority: "high"
+      - item: "Kindlegem"
+        cost: 800
+        priority: "normal"
+      - item: "Plated Steelcaps"
+        cost: 1200
+        situational: true
+      - item: "Phage"
+        cost: 1100
+        priority: "normal"
+
+    Assassin:
+      - item: "Tiamat"
+        cost: 1200
+        priority: "high"
+      - item: "Serrated Dirk"
+        cost: 1000
+        priority: "high"
+      - item: "Boots"
+        cost: 300
+        situational: true
+      - item: "The Brutalizer"
+        cost: 1337
+        priority: "normal"
