@@ -33,7 +33,7 @@ class GlobalState(TypedDict):
     my_gold: int
     my_cs: int
     my_summoner_spells: list[str]
-    my_items: set[str]
+    my_items: list[str]
     my_opponent: dict[str, Any] | None
     player_positions: dict[str, str]
     enemy_team_stats: list[dict[str, Any]]
@@ -58,7 +58,7 @@ global_state: GlobalState = {
     "my_gold": 0,
     "my_cs": 0,
     "my_summoner_spells": [],
-    "my_items": set(),
+    "my_items": [],
     "my_opponent": None,
     "player_positions": {},
     "enemy_team_stats": [],
@@ -190,7 +190,7 @@ class GameContext:
                 global_state["my_cs"] = int(float(scores.get("creepScore", 0)))
 
                 raw_items = p.get("items", [])
-                global_state["my_items"] = {i.get("displayName", "") for i in raw_items if i.get("displayName")}
+                global_state["my_items"] = [i.get("displayName", "") for i in raw_items if i.get("displayName")]
                 continue
 
             # 2. Opponent Stats
