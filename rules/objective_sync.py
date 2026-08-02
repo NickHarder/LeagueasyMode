@@ -12,14 +12,15 @@ class ObjectiveSyncRule(TacticalRule):
     def __init__(self) -> None:
         super().__init__(name="ObjectiveSync", priority=AlertPriority.CRITICAL, cooldown=60.0)
 
-        # Timers: Grubs/Drake at 5:00 (300s), Herald at 14:00 (840s), Baron at 20:00 (1200s)
+        # Separated timers: Drake at 5:00 (300s), Grubs at 8:00 (480s), Herald at 15:00 (900s), Baron at 20:00 (1200s)
         self.static_spawns: dict[str, ObjectiveInfo] = {
-            "first_grubs_drake": {"spawn_time": 300.0, "name": "Void Grubs and Dragon"},
-            "rift_herald": {"spawn_time": 840.0, "name": "Rift Herald"},
+            "first_dragon": {"spawn_time": 300.0, "name": "First Dragon"},
+            "first_grubs": {"spawn_time": 480.0, "name": "Void Grubs"},
+            "rift_herald": {"spawn_time": 900.0, "name": "Rift Herald"},
             "first_baron": {"spawn_time": 1200.0, "name": "Baron Nashor"},
         }
 
-        self.lookahead = 45.0  # Warn 45 seconds before spawn
+        self.lookahead = 55.0  # Warn 55 seconds before spawn
 
     def evaluate(
         self,
@@ -33,7 +34,7 @@ class ObjectiveSyncRule(TacticalRule):
             spawn_t = objective["spawn_time"]
             name = objective["name"]
 
-            # If we are in the 45-second lookahead window
+            # If we are in the 55-second lookahead window
             if spawn_t - self.lookahead <= t < spawn_t:
                 event_tag = f"obj_spawn_{key}"
 
@@ -43,12 +44,13 @@ class ObjectiveSyncRule(TacticalRule):
                         "id": 0.0,
                         "priority": int(self.priority),
                         "title": "MACRO SYNC",
-                        "text": f"{name} spawning in 45s. Secure priority.",
-                        "speech": f"{name} spawns in 45 seconds. Decide your pathing now.",
+                        "text": f"{name} spawning in 55s. Secure priority.",
+                        "speech": f"{name} spawns in 55 seconds. Decide your pathing now.",
                         "sound": "alert",
                     }
 
         # 2. Check Dynamic Respawns (Mid/Late Game)
+        # Default next drake to 300 so it aligns with the first spawn
         next_drake = game_state.get("next_dragon_time", 300.0)
         next_baron = game_state.get("next_baron_time", 1200.0)
 
@@ -61,8 +63,8 @@ class ObjectiveSyncRule(TacticalRule):
                     "id": 0.0,
                     "priority": int(self.priority),
                     "title": "DRAGON SYNC",
-                    "text": "Dragon respawns in 45s. Setup vision.",
-                    "speech": "Dragon respawns in 45 seconds. Establish vision control.",
+                    "text": "Dragon respawns in 55s. Setup vision.",
+                    "speech": "Dragon respawns in 55 seconds. Establish vision control.",
                     "sound": "alert",
                 }
 
@@ -75,8 +77,8 @@ class ObjectiveSyncRule(TacticalRule):
                     "id": 0.0,
                     "priority": int(self.priority),
                     "title": "BARON SYNC",
-                    "text": "Baron Nashor respawns in 45s.",
-                    "speech": "Baron spawns in 45 seconds. Sweep the pit.",
+                    "text": "Baron Nashor respawns in 55s.",
+                    "speech": "Baron spawns in 55 seconds. Sweep the pit.",
                     "sound": "alert",
                 }
 
