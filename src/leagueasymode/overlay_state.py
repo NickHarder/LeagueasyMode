@@ -90,6 +90,21 @@ class NumbersWindow(BaseModel):
     ends_at_game_time_seconds: float
 
 
+type CalloutKind = Literal["numbers_window", "level_spike", "objective_soon"]
+
+
+class Callout(BaseModel):
+    """A short notice shown for a few seconds when something happens; never an instruction."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    # Stable for one happening, so that the widget does not show it twice.
+    callout_id: str
+    kind: CalloutKind
+    text: str
+    shown_until_game_time_seconds: float
+
+
 class OverlayState(BaseModel):
     """Everything the overlay shows at one moment."""
 
@@ -103,6 +118,7 @@ class OverlayState(BaseModel):
     inhibitors: list[InhibitorTimer] = Field(default_factory=list)
     players: list[PlayerCard] = Field(default_factory=list)
     numbers_window: NumbersWindow | None = None
+    callouts: list[Callout] = Field(default_factory=list)
 
 
 if __name__ == "__main__":

@@ -6,6 +6,9 @@ skill has the format.
 
 ## 2026-10-08
 
+- Phase 2.3, callouts: short notices when an enemy reaches 6, 11 or 16, a numbers window opens,
+  or an objective comes within a minute, each once per game and shown for six game seconds. They
+  state facts; the policy keeps instructions out.
 - Phase 2.2: each player's card (side, role, level, respawn) and the numbers window, shown as a
   pill at the head of the strip and an enemy strip on the right. The strip is now centered across
   the whole width, where before it was held to half the screen and wrapped its pills.

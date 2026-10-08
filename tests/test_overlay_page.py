@@ -41,23 +41,33 @@ EN_DASH: Final = "\u2013"
 
 
 def scoreboard_at(
-    game_time_seconds: float, respawn_at_by_champion: dict[str, float]
+    game_time_seconds: float,
+    respawn_at_by_champion: dict[str, float],
+    zed_reaches_six_at_seconds: float | None = None,
 ) -> tuple[PlayerSeed, ...]:
+    def level_of(seed: PlayerSeed) -> int:
+        if seed.champion_name != "Zed" or zed_reaches_six_at_seconds is None:
+            return 9
+        return 6 if game_time_seconds >= zed_reaches_six_at_seconds else 5
+
     return tuple(
         dataclasses.replace(
             seed,
-            level=9,
+            level=level_of(seed),
             is_dead=True,
             respawn_timer_seconds=respawn_at_by_champion[seed.champion_name] - game_time_seconds,
         )
         if respawn_at_by_champion.get(seed.champion_name, 0.0) > game_time_seconds
-        else dataclasses.replace(seed, level=9)
+        else dataclasses.replace(seed, level=level_of(seed))
         for seed in DEFAULT_PLAYERS
     )
 
 
 def write_recording(
-    directory: Path, snapshot_count: int, respawn_at_by_champion: dict[str, float] | None = None
+    directory: Path,
+    snapshot_count: int,
+    respawn_at_by_champion: dict[str, float] | None = None,
+    zed_reaches_six_at_seconds: float | None = None,
 ) -> Path:
     writer = RecordingWriter(directory / "game.jsonl", keyframe_interval_seconds=60.0)
     writer.write_started(
@@ -77,7 +87,9 @@ def write_recording(
                 5, 1385.0, "Barracks_T2_L1", DEFAULT_PLAYERS[0].riot_id_game_name
             ),
         ]
-        players = scoreboard_at(game_time_seconds, respawn_at_by_champion or {})
+        players = scoreboard_at(
+            game_time_seconds, respawn_at_by_champion or {}, zed_reaches_six_at_seconds
+        )
         writer.write_snapshot(
             received_at_seconds=index * 0.5,
             payload=all_game_data(
@@ -94,9 +106,13 @@ async def open_overlay(
     snapshot_count: int,
     speed: float,
     respawn_at_by_champion: dict[str, float] | None = None,
+    zed_reaches_six_at_seconds: float | None = None,
 ) -> AsyncIterator[Page]:
     replay = RecordingReplay(
-        write_recording(tmp_path, snapshot_count, respawn_at_by_champion), speed=speed
+        write_recording(
+            tmp_path, snapshot_count, respawn_at_by_champion, zed_reaches_six_at_seconds
+        ),
+        speed=speed,
     )
     overlay_urls: list[str] = []
     overlay_is_up = asyncio.Event()
@@ -189,3 +205,14 @@ async def test_two_enemies_down_open_a_numbers_window_and_show_in_the_enemy_stri
         await expect(zed_row.locator(".enemy-respawn")).to_have_text(re.compile(r"^0:[12]\d$"))
         await expect(rows.filter(has_text="Lux")).to_have_attribute("data-dead", "false")
         await keep_screenshot(page, "numbers-and-enemies")
+
+
+async def test_an_enemy_reaching_level_six_is_called_out(tmp_path: Path) -> None:
+    async with open_overlay(
+        tmp_path, snapshot_count=60, speed=1.0, zed_reaches_six_at_seconds=1397.0
+    ) as page:
+        callout = page.locator('#callouts .callout[data-kind="level_spike"]')
+        await expect(callout).to_have_text("Zed is level 6", timeout=5000)
+        await keep_screenshot(page, "callout")
+        # Shown for six seconds of game time, then gone.
+        await expect(callout).to_have_count(0, timeout=10000)

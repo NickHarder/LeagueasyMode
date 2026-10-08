@@ -8,6 +8,7 @@
 
 import {
   type BuffTimer,
+  type Callout,
   type DragonTimer,
   type InhibitorTimer,
   type NumbersWindow,
@@ -275,12 +276,51 @@ function renderEnemyStrip(nowMilliseconds: number): void {
   strip.replaceChildren(...enemyCards.map((card) => enemyRowElement(card, gameTimeSeconds)));
 }
 
+/** Return the element that draws one callout. */
+function calloutElement(callout: Callout): HTMLElement {
+  const element = document.createElement("div");
+  element.className = "callout";
+  element.dataset["calloutId"] = callout.callout_id;
+  element.dataset["kind"] = callout.kind;
+  element.textContent = callout.text;
+  return element;
+}
+
+/**
+ * Draw the callouts still to be shown. Each element is kept from one render to the next by its id,
+ * so that its entrance plays once and not at every render.
+ */
+function renderCallouts(nowMilliseconds: number): void {
+  const list = requireElement("callouts");
+  const received = latestReceivedState;
+  const gameTimeSeconds = received === null ? null : currentGameTimeSeconds(received, nowMilliseconds);
+  const shownCallouts =
+    received === null || gameTimeSeconds === null || !received.state.is_game_running
+      ? []
+      : received.state.callouts.filter((callout) => callout.shown_until_game_time_seconds > gameTimeSeconds);
+  const shownIds = new Set(shownCallouts.map((callout) => callout.callout_id));
+  for (const child of Array.from(list.children)) {
+    if (child instanceof HTMLElement && !shownIds.has(child.dataset["calloutId"] ?? "")) {
+      child.remove();
+    }
+  }
+  const presentIds = new Set(
+    Array.from(list.children).map((child) => (child instanceof HTMLElement ? (child.dataset["calloutId"] ?? "") : "")),
+  );
+  for (const callout of shownCallouts) {
+    if (!presentIds.has(callout.callout_id)) {
+      list.append(calloutElement(callout));
+    }
+  }
+}
+
 /** Draw every widget. */
 function render(): void {
   const nowMilliseconds = performance.now();
   renderDragonWidget(nowMilliseconds);
   renderObjectivePills(nowMilliseconds);
   renderEnemyStrip(nowMilliseconds);
+  renderCallouts(nowMilliseconds);
 }
 
 /** Listen to the engine; the browser reconnects by itself when the stream drops. */

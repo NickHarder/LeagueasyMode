@@ -11,6 +11,7 @@ const EPIC_OBJECTIVES = new Set(["baron", "rift_herald", "voidgrubs"]);
 const OBJECTIVE_STATUSES = new Set(["not_spawned", "respawning", "alive", "gone"]);
 const BUFFS = new Set(["baron", "elder"]);
 const LANES = new Set(["top", "mid", "bot"]);
+const CALLOUT_KINDS = new Set(["numbers_window", "level_spike", "objective_soon"]);
 /** Return whether a value is a plain object, so that its fields can be read. */
 function isRecord(value) {
     return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -85,6 +86,14 @@ export function isNumbersWindow(value) {
         typeof value["enemy_dead_count"] === "number" &&
         typeof value["ends_at_game_time_seconds"] === "number");
 }
+/** Return whether a value is a callout as the engine sends it. */
+export function isCallout(value) {
+    return (isRecord(value) &&
+        typeof value["callout_id"] === "string" &&
+        isOneOf(value["kind"], CALLOUT_KINDS) &&
+        typeof value["text"] === "string" &&
+        typeof value["shown_until_game_time_seconds"] === "number");
+}
 /** Return whether a value is an overlay state as the engine sends it. */
 export function isOverlayState(value) {
     if (!isRecord(value)) {
@@ -98,5 +107,6 @@ export function isOverlayState(value) {
         isArrayOf(value["buffs"], isBuffTimer) &&
         isArrayOf(value["inhibitors"], isInhibitorTimer) &&
         isArrayOf(value["players"], isPlayerCard) &&
-        (value["numbers_window"] === null || isNumbersWindow(value["numbers_window"])));
+        (value["numbers_window"] === null || isNumbersWindow(value["numbers_window"])) &&
+        isArrayOf(value["callouts"], isCallout));
 }

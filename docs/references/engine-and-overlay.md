@@ -4,7 +4,7 @@ title: The engine and the overlay page
 description: How the engine turns the game's answers into the overlay's state, how that state reaches the widgets, how the page is built and tested, and how to run it all against a replay.
 tags: [engine, overlay, architecture]
 status: draft
-generated: { by: claude-code/cloud, at: 2026-10-08T15:20:00Z }
+generated: { by: claude-code/cloud, at: 2026-10-08T15:35:00Z }
 sources:
   - id: engine
     resource: ../../src/leagueasymode/engine.py
@@ -39,7 +39,8 @@ game API ─▶ GameApiClient ─▶ GameSnapshot ─▶ estimators ─▶ Overl
   page.[^cli]
 - **The engine** asks the game twice a second, reads the answer into typed models, runs the
   estimators and, when the result differs from the last, hands it to every subscriber. A reader
-  that falls behind gets the latest state only.[^engine]
+  that falls behind gets the latest state only. The callouts are the one part that remembers:
+  the engine compares each state with the one before.[^engine]
 - **The models of Riot's answer ignore fields they do not know**, unlike the project's own
   contracts, which refuse them: Riot adds fields between patches, and refusing one would stop the
   overlay mid-game on a patch day. The recorder keeps every answer whole, so nothing is lost.[^game-state]
@@ -56,6 +57,7 @@ game API ─▶ GameApiClient ─▶ GameSnapshot ─▶ estimators ─▶ Overl
 | Baron and Elder buffs | exact | to the team of the player who took the monster: Baron 3:00, Elder 2:30 |
 | Players and death timers | exact | each player's side, role as the game names it, level, and, while dead, when they respawn (`respawnTimer` added to the clock) |
 | Numbers window | exact | open while more enemies than allies are dead; it closes at the first respawn after which no more enemies than allies are dead; a death to come cannot be known, so it is never counted |
+| Callouts | exact: each states a fact at the moment it becomes true | "Zed is level 6" when an enemy crosses 6, 11 or 16 between two answers (not for levels already reached when the overlay starts); "2 enemies down for 0:24" when a numbers window opens or widens; "Baron in 1:00" (with "~" when the spawn time is provisional) when an objective comes within a minute; each once per game, shown for six game seconds; a clock that runs back more than five seconds starts a new game |
 | Inhibitors down | exact | back 5:00 after they fall, or when the feed says they respawned; `Barracks_T1_L1` is team 1's top inhibitor (L, C and R taken as top, mid and bottom, to be confirmed) |
 
 The long-standing rules are written as verified; the rest are checked against the first

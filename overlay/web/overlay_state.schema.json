@@ -33,6 +33,43 @@
       "title": "BuffTimer",
       "type": "object"
     },
+    "Callout": {
+      "additionalProperties": false,
+      "description": "A short notice shown for a few seconds when something happens; never an instruction.",
+      "properties": {
+        "callout_id": {
+          "title": "Callout Id",
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/$defs/CalloutKind"
+        },
+        "text": {
+          "title": "Text",
+          "type": "string"
+        },
+        "shown_until_game_time_seconds": {
+          "title": "Shown Until Game Time Seconds",
+          "type": "number"
+        }
+      },
+      "required": [
+        "callout_id",
+        "kind",
+        "text",
+        "shown_until_game_time_seconds"
+      ],
+      "title": "Callout",
+      "type": "object"
+    },
+    "CalloutKind": {
+      "enum": [
+        "numbers_window",
+        "level_spike",
+        "objective_soon"
+      ],
+      "type": "string"
+    },
     "DragonTimer": {
       "additionalProperties": false,
       "description": "The next dragon or Elder Dragon: when it spawns, and the race for the soul.\n\nEvery value restates the kill feed and the map; nothing here is estimated.",
@@ -332,6 +369,13 @@
         }
       ],
       "default": null
+    },
+    "callouts": {
+      "items": {
+        "$ref": "#/$defs/Callout"
+      },
+      "title": "Callouts",
+      "type": "array"
     }
   },
   "required": [

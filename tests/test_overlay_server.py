@@ -1,4 +1,5 @@
 import asyncio
+import dataclasses
 import json
 from pathlib import Path
 from typing import Final
@@ -167,3 +168,27 @@ def test_the_state_carries_the_players_and_the_numbers_window() -> None:
     state = compute_overlay_state(game_with_a_dragon_taken_at(400.0, 450.0))
     assert len(state.players) == 10
     assert state.numbers_window is None
+
+
+async def test_the_engine_adds_a_callout_when_an_enemy_reaches_level_six() -> None:
+    def game_at(game_time_seconds: float, zed_level: int) -> JsonValue:
+        players = tuple(
+            dataclasses.replace(seed, level=zed_level) if seed.champion_name == "Zed" else seed
+            for seed in DEFAULT_PLAYERS
+        )
+        return all_game_data(game_time_seconds, [game_start_event()], players=players)
+
+    answers = [game_at(400.0, 5), game_at(401.0, 6)]
+    async with serve(scripted_game(answers)) as game_url, aiohttp.ClientSession() as session:
+        engine = OverlayEngine(
+            GameApiClient(session, game_url, tls_context=None), poll_interval_seconds=0.01
+        )
+        updates = engine.subscribe()
+        stop_requested = asyncio.Event()
+        engine_task = asyncio.create_task(engine.run(stop_requested))
+        first_state = await asyncio.wait_for(updates.get(), timeout=2)
+        second_state = await asyncio.wait_for(updates.get(), timeout=2)
+        stop_requested.set()
+        await engine_task
+    assert first_state.callouts == []
+    assert [callout.text for callout in second_state.callouts] == ["Zed is level 6"]

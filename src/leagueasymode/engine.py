@@ -8,6 +8,7 @@ from pydantic import JsonValue, ValidationError
 
 from leagueasymode.game_api import GameApiClient
 from leagueasymode.game_state import GameSnapshot
+from leagueasymode.inference.callouts import CalloutTracker
 from leagueasymode.inference.objectives import (
     buff_timers,
     dragon_timer,
@@ -51,7 +52,11 @@ def compute_overlay_state(payload: JsonValue | None) -> OverlayState:
 
 
 class OverlayEngine:
-    """Keeps the overlay's state current and passes each new state to its subscribers."""
+    """Keeps the overlay's state current and passes each new state to its subscribers.
+
+    The state of one answer is worked out on its own (`compute_overlay_state`); the callouts, which
+    depend on what changed since the last answer, are added by the engine, which remembers.
+    """
 
     def __init__(self, game_api: GameApiClient, poll_interval_seconds: float) -> None:
         """Keep the game's API and how often to ask it.
@@ -63,6 +68,7 @@ class OverlayEngine:
         self.game_api: Final = game_api
         self.poll_interval_seconds: Final = poll_interval_seconds
         self._current_state = NOT_RUNNING
+        self._callouts: Final = CalloutTracker()
         self._subscribers: Final[set[asyncio.Queue[OverlayState]]] = set()
 
     @property
@@ -95,7 +101,10 @@ class OverlayEngine:
             stop_requested: Set to stop.
         """
         while not stop_requested.is_set():
-            new_state = compute_overlay_state(await self.game_api.fetch_all_game_data())
+            answer_state = compute_overlay_state(await self.game_api.fetch_all_game_data())
+            new_state = answer_state.model_copy(
+                update={"callouts": self._callouts.update(answer_state)}
+            )
             if new_state != self._current_state:
                 self._current_state = new_state
                 self._publish(new_state)

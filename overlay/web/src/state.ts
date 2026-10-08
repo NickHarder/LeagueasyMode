@@ -63,6 +63,16 @@ export interface NumbersWindow {
   readonly ends_at_game_time_seconds: number;
 }
 
+export type CalloutKind = "numbers_window" | "level_spike" | "objective_soon";
+
+/** A short notice shown for a few seconds when something happens; never an instruction. */
+export interface Callout {
+  readonly callout_id: string;
+  readonly kind: CalloutKind;
+  readonly text: string;
+  readonly shown_until_game_time_seconds: number;
+}
+
 /** Everything the overlay shows at one moment. */
 export interface OverlayState {
   readonly is_game_running: boolean;
@@ -73,6 +83,7 @@ export interface OverlayState {
   readonly inhibitors: readonly InhibitorTimer[];
   readonly players: readonly PlayerCard[];
   readonly numbers_window: NumbersWindow | null;
+  readonly callouts: readonly Callout[];
 }
 
 const DRAGON_OBJECTIVES: ReadonlySet<string> = new Set(["dragon", "elder_dragon"]);
@@ -82,6 +93,7 @@ const EPIC_OBJECTIVES: ReadonlySet<string> = new Set(["baron", "rift_herald", "v
 const OBJECTIVE_STATUSES: ReadonlySet<string> = new Set(["not_spawned", "respawning", "alive", "gone"]);
 const BUFFS: ReadonlySet<string> = new Set(["baron", "elder"]);
 const LANES: ReadonlySet<string> = new Set(["top", "mid", "bot"]);
+const CALLOUT_KINDS: ReadonlySet<string> = new Set(["numbers_window", "level_spike", "objective_soon"]);
 
 /** Return whether a value is a plain object, so that its fields can be read. */
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -179,6 +191,17 @@ export function isNumbersWindow(value: unknown): value is NumbersWindow {
   );
 }
 
+/** Return whether a value is a callout as the engine sends it. */
+export function isCallout(value: unknown): value is Callout {
+  return (
+    isRecord(value) &&
+    typeof value["callout_id"] === "string" &&
+    isOneOf(value["kind"], CALLOUT_KINDS) &&
+    typeof value["text"] === "string" &&
+    typeof value["shown_until_game_time_seconds"] === "number"
+  );
+}
+
 /** Return whether a value is an overlay state as the engine sends it. */
 export function isOverlayState(value: unknown): value is OverlayState {
   if (!isRecord(value)) {
@@ -193,6 +216,7 @@ export function isOverlayState(value: unknown): value is OverlayState {
     isArrayOf(value["buffs"], isBuffTimer) &&
     isArrayOf(value["inhibitors"], isInhibitorTimer) &&
     isArrayOf(value["players"], isPlayerCard) &&
-    (value["numbers_window"] === null || isNumbersWindow(value["numbers_window"]))
+    (value["numbers_window"] === null || isNumbersWindow(value["numbers_window"])) &&
+    isArrayOf(value["callouts"], isCallout)
   );
 }
