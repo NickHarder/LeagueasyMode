@@ -27,6 +27,7 @@ import {
   type PositionClue,
   type PositionEstimate,
   type RankedStanding,
+  type WardEstimate,
   isOverlayState,
 } from "./state.js";
 
@@ -68,6 +69,8 @@ const LIKELY_TO_AFFORD = 0.75;
 const PERCENT = 100;
 // At most this many camps are shown under the strip's header.
 const SHOWN_CAMP_COUNT = 4;
+// At most this many of the enemies' control wards are shown under it.
+const SHOWN_WARD_COUNT = 3;
 // An enemy's likely place is shown once they have been unseen this long.
 const LOCATION_SHOWN_AFTER_SECONDS = 10;
 // An enemy's latest clue to their place is shown for this long after it.
@@ -397,6 +400,20 @@ export function formatCampTimers(timers: readonly CampTimer[], gameTimeSeconds: 
   return `Camps: ${shown.join(" \u00b7 ")}`;
 }
 
+/** Return the enemies' control wards likely down: "Wards: Vi likely top river 60% · 2:10 ago". */
+export function formatEnemyWards(wards: readonly WardEstimate[], gameTimeSeconds: number): string | null {
+  const enemyWards = wards.filter((ward) => ward.side === "enemy").slice(0, SHOWN_WARD_COUNT);
+  if (enemyWards.length === 0) {
+    return null;
+  }
+  const shown = enemyWards.map(
+    (ward) =>
+      `${ward.champion_name} likely ${ward.label} ${String(Math.round(ward.chance * PERCENT))}% \u00b7 ` +
+      `${formatCountdown(gameTimeSeconds - ward.placed_at_game_time_seconds)} ago`,
+  );
+  return `Wards: ${shown.join("; ")}`;
+}
+
 /** Return a header of the enemy strip: a label and the player's team's lead, colored by side. */
 function leadElement(className: string, label: string, leadGold: number, valueText: string): HTMLElement {
   const header = document.createElement("div");
@@ -641,6 +658,13 @@ function renderEnemyStrip(nowMilliseconds: number): void {
     campElement.className = "camp-timers";
     campElement.textContent = campTimersText;
     campElements.push(campElement);
+  }
+  const wardsText = formatEnemyWards(received.state.control_wards, gameTimeSeconds);
+  if (wardsText !== null) {
+    const wardsElement = document.createElement("div");
+    wardsElement.className = "camp-timers ward-list";
+    wardsElement.textContent = wardsText;
+    campElements.push(wardsElement);
   }
   strip.replaceChildren(...leadElements(received.state), ...campElements, ...rows);
 }

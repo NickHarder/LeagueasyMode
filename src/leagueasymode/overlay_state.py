@@ -382,6 +382,24 @@ class JunglePath(BaseModel):
     next_camp_at_game_time_seconds: float | None
 
 
+class WardEstimate(BaseModel):
+    """Where a player's control ward likely is: placed when their count dropped, where they were.
+
+    An estimate (`inference/wards.py`): the moment is known from the inventory, the place is the
+    position estimate's likeliest region then. Each player has one control ward down at a time.
+    """
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    champion_name: str
+    side: Literal["ally", "enemy"]
+    placed_at_game_time_seconds: float
+    # The map's region, in words from your side, and the chance it is there.
+    region: str
+    label: str
+    chance: float
+
+
 class Callout(BaseModel):
     """A short notice shown for a few seconds when something happens.
 
@@ -415,6 +433,7 @@ class OverlayState(BaseModel):
     cooldowns: list[CooldownTimer] = Field(default_factory=list)
     jungle_paths: list[JunglePath] = Field(default_factory=list)
     camp_timers: list[CampTimer] = Field(default_factory=list)
+    control_wards: list[WardEstimate] = Field(default_factory=list)
     callouts: list[Callout] = Field(default_factory=list)
 
 

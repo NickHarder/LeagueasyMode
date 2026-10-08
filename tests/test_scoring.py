@@ -28,6 +28,7 @@ from leagueasymode.scoring import (
     read_recorded_game,
     score_backs,
     score_combat_stats,
+    score_control_wards,
     score_experience,
     score_gold,
     score_jungle_path,
@@ -509,3 +510,60 @@ def test_the_jungle_path_is_scored_by_how_far_the_timeline_puts_the_jungler_from
     assert score is not None
     assert score.sample_count == 1
     assert score.value == pytest.approx(300.0, abs=1)
+
+
+def ward_placed(participant_id: int, game_time_seconds: float, ward_type: str) -> JsonValue:
+    return {
+        "type": "WARD_PLACED",
+        "timestamp": round(game_time_seconds * 1000),
+        "creatorId": participant_id,
+        "wardType": ward_type,
+    }
+
+
+def test_control_wards_are_scored_against_the_timelines_placements(tmp_path: Path) -> None:
+    # Vi (participant 7) holds a control ward until 8:00, which the tracker sees placed. Caitlyn
+    # (9) places one at 10:00 the built scoreboard never shows; a trinket ward does not count.
+    players_by_minute = {
+        minute: tuple(
+            dataclasses.replace(seed, items=((2055, "Control Ward", 75),) if minute < 8 else ())
+            if seed.champion_name == "Vi"
+            else seed
+            for seed in DEFAULT_PLAYERS
+        )
+        for minute in range(16)
+    }
+    events_by_minute: dict[int, list[JsonValue]] = {
+        7: [ward_placed(7, 479.5, "CONTROL_WARD"), ward_placed(7, 470.0, "YELLOW_TRINKET")],
+        10: [ward_placed(9, 600.0, "CONTROL_WARD")],
+    }
+    writer = RecordingWriter(tmp_path / "game.jsonl", keyframe_interval_seconds=60.0)
+    writer.write_started(
+        started_at=datetime.datetime(2026, 10, 8, tzinfo=datetime.UTC),
+        recorder_version="test",
+        poll_interval_seconds=0.5,
+    )
+    for path, payload in [
+        (GAMEFLOW_SESSION_PATH, gameflow_session()),
+        (CHAMPION_SUMMARY_PATH, champion_summary()),
+    ]:
+        writer.write_client_resource(received_at_seconds=0.0, path=path, payload=payload)
+    for minute in range(16):
+        writer.write_snapshot(
+            received_at_seconds=minute * 60.0,
+            payload=all_game_data(minute * 60.0, players=players_by_minute[minute]),
+        )
+    writer.write_client_resource(
+        received_at_seconds=1000.0,
+        path=GAME_DETAILS_PATH_TEMPLATE.format(game_id=GAME_ID),
+        payload=game_details({seed.champion_name: seed.position for seed in DEFAULT_PLAYERS}),
+    )
+    writer.write_client_resource(
+        received_at_seconds=1000.0,
+        path=TIMELINE_PATH_TEMPLATE.format(game_id=GAME_ID),
+        payload=game_timeline(events_by_minute=events_by_minute),
+    )
+    writer.write_ended(received_at_seconds=1000.0, reason="game ended")
+    of_the_timeline, of_those_seen = score_control_wards(read_recorded_game(writer.close()))
+    assert of_the_timeline.describe() == "control wards (of the timeline's): 1/2 matched (50%)"
+    assert of_those_seen.describe() == "control wards (of those seen): 1/1 matched (100%)"

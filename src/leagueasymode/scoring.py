@@ -25,6 +25,9 @@ compared with what is known to be true:
 - **Jungle path** (estimator 8): at each minute of the timeline, a jungler whose decoded camp was
   finished within 30 seconds before it should be near that camp; how far the timeline puts them
   from it, on average.
+- **Control wards** (estimator 9): the timeline records each control ward placed; one seen
+  within 10 seconds of it is matched, both ways. Where it was is not recorded, so only the moment
+  is scored.
 - **The map** (phase 4.1): every player's position each minute on the timeline should lie near a
   path of the hand-built map; how far it lies on average says how well the map was drawn.
 - **Backs** (estimator 6): the timeline records every purchase. One made alive (not within a
@@ -57,6 +60,7 @@ from leagueasymode.inference.jungle_path import JunglePathTracker
 from leagueasymode.inference.positions import position_estimate
 from leagueasymode.inference.rift_map import RIFT_MAP, RiftMap
 from leagueasymode.inference.roles import assign_roles
+from leagueasymode.inference.wards import WardTracker
 from leagueasymode.overlay_state import (
     CombatStats,
     GoldEstimate,
@@ -85,6 +89,10 @@ SAME_TRIP_SECONDS: Final = 30.0
 TRIP_MATCH_SECONDS: Final = 20.0
 # A jungler's decoded camp this recent before a frame of the timeline is where they should be.
 RECENT_CAMP_SECONDS: Final = 30.0
+WARD_PLACED_EVENT: Final = "WARD_PLACED"
+CONTROL_WARD_TYPE: Final = "CONTROL_WARD"
+# A placement seen this close to one the timeline records is the same.
+WARD_MATCH_SECONDS: Final = 10.0
 SECONDS_PER_MINUTE: Final = 60
 TEAM_BY_ID: Final = {100: "ORDER", 200: "CHAOS"}
 PERCENT: Final = 100.0
@@ -177,6 +185,8 @@ class RecordedGame:
     minute_position_estimates: Mapping[int, Mapping[PlayerKey, PositionEstimate]]
     # Each jungler's last decoded camp and when they finished it, at each minute's start.
     minute_jungle_camps: Mapping[int, Mapping[PlayerKey, tuple[str, float]]]
+    # When the ward tracker saw each player place a control ward, in game seconds.
+    control_wards_seen: Mapping[PlayerKey, tuple[float, ...]]
 
 
 class DetailsTimeline(RiotPayloadModel):
@@ -229,6 +239,9 @@ class TimelineEvent(RiotPayloadModel):
     item_id: int = Field(default=0, alias="itemId")
     # The champion a kill killed.
     victim_id: int = Field(default=0, alias="victimId")
+    # The placer of a ward, and its kind.
+    creator_id: int = Field(default=0, alias="creatorId")
+    ward_type: str = Field(default="", alias="wardType")
 
 
 class TimelineFrame(RiotPayloadModel):
@@ -282,6 +295,7 @@ def read_recorded_game(recording_path: Path) -> RecordedGame:
     back_tracker = BackTracker()
     clue_tracker = ClueTracker()
     jungle_tracker = JunglePathTracker()
+    ward_tracker = WardTracker()
     jungle_camps_by_minute: dict[int, Mapping[PlayerKey, tuple[str, float]]] = {}
     trips_by_player: dict[PlayerKey, list[float]] = {}
     position_estimates_by_minute: dict[int, Mapping[PlayerKey, PositionEstimate]] = {}
@@ -305,6 +319,7 @@ def read_recorded_game(recording_path: Path) -> RecordedGame:
                 player_trips.append(last_back.shopped_at_game_time_seconds)
         position_clues = clue_tracker.update(snapshot, last_backs)
         jungle_tracker.update(snapshot)
+        ward_tracker.update(snapshot, {})
         is_minute_start = game_time_seconds - game_minute * SECONDS_PER_MINUTE <= (
             FRAME_ALIGNMENT_SECONDS
         )
@@ -323,6 +338,7 @@ def read_recorded_game(recording_path: Path) -> RecordedGame:
         trips_seen={key: tuple(trips) for key, trips in trips_by_player.items()},
         minute_position_estimates=position_estimates_by_minute,
         minute_jungle_camps=jungle_camps_by_minute,
+        control_wards_seen=ward_tracker.placements(),
     )
 
 
@@ -612,6 +628,64 @@ def score_jungle_path(game: RecordedGame) -> EstimatorScore | None:
     )
 
 
+def score_control_wards(game: RecordedGame) -> list[EstimatorScore]:
+    """Score the control wards seen placed against those the timeline records.
+
+    Args:
+        game: The recorded game.
+
+    Returns:
+        The share of the timeline's placements seen, and of those seen that it has; nothing
+        without a timeline, the game's details, or a placement to score.
+    """
+    timeline = _game_timeline(game)
+    if timeline is None:
+        return []
+    events = [event for frame in timeline.frames for event in frame.events]
+    timeline_placements = {
+        key: tuple(
+            event.timestamp_milliseconds / MILLISECONDS_PER_SECOND
+            for event in events
+            if event.event_type == WARD_PLACED_EVENT
+            and event.ward_type == CONTROL_WARD_TYPE
+            and event.creator_id == participant.participant_id
+        )
+        for key, participant in _details_participants(game)
+    }
+    true_placements = [
+        (key, placed_at) for key, times in timeline_placements.items() for placed_at in times
+    ]
+    seen_placements = [
+        (key, placed_at) for key, times in game.control_wards_seen.items() for placed_at in times
+    ]
+    if not true_placements or not seen_placements:
+        return []
+    return [
+        EstimatorScore(
+            estimator="control wards (of the timeline's)",
+            sample_count=len(true_placements),
+            value=sum(
+                1
+                for key, placed_at in true_placements
+                if _is_within(placed_at, game.control_wards_seen.get(key, ()), WARD_MATCH_SECONDS)
+            )
+            / len(true_placements),
+            measure="share_matched",
+        ),
+        EstimatorScore(
+            estimator="control wards (of those seen)",
+            sample_count=len(seen_placements),
+            value=sum(
+                1
+                for key, placed_at in seen_placements
+                if _is_within(placed_at, timeline_placements.get(key, ()), WARD_MATCH_SECONDS)
+            )
+            / len(seen_placements),
+            measure="share_matched",
+        ),
+    ]
+
+
 def score_map(game: RecordedGame, rift_map: RiftMap = RIFT_MAP) -> EstimatorScore | None:
     """Score the map by how far the timeline's positions lie from its paths.
 
@@ -734,6 +808,7 @@ def score_game(game: RecordedGame, patch_stats: PatchStats | None) -> list[Estim
         *(score for score in [score_next_items(game, patch_stats)] if score is not None),
         *score_backs(game),
         *score_positions(game),
+        *score_control_wards(game),
         *(score for score in [score_jungle_path(game), score_map(game)] if score is not None),
     ]
 
@@ -968,6 +1043,22 @@ def _distance_to_segment(
     return math.hypot(
         x_position - (start_x + along * path_x), y_position - (start_y + along * path_y)
     )
+
+
+def _is_within(
+    moment_seconds: float, other_moments_seconds: tuple[float, ...], within_seconds: float
+) -> bool:
+    """Return whether one of other moments is close to a moment.
+
+    Args:
+        moment_seconds: The moment.
+        other_moments_seconds: The others.
+        within_seconds: How close counts.
+
+    Returns:
+        Whether one is within that of it.
+    """
+    return any(abs(moment_seconds - other) <= within_seconds for other in other_moments_seconds)
 
 
 def _is_near(trip_seconds: float, other_trips_seconds: tuple[float, ...]) -> bool:
