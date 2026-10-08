@@ -3,7 +3,7 @@
 If you are picking this work up, human or model: read this file top to bottom first. The `handoff` skill
 refreshes it; it describes the current state.
 
-Last updated: 2026-10-08, on branch `feat/win-chance`. `main` holds phases 0 to 4 (pull requests
+Last updated: 2026-10-08, on branch `feat/fights`. `main` holds phases 0 to 4 (pull requests
 #2 to #20, merged).
 
 ## Where things stand
@@ -16,13 +16,14 @@ built but for structures, left out until the first recordings. Phase 3
 approved) and phase 4 ([docs/plans/phase-4-positions.md](docs/plans/phase-4-positions.md), a
 draft built on its best guesses) are built and merged. Phase 5 has a draft plan
 ([docs/plans/phase-5-models.md](docs/plans/phase-5-models.md)): its models are built hand-set now
-and refit once a few dozen recordings exist. 5.1, win chance, is on `feat/win-chance`. Each slice
+and refit once a few dozen recordings exist. 5.1, win chance, is pull request #21
+(`feat/win-chance`); 5.2, fights, is on `feat/fights`, which carries 5.1. Each slice
 goes up as its own pull request into `main` without waiting for the one before to merge.
 
 | Area | State | Proof |
 |---|---|---|
 | Scaffold | ai-kit v0.11.1, Python layer, GitHub CI | `.copier-answers.yml` |
-| Gate | Green: lint, 663 tests (and 19 in Chromium), secrets | `make gate` |
+| Gate | Green: lint, 674 tests (and 20 in Chromium), secrets | `make gate` |
 | Recorder | Records games, the client's patch data and the post-game timeline; anonymized copies | `uv run leagueasymode record`; `tests/test_recorder.py`, `tests/test_anonymize.py` |
 | Replay | A recording served as a stand-in game API | `uv run leagueasymode replay <recording>`; `tests/test_replay.py` |
 | Engine and overlay page | The dragon and Elder timer, from the game's answer to the page | `uv run leagueasymode run`; `tests/test_tracer_bullet.py` |

@@ -421,6 +421,23 @@ class MinimapLayout(BaseModel):
     is_flipped: bool
 
 
+class FightEstimate(BaseModel):
+    """An even fight now: every living player of both teams, at full health, all at once.
+
+    An estimate (`inference/fights.py`): each team's damage times its health against the other's
+    damage, from the combat stats, as Lanchester's square law has it; hand-set until refit.
+    """
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    ally_chance: float
+    ally_fighters: int
+    enemy_fighters: int
+    # The share of each team's damage that is physical, the rest magic.
+    ally_physical_share: float
+    enemy_physical_share: float
+
+
 class WinReason(BaseModel):
     """One thing moving the win chance, from the player's side."""
 
@@ -482,6 +499,8 @@ class OverlayState(BaseModel):
     # None while League's settings are not known; the minimap layer then takes the default place.
     minimap: MinimapLayout | None = None
     win_chance: WinChance | None = None
+    # None while any living player's combat stats are unknown.
+    fight: FightEstimate | None = None
     callouts: list[Callout] = Field(default_factory=list)
 
 

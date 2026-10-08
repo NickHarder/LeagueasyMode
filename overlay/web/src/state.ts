@@ -263,6 +263,15 @@ export interface MinimapLayout {
   readonly is_flipped: boolean;
 }
 
+/** An even fight now, every living player at full health: an estimate. */
+export interface FightEstimate {
+  readonly ally_chance: number;
+  readonly ally_fighters: number;
+  readonly enemy_fighters: number;
+  readonly ally_physical_share: number;
+  readonly enemy_physical_share: number;
+}
+
 /** One thing moving the win chance, from the player's side: above 0 for their team. */
 export interface WinReason {
   readonly label: string;
@@ -293,6 +302,7 @@ export interface OverlayState {
   readonly control_wards: readonly WardEstimate[];
   readonly minimap: MinimapLayout | null;
   readonly win_chance: WinChance | null;
+  readonly fight: FightEstimate | null;
   readonly callouts: readonly Callout[];
 }
 
@@ -662,6 +672,18 @@ export function isWinChance(value: unknown): value is WinChance {
   return isRecord(value) && typeof value["ally_chance"] === "number" && isArrayOf(value["reasons"], isWinReason);
 }
 
+/** Return whether a value is an even fight's estimate as the engine sends it. */
+export function isFightEstimate(value: unknown): value is FightEstimate {
+  return (
+    isRecord(value) &&
+    typeof value["ally_chance"] === "number" &&
+    typeof value["ally_fighters"] === "number" &&
+    typeof value["enemy_fighters"] === "number" &&
+    typeof value["ally_physical_share"] === "number" &&
+    typeof value["enemy_physical_share"] === "number"
+  );
+}
+
 /** Return whether a value is an overlay state as the engine sends it. */
 export function isOverlayState(value: unknown): value is OverlayState {
   if (!isRecord(value)) {
@@ -685,6 +707,7 @@ export function isOverlayState(value: unknown): value is OverlayState {
     isArrayOf(value["control_wards"], isWardEstimate) &&
     (value["minimap"] === null || isMinimapLayout(value["minimap"])) &&
     (value["win_chance"] === null || isWinChance(value["win_chance"])) &&
+    (value["fight"] === null || isFightEstimate(value["fight"])) &&
     isArrayOf(value["callouts"], isCallout)
   );
 }

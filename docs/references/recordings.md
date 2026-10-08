@@ -42,7 +42,10 @@ minute against the region nearest their timeline position (how often the likelie
 the chance on the true one); each jungler's decoded camp, by how far the timeline puts them from
 it at a minute that came within 30 seconds of it; the control wards seen placed against the
 timeline's, both ways (it records when, not where); the map, by how far the timeline's position
-of each player each minute lies from its paths; and the win chance at the start of each minute
+of each player each minute lies from its paths; each fight of the timeline (two kills or more,
+each within 15 seconds of the last and 3000 units of the first), the chance its players had from
+the last answer before it against the team that lost fewer, by its Brier score; and the win
+chance at the start of each minute
 against the result the game's details record, by its Brier score (0.25 for a coin flip every
 minute, lower is better).[^scoring]
 

@@ -290,6 +290,15 @@ export function isWinReason(value) {
 export function isWinChance(value) {
     return isRecord(value) && typeof value["ally_chance"] === "number" && isArrayOf(value["reasons"], isWinReason);
 }
+/** Return whether a value is an even fight's estimate as the engine sends it. */
+export function isFightEstimate(value) {
+    return (isRecord(value) &&
+        typeof value["ally_chance"] === "number" &&
+        typeof value["ally_fighters"] === "number" &&
+        typeof value["enemy_fighters"] === "number" &&
+        typeof value["ally_physical_share"] === "number" &&
+        typeof value["enemy_physical_share"] === "number");
+}
 /** Return whether a value is an overlay state as the engine sends it. */
 export function isOverlayState(value) {
     if (!isRecord(value)) {
@@ -312,5 +321,6 @@ export function isOverlayState(value) {
         isArrayOf(value["control_wards"], isWardEstimate) &&
         (value["minimap"] === null || isMinimapLayout(value["minimap"])) &&
         (value["win_chance"] === null || isWinChance(value["win_chance"])) &&
+        (value["fight"] === null || isFightEstimate(value["fight"])) &&
         isArrayOf(value["callouts"], isCallout));
 }

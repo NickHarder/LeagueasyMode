@@ -48,8 +48,9 @@ Proposed, built on a best guess until the owner says otherwise, as before:
 1. **Win chance on screen (5.1).** Some players play worse watching a falling number. Proposed:
    shown, small, at the head of the enemy strip above the gold leads, with its two reasons; the
    line over the game only in the post-game window (phase 6) at first.
-2. **Fight chance wording (5.2).** Proposed: "Fight now ~58%" beside the numbers window, with
-   "their damage 70% physical" under it.
+2. **Fight chance wording (5.2).** Proposed: "Fight now ~58% · their damage 70% physical" in
+   the enemy strip's header, under the win chance, with "5v4" after the chance when the counts
+   differ.
 3. **Contest wording (5.3).** Proposed: shown only while a monster is up or due within 0:30.
 4. **The You panel's threshold (5.4).** Proposed: "holding gold" counts from the moment your
    unspent gold passes 1,300 (about a component and a ward) while alive and out of base.

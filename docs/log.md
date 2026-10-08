@@ -6,6 +6,14 @@ skill has the format.
 
 ## 2026-10-08
 
+- Phase 5.2, fights (estimator 10): an even fight now, every living player at full health. Each
+  player's damage a second, physical and magic, from their combat stats and Riot's rating of
+  the champion's damage (Data Dragon's `info`, now read), and their effective health against
+  the other team's mix; by Lanchester's square law the side with more damage times health wins,
+  the chance a logistic of the ratio's logarithm. The enemy strip's header shows it with the
+  enemy's damage mix; the harness scores it on the timeline's fights (kills close in time and
+  place), against the team that lost fewer. The per-player combat stats helper moved into
+  `combat_stats.py` for the fights and the harness to share.
 - Phase 5.1, win chance (estimator 12): a logistic model over the gold lead as a share of the
   gold earned, levels, turrets, inhibitors, dragons, the soul, the Baron and Elder buffs, players
   alive and the side, with hand-set weights (a 2.5k lead at 15:00 wins about 3 in 4, as seasons 7
