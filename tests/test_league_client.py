@@ -8,6 +8,7 @@ from aiohttp import web
 from leagueasymode.league_client import (
     ClientCredentials,
     LeagueClient,
+    SharedAnswers,
     find_client_credentials,
     parse_lockfile,
     parse_process_arguments,
@@ -110,3 +111,51 @@ async def test_a_wrong_password_or_a_missing_path_is_no_answer() -> None:
 
 def test_the_credentials_never_print_the_password() -> None:
     assert CLIENT_PASSWORD not in repr(ClientCredentials(port=54321, password=CLIENT_PASSWORD))
+
+
+def counting_client_application(
+    requested_paths: list[str], failing: bool = False
+) -> web.Application:
+    application = web.Application()
+
+    async def ranked_route(request: web.Request) -> web.Response:
+        requested_paths.append(request.path_qs)
+        if failing:
+            return web.json_response({"message": "busy"}, status=429)
+        return web.json_response({"queues": []})
+
+    application.router.add_get("/lol-ranked/v1/ranked-stats/{puuid}", ranked_route)
+    application.router.add_get("/lol-patch/v1/game-version", ranked_route)
+    return application
+
+
+async def test_clients_sharing_answers_ask_a_shared_question_once() -> None:
+    requested_paths: list[str] = []
+    shared_answers = SharedAnswers(("/lol-ranked/",))
+    async with (
+        serve(counting_client_application(requested_paths)) as base_url,
+        aiohttp.ClientSession() as session,
+    ):
+        engines_client = LeagueClient(session, base_url, "", None, shared_answers=shared_answers)
+        recorders_client = LeagueClient(session, base_url, "", None, shared_answers=shared_answers)
+        first = await engines_client.get_json("/lol-ranked/v1/ranked-stats/puuid-1")
+        second = await recorders_client.get_json("/lol-ranked/v1/ranked-stats/puuid-1")
+        # A question outside the shared ones is asked each time.
+        await engines_client.get_json("/lol-patch/v1/game-version")
+        await recorders_client.get_json("/lol-patch/v1/game-version")
+    assert first == second == {"queues": []}
+    assert requested_paths.count("/lol-ranked/v1/ranked-stats/puuid-1") == 1
+    assert requested_paths.count("/lol-patch/v1/game-version") == 2
+
+
+async def test_a_shared_question_left_unanswered_is_asked_again() -> None:
+    requested_paths: list[str] = []
+    shared_answers = SharedAnswers(("/lol-ranked/",))
+    async with (
+        serve(counting_client_application(requested_paths, failing=True)) as base_url,
+        aiohttp.ClientSession() as session,
+    ):
+        client = LeagueClient(session, base_url, "", None, shared_answers=shared_answers)
+        assert await client.get_json("/lol-ranked/v1/ranked-stats/puuid-1") is None
+        assert await client.get_json("/lol-ranked/v1/ranked-stats/puuid-1") is None
+    assert len(requested_paths) == 2

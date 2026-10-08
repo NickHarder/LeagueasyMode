@@ -30,9 +30,11 @@ from leagueasymode.league_client import (
     DEFAULT_LOCKFILE_PATHS,
     ClientConnector,
     LeagueClient,
+    SharedAnswers,
     find_client_credentials,
 )
 from leagueasymode.overlay_server import create_overlay_application
+from leagueasymode.player_intel import PLAYER_LOOKUP_PATH_PREFIXES
 from leagueasymode.recorder import RecorderTimings, record_games
 from leagueasymode.recording.anonymize import IdentityLeakError, anonymize_recording
 from leagueasymode.recording.file_format import COMPRESSED_SUFFIX, PLAIN_SUFFIX
@@ -94,12 +96,15 @@ async def run_overlay(
         stop_requested: Set to stop.
         announce_url: Called once with the overlay page's address, when the server is up.
     """
+    # The engine and the recorder both ask about each player; they share the answers.
+    shared_answers = SharedAnswers(PLAYER_LOOKUP_PATH_PREFIXES)
     async with aiohttp.ClientSession() as session:
         engine = OverlayEngine(
             _game_api(session, settings),
             settings.poll_interval_seconds,
-            _client_connector(session, settings),
+            _client_connector(session, settings, shared_answers),
             _patch_stats_loader(session, settings),
+            settings.player_lookup_pause_seconds,
         )
         runner = web.AppRunner(create_overlay_application(engine))
         await runner.setup()
@@ -111,9 +116,12 @@ async def run_overlay(
         async def record_in_background() -> None:
             await record_games(
                 _game_api(session, settings),
-                _client_connector(session, settings),
+                _client_connector(session, settings, shared_answers),
                 settings.recordings_directory or default_recordings_directory(),
-                RecorderTimings(poll_interval_seconds=settings.poll_interval_seconds),
+                RecorderTimings(
+                    poll_interval_seconds=settings.poll_interval_seconds,
+                    lookup_pause_seconds=settings.player_lookup_pause_seconds,
+                ),
                 stop_requested,
             )
 
@@ -145,6 +153,7 @@ async def record_until_stopped(
     timings = RecorderTimings(
         poll_interval_seconds=settings.poll_interval_seconds,
         idle_poll_interval_seconds=idle_poll_interval_seconds,
+        lookup_pause_seconds=settings.player_lookup_pause_seconds,
     )
     async with aiohttp.ClientSession() as session:
         logger.info("waiting for a game; recordings go to %s", recordings_directory)
@@ -175,7 +184,11 @@ def _game_api(session: aiohttp.ClientSession, settings: Settings) -> GameApiClie
     )
 
 
-def _client_connector(session: aiohttp.ClientSession, settings: Settings) -> ClientConnector:
+def _client_connector(
+    session: aiohttp.ClientSession,
+    settings: Settings,
+    shared_answers: SharedAnswers | None = None,
+) -> ClientConnector:
     """Return what finds the League client when a game starts.
 
     With `league_client_base_url` set, the client is that address, such as a replay's, reached
@@ -184,6 +197,7 @@ def _client_connector(session: aiohttp.ClientSession, settings: Settings) -> Cli
     Args:
         session: The HTTP session.
         settings: Where the client's lockfile is, or a stand-in's address.
+        shared_answers: Answers shared with other clients of the same League client, or None.
 
     Returns:
         A function returning the client, or None when it is not running.
@@ -192,7 +206,13 @@ def _client_connector(session: aiohttp.ClientSession, settings: Settings) -> Cli
     if stand_in_base_url:
 
         async def connect_to_stand_in() -> LeagueClient | None:
-            return LeagueClient(session, stand_in_base_url, password="", tls_context=None)
+            return LeagueClient(
+                session,
+                stand_in_base_url,
+                password="",
+                tls_context=None,
+                shared_answers=shared_answers,
+            )
 
         return connect_to_stand_in
 
@@ -208,7 +228,11 @@ def _client_connector(session: aiohttp.ClientSession, settings: Settings) -> Cli
             logger.warning("the League client is not running; going on without its data")
             return None
         return LeagueClient(
-            session, credentials.base_url, credentials.password, create_riot_tls_context()
+            session,
+            credentials.base_url,
+            credentials.password,
+            create_riot_tls_context(),
+            shared_answers=shared_answers,
         )
 
     return connect_to_client

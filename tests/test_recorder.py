@@ -7,7 +7,17 @@ import aiohttp
 from aiohttp import web
 from pydantic import JsonValue
 
-from game_payloads import GAME_ID, all_game_data, game_start_event, gameflow_session
+from game_payloads import (
+    DEFAULT_PLAYERS,
+    GAME_ID,
+    all_game_data,
+    champion_summary,
+    game_start_event,
+    gameflow_session,
+    match_history,
+    puuid_of,
+    ranked_stats,
+)
 from leagueasymode.game_api import GameApiClient
 from leagueasymode.league_client import LeagueClient
 from leagueasymode.recorder import RecorderTimings, record_one_game
@@ -21,6 +31,7 @@ FAST_TIMINGS: Final = RecorderTimings(
     game_end_grace_seconds=0.3,
     timeline_wait_seconds=1.0,
     timeline_retry_seconds=0.02,
+    lookup_pause_seconds=0.0,
 )
 STAND_IN_PASSWORD: Final = "stand-in"  # noqa: S105  the stand-in client's password
 TIMELINE: Final[JsonValue] = {"frames": [{"timestamp": 0, "participantFrames": {}}]}
@@ -199,3 +210,35 @@ async def test_nothing_is_written_until_a_game_answers(tmp_path: Path) -> None:
         recording_path = await waiting
     assert recording_path is None
     assert await asyncio.to_thread(lambda: list(tmp_path.iterdir())) == []
+
+
+async def test_each_players_rank_and_recent_games_are_recorded(tmp_path: Path) -> None:
+    client_application = stand_in_client(timeline_misses=0)
+    zed_puuid = puuid_of(DEFAULT_PLAYERS[7])
+
+    async def summary_route(_request: web.Request) -> web.Response:
+        return web.json_response(champion_summary())
+
+    async def ranked_route(_request: web.Request) -> web.Response:
+        return web.json_response(ranked_stats("GOLD", "I", 75, 20, 18))
+
+    async def history_route(request: web.Request) -> web.Response:
+        return web.json_response(match_history(request.match_info["puuid"], []))
+
+    client_application.router.add_get(
+        "/lol-game-data/assets/v1/champion-summary.json", summary_route
+    )
+    client_application.router.add_get("/lol-ranked/v1/ranked-stats/{puuid}", ranked_route)
+    client_application.router.add_get(
+        "/lol-match-history/v1/products/lol/{puuid}/matches", history_route
+    )
+    recording_path = await record(
+        tmp_path, a_game_of(5, ends_with_game_end=True), client_application
+    )
+    paths = {
+        line.path
+        for line in iter_recording_lines(recording_path)
+        if isinstance(line, ClientResource)
+    }
+    assert f"/lol-ranked/v1/ranked-stats/{zed_puuid}" in paths
+    assert f"/lol-match-history/v1/products/lol/{zed_puuid}/matches?begIndex=0&endIndex=20" in paths

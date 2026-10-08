@@ -157,7 +157,8 @@ def create_replay_application(replay: RecordingReplay) -> web.Application:
         return part
 
     async def client_resource(request: web.Request) -> web.Response:
-        payload = replay.client_resource_now(request.path)
+        # With its query, as the recorder kept it: match history is asked for with one.
+        payload = replay.client_resource_now(request.path_qs)
         if payload is None:
             return web.json_response({"message": "not in the recording yet"}, status=404)
         return web.json_response(payload)

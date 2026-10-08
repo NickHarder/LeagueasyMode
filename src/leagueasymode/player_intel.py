@@ -29,6 +29,11 @@ MATCH_HISTORY_PATH_TEMPLATE: Final = (
     "/lol-match-history/v1/products/lol/{puuid}/matches?begIndex=0&endIndex="
     + str(RECENT_GAME_COUNT)
 )
+# The questions about players, whose answers the engine and the recorder share.
+PLAYER_LOOKUP_PATH_PREFIXES: Final = (
+    "/lol-ranked/v1/ranked-stats/",
+    "/lol-match-history/v1/products/lol/",
+)
 DEFAULT_PAUSE_SECONDS: Final = 0.25
 # Solo queue first: its rank is the one a player is known by.
 RANKED_QUEUES: Final[tuple[tuple[str, Literal["solo", "flex"]], ...]] = (
@@ -374,6 +379,19 @@ async def _look_up(client: LeagueClient, puuid: str, pause_seconds: float) -> Pl
         ranked=ranked_standing_of(ranked_payload),
         recent_games=tuple(recent_games_of(history_payload, puuid)),
     )
+
+
+def puuids_in_game(session_payload: JsonValue | None) -> list[str]:
+    """Return the PUUID of each player in the game in progress, team one first.
+
+    Args:
+        session_payload: The client's answer for its gameflow session, or None.
+
+    Returns:
+        The PUUIDs; empty when the client lists no game.
+    """
+    game_data = _gameflow_session_of(session_payload).game_data
+    return [player.puuid for player in [*game_data.team_one, *game_data.team_two] if player.puuid]
 
 
 def _gameflow_session_of(payload: JsonValue | None) -> GameflowSession:

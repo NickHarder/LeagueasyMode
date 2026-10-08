@@ -20,6 +20,12 @@ from leagueasymode import __version__
 from leagueasymode.game_api import GameApiClient
 from leagueasymode.league_client import GAMEFLOW_SESSION_PATH, ClientConnector, LeagueClient
 from leagueasymode.patch_data import CHAMPION_SUMMARY_PATH, GAME_VERSION_PATH, ITEMS_PATH
+from leagueasymode.player_intel import (
+    DEFAULT_PAUSE_SECONDS,
+    MATCH_HISTORY_PATH_TEMPLATE,
+    RANKED_STATS_PATH_TEMPLATE,
+    puuids_in_game,
+)
 from leagueasymode.recording.file_format import PLAIN_SUFFIX
 from leagueasymode.recording.writer import DEFAULT_KEYFRAME_INTERVAL_SECONDS, RecordingWriter
 
@@ -59,6 +65,8 @@ class RecorderTimings:
     timeline_wait_seconds: float = 600.0
     timeline_retry_seconds: float = 15.0
     keyframe_interval_seconds: float = DEFAULT_KEYFRAME_INTERVAL_SECONDS
+    # The pause after each question about a player, to stay gentle on the client and on Riot.
+    lookup_pause_seconds: float = DEFAULT_PAUSE_SECONDS
 
 
 class _SharedRecording:
@@ -219,7 +227,9 @@ async def _record_until_game_over(
     recording = _SharedRecording(writer, await connect_to_client())
     logger.info("recording a game to %s", recording_path)
     await recording.write_snapshot(first_payload)
-    start_task = asyncio.create_task(_record_client_data_at_start(recording, first_payload))
+    start_task = asyncio.create_task(
+        _record_client_data_at_start(recording, first_payload, timings.lookup_pause_seconds)
+    )
     try:
         reason = await _record_snapshots(
             game_api, recording, first_payload, timings, stop_requested
@@ -297,13 +307,17 @@ async def _record_snapshots(
 
 
 async def _record_client_data_at_start(
-    recording: _SharedRecording, first_payload: JsonValue
+    recording: _SharedRecording, first_payload: JsonValue, lookup_pause_seconds: float
 ) -> int | None:
     """Write what the League client knows at the start of a game, and return the game's id.
+
+    That is the gameflow session, the patch's data, each champion's details, and each player's
+    ranked stats and recent games, the answers the engine's loading-screen intel reads.
 
     Args:
         recording: The open recording.
         first_payload: The game's first answer, which names the champions in the game.
+        lookup_pause_seconds: The pause after each question about a player.
 
     Returns:
         The game's id, or None when the client is not running or does not say.
@@ -321,6 +335,10 @@ async def _record_client_data_at_start(
         await _record_client_resource(
             recording, client, CHAMPION_DETAILS_PATH_TEMPLATE.format(champion_id=champion_id)
         )
+    for puuid in puuids_in_game(session):
+        for path_template in (RANKED_STATS_PATH_TEMPLATE, MATCH_HISTORY_PATH_TEMPLATE):
+            await _record_client_resource(recording, client, path_template.format(puuid=puuid))
+            await asyncio.sleep(lookup_pause_seconds)
     return _game_id_of(session)
 
 

@@ -133,3 +133,26 @@ async def test_the_replay_serves_the_clients_resources_once_reached(tmp_path: Pa
             base_url + "/lol-match-history/v1/game-timelines/1"
         ) as late_response:
             assert late_response.status == 200
+
+
+async def test_a_client_path_is_served_with_its_query_as_it_was_recorded(tmp_path: Path) -> None:
+    history_path = "/lol-match-history/v1/products/lol/puuid-1/matches?begIndex=0&endIndex=20"
+    writer = RecordingWriter(tmp_path / "query.jsonl", keyframe_interval_seconds=1.0)
+    writer.write_started(
+        started_at=datetime.datetime(2026, 10, 8, tzinfo=datetime.UTC),
+        recorder_version="test",
+        poll_interval_seconds=0.5,
+    )
+    writer.write_snapshot(received_at_seconds=0.0, payload=all_game_data(10.0))
+    writer.write_client_resource(
+        received_at_seconds=0.0, path=history_path, payload={"games": {"games": []}}
+    )
+    writer.write_ended(received_at_seconds=1.0, reason="game ended")
+    replay = RecordingReplay(writer.close(), speed=1.0, clock=ManualClock())
+    async with (
+        serve(create_replay_application(replay)) as base_url,
+        aiohttp.ClientSession() as session,
+        session.get(base_url + history_path) as history_response,
+    ):
+        assert history_response.status == 200
+        assert await history_response.json() == {"games": {"games": []}}

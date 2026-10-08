@@ -1,5 +1,6 @@
 import asyncio
 import dataclasses
+from pathlib import Path
 from typing import Final
 
 import aiohttp
@@ -17,11 +18,13 @@ from game_payloads import (
     puuid_of,
     ranked_stats,
 )
+from leagueasymode.cli import run_overlay
+from leagueasymode.config import Settings
 from leagueasymode.engine import OverlayEngine, compute_overlay_state
 from leagueasymode.game_api import GameApiClient
 from leagueasymode.inference.intel import player_intel
 from leagueasymode.league_client import LeagueClient
-from leagueasymode.overlay_state import RankedStanding
+from leagueasymode.overlay_state import OverlayState, RankedStanding
 from leagueasymode.player_intel import (
     PlayerRecord,
     RecentGame,
@@ -318,3 +321,50 @@ async def test_the_engine_looks_the_players_up_when_a_game_starts() -> None:
     assert zed_card.intel is not None
     assert zed_card.intel.champion_game_count == 3
     assert len(requested_paths) == 20
+
+
+async def test_running_and_recording_together_ask_about_each_player_once(tmp_path: Path) -> None:
+    requested_paths: list[str] = []
+    client_application = fake_league_client(requested_paths, set())
+    game_application = web.Application()
+    answers: list[JsonValue] = [all_game_data(60.0 + index * 0.1) for index in range(400)]
+
+    async def answer(_request: web.Request) -> web.Response:
+        return web.json_response(answers.pop(0) if answers else None)
+
+    game_application.router.add_get("/liveclientdata/allgamedata", answer)
+    overlay_urls: list[str] = []
+    async with (
+        serve(game_application) as game_url,
+        serve(client_application) as client_url,
+        aiohttp.ClientSession() as session,
+    ):
+        settings = Settings(
+            game_api_base_url=game_url,
+            league_client_base_url=client_url,
+            recordings_directory=tmp_path / "recordings",
+            download_patch_stats=False,
+            patch_data_directory=tmp_path / "patch-data",
+            poll_interval_seconds=0.01,
+            player_lookup_pause_seconds=0.0,
+        )
+        stop_requested = asyncio.Event()
+        overlay_task = asyncio.create_task(
+            run_overlay(settings, stop_requested, overlay_urls.append)
+        )
+        state = OverlayState(is_game_running=False)
+        for _ in range(300):
+            await asyncio.sleep(0.01)
+            if not overlay_urls:
+                continue
+            async with session.get(overlay_urls[0] + "state") as response:
+                state = OverlayState.model_validate(await response.json())
+            if len(requested_paths) >= 20 and any(card.intel for card in state.players):
+                break
+        # Give the slower of the two time to ask, had it not shared the answers.
+        await asyncio.sleep(0.3)
+        stop_requested.set()
+        await overlay_task
+    assert any(card.intel for card in state.players)
+    assert len(requested_paths) == 20
+    assert len(set(requested_paths)) == 20
