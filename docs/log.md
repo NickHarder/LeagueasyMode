@@ -6,6 +6,10 @@ skill has the format.
 
 ## 2026-10-08
 
+- Phase 3 planned in [plans/phase-3-economy-and-open-policy.md](plans/phase-3-economy-and-open-policy.md):
+  the hidden economy from the approved plan, plus what the owner's open policy adds (loading-screen
+  intel, cooldowns the player marks, suggestions), with the three that help from the first game
+  proposed first.
 - Pull requests #2, #3 and #4 merged; #3 and #4 went into the branches they were stacked on, so
   pull request #5 brings `feat/exact-facts`, which holds all of them, into `main`.
 - The owner's answers: `truststore` stays; Data Dragon may be allowed in this environment's network
