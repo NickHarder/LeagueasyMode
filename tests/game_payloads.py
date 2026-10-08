@@ -244,3 +244,49 @@ def gameflow_session(phase: str = "InProgress") -> JsonValue:
             ],
         },
     }
+
+
+def baron_kill_event(event_id: int, event_time: float, killer_name: str) -> dict[str, JsonValue]:
+    return {
+        "EventID": event_id,
+        "EventName": "BaronKill",
+        "EventTime": event_time,
+        "Stolen": "False",
+        "KillerName": killer_name,
+        "Assisters": [],
+    }
+
+
+def herald_kill_event(event_id: int, event_time: float, killer_name: str) -> dict[str, JsonValue]:
+    return {
+        "EventID": event_id,
+        "EventName": "HeraldKill",
+        "EventTime": event_time,
+        "Stolen": "False",
+        "KillerName": killer_name,
+        "Assisters": [],
+    }
+
+
+def inhibitor_killed_event(
+    event_id: int, event_time: float, inhibitor_name: str, killer_name: str
+) -> dict[str, JsonValue]:
+    return {
+        "EventID": event_id,
+        "EventName": "InhibKilled",
+        "EventTime": event_time,
+        "InhibKilled": inhibitor_name,
+        "KillerName": killer_name,
+        "Assisters": [],
+    }
+
+
+def inhibitor_respawned_event(
+    event_id: int, event_time: float, inhibitor_name: str
+) -> dict[str, JsonValue]:
+    return {
+        "EventID": event_id,
+        "EventName": "InhibRespawned",
+        "EventTime": event_time,
+        "InhibRespawned": inhibitor_name,
+    }

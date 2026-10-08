@@ -29,7 +29,8 @@ name replaced, which is the only kind that goes into this repository.
 make bootstrap    # once per clone
 make gate         # everything a push must pass
 uv run leagueasymode replay <recording> --speed 10    # a recorded game, served as a stand-in game API
-LEAGUEASYMODE_GAME_API_BASE_URL=http://127.0.0.1:2998 uv run leagueasymode run   # the overlay, against it
+LEAGUEASYMODE_GAME_API_BASE_URL=http://127.0.0.1:2998 LEAGUEASYMODE_LEAGUE_CLIENT_BASE_URL=http://127.0.0.1:2998 \
+  uv run leagueasymode run   # the overlay, against it
 ```
 
 How the engine, the overlay page and its widgets fit together is in

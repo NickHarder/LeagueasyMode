@@ -1,4 +1,5 @@
 import asyncio
+import dataclasses
 import json
 from pathlib import Path
 from typing import Final
@@ -11,6 +12,7 @@ from pydantic import JsonValue
 from game_payloads import DEFAULT_PLAYERS, all_game_data, dragon_kill_event, game_start_event
 from leagueasymode.engine import OverlayEngine, compute_overlay_state
 from leagueasymode.game_api import GameApiClient
+from leagueasymode.league_client import LeagueClient
 from leagueasymode.overlay_server import create_overlay_application
 from leagueasymode.overlay_state import OverlayState
 from local_servers import serve, unused_local_url
@@ -136,3 +138,92 @@ async def test_a_request_for_another_host_is_refused() -> None:
                 overlay_url + "/state", headers={"Host": "localhost"}
             ) as allowed_response:
                 assert allowed_response.status == 200
+
+
+def test_the_state_carries_every_objective_buff_and_inhibitor() -> None:
+    state = compute_overlay_state(game_with_a_dragon_taken_at(400.0, 450.0))
+    assert [timer.objective for timer in state.objectives] == ["voidgrubs", "rift_herald", "baron"]
+    assert state.buffs == []
+    assert state.inhibitors == []
+
+
+async def test_the_server_stops_promptly_while_a_page_still_listens() -> None:
+    async with aiohttp.ClientSession() as session:
+        engine = OverlayEngine(
+            GameApiClient(session, unused_local_url(), tls_context=None), poll_interval_seconds=1
+        )
+        runner = web.AppRunner(create_overlay_application(engine))
+        await runner.setup()
+        site = web.TCPSite(runner, "127.0.0.1", 0)
+        await site.start()
+        host, port = runner.addresses[0][:2]
+        async with session.get(f"http://{host}:{port}/events") as events_response:
+            await events_response.content.readuntil(b"\n\n")
+            started_at = asyncio.get_running_loop().time()
+            await asyncio.wait_for(runner.cleanup(), timeout=10)
+            stop_seconds = asyncio.get_running_loop().time() - started_at
+    assert stop_seconds < 2.0
+
+
+def test_the_state_carries_the_players_and_the_numbers_window() -> None:
+    state = compute_overlay_state(game_with_a_dragon_taken_at(400.0, 450.0))
+    assert len(state.players) == 10
+    assert state.numbers_window is None
+
+
+async def test_the_engine_adds_a_callout_when_an_enemy_reaches_level_six() -> None:
+    def game_at(game_time_seconds: float, zed_level: int) -> JsonValue:
+        players = tuple(
+            dataclasses.replace(seed, level=zed_level) if seed.champion_name == "Zed" else seed
+            for seed in DEFAULT_PLAYERS
+        )
+        return all_game_data(game_time_seconds, [game_start_event()], players=players)
+
+    answers = [game_at(400.0, 5), game_at(401.0, 6)]
+    async with serve(scripted_game(answers)) as game_url, aiohttp.ClientSession() as session:
+        engine = OverlayEngine(
+            GameApiClient(session, game_url, tls_context=None), poll_interval_seconds=0.01
+        )
+        updates = engine.subscribe()
+        stop_requested = asyncio.Event()
+        engine_task = asyncio.create_task(engine.run(stop_requested))
+        first_state = await asyncio.wait_for(updates.get(), timeout=2)
+        second_state = await asyncio.wait_for(updates.get(), timeout=2)
+        stop_requested.set()
+        await engine_task
+    assert first_state.callouts == []
+    assert [callout.text for callout in second_state.callouts] == ["Zed is level 6"]
+
+
+async def test_the_engine_loads_the_item_catalog_from_the_client_when_a_game_starts() -> None:
+    answers = [game_with_a_dragon_taken_at(400.0, 450.0 + index) for index in range(20)]
+    client_application = web.Application()
+
+    async def items_route(_request: web.Request) -> web.Response:
+        return web.json_response([{"id": 3031, "name": "Infinity Edge", "priceTotal": 3400}])
+
+    client_application.router.add_get("/lol-game-data/assets/v1/items.json", items_route)
+    async with (
+        serve(scripted_game(answers)) as game_url,
+        serve(client_application) as client_url,
+        aiohttp.ClientSession() as session,
+    ):
+
+        async def connect_to_client() -> LeagueClient | None:
+            return LeagueClient(session, client_url, password="", tls_context=None)
+
+        engine = OverlayEngine(
+            GameApiClient(session, game_url, tls_context=None),
+            poll_interval_seconds=0.01,
+            connect_to_client=connect_to_client,
+        )
+        stop_requested = asyncio.Event()
+        engine_task = asyncio.create_task(engine.run(stop_requested))
+        for _ in range(100):
+            if engine.item_catalog is not None:
+                break
+            await asyncio.sleep(0.01)
+        stop_requested.set()
+        await engine_task
+    assert engine.item_catalog is not None
+    assert engine.item_catalog.total_price(3031) == 3400

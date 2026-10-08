@@ -6,7 +6,17 @@
  * seconds, so a paused or stalled game does not run its timers down.
  */
 
-import { type DragonTimer, type OverlayState, isOverlayState } from "./state.js";
+import {
+  type BuffTimer,
+  type Callout,
+  type DragonTimer,
+  type InhibitorTimer,
+  type NumbersWindow,
+  type ObjectiveTimer,
+  type OverlayState,
+  type PlayerCard,
+  isOverlayState,
+} from "./state.js";
 
 const EVENTS_PATH = "/events";
 const RENDER_INTERVAL_MILLISECONDS = 250;
@@ -22,6 +32,42 @@ const SOUL_COLORS: Readonly<Record<string, string>> = {
   Chemtech: "#9bd13f",
 };
 const NEUTRAL_DRAGON_COLOR = "#d8b65a";
+// An epic monster shows once it is this close to spawning, or up.
+const UPCOMING_OBJECTIVE_SECONDS = 90;
+const OBJECTIVE_NAMES: Readonly<Record<ObjectiveTimer["objective"], string>> = {
+  baron: "Baron",
+  rift_herald: "Herald",
+  voidgrubs: "Voidgrubs",
+};
+const BUFF_NAMES: Readonly<Record<BuffTimer["buff"], string>> = {
+  baron: "Baron buff",
+  elder: "Elder buff",
+};
+const LANE_NAMES: Readonly<Record<InhibitorTimer["lane"], string>> = {
+  top: "top",
+  mid: "mid",
+  bot: "bot",
+};
+const GOLD_PER_THOUSAND = 1000;
+const ROLE_ORDER: readonly string[] = ["TOP", "JUNGLE", "MIDDLE", "BOTTOM", "UTILITY"];
+const ROLE_SHORT_NAMES: Readonly<Record<string, string>> = {
+  TOP: "TOP",
+  JUNGLE: "JGL",
+  MIDDLE: "MID",
+  BOTTOM: "BOT",
+  UTILITY: "SUP",
+};
+// A timer whose rule is not yet confirmed for this season is shown with this mark.
+const PROVISIONAL_MARK = "~";
+
+/** One small pill of the objective strip: its words, its time, and how it is styled. */
+interface Pill {
+  readonly label: string;
+  readonly timeText: string;
+  readonly kind: "numbers" | "objective" | "buff" | "inhibitor";
+  readonly side: "ally" | "enemy" | "neutral";
+  readonly isUp: boolean;
+}
 
 /** A state from the engine, and when it arrived on this page's clock. */
 interface ReceivedState {
@@ -93,9 +139,248 @@ function renderDragonWidget(nowMilliseconds: number): void {
     (dragon.soul_type !== null ? SOUL_COLORS[dragon.soul_type] : undefined) ?? NEUTRAL_DRAGON_COLOR;
 }
 
+/** Return the pill for an epic monster, or null when it is gone or not yet close. */
+export function objectivePill(timer: ObjectiveTimer, gameTimeSeconds: number): Pill | null {
+  const spawnsAtSeconds = timer.spawns_at_game_time_seconds;
+  if (timer.status === "gone" || spawnsAtSeconds === null) {
+    return null;
+  }
+  const remainingSeconds = spawnsAtSeconds - gameTimeSeconds;
+  if (remainingSeconds > UPCOMING_OBJECTIVE_SECONDS) {
+    return null;
+  }
+  const isUp = remainingSeconds <= 0;
+  const provisionalMark = timer.is_rule_verified ? "" : PROVISIONAL_MARK;
+  return {
+    label: OBJECTIVE_NAMES[timer.objective],
+    timeText: isUp ? "up" : `${provisionalMark}${formatCountdown(remainingSeconds)}`,
+    kind: "objective",
+    side: "neutral",
+    isUp,
+  };
+}
+
+/** Return the pill for a running buff, or null once it has run out. */
+export function buffPill(timer: BuffTimer, gameTimeSeconds: number): Pill | null {
+  const remainingSeconds = timer.ends_at_game_time_seconds - gameTimeSeconds;
+  if (remainingSeconds <= 0) {
+    return null;
+  }
+  const holderText = timer.holder === "ally" ? "Your" : "Enemy";
+  return {
+    label: `${holderText} ${BUFF_NAMES[timer.buff].toLowerCase()}`,
+    timeText: formatCountdown(remainingSeconds),
+    kind: "buff",
+    side: timer.holder,
+    isUp: false,
+  };
+}
+
+/** Return the pill for a destroyed inhibitor, or null once it is back. */
+export function inhibitorPill(timer: InhibitorTimer, gameTimeSeconds: number): Pill | null {
+  const remainingSeconds = timer.respawns_at_game_time_seconds - gameTimeSeconds;
+  if (remainingSeconds <= 0) {
+    return null;
+  }
+  const sideText = timer.side === "ally" ? "Your" : "Enemy";
+  return {
+    label: `${sideText} ${LANE_NAMES[timer.lane]} inhib`,
+    timeText: formatCountdown(remainingSeconds),
+    kind: "inhibitor",
+    side: timer.side,
+    isUp: false,
+  };
+}
+
+/** Return the pill for a numbers window, or null once it has closed. */
+export function numbersPill(window: NumbersWindow, gameTimeSeconds: number): Pill | null {
+  const remainingSeconds = window.ends_at_game_time_seconds - gameTimeSeconds;
+  if (remainingSeconds <= 0) {
+    return null;
+  }
+  const enemyText = window.enemy_dead_count === 1 ? "enemy" : "enemies";
+  return {
+    label: `${window.enemy_dead_count} ${enemyText} down (${window.ally_dead_count} of yours)`,
+    timeText: formatCountdown(remainingSeconds),
+    kind: "numbers",
+    side: "ally",
+    isUp: false,
+  };
+}
+
+/** Return every pill to show beside the dragon, in a steady order. */
+function stripPills(state: OverlayState, gameTimeSeconds: number): Pill[] {
+  const candidatePills = [
+    state.numbers_window === null ? null : numbersPill(state.numbers_window, gameTimeSeconds),
+    ...state.objectives.map((timer) => objectivePill(timer, gameTimeSeconds)),
+    ...state.buffs.map((timer) => buffPill(timer, gameTimeSeconds)),
+    ...state.inhibitors.map((timer) => inhibitorPill(timer, gameTimeSeconds)),
+  ];
+  return candidatePills.filter((pill): pill is Pill => pill !== null);
+}
+
+/** Return the element that draws one pill. */
+function pillElement(pill: Pill): HTMLElement {
+  const element = document.createElement("span");
+  element.className = "pill";
+  element.dataset["kind"] = pill.kind;
+  element.dataset["side"] = pill.side;
+  element.dataset["state"] = pill.isUp ? "alive" : "waiting";
+  const labelElement = document.createElement("span");
+  labelElement.className = "pill-label";
+  labelElement.textContent = pill.label;
+  const timeElement = document.createElement("span");
+  timeElement.className = "pill-time";
+  timeElement.textContent = pill.timeText;
+  element.append(labelElement, timeElement);
+  return element;
+}
+
+/** Draw the pills beside the dragon: other monsters, buffs and inhibitors. */
+function renderObjectivePills(nowMilliseconds: number): void {
+  const pillRow = requireElement("objective-pills");
+  const received = latestReceivedState;
+  const gameTimeSeconds = received === null ? null : currentGameTimeSeconds(received, nowMilliseconds);
+  if (received === null || !received.state.is_game_running || gameTimeSeconds === null) {
+    pillRow.replaceChildren();
+    return;
+  }
+  pillRow.replaceChildren(...stripPills(received.state, gameTimeSeconds).map(pillElement));
+}
+
+/** Return gold in thousands with one decimal: 3400 is "3.4k". */
+export function formatGold(gold: number): string {
+  return `${(gold / GOLD_PER_THOUSAND).toFixed(1)}k`;
+}
+
+/** Return a team's item-gold lead with its sign: "+1.2k", "−0.8k", or "even". */
+export function formatGoldLead(leadGold: number): string {
+  const roundedLead = Math.round(leadGold / 100) * 100;
+  if (roundedLead === 0) {
+    return "even";
+  }
+  return roundedLead > 0 ? `+${formatGold(roundedLead)}` : `\u2212${formatGold(-roundedLead)}`;
+}
+
+/** Return the enemy strip's header: the player's team's item-gold lead, when it is known. */
+function itemLeadElement(state: OverlayState): HTMLElement | null {
+  const teamGold = state.team_item_gold;
+  if (teamGold === null) {
+    return null;
+  }
+  const leadGold = teamGold.ally_item_gold - teamGold.enemy_item_gold;
+  const header = document.createElement("div");
+  header.className = "item-lead";
+  header.dataset["lead"] = leadGold > 0 ? "ally" : leadGold < 0 ? "enemy" : "even";
+  const labelElement = document.createElement("span");
+  labelElement.textContent = "Item gold";
+  const valueElement = document.createElement("span");
+  valueElement.className = "item-lead-value";
+  valueElement.textContent = formatGoldLead(leadGold);
+  header.append(labelElement, valueElement);
+  return header;
+}
+
+/** Return the row that draws one enemy: champion, level, item gold, and the death timer. */
+function enemyRowElement(card: PlayerCard, gameTimeSeconds: number): HTMLElement {
+  const row = document.createElement("div");
+  row.className = "enemy-row";
+  row.dataset["dead"] = card.is_dead ? "true" : "false";
+  const roleElement = document.createElement("span");
+  roleElement.className = "enemy-role";
+  roleElement.dataset["confidence"] = card.role_confidence;
+  const roleName = ROLE_SHORT_NAMES[card.role] ?? "";
+  roleElement.textContent = card.role_confidence === "guess" && roleName !== "" ? `${roleName}?` : roleName;
+  const nameElement = document.createElement("span");
+  nameElement.className = "enemy-name";
+  nameElement.textContent = card.champion_name;
+  const levelElement = document.createElement("span");
+  levelElement.className = "enemy-level";
+  levelElement.textContent = String(card.level);
+  const goldElement = document.createElement("span");
+  goldElement.className = "enemy-gold";
+  goldElement.textContent = card.item_gold === null ? "" : formatGold(card.item_gold);
+  row.append(roleElement, nameElement, levelElement, goldElement);
+  const respawnsAtSeconds = card.respawns_at_game_time_seconds;
+  if (card.is_dead && respawnsAtSeconds !== null) {
+    const respawnElement = document.createElement("span");
+    respawnElement.className = "enemy-respawn";
+    respawnElement.textContent = formatCountdown(respawnsAtSeconds - gameTimeSeconds);
+    row.append(respawnElement);
+  }
+  return row;
+}
+
+/** Return a card's place in role order, unknown roles last. */
+function roleRank(card: PlayerCard): number {
+  const rank = ROLE_ORDER.indexOf(card.role);
+  return rank === -1 ? ROLE_ORDER.length : rank;
+}
+
+/** Draw the enemy strip: each enemy's champion, level and death timer. */
+function renderEnemyStrip(nowMilliseconds: number): void {
+  const strip = requireElement("enemy-strip");
+  const received = latestReceivedState;
+  const gameTimeSeconds = received === null ? null : currentGameTimeSeconds(received, nowMilliseconds);
+  if (received === null || !received.state.is_game_running || gameTimeSeconds === null) {
+    strip.hidden = true;
+    strip.replaceChildren();
+    return;
+  }
+  const enemyCards = [...received.state.players.filter((card) => card.side === "enemy")].sort(
+    (first, second) => roleRank(first) - roleRank(second),
+  );
+  strip.hidden = enemyCards.length === 0;
+  const header = itemLeadElement(received.state);
+  const rows = enemyCards.map((card) => enemyRowElement(card, gameTimeSeconds));
+  strip.replaceChildren(...(header === null ? rows : [header, ...rows]));
+}
+
+/** Return the element that draws one callout. */
+function calloutElement(callout: Callout): HTMLElement {
+  const element = document.createElement("div");
+  element.className = "callout";
+  element.dataset["calloutId"] = callout.callout_id;
+  element.dataset["kind"] = callout.kind;
+  element.textContent = callout.text;
+  return element;
+}
+
+/**
+ * Draw the callouts still to be shown. Each element is kept from one render to the next by its id,
+ * so that its entrance plays once and not at every render.
+ */
+function renderCallouts(nowMilliseconds: number): void {
+  const list = requireElement("callouts");
+  const received = latestReceivedState;
+  const gameTimeSeconds = received === null ? null : currentGameTimeSeconds(received, nowMilliseconds);
+  const shownCallouts =
+    received === null || gameTimeSeconds === null || !received.state.is_game_running
+      ? []
+      : received.state.callouts.filter((callout) => callout.shown_until_game_time_seconds > gameTimeSeconds);
+  const shownIds = new Set(shownCallouts.map((callout) => callout.callout_id));
+  for (const child of Array.from(list.children)) {
+    if (child instanceof HTMLElement && !shownIds.has(child.dataset["calloutId"] ?? "")) {
+      child.remove();
+    }
+  }
+  const presentIds = new Set(
+    Array.from(list.children).map((child) => (child instanceof HTMLElement ? (child.dataset["calloutId"] ?? "") : "")),
+  );
+  for (const callout of shownCallouts) {
+    if (!presentIds.has(callout.callout_id)) {
+      list.append(calloutElement(callout));
+    }
+  }
+}
+
 /** Draw every widget. */
 function render(): void {
-  renderDragonWidget(performance.now());
+  const nowMilliseconds = performance.now();
+  renderDragonWidget(nowMilliseconds);
+  renderObjectivePills(nowMilliseconds);
+  renderEnemyStrip(nowMilliseconds);
+  renderCallouts(nowMilliseconds);
 }
 
 /** Listen to the engine; the browser reconnects by itself when the stream drops. */

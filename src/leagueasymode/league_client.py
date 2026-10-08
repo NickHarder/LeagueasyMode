@@ -183,3 +183,7 @@ class LeagueClient:
         except ValidationError:
             logger.warning("League client answered %s with something that is not JSON", path)
             return None
+
+
+# Finds the running League client and returns a client of its API, or None when it is not running.
+type ClientConnector = Callable[[], Awaitable[LeagueClient | None]]
