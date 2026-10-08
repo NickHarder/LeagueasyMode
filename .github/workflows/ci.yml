@@ -1,0 +1,153 @@
+# CI for LeagueasyMode.
+#
+# Every pull request runs every check, whatever it changed: a green run is the proof, with no path
+# filter to second-guess. The jobs do not wait for one another. No job is allowed to fail.
+#
+# Runs for pull requests, version tags and manual runs, never for a plain push: the same checks run on
+# the laptop first, through `make gate`.
+#
+# Every action is named by its commit, with the version beside it. A tag can be moved to other code
+# by whoever owns the action, and a commit cannot. To move to a newer version, change both.
+name: CI
+
+on:
+  pull_request:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+# A new push to a pull request cancels the run it supersedes.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  # Never re-resolve in CI: install and run exactly what uv.lock pins.
+  UV_FROZEN: "1"
+
+jobs:
+  # Every skill says when to use it and carries a version (scripts/check_skills.sh).
+  skills:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+      - run: scripts/check_skills.sh
+
+  # docs/ is a conformant knowledge bundle (scripts/okf_bundle.py). uv runs the check from the
+  # versions its own lock file pins.
+  okf-bundle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      UV_FROZEN: "1"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7  # v10.2.0
+      - run: scripts/okf_bundle.py check docs --repository .
+
+
+  # Secrets in the commits this pull request adds (scripts/secrets_scan.sh). Tag and manual runs have
+  # no new commits to scan: every commit reached the default branch through a pull request.
+  gitleaks:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          # The whole history, so the pull request's base branch is there to compare against.
+          fetch-depth: 0
+      # The version `make tools` installs, its download checked against the checksum in the script.
+      - run: |
+          scripts/install_tools.sh gitleaks
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+      - run: scripts/secrets_scan.sh "origin/$BASE_REF..HEAD"
+        env:
+          BASE_REF: ${{ github.base_ref }}
+
+  ruff:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7  # v10.2.0
+        with:
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+      - run: uv sync --frozen
+      - run: uv run ruff check .
+      - run: uv run ruff format --check .
+      # The attesters, the Python files under docs/, are held to the same rules, as the gate holds them.
+      - run: find "$GITHUB_WORKSPACE/docs" -name '*.py' -print0 | xargs -0 -r uv run ruff check --config pyproject.toml
+      - run: find "$GITHUB_WORKSPACE/docs" -name '*.py' -print0 | xargs -0 -r uv run ruff format --check --config pyproject.toml
+
+  mypy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7  # v10.2.0
+        with:
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+      - run: uv sync --frozen
+      - run: uv run mypy
+      # One attester at a time: two may share a file name, and no two are one program.
+      - run: find "$GITHUB_WORKSPACE/docs" -name '*.py' -print0 | xargs -0 -r -n 1 uv run mypy --strict
+
+  # Assign-once, Final and the three-character minimum: what ruff and mypy cannot check.
+  python-rules:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7  # v10.2.0
+        with:
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+      - run: uv sync --frozen
+      - run: uv run python "$GITHUB_WORKSPACE/scripts/check_python_rules.py" src tests "$GITHUB_WORKSPACE/docs"
+
+  pytest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7  # v10.2.0
+        with:
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+      - run: uv sync --frozen
+      - run: uv run pytest -q
+
+  # Known vulnerabilities in the locked dependencies. No path filter: new advisories land without
+  # any commit here.
+  pip-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7  # v10.2.0
+        with:
+          enable-cache: false
+      - run: uv export --frozen --no-emit-project --format requirements-txt -q -o "$RUNNER_TEMP/requirements.txt"
+      - run: uvx pip-audit==2.10.1 -r "$RUNNER_TEMP/requirements.txt" --disable-pip --require-hashes --progress-spinner off

@@ -1,0 +1,8 @@
+# A change to any of these can turn a red gate green, so each one needs the owner's review.
+# Turn on "require review from Code Owners" in the default branch's protection rule.
+/scripts/ @NickHarder
+/.githooks/ @NickHarder
+/Makefile @NickHarder
+/.github/ @NickHarder
+/.gitleaks.toml @NickHarder
+/pyproject.toml @NickHarder

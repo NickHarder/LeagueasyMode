@@ -1,0 +1,21 @@
+# Written by Copier; `copier update` reads it. Do not edit by hand.
+_commit: v0.11.1
+_src_path: gh:NickHarder/ai-kit
+ci_provider: github
+description: A macOS overlay for League of Legends that infers what the scoreboard
+    hides, from the game's local APIs only.
+enable_demo: false
+enable_evals: false
+enable_mcp_scaffold: false
+enable_mutation_tests: false
+enable_semgrep_ci: false
+github_owner_handle: NickHarder
+is_api_project: false
+module_name: leagueasymode
+owner_id: nickharder
+project_name: LeagueasyMode
+project_slug: leagueasymode
+python_service: true
+python_version: '3.12'
+service_dir: .
+vendor_skills: true
