@@ -4,7 +4,7 @@ title: "Phase 4: where the enemies are"
 description: The slices of phase 4 of the approved plan, the map, the clues, the position filter, the jungle path, control wards and the minimap layer, in a proposed build order with what each needs and where the owner decides.
 tags: [plan, phase-4, positions]
 status: draft
-generated: { by: claude-code/cloud, at: 2026-10-08T22:45:47Z }
+generated: { by: claude-code/cloud, at: 2026-10-08T22:57:15Z }
 ---
 
 # Phase 4: where the enemies are
@@ -22,7 +22,7 @@ Each slice goes through every layer, as before, and every fact keeps its tag, ex
 | 4.1 | The map | Nothing alone; every later slice walks it, and backs take their way home from it at once | A hand-built graph of Summoner's Rift: about 150 points (fountains, bases, lanes, turrets, camps, river, the two pits) with their game coordinates and regions, joined by walkable edges; travel times by shortest path at a move speed |
 | 4.2 | Clues | Each enemy's last pinned place and how long ago ("Zed: at their mid turret 0:40 ago") | Every event that pins a place: a death (the fountain at respawn), a trip to base (the fountain), a kill or assist at a turret, Dragon, Baron or Herald, an inhibitor; creep score rising (a laner in their lane, a jungler at a camp) |
 | 4.3 | Positions (estimator 7) | Each enemy's likely region, how sure "missing" is, and the earliest they could reach each lane | A filter per enemy over the map's points: a chance for each (a histogram filter, the exact form of the particle filter the approved plan names, which over 81 points needs no sampling), spread at the enemy's move speed from their latest clue and weighed by their role's habits |
-| 4.4 | Jungle path (estimator 8) | The enemy jungler's likely clear, which side they are on, their likely next camp; each camp's respawn | A hidden Markov model over the camps (Viterbi decoding): creep score bursts as evidence, travel times and camp respawns as constraints |
+| 4.4 | Jungle path (estimator 8) | The enemy jungler's likely clear, which side they are on, their likely next camp; each camp's respawn | A hidden Markov model over the camps: creep score bursts as evidence, travel times and camp respawns as constraints; since the respawn rule needs the whole path, decoded by a beam search (Viterbi decoding with memory) |
 | 4.5 | Control wards (estimator 9) | Likely areas of enemy control wards | The control ward count dropping, at the place 4.3 puts them then |
 | 4.6 | The minimap layer | Each enemy's likely region over the map | 4.3; how it is drawn is the owner's choice |
 

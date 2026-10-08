@@ -62,11 +62,17 @@ def scoreboard_at(
     respawn_at_by_champion: dict[str, float],
     zed_reaches_six_at_seconds: float | None = None,
     zed_buys_at_seconds: float | None = None,
+    vi_farms_at_seconds: tuple[float, ...] = (),
 ) -> tuple[PlayerSeed, ...]:
     def level_of(seed: PlayerSeed) -> int:
         if seed.champion_name != "Zed" or zed_reaches_six_at_seconds is None:
             return 9
         return 6 if game_time_seconds >= zed_reaches_six_at_seconds else 5
+
+    def creep_score_of(seed: PlayerSeed) -> int:
+        if seed.champion_name != "Vi":
+            return 0
+        return 4 * sum(1 for farmed_at in vi_farms_at_seconds if game_time_seconds >= farmed_at)
 
     def items_of(seed: PlayerSeed) -> tuple[tuple[int, str, int], ...]:
         has_bought = (
@@ -85,11 +91,14 @@ def scoreboard_at(
             seed,
             items=items_of(seed),
             level=level_of(seed),
+            creep_score=creep_score_of(seed),
             is_dead=True,
             respawn_timer_seconds=respawn_at_by_champion[seed.champion_name] - game_time_seconds,
         )
         if respawn_at_by_champion.get(seed.champion_name, 0.0) > game_time_seconds
-        else dataclasses.replace(seed, level=level_of(seed), items=items_of(seed))
+        else dataclasses.replace(
+            seed, level=level_of(seed), items=items_of(seed), creep_score=creep_score_of(seed)
+        )
         for seed in DEFAULT_PLAYERS
     )
 
@@ -101,6 +110,7 @@ def write_recording(
     zed_reaches_six_at_seconds: float | None = None,
     is_baron_taken: bool = True,
     zed_buys_at_seconds: float | None = None,
+    vi_farms_at_seconds: tuple[float, ...] = (),
 ) -> Path:
     writer = RecordingWriter(directory / "game.jsonl", keyframe_interval_seconds=60.0)
     writer.write_started(
@@ -138,6 +148,7 @@ def write_recording(
             respawn_at_by_champion or {},
             zed_reaches_six_at_seconds,
             zed_buys_at_seconds,
+            vi_farms_at_seconds,
         )
         writer.write_snapshot(
             received_at_seconds=index * 0.5,
@@ -191,6 +202,7 @@ async def open_overlay(
     zed_reaches_six_at_seconds: float | None = None,
     is_baron_taken: bool = True,
     zed_buys_at_seconds: float | None = None,
+    vi_farms_at_seconds: tuple[float, ...] = (),
 ) -> AsyncIterator[Page]:
     replay = RecordingReplay(
         write_recording(
@@ -200,6 +212,7 @@ async def open_overlay(
             zed_reaches_six_at_seconds,
             is_baron_taken,
             zed_buys_at_seconds,
+            vi_farms_at_seconds,
         ),
         speed=speed,
     )
@@ -371,6 +384,24 @@ async def test_an_enemy_seen_at_an_objective_shows_where_and_how_long_ago(tmp_pa
         await expect(vi_location).to_have_text(
             re.compile(r"^likely .+ \d+% \u00b7 unseen 0:[1-4]\d$"), timeout=10000
         )
+
+
+async def test_the_enemy_junglers_path_and_the_camps_down_show(tmp_path: Path) -> None:
+    async with open_overlay(
+        tmp_path, snapshot_count=80, speed=1.0, vi_farms_at_seconds=(1412.0, 1422.0)
+    ) as page:
+        vi_path = page.locator("#enemy-strip .enemy-row", has_text="Vi").locator(
+            ".enemy-jungle-path"
+        )
+        await expect(vi_path).to_have_text(
+            re.compile(r"^path .+ \u2192 .+ \u00b7 next .+ ~\d:\d\d$"),
+            # The second camp is decoded once its burst is over, at 23:48 of the replay.
+            timeout=60000,
+        )
+        await expect(page.locator("#enemy-strip .camp-timers")).to_have_text(
+            re.compile(r"^Camps: .+ \d:\d\d")
+        )
+        await keep_screenshot(page, "jungle-path")
 
 
 async def test_the_enemy_strip_shows_item_gold_and_the_lead(tmp_path: Path) -> None:

@@ -22,6 +22,9 @@ compared with what is known to be true:
 - **Positions** (estimator 7): each player's likely regions at the start of each minute, from the
   clues as they came live, against the region of the map nearest their timeline position: how
   often the likeliest was right, and the chance given to the true one on average.
+- **Jungle path** (estimator 8): at each minute of the timeline, a jungler whose decoded camp was
+  finished within 30 seconds before it should be near that camp; how far the timeline puts them
+  from it, on average.
 - **The map** (phase 4.1): every player's position each minute on the timeline should lie near a
   path of the hand-built map; how far it lies on average says how well the map was drawn.
 - **Backs** (estimator 6): the timeline records every purchase. One made alive (not within a
@@ -50,6 +53,7 @@ from leagueasymode.inference.clues import ClueTracker
 from leagueasymode.inference.combat_stats import DEFAULT_MOVE_SPEED, estimated_combat_stats
 from leagueasymode.inference.experience import ExperienceTracker
 from leagueasymode.inference.gold import GoldTracker, PlayerKey, player_key
+from leagueasymode.inference.jungle_path import JunglePathTracker
 from leagueasymode.inference.positions import position_estimate
 from leagueasymode.inference.rift_map import RIFT_MAP, RiftMap
 from leagueasymode.inference.roles import assign_roles
@@ -79,6 +83,8 @@ DEATH_SHOPPING_SECONDS: Final = 60.0
 SAME_TRIP_SECONDS: Final = 30.0
 # A trip seen this close to one the timeline shows is the same trip.
 TRIP_MATCH_SECONDS: Final = 20.0
+# A jungler's decoded camp this recent before a frame of the timeline is where they should be.
+RECENT_CAMP_SECONDS: Final = 30.0
 SECONDS_PER_MINUTE: Final = 60
 TEAM_BY_ID: Final = {100: "ORDER", 200: "CHAOS"}
 PERCENT: Final = 100.0
@@ -113,7 +119,7 @@ SCORE_DESCRIPTIONS: Final = {
         "{estimator}: {sample_count} player-minutes, {percent:.0f}% on the truth on average"
     ),
     "mean_distance_units": (
-        "{estimator}: {sample_count} positions, {value:.0f} units from its paths on average"
+        "{estimator}: {sample_count} positions, {value:.0f} units off on average"
     ),
 }
 
@@ -169,6 +175,8 @@ class RecordedGame:
     trips_seen: Mapping[PlayerKey, tuple[float, ...]]
     # Where each player likely was at the first answer of each minute, by minute.
     minute_position_estimates: Mapping[int, Mapping[PlayerKey, PositionEstimate]]
+    # Each jungler's last decoded camp and when they finished it, at each minute's start.
+    minute_jungle_camps: Mapping[int, Mapping[PlayerKey, tuple[str, float]]]
 
 
 class DetailsTimeline(RiotPayloadModel):
@@ -273,6 +281,8 @@ def read_recorded_game(recording_path: Path) -> RecordedGame:
     experience_tracker = ExperienceTracker()
     back_tracker = BackTracker()
     clue_tracker = ClueTracker()
+    jungle_tracker = JunglePathTracker()
+    jungle_camps_by_minute: dict[int, Mapping[PlayerKey, tuple[str, float]]] = {}
     trips_by_player: dict[PlayerKey, list[float]] = {}
     position_estimates_by_minute: dict[int, Mapping[PlayerKey, PositionEstimate]] = {}
     snapshot_by_minute: dict[int, GameSnapshot] = {}
@@ -294,6 +304,7 @@ def read_recorded_game(recording_path: Path) -> RecordedGame:
             if last_back.shopped_at_game_time_seconds not in player_trips:
                 player_trips.append(last_back.shopped_at_game_time_seconds)
         position_clues = clue_tracker.update(snapshot, last_backs)
+        jungle_tracker.update(snapshot)
         is_minute_start = game_time_seconds - game_minute * SECONDS_PER_MINUTE <= (
             FRAME_ALIGNMENT_SECONDS
         )
@@ -303,6 +314,7 @@ def read_recorded_game(recording_path: Path) -> RecordedGame:
             position_estimates_by_minute[game_minute] = _position_estimates(
                 snapshot, position_clues
             )
+            jungle_camps_by_minute[game_minute] = jungle_tracker.last_clears()
     return RecordedGame(
         minute_snapshots=tuple(snapshot_by_minute[minute] for minute in sorted(snapshot_by_minute)),
         client_resources=client_resources,
@@ -310,6 +322,7 @@ def read_recorded_game(recording_path: Path) -> RecordedGame:
         minute_level_estimates=level_estimates_by_minute,
         trips_seen={key: tuple(trips) for key, trips in trips_by_player.items()},
         minute_position_estimates=position_estimates_by_minute,
+        minute_jungle_camps=jungle_camps_by_minute,
     )
 
 
@@ -569,6 +582,36 @@ def score_positions(game: RecordedGame) -> list[EstimatorScore]:
     ]
 
 
+def score_jungle_path(game: RecordedGame) -> EstimatorScore | None:
+    """Score each jungler's decoded camps by how far the timeline puts them from each.
+
+    Args:
+        game: The recorded game.
+
+    Returns:
+        The mean distance, over the minutes whose start came within 30 seconds of a decoded
+        camp; None without such a minute.
+    """
+    distances = [
+        math.hypot(
+            truth.position.x - RIFT_MAP.points[camp].x_position,
+            truth.position.y - RIFT_MAP.points[camp].y_position,
+        )
+        for game_minute, camp_and_time, truth in _timeline_items(game, game.minute_jungle_camps)
+        if truth.position is not None
+        for camp, cleared_at_seconds in [camp_and_time]
+        if game_minute * SECONDS_PER_MINUTE - cleared_at_seconds <= RECENT_CAMP_SECONDS
+    ]
+    if not distances:
+        return None
+    return EstimatorScore(
+        estimator="jungle path",
+        sample_count=len(distances),
+        value=sum(distances) / len(distances),
+        measure="mean_distance_units",
+    )
+
+
 def score_map(game: RecordedGame, rift_map: RiftMap = RIFT_MAP) -> EstimatorScore | None:
     """Score the map by how far the timeline's positions lie from its paths.
 
@@ -691,8 +734,43 @@ def score_game(game: RecordedGame, patch_stats: PatchStats | None) -> list[Estim
         *(score for score in [score_next_items(game, patch_stats)] if score is not None),
         *score_backs(game),
         *score_positions(game),
-        *(score for score in [score_map(game)] if score is not None),
+        *(score for score in [score_jungle_path(game), score_map(game)] if score is not None),
     ]
+
+
+def _timeline_items[Estimate](
+    game: RecordedGame, estimates_by_minute: Mapping[int, Mapping[PlayerKey, Estimate]]
+) -> Iterator[tuple[int, Estimate, TimelineParticipantFrame]]:
+    """Yield each estimate of a player with the timeline's truth and the minute they share.
+
+    Args:
+        game: The recorded game.
+        estimates_by_minute: A tracker's estimates at the start of each minute.
+
+    Yields:
+        The minute, the estimate and the truth.
+    """
+    key_by_participant_id = {
+        participant.participant_id: key for key, participant in _details_participants(game)
+    }
+    timeline = _game_timeline(game)
+    if timeline is None:
+        return
+    for frame in timeline.frames:
+        frame_seconds = frame.timestamp_milliseconds / MILLISECONDS_PER_SECOND
+        game_minute = round(frame_seconds / SECONDS_PER_MINUTE)
+        is_aligned = (
+            abs(frame_seconds - game_minute * SECONDS_PER_MINUTE) <= FRAME_ALIGNMENT_SECONDS
+        )
+        # At 0:00 everyone is in their fountain, which scores nothing.
+        if game_minute == 0 or not is_aligned:
+            continue
+        estimates = estimates_by_minute.get(game_minute, {})
+        for truth in frame.participant_frames:
+            key = key_by_participant_id.get(truth.participant_id)
+            estimate = estimates.get(key) if key is not None else None
+            if estimate is not None:
+                yield game_minute, estimate, truth
 
 
 def _timeline_pairs[Estimate](
@@ -707,27 +785,8 @@ def _timeline_pairs[Estimate](
     Yields:
         The pairs.
     """
-    key_by_participant_id = {
-        participant.participant_id: key for key, participant in _details_participants(game)
-    }
-    timeline = _game_timeline(game)
-    if timeline is None:
-        return
-    for frame in timeline.frames:
-        frame_seconds = frame.timestamp_milliseconds / MILLISECONDS_PER_SECOND
-        game_minute = round(frame_seconds / SECONDS_PER_MINUTE)
-        is_aligned = (
-            abs(frame_seconds - game_minute * SECONDS_PER_MINUTE) <= FRAME_ALIGNMENT_SECONDS
-        )
-        # At 0:00 everyone holds the starting gold, which scores nothing.
-        if game_minute == 0 or not is_aligned:
-            continue
-        estimates = estimates_by_minute.get(game_minute, {})
-        for truth in frame.participant_frames:
-            key = key_by_participant_id.get(truth.participant_id)
-            estimate = estimates.get(key) if key is not None else None
-            if estimate is not None:
-                yield estimate, truth
+    for _, estimate, truth in _timeline_items(game, estimates_by_minute):
+        yield estimate, truth
 
 
 def _timeline_trips(timeline: GameTimeline, participant_id: int) -> tuple[float, ...]:

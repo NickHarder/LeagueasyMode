@@ -19,7 +19,7 @@ from game_payloads import (
 from leagueasymode.cli import main
 from leagueasymode.data_dragon import PatchStatsStore
 from leagueasymode.inference.gold import passive_gold
-from leagueasymode.inference.rift_map import MapPoint, RiftMap
+from leagueasymode.inference.rift_map import RIFT_MAP, MapPoint, RiftMap
 from leagueasymode.league_client import GAMEFLOW_SESSION_PATH
 from leagueasymode.patch_data import CHAMPION_SUMMARY_PATH, GAME_VERSION_PATH, ITEMS_PATH
 from leagueasymode.recorder import GAME_DETAILS_PATH_TEMPLATE, TIMELINE_PATH_TEMPLATE
@@ -30,6 +30,7 @@ from leagueasymode.scoring import (
     score_combat_stats,
     score_experience,
     score_gold,
+    score_jungle_path,
     score_map,
     score_next_items,
     score_positions,
@@ -414,7 +415,7 @@ def test_the_map_is_scored_by_how_far_the_timelines_positions_lie_from_its_paths
     recording = write_scored_recording(tmp_path, DEFAULT_PLAYERS, timeline=frames)
     score = score_map(read_recorded_game(recording), one_path)
     assert score is not None
-    assert score.describe() == "map: 2 positions, 150 units from its paths on average"
+    assert score.describe() == "map: 2 positions, 150 units off on average"
 
 
 def test_positions_are_scored_against_the_timelines(tmp_path: Path) -> None:
@@ -438,3 +439,73 @@ def test_positions_are_scored_against_the_timelines(tmp_path: Path) -> None:
     likeliest, chance_on_truth = score_positions(read_recorded_game(recording))
     assert likeliest.describe() == "positions (likeliest region): 2/4 correct (50%)"
     assert 0.0 < chance_on_truth.value < 1.0
+
+
+def write_jungle_recording(directory: Path, timeline: JsonValue | None) -> Path:
+    """A game in which Vi (participant 7) farms one burst, finished at 1:42."""
+    directory.mkdir()
+    writer = RecordingWriter(directory / "game.jsonl", keyframe_interval_seconds=60.0)
+    writer.write_started(
+        started_at=datetime.datetime(2026, 10, 8, tzinfo=datetime.UTC),
+        recorder_version="test",
+        poll_interval_seconds=0.5,
+    )
+    for path, payload in [
+        (GAMEFLOW_SESSION_PATH, gameflow_session()),
+        (CHAMPION_SUMMARY_PATH, champion_summary()),
+    ]:
+        writer.write_client_resource(received_at_seconds=0.0, path=path, payload=payload)
+    for game_time_seconds in (0.0, 60.0, 102.0, 115.0, 120.0):
+        players = tuple(
+            dataclasses.replace(seed, creep_score=4 if game_time_seconds >= 102.0 else 0)
+            if seed.champion_name == "Vi"
+            else seed
+            for seed in DEFAULT_PLAYERS
+        )
+        writer.write_snapshot(
+            received_at_seconds=game_time_seconds,
+            payload=all_game_data(game_time_seconds, players=players),
+        )
+    writer.write_client_resource(
+        received_at_seconds=200.0,
+        path=GAME_DETAILS_PATH_TEMPLATE.format(game_id=GAME_ID),
+        payload=game_details({seed.champion_name: seed.position for seed in DEFAULT_PLAYERS}),
+    )
+    if timeline is not None:
+        writer.write_client_resource(
+            received_at_seconds=200.0,
+            path=TIMELINE_PATH_TEMPLATE.format(game_id=GAME_ID),
+            payload=timeline,
+        )
+    writer.write_ended(received_at_seconds=200.0, reason="game ended")
+    return writer.close()
+
+
+def test_the_jungle_path_is_scored_by_how_far_the_timeline_puts_the_jungler_from_its_camp(
+    tmp_path: Path,
+) -> None:
+    without_timeline = read_recorded_game(write_jungle_recording(tmp_path / "first", None))
+    camp, _ = without_timeline.minute_jungle_camps[2][("CHAOS", "vi")]
+    camp_point = RIFT_MAP.points[camp]
+    # At 2:00 the timeline puts Vi 300 units from the camp her burst was decoded as.
+    frames: JsonValue = {
+        "frames": [
+            {
+                "timestamp": 120000,
+                "participantFrames": {
+                    "7": {
+                        "participantId": 7,
+                        "position": {
+                            "x": round(camp_point.x_position + 300),
+                            "y": round(camp_point.y_position),
+                        },
+                    }
+                },
+            }
+        ]
+    }
+    game = read_recorded_game(write_jungle_recording(tmp_path / "second", frames))
+    score = score_jungle_path(game)
+    assert score is not None
+    assert score.sample_count == 1
+    assert score.value == pytest.approx(300.0, abs=1)

@@ -97,6 +97,40 @@
       ],
       "type": "string"
     },
+    "CampTimer": {
+      "additionalProperties": false,
+      "description": "A jungle camp a jungler likely cleared, and when it is back.\n\nAn estimate (`inference/jungle_path.py`): which camps were cleared, and when, comes from the\njungler's likely path.",
+      "properties": {
+        "camp": {
+          "title": "Camp",
+          "type": "string"
+        },
+        "label": {
+          "title": "Label",
+          "type": "string"
+        },
+        "cleared_by": {
+          "enum": [
+            "ally",
+            "enemy"
+          ],
+          "title": "Cleared By",
+          "type": "string"
+        },
+        "respawns_at_game_time_seconds": {
+          "title": "Respawns At Game Time Seconds",
+          "type": "number"
+        }
+      },
+      "required": [
+        "camp",
+        "label",
+        "cleared_by",
+        "respawns_at_game_time_seconds"
+      ],
+      "title": "CampTimer",
+      "type": "object"
+    },
     "CombatStats": {
       "additionalProperties": false,
       "description": "A player's combat stats.\n\nExact for the player on this machine, whose stats the game gives in full. For the others an\nestimate: the champion's base stats grown to their level, plus their items' stats, at this\npatch's numbers; runes, passives, stacks and buffs are not counted.",
@@ -339,6 +373,74 @@
         "respawns_at_game_time_seconds"
       ],
       "title": "InhibitorTimer",
+      "type": "object"
+    },
+    "JunglePath": {
+      "additionalProperties": false,
+      "description": "A jungler's likely clear: the camps lately, which side they are on, and the next camp.",
+      "properties": {
+        "champion_name": {
+          "title": "Champion Name",
+          "type": "string"
+        },
+        "side": {
+          "enum": [
+            "ally",
+            "enemy"
+          ],
+          "title": "Side",
+          "type": "string"
+        },
+        "recent_camps": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Recent Camps",
+          "type": "array"
+        },
+        "last_cleared_at_game_time_seconds": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Last Cleared At Game Time Seconds"
+        },
+        "next_camp": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Next Camp"
+        },
+        "next_camp_at_game_time_seconds": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Next Camp At Game Time Seconds"
+        }
+      },
+      "required": [
+        "champion_name",
+        "side",
+        "recent_camps",
+        "last_cleared_at_game_time_seconds",
+        "next_camp",
+        "next_camp_at_game_time_seconds"
+      ],
+      "title": "JunglePath",
       "type": "object"
     },
     "LevelEstimate": {
@@ -1081,6 +1183,20 @@
         "$ref": "#/$defs/CooldownTimer"
       },
       "title": "Cooldowns",
+      "type": "array"
+    },
+    "jungle_paths": {
+      "items": {
+        "$ref": "#/$defs/JunglePath"
+      },
+      "title": "Jungle Paths",
+      "type": "array"
+    },
+    "camp_timers": {
+      "items": {
+        "$ref": "#/$defs/CampTimer"
+      },
+      "title": "Camp Timers",
       "type": "array"
     },
     "callouts": {
