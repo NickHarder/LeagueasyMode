@@ -91,6 +91,29 @@ export function isCombatStats(value) {
         isOneOf(value["source"], COMBAT_STAT_SOURCES) &&
         COMBAT_STAT_NAMES.every((statName) => typeof value[statName] === "number"));
 }
+const RANKED_QUEUES = new Set(["solo", "flex"]);
+/** Return whether a value is a player's rank as the engine sends it. */
+export function isRankedStanding(value) {
+    return (isRecord(value) &&
+        isOneOf(value["queue"], RANKED_QUEUES) &&
+        typeof value["tier"] === "string" &&
+        typeof value["division"] === "string" &&
+        typeof value["league_points"] === "number" &&
+        typeof value["wins"] === "number" &&
+        typeof value["losses"] === "number");
+}
+/** Return whether a value is a player's intel as the engine sends it. */
+export function isPlayerIntel(value) {
+    return (isRecord(value) &&
+        (value["ranked"] === null || isRankedStanding(value["ranked"])) &&
+        typeof value["recent_game_count"] === "number" &&
+        typeof value["recent_win_count"] === "number" &&
+        typeof value["streak"] === "number" &&
+        typeof value["champion_game_count"] === "number" &&
+        typeof value["champion_win_count"] === "number" &&
+        typeof value["usual_position"] === "string" &&
+        typeof value["is_off_role"] === "boolean");
+}
 /** Return whether a value is a player's card as the engine sends it. */
 export function isPlayerCard(value) {
     return (isRecord(value) &&
@@ -104,7 +127,8 @@ export function isPlayerCard(value) {
         isNumberOrNull(value["respawns_at_game_time_seconds"]) &&
         isNumberOrNull(value["item_gold"]) &&
         isArrayOf(value["finished_item_names"], (name) => typeof name === "string") &&
-        (value["combat_stats"] === null || isCombatStats(value["combat_stats"])));
+        (value["combat_stats"] === null || isCombatStats(value["combat_stats"])) &&
+        (value["intel"] === null || isPlayerIntel(value["intel"])));
 }
 /** Return whether a value is each team's item gold as the engine sends it. */
 export function isTeamItemGold(value) {

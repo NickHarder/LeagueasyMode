@@ -159,6 +159,17 @@ body {
   color: var(--widget-enemy);
 }
 
+.enemy-intel {
+  grid-column: 2 / -1;
+  color: var(--widget-muted);
+  font-size: 10px;
+  font-weight: 500;
+}
+
+.enemy-intel[data-off-role="true"] {
+  color: var(--widget-alive);
+}
+
 .enemy-stats {
   grid-column: 2 / -1;
   color: var(--widget-muted);

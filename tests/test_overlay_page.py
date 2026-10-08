@@ -21,17 +21,26 @@ from pydantic import JsonValue, TypeAdapter
 
 from data_dragon_fixtures import FIXTURE_VERSIONS, fake_data_dragon
 from game_payloads import (
+    CHAMPION_IDS,
     DEFAULT_PLAYERS,
+    PastGame,
     PlayerSeed,
     all_game_data,
     baron_kill_event,
+    champion_summary,
     dragon_kill_event,
     game_start_event,
+    gameflow_session,
     inhibitor_killed_event,
+    match_history,
+    puuid_of,
+    ranked_stats,
 )
 from leagueasymode.cli import run_overlay
 from leagueasymode.config import Settings
-from leagueasymode.patch_data import GAME_VERSION_PATH, ITEMS_PATH
+from leagueasymode.league_client import GAMEFLOW_SESSION_PATH
+from leagueasymode.patch_data import CHAMPION_SUMMARY_PATH, GAME_VERSION_PATH, ITEMS_PATH
+from leagueasymode.player_intel import MATCH_HISTORY_PATH_TEMPLATE, RANKED_STATS_PATH_TEMPLATE
 from leagueasymode.recording.writer import RecordingWriter
 from leagueasymode.replay import RecordingReplay, create_replay_application
 from local_servers import serve
@@ -95,6 +104,10 @@ def write_recording(
     writer.write_client_resource(
         received_at_seconds=0.0, path=GAME_VERSION_PATH, payload="16.19.712.1234"
     )
+    for client_path, client_payload in looked_up_players():
+        writer.write_client_resource(
+            received_at_seconds=0.0, path=client_path, payload=client_payload
+        )
     for index in range(snapshot_count):
         game_time_seconds = 1395.0 + index * 0.5
         events: list[dict[str, JsonValue]] = [
@@ -119,6 +132,39 @@ def write_recording(
         )
     writer.write_ended(received_at_seconds=snapshot_count * 0.5, reason="game ended")
     return writer.close()
+
+
+def looked_up_players() -> list[tuple[str, JsonValue]]:
+    """The client's answers about each player: Zed has a record, everyone else a bare rank."""
+    zed = DEFAULT_PLAYERS[7]
+    zed_id = CHAMPION_IDS["Zed"]
+    answers: list[tuple[str, JsonValue]] = [
+        (GAMEFLOW_SESSION_PATH, gameflow_session()),
+        (CHAMPION_SUMMARY_PATH, champion_summary()),
+    ]
+    for seed in DEFAULT_PLAYERS:
+        is_zed = seed is zed
+        answers.append(
+            (
+                RANKED_STATS_PATH_TEMPLATE.format(puuid=puuid_of(seed)),
+                ranked_stats("PLATINUM", "IV", 12, 40, 38)
+                if is_zed
+                else ranked_stats("GOLD", "I", 75, 20, 18),
+            )
+        )
+        past_games = (
+            [PastGame(zed_id, "MIDDLE", "SOLO", is_win=True)] * 3
+            + [PastGame(CHAMPION_IDS["Ahri"], "MIDDLE", "SOLO", is_win=False)] * 2
+            if is_zed
+            else []
+        )
+        answers.append(
+            (
+                MATCH_HISTORY_PATH_TEMPLATE.format(puuid=puuid_of(seed)),
+                match_history(puuid_of(seed), past_games),
+            )
+        )
+    return answers
 
 
 @contextlib.asynccontextmanager
@@ -156,6 +202,7 @@ async def open_overlay(
             league_client_base_url=game_url,
             data_dragon_base_url=data_dragon_url,
             patch_data_directory=tmp_path / "patch-data",
+            player_lookup_pause_seconds=0.0,
             poll_interval_seconds=0.1,
             record_while_running=False,
         )
@@ -288,3 +335,16 @@ async def test_the_enemy_strip_shows_each_enemys_health_armor_and_magic_resist(
         await expect(caitlyn_stats).to_have_text("1.3k HP · 59 AR · 39 MR", timeout=5000)
         await expect(caitlyn_stats).to_have_attribute("data-source", "estimate")
         await keep_screenshot(page, "combat-stats")
+
+
+async def test_the_enemy_strip_shows_each_enemys_rank_and_record(tmp_path: Path) -> None:
+    async with open_overlay(tmp_path, snapshot_count=60, speed=1.0) as page:
+        zed_intel = page.locator("#enemy-strip .enemy-row", has_text="Zed").locator(".enemy-intel")
+        # Platinum IV; 3 wins and 2 losses lately, the last three in a row, all three on Zed.
+        await expect(zed_intel).to_have_text(f"P4 · 3{EN_DASH}2 W3 · 3 on champ", timeout=5000)
+        await expect(zed_intel).to_have_attribute("data-off-role", "false")
+        caitlyn_intel = page.locator("#enemy-strip .enemy-row", has_text="Caitlyn").locator(
+            ".enemy-intel"
+        )
+        await expect(caitlyn_intel).to_have_text("G1")
+        await keep_screenshot(page, "player-intel")

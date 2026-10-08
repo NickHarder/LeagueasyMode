@@ -61,6 +61,28 @@ export interface CombatStats {
   readonly move_speed: number;
 }
 
+/** A player's rank in one ranked queue this season. */
+export interface RankedStanding {
+  readonly queue: "solo" | "flex";
+  readonly tier: string;
+  readonly division: string;
+  readonly league_points: number;
+  readonly wins: number;
+  readonly losses: number;
+}
+
+/** What a player's record says before the game: rank, recent form, and the champion and role. */
+export interface PlayerIntel {
+  readonly ranked: RankedStanding | null;
+  readonly recent_game_count: number;
+  readonly recent_win_count: number;
+  readonly streak: number;
+  readonly champion_game_count: number;
+  readonly champion_win_count: number;
+  readonly usual_position: string;
+  readonly is_off_role: boolean;
+}
+
 /** One player as the scoreboard shows them: side, role, level, and when they are back. */
 export interface PlayerCard {
   readonly champion_name: string;
@@ -74,6 +96,7 @@ export interface PlayerCard {
   readonly item_gold: number | null;
   readonly finished_item_names: readonly string[];
   readonly combat_stats: CombatStats | null;
+  readonly intel: PlayerIntel | null;
 }
 
 /** What each team's items are worth: gold earned and spent, not gold in hand. */
@@ -221,6 +244,36 @@ export function isCombatStats(value: unknown): value is CombatStats {
   );
 }
 
+const RANKED_QUEUES: ReadonlySet<string> = new Set(["solo", "flex"]);
+
+/** Return whether a value is a player's rank as the engine sends it. */
+export function isRankedStanding(value: unknown): value is RankedStanding {
+  return (
+    isRecord(value) &&
+    isOneOf(value["queue"], RANKED_QUEUES) &&
+    typeof value["tier"] === "string" &&
+    typeof value["division"] === "string" &&
+    typeof value["league_points"] === "number" &&
+    typeof value["wins"] === "number" &&
+    typeof value["losses"] === "number"
+  );
+}
+
+/** Return whether a value is a player's intel as the engine sends it. */
+export function isPlayerIntel(value: unknown): value is PlayerIntel {
+  return (
+    isRecord(value) &&
+    (value["ranked"] === null || isRankedStanding(value["ranked"])) &&
+    typeof value["recent_game_count"] === "number" &&
+    typeof value["recent_win_count"] === "number" &&
+    typeof value["streak"] === "number" &&
+    typeof value["champion_game_count"] === "number" &&
+    typeof value["champion_win_count"] === "number" &&
+    typeof value["usual_position"] === "string" &&
+    typeof value["is_off_role"] === "boolean"
+  );
+}
+
 /** Return whether a value is a player's card as the engine sends it. */
 export function isPlayerCard(value: unknown): value is PlayerCard {
   return (
@@ -235,7 +288,8 @@ export function isPlayerCard(value: unknown): value is PlayerCard {
     isNumberOrNull(value["respawns_at_game_time_seconds"]) &&
     isNumberOrNull(value["item_gold"]) &&
     isArrayOf(value["finished_item_names"], (name: unknown): name is string => typeof name === "string") &&
-    (value["combat_stats"] === null || isCombatStats(value["combat_stats"]))
+    (value["combat_stats"] === null || isCombatStats(value["combat_stats"])) &&
+    (value["intel"] === null || isPlayerIntel(value["intel"]))
   );
 }
 

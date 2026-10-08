@@ -13,7 +13,8 @@ the owner on 2026-10-08). Phase 0 is done; phase 1, the tracer bullet, is built 
 test on a Mac; phase 2 ([docs/plans/phase-2-exact-facts.md](docs/plans/phase-2-exact-facts.md)) is
 built but for structures, left out until the first recordings. Phase 3
 ([docs/plans/phase-3-economy-and-open-policy.md](docs/plans/phase-3-economy-and-open-policy.md)) is
-approved by the owner; 3.1, loading-screen intel, is next.
+approved by the owner; 3.1, loading-screen intel, is built on `feat/loading-screen-intel`, and
+3.2, marked cooldowns, is next.
 
 | Area | State | Proof |
 |---|---|---|
@@ -102,6 +103,10 @@ In `AGENTS.md`. Also: a raw recording (it holds other players' names); only `ano
   this patch's, and the "finished item" rule (a full recipe of at least 2000 gold) and the support
   item names are to be checked on a real catalog.
 - The role costs are a hand-set prior, not yet fitted on recorded games.
+- Loading-screen intel reads the client's ranked stats and match history in the shapes other tools
+  describe; no real answer has been seen. If the client does not answer for other players, or
+  answers in another shape, the line under each enemy stays empty until the first recording shows
+  what to read.
 - Combat stats leave out runes, passives, stacks and buffs, so an estimate runs low for a champion
   that has them. Data Dragon's item stats leave out some stats (ability haste, lethality, magic
   penetration), which the overlay does not show anyway. The Data Dragon test files are

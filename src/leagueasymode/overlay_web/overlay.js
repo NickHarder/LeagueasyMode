@@ -246,6 +246,56 @@ export function formatDefensiveStats(stats) {
     const healthText = `${formatThousands(stats.health)} HP`;
     return [healthText, `${Math.round(stats.armor)} AR`, `${Math.round(stats.magic_resist)} MR`].join(" · ");
 }
+const TIER_SHORT_NAMES = {
+    IRON: "I",
+    BRONZE: "B",
+    SILVER: "S",
+    GOLD: "G",
+    PLATINUM: "P",
+    EMERALD: "E",
+    DIAMOND: "D",
+    MASTER: "M",
+    GRANDMASTER: "GM",
+    CHALLENGER: "C",
+};
+const DIVISION_NUMBERS = { I: "1", II: "2", III: "3", IV: "4" };
+const APEX_TIERS = new Set(["MASTER", "GRANDMASTER", "CHALLENGER"]);
+// A streak this long is worth naming.
+const NOTABLE_STREAK = 3;
+// With this many recent games and none on the champion, it is new to them.
+const GAMES_TO_CALL_A_CHAMPION_NEW = 10;
+/** Return a rank in short: "P4" for Platinum IV, "M 120" for Master with 120 LP. */
+export function formatRank(ranked) {
+    if (ranked === null) {
+        return "Unranked";
+    }
+    const tierName = TIER_SHORT_NAMES[ranked.tier] ?? ranked.tier;
+    if (APEX_TIERS.has(ranked.tier)) {
+        return `${tierName} ${String(ranked.league_points)}`;
+    }
+    return `${tierName}${DIVISION_NUMBERS[ranked.division] ?? ""}`;
+}
+/** Return a player's record in one line: "P4 · 3–2 W3 · 3 on champ · off-role (MID)". */
+export function formatIntel(intel) {
+    const parts = [formatRank(intel.ranked)];
+    if (intel.recent_game_count > 0) {
+        const lossCount = intel.recent_game_count - intel.recent_win_count;
+        const streakText = Math.abs(intel.streak) >= NOTABLE_STREAK
+            ? ` ${intel.streak > 0 ? "W" : "L"}${String(Math.abs(intel.streak))}`
+            : "";
+        parts.push(`${String(intel.recent_win_count)}\u2013${String(lossCount)}${streakText}`);
+    }
+    if (intel.champion_game_count > 0) {
+        parts.push(`${String(intel.champion_game_count)} on champ`);
+    }
+    else if (intel.recent_game_count >= GAMES_TO_CALL_A_CHAMPION_NEW) {
+        parts.push("new on champ");
+    }
+    if (intel.is_off_role) {
+        parts.push(`off-role (${ROLE_SHORT_NAMES[intel.usual_position] ?? intel.usual_position})`);
+    }
+    return parts.join(" \u00b7 ");
+}
 /** Return the row that draws one enemy: champion, level, item gold, the death timer and stats. */
 function enemyRowElement(card, gameTimeSeconds) {
     const row = document.createElement("div");
@@ -272,6 +322,13 @@ function enemyRowElement(card, gameTimeSeconds) {
         respawnElement.className = "enemy-respawn";
         respawnElement.textContent = formatCountdown(respawnsAtSeconds - gameTimeSeconds);
         row.append(respawnElement);
+    }
+    if (card.intel !== null) {
+        const intelElement = document.createElement("span");
+        intelElement.className = "enemy-intel";
+        intelElement.dataset["offRole"] = card.intel.is_off_role ? "true" : "false";
+        intelElement.textContent = formatIntel(card.intel);
+        row.append(intelElement);
     }
     if (card.combat_stats !== null) {
         const statsElement = document.createElement("span");

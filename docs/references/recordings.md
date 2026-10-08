@@ -4,7 +4,7 @@ title: Recordings
 description: What a recording of a game holds, how it is written and read, what is asked of the League client and when, and how a copy is anonymized before it may enter the repository.
 tags: [recording, data, privacy]
 status: draft
-generated: { by: claude-code/cloud, at: 2026-10-08T13:45:00Z }
+generated: { by: claude-code/cloud, at: 2026-10-08T20:48:36Z }
 sources:
   - id: file-format
     resource: ../../src/leagueasymode/recording/file_format.py
@@ -65,7 +65,10 @@ compressed one is complete.
   or `LEAGUEASYMODE_LEAGUE_CLIENT_LOCKFILE`) or, failing that, the arguments of its `LeagueClientUx`
   process.[^league-client] At the start of a game: the gameflow session (which holds the game's id),
   the game version, and the patch's items, champion summary, summoner spells, runes and rune styles,
-  then each champion in the game. After the game: the end-of-game stats, then the match timeline
+  then each champion in the game, then each player's ranked stats and last 20 games, one request
+  at a time (`LEAGUEASYMODE_PLAYER_LOOKUP_PAUSE_SECONDS` apart); while `leagueasymode run` also
+  shows the overlay, the engine and the recorder share those answers, so each player is asked
+  about once. After the game: the end-of-game stats, then the match timeline
   every 15 seconds for up to 10 minutes, and the game's details once the timeline has come. A path
   the client does not have is skipped. Without the client, the game is recorded alone.
 

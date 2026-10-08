@@ -6,6 +6,11 @@ skill has the format.
 
 ## 2026-10-08
 
+- Phase 3.1, loading-screen intel: each player's rank, recent record, streak, games on their
+  champion and whether they are off-role, from the League client's own lookups, never a developer
+  key. Each player is asked about once, one request at a time; the recorder keeps the answers to
+  confirm their shapes, and shares them with the engine so the client is not asked twice. The
+  replay now serves a recorded path with its query.
 - Phase 3's plan approved by the owner, with their answers: the hotkey scheme as proposed,
   suggestions worded by best guess to iterate on, and other players' stats looked up through the
   League client's own session rather than a developer key, to keep clear of rate limits.
