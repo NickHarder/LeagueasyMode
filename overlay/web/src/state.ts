@@ -83,6 +83,17 @@ export interface PlayerIntel {
   readonly is_off_role: boolean;
 }
 
+/** A spell the player marked an enemy as having used, and when it is back: an estimate. */
+export interface CooldownTimer {
+  readonly cooldown_id: string;
+  readonly champion_name: string;
+  readonly spell: "flash" | "summoner" | "ultimate";
+  readonly spell_name: string;
+  readonly label: string;
+  readonly marked_at_game_time_seconds: number;
+  readonly ready_at_game_time_seconds: number;
+}
+
 /** One player as the scoreboard shows them: side, role, level, and when they are back. */
 export interface PlayerCard {
   readonly champion_name: string;
@@ -112,7 +123,12 @@ export interface NumbersWindow {
   readonly ends_at_game_time_seconds: number;
 }
 
-export type CalloutKind = "numbers_window" | "level_spike" | "objective_soon" | "item_spike";
+export type CalloutKind =
+  | "numbers_window"
+  | "level_spike"
+  | "objective_soon"
+  | "item_spike"
+  | "cooldown_ready";
 
 /** A short notice shown for a few seconds when something happens; never an instruction. */
 export interface Callout {
@@ -133,6 +149,7 @@ export interface OverlayState {
   readonly players: readonly PlayerCard[];
   readonly numbers_window: NumbersWindow | null;
   readonly team_item_gold: TeamItemGold | null;
+  readonly cooldowns: readonly CooldownTimer[];
   readonly callouts: readonly Callout[];
 }
 
@@ -149,7 +166,9 @@ const CALLOUT_KINDS: ReadonlySet<string> = new Set([
   "level_spike",
   "objective_soon",
   "item_spike",
+  "cooldown_ready",
 ]);
+const MARKED_SPELLS: ReadonlySet<string> = new Set(["flash", "summoner", "ultimate"]);
 
 /** Return whether a value is a plain object, so that its fields can be read. */
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -323,6 +342,20 @@ export function isCallout(value: unknown): value is Callout {
   );
 }
 
+/** Return whether a value is a marked cooldown as the engine sends it. */
+export function isCooldownTimer(value: unknown): value is CooldownTimer {
+  return (
+    isRecord(value) &&
+    typeof value["cooldown_id"] === "string" &&
+    typeof value["champion_name"] === "string" &&
+    isOneOf(value["spell"], MARKED_SPELLS) &&
+    typeof value["spell_name"] === "string" &&
+    typeof value["label"] === "string" &&
+    typeof value["marked_at_game_time_seconds"] === "number" &&
+    typeof value["ready_at_game_time_seconds"] === "number"
+  );
+}
+
 /** Return whether a value is an overlay state as the engine sends it. */
 export function isOverlayState(value: unknown): value is OverlayState {
   if (!isRecord(value)) {
@@ -339,6 +372,7 @@ export function isOverlayState(value: unknown): value is OverlayState {
     isArrayOf(value["players"], isPlayerCard) &&
     (value["numbers_window"] === null || isNumbersWindow(value["numbers_window"])) &&
     (value["team_item_gold"] === null || isTeamItemGold(value["team_item_gold"])) &&
+    isArrayOf(value["cooldowns"], isCooldownTimer) &&
     isArrayOf(value["callouts"], isCallout)
   );
 }

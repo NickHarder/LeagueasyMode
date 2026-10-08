@@ -348,3 +348,25 @@ async def test_the_enemy_strip_shows_each_enemys_rank_and_record(tmp_path: Path)
         )
         await expect(caitlyn_intel).to_have_text("G1")
         await keep_screenshot(page, "player-intel")
+
+
+async def test_a_marked_flash_shows_on_the_enemys_row_and_counts_down(tmp_path: Path) -> None:
+    async with open_overlay(tmp_path, snapshot_count=60, speed=1.0) as page:
+        mark_status = 0
+        for _ in range(50):
+            # As the macOS app sends it: Zed is third in role order.
+            mark_response = await page.request.post(
+                page.url + "marks",
+                data={"enemy_slot": 3, "spell": "flash"},
+                headers={"X-LeagueasyMode-Request": "mark"},
+            )
+            mark_status = mark_response.status
+            if mark_status == 200:
+                break
+            await asyncio.sleep(0.1)
+        assert mark_status == 200
+        zed_cooldowns = page.locator("#enemy-strip .enemy-row", has_text="Zed").locator(
+            ".enemy-cooldowns"
+        )
+        await expect(zed_cooldowns).to_have_text(re.compile(r"^F 4:5\d$|^F 5:00$"), timeout=5000)
+        await keep_screenshot(page, "marked-cooldown")

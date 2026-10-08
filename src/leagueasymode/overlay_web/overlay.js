@@ -297,7 +297,7 @@ export function formatIntel(intel) {
     return parts.join(" \u00b7 ");
 }
 /** Return the row that draws one enemy: champion, level, item gold, the death timer and stats. */
-function enemyRowElement(card, gameTimeSeconds) {
+function enemyRowElement(card, gameTimeSeconds, cooldowns) {
     const row = document.createElement("div");
     row.className = "enemy-row";
     row.dataset["dead"] = card.is_dead ? "true" : "false";
@@ -323,6 +323,13 @@ function enemyRowElement(card, gameTimeSeconds) {
         respawnElement.textContent = formatCountdown(respawnsAtSeconds - gameTimeSeconds);
         row.append(respawnElement);
     }
+    const runningCooldowns = cooldowns.filter((timer) => timer.champion_name === card.champion_name && timer.ready_at_game_time_seconds > gameTimeSeconds);
+    if (runningCooldowns.length > 0) {
+        const cooldownsElement = document.createElement("span");
+        cooldownsElement.className = "enemy-cooldowns";
+        cooldownsElement.replaceChildren(...runningCooldowns.map((timer) => cooldownBadgeElement(timer, gameTimeSeconds)));
+        row.append(cooldownsElement);
+    }
     if (card.intel !== null) {
         const intelElement = document.createElement("span");
         intelElement.className = "enemy-intel";
@@ -338,6 +345,14 @@ function enemyRowElement(card, gameTimeSeconds) {
         row.append(statsElement);
     }
     return row;
+}
+/** Return the badge of one marked spell: its label and the time until it is back, "F 4:12". */
+function cooldownBadgeElement(timer, gameTimeSeconds) {
+    const badge = document.createElement("span");
+    badge.className = "cooldown-badge";
+    badge.dataset["spell"] = timer.spell;
+    badge.textContent = `${timer.label} ${formatCountdown(timer.ready_at_game_time_seconds - gameTimeSeconds)}`;
+    return badge;
 }
 /** Return a card's place in role order, unknown roles last. */
 function roleRank(card) {
@@ -357,7 +372,7 @@ function renderEnemyStrip(nowMilliseconds) {
     const enemyCards = [...received.state.players.filter((card) => card.side === "enemy")].sort((first, second) => roleRank(first) - roleRank(second));
     strip.hidden = enemyCards.length === 0;
     const header = itemLeadElement(received.state);
-    const rows = enemyCards.map((card) => enemyRowElement(card, gameTimeSeconds));
+    const rows = enemyCards.map((card) => enemyRowElement(card, gameTimeSeconds, received.state.cooldowns));
     strip.replaceChildren(...(header === null ? rows : [header, ...rows]));
 }
 /** Return the element that draws one callout. */

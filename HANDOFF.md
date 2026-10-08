@@ -13,8 +13,8 @@ the owner on 2026-10-08). Phase 0 is done; phase 1, the tracer bullet, is built 
 test on a Mac; phase 2 ([docs/plans/phase-2-exact-facts.md](docs/plans/phase-2-exact-facts.md)) is
 built but for structures, left out until the first recordings. Phase 3
 ([docs/plans/phase-3-economy-and-open-policy.md](docs/plans/phase-3-economy-and-open-policy.md)) is
-approved by the owner; 3.1, loading-screen intel, is built on `feat/loading-screen-intel`, and
-3.2, marked cooldowns, is next.
+approved by the owner; 3.1, loading-screen intel, is pull request #7; 3.2, marked cooldowns, is
+built on `feat/marked-cooldowns`; 3.3, suggestions, is next.
 
 | Area | State | Proof |
 |---|---|---|

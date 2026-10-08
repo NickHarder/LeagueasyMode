@@ -6,6 +6,12 @@ skill has the format.
 
 ## 2026-10-08
 
+- Phase 3.2, marked cooldowns: ⌃⌥ and a digit picks an enemy in role order, then ⌃⌥ F, D or R
+  marks their Flash, other summoner spell or ultimate; the engine times it from the patch's
+  cooldowns, the enemy's level and their items' haste, shows it on their row and calls it out when
+  it is back. A patch's Data Dragon files are now `championFull.json`, `item.json` and
+  `summoner.json`. The macOS app's hot keys each check that a press is their own; before, with more
+  than one, any press ran the first handler's action.
 - The owner lifted the ask-before-push rule for this project: pushes and pull requests are free,
   deletions on GitHub and force pushes are not. Recorded in `AGENTS.md`, rule 1.
 - Phase 3.1, loading-screen intel: each player's rank, recent record, streak, games on their

@@ -159,6 +159,25 @@ body {
   color: var(--widget-enemy);
 }
 
+.enemy-cooldowns {
+  grid-column: 2 / -1;
+  display: flex;
+  gap: 4px;
+}
+
+.cooldown-badge {
+  padding: 0 4px;
+  border-radius: 4px;
+  background: rgb(255 122 107 / 0.22);
+  color: var(--widget-enemy);
+  font-size: 10px;
+}
+
+.cooldown-badge[data-spell="ultimate"] {
+  background: rgb(240 199 94 / 0.22);
+  color: var(--widget-alive);
+}
+
 .enemy-intel {
   grid-column: 2 / -1;
   color: var(--widget-muted);

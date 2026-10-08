@@ -17,7 +17,9 @@ const CALLOUT_KINDS = new Set([
     "level_spike",
     "objective_soon",
     "item_spike",
+    "cooldown_ready",
 ]);
+const MARKED_SPELLS = new Set(["flash", "summoner", "ultimate"]);
 /** Return whether a value is a plain object, so that its fields can be read. */
 function isRecord(value) {
     return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -151,6 +153,17 @@ export function isCallout(value) {
         typeof value["text"] === "string" &&
         typeof value["shown_until_game_time_seconds"] === "number");
 }
+/** Return whether a value is a marked cooldown as the engine sends it. */
+export function isCooldownTimer(value) {
+    return (isRecord(value) &&
+        typeof value["cooldown_id"] === "string" &&
+        typeof value["champion_name"] === "string" &&
+        isOneOf(value["spell"], MARKED_SPELLS) &&
+        typeof value["spell_name"] === "string" &&
+        typeof value["label"] === "string" &&
+        typeof value["marked_at_game_time_seconds"] === "number" &&
+        typeof value["ready_at_game_time_seconds"] === "number");
+}
 /** Return whether a value is an overlay state as the engine sends it. */
 export function isOverlayState(value) {
     if (!isRecord(value)) {
@@ -166,5 +179,6 @@ export function isOverlayState(value) {
         isArrayOf(value["players"], isPlayerCard) &&
         (value["numbers_window"] === null || isNumbersWindow(value["numbers_window"])) &&
         (value["team_item_gold"] === null || isTeamItemGold(value["team_item_gold"])) &&
+        isArrayOf(value["cooldowns"], isCooldownTimer) &&
         isArrayOf(value["callouts"], isCallout));
 }

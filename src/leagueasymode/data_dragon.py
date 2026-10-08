@@ -25,7 +25,7 @@ from leagueasymode.game_state import RiotPayloadModel
 
 DEFAULT_DATA_DRAGON_BASE_URL: Final = "https://ddragon.leagueoflegends.com"
 VERSIONS_PATH: Final = "/api/versions.json"
-# championFull.json holds champion.json's base stats and each champion's spells besides.
+# championFull.json holds each champion's base stats and spells.
 CHAMPIONS_FILE_NAME: Final = "championFull.json"
 ITEMS_FILE_NAME: Final = "item.json"
 SUMMONERS_FILE_NAME: Final = "summoner.json"
