@@ -9,7 +9,7 @@ from leagueasymode.game_state import ScoreboardPlayer
 from leagueasymode.inference.callouts import CalloutTracker
 from leagueasymode.inference.clues import ClueTracker
 from leagueasymode.inference.positions import position_estimate
-from leagueasymode.inference.rift_map import RIFT_MAP
+from leagueasymode.inference.rift_map import RIFT_MAP, region_center
 from leagueasymode.overlay_state import (
     OverlayState,
     PlayerCard,
@@ -60,7 +60,12 @@ def estimate(
 
 def test_a_player_just_pinned_is_where_the_clue_put_them() -> None:
     zed = estimate("Zed", "MIDDLE", [at_point("chaos_mid_outer_turret", 600.0)], 600.0)
-    assert zed.regions == [RegionChance(region="mid_lane", label="mid lane", chance=1.0)]
+    mid_x, mid_y = region_center("mid_lane")
+    assert zed.regions == [
+        RegionChance(
+            region="mid_lane", label="mid lane", chance=1.0, x_position=mid_x, y_position=mid_y
+        )
+    ]
     assert (zed.away_chance, zed.unseen_seconds) == (0.0, 0.0)
     assert zed.reach_mid_seconds == pytest.approx(
         RIFT_MAP.distance("chaos_mid_outer_turret", "mid_center") / MOVE_SPEED
@@ -164,7 +169,15 @@ def missing_enemy(
         is_dead=False,
         respawns_at_game_time_seconds=None,
         location=PositionEstimate(
-            regions=[RegionChance(region="top_river", label="top river", chance=0.6)],
+            regions=[
+                RegionChance(
+                    region="top_river",
+                    label="top river",
+                    chance=0.6,
+                    x_position=4700.0,
+                    y_position=9800.0,
+                )
+            ],
             away_chance=0.8,
             unseen_seconds=unseen_seconds,
             reach_top_seconds=30.0,

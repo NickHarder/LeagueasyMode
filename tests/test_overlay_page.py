@@ -240,6 +240,7 @@ async def open_overlay(
             league_client_base_url=game_url,
             data_dragon_base_url=data_dragon_url,
             patch_data_directory=tmp_path / "patch-data",
+            league_game_config=tmp_path / "no-game.cfg",
             player_lookup_pause_seconds=0.0,
             poll_interval_seconds=0.1,
             record_while_running=False,
@@ -420,6 +421,18 @@ async def test_an_enemy_control_ward_shows_where_it_likely_is(tmp_path: Path) ->
             re.compile(r"^Wards: Vi likely .+ \d+% \u00b7 0:\d\d ago$"), timeout=20000
         )
         await keep_screenshot(page, "control-wards")
+
+
+async def test_the_minimap_layer_marks_where_each_enemy_likely_is(tmp_path: Path) -> None:
+    async with open_overlay(tmp_path, snapshot_count=60, speed=1.0) as page:
+        minimap = page.locator("#minimap")
+        # League's settings file is missing: the layer takes the default place.
+        await expect(minimap).to_have_attribute("data-side", "right", timeout=5000)
+        for champion_name in ("Darius", "Vi", "Zed", "Caitlyn", "Lux"):
+            await expect(minimap.locator(f'circle[data-champion="{champion_name}"]')).to_have_count(
+                1
+            )
+        await keep_screenshot(page, "minimap")
 
 
 async def test_the_enemy_strip_shows_item_gold_and_the_lead(tmp_path: Path) -> None:

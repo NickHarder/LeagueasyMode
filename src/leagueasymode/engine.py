@@ -27,7 +27,13 @@ from leagueasymode.inference.objectives import (
 from leagueasymode.inference.players import numbers_window, player_cards, team_item_gold
 from leagueasymode.inference.wards import WardTracker
 from leagueasymode.league_client import ClientConnector, LeagueClient
-from leagueasymode.overlay_state import CooldownTimer, OverlayState, PlayerCard, PositionEstimate
+from leagueasymode.overlay_state import (
+    CooldownTimer,
+    MinimapLayout,
+    OverlayState,
+    PlayerCard,
+    PositionEstimate,
+)
 from leagueasymode.patch_data import GAME_VERSION_PATH, ITEMS_PATH, ItemCatalog, game_version_of
 from leagueasymode.player_intel import (
     DEFAULT_PAUSE_SECONDS,
@@ -57,6 +63,7 @@ def compute_overlay_state(
     clue_tracker: ClueTracker | None = None,
     jungle_tracker: JunglePathTracker | None = None,
     ward_tracker: WardTracker | None = None,
+    minimap: MinimapLayout | None = None,
 ) -> OverlayState:
     """Return what the overlay shows for one answer of the game's API.
 
@@ -75,6 +82,7 @@ def compute_overlay_state(
         clue_tracker: The same for the clues to where each player is; None to show none.
         jungle_tracker: The same for the junglers' clears; None to show none.
         ward_tracker: The same for the control wards; None to show none.
+        minimap: Where League draws its minimap; None while unknown.
 
     Returns:
         The overlay's state; no game running when there is no answer or it cannot be read.
@@ -140,6 +148,7 @@ def compute_overlay_state(
             if ward_tracker is not None
             else []
         ),
+        minimap=minimap,
     )
 
 
@@ -182,6 +191,8 @@ class OverlayEngine:
         connect_to_client: ClientConnector | None = None,
         load_patch_stats: PatchStatsLoader | None = None,
         intel_pause_seconds: float = DEFAULT_PAUSE_SECONDS,
+        *,
+        minimap_layout: MinimapLayout | None = None,
     ) -> None:
         """Keep the game's API, how often to ask it, and where the patch's data comes from.
 
@@ -193,12 +204,15 @@ class OverlayEngine:
             load_patch_stats: Returns the stats of the game's patch, for the combat stats; None to
                 go without them.
             intel_pause_seconds: The pause after each question about a player.
+            minimap_layout: Where League draws its minimap, from its settings; None while
+                unknown.
         """
         self.game_api: Final = game_api
         self.poll_interval_seconds: Final = poll_interval_seconds
         self.connect_to_client: Final = connect_to_client
         self.load_patch_stats: Final = load_patch_stats
         self.intel_pause_seconds: Final = intel_pause_seconds
+        self.minimap_layout: Final = minimap_layout
         self._item_catalog: ItemCatalog | None = None
         self._patch_stats: PatchStats | None = None
         self._player_records: PlayerRecords | None = None
@@ -295,6 +309,7 @@ class OverlayEngine:
                 clue_tracker=self._clue_tracker,
                 jungle_tracker=self._jungle_tracker,
                 ward_tracker=self._ward_tracker,
+                minimap=self.minimap_layout,
             )
             self._last_payload = payload if answer_state.is_game_running else None
             if answer_state.is_game_running and not self._current_state.is_game_running:

@@ -79,6 +79,9 @@ class Settings(BaseSettings):
     league_client_lockfile: Path | None = None
     # A stand-in for the League client, such as a replay's address; empty to find the running one.
     league_client_base_url: str | None = None
+    # League's game settings file (`game.cfg`), for where its minimap is, when League is installed
+    # somewhere other than the default.
+    league_game_config: Path | None = None
     # The overlay's local web server; 0 picks a free port, which `leagueasymode run` prints.
     overlay_port: int = 0
     # Whether `leagueasymode run` also records every game it shows.

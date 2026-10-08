@@ -120,13 +120,23 @@
         "respawns_at_game_time_seconds": {
           "title": "Respawns At Game Time Seconds",
           "type": "number"
+        },
+        "x_position": {
+          "title": "X Position",
+          "type": "number"
+        },
+        "y_position": {
+          "title": "Y Position",
+          "type": "number"
         }
       },
       "required": [
         "camp",
         "label",
         "cleared_by",
-        "respawns_at_game_time_seconds"
+        "respawns_at_game_time_seconds",
+        "x_position",
+        "y_position"
       ],
       "title": "CampTimer",
       "type": "object"
@@ -509,6 +519,26 @@
         "power_level_band_seconds"
       ],
       "title": "LevelEstimate",
+      "type": "object"
+    },
+    "MinimapLayout": {
+      "additionalProperties": false,
+      "description": "Where League draws its minimap, from League's own settings (`game.cfg`).",
+      "properties": {
+        "scale": {
+          "title": "Scale",
+          "type": "number"
+        },
+        "is_flipped": {
+          "title": "Is Flipped",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "scale",
+        "is_flipped"
+      ],
+      "title": "MinimapLayout",
       "type": "object"
     },
     "NextItemEstimate": {
@@ -1031,12 +1061,22 @@
         "chance": {
           "title": "Chance",
           "type": "number"
+        },
+        "x_position": {
+          "title": "X Position",
+          "type": "number"
+        },
+        "y_position": {
+          "title": "Y Position",
+          "type": "number"
         }
       },
       "required": [
         "region",
         "label",
-        "chance"
+        "chance",
+        "x_position",
+        "y_position"
       ],
       "title": "RegionChance",
       "type": "object"
@@ -1117,6 +1157,14 @@
         "chance": {
           "title": "Chance",
           "type": "number"
+        },
+        "x_position": {
+          "title": "X Position",
+          "type": "number"
+        },
+        "y_position": {
+          "title": "Y Position",
+          "type": "number"
         }
       },
       "required": [
@@ -1125,7 +1173,9 @@
         "placed_at_game_time_seconds",
         "region",
         "label",
-        "chance"
+        "chance",
+        "x_position",
+        "y_position"
       ],
       "title": "WardEstimate",
       "type": "object"
@@ -1249,6 +1299,17 @@
       },
       "title": "Control Wards",
       "type": "array"
+    },
+    "minimap": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/MinimapLayout"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
     },
     "callouts": {
       "items": {

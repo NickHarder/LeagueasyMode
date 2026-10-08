@@ -352,3 +352,50 @@ body {
 .enemy-role[data-confidence="guess"] {
   font-style: italic;
 }
+
+/* The minimap layer sits where League draws its minimap. Its size at League's scale 1, a share of
+   the window's height, is a first guess to check on the Mac. */
+.minimap {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  width: calc(22vh * var(--minimap-scale, 1));
+  height: calc(22vh * var(--minimap-scale, 1));
+  pointer-events: none;
+}
+
+.minimap[hidden] {
+  display: none;
+}
+
+.minimap[data-side="left"] {
+  right: auto;
+  left: 0;
+}
+
+.minimap svg {
+  width: 100%;
+  height: 100%;
+}
+
+.minimap-enemy {
+  fill: var(--widget-enemy);
+}
+
+.minimap-label {
+  fill: #ffffff;
+  font: 600 700px -apple-system, "SF Pro Text", system-ui, sans-serif;
+  text-anchor: middle;
+  dominant-baseline: central;
+}
+
+.minimap-camp {
+  fill: var(--widget-alive);
+  font: 600 600px -apple-system, "SF Pro Text", system-ui, sans-serif;
+  text-anchor: middle;
+  dominant-baseline: central;
+}
+
+.minimap-ward {
+  fill: #f0c75e;
+}

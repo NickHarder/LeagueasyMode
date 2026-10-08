@@ -170,7 +170,9 @@ export function isRegionChance(value) {
     return (isRecord(value) &&
         typeof value["region"] === "string" &&
         typeof value["label"] === "string" &&
-        typeof value["chance"] === "number");
+        typeof value["chance"] === "number" &&
+        typeof value["x_position"] === "number" &&
+        typeof value["y_position"] === "number");
 }
 /** Return whether a value is a player's position as the engine sends it. */
 export function isPositionEstimate(value) {
@@ -250,7 +252,9 @@ export function isCampTimer(value) {
         typeof value["camp"] === "string" &&
         typeof value["label"] === "string" &&
         isOneOf(value["cleared_by"], SIDES) &&
-        typeof value["respawns_at_game_time_seconds"] === "number");
+        typeof value["respawns_at_game_time_seconds"] === "number" &&
+        typeof value["x_position"] === "number" &&
+        typeof value["y_position"] === "number");
 }
 /** Return whether a value is a jungler's path as the engine sends it. */
 export function isJunglePath(value) {
@@ -270,7 +274,13 @@ export function isWardEstimate(value) {
         typeof value["placed_at_game_time_seconds"] === "number" &&
         typeof value["region"] === "string" &&
         typeof value["label"] === "string" &&
-        typeof value["chance"] === "number");
+        typeof value["chance"] === "number" &&
+        typeof value["x_position"] === "number" &&
+        typeof value["y_position"] === "number");
+}
+/** Return whether a value is where League draws its minimap as the engine sends it. */
+export function isMinimapLayout(value) {
+    return isRecord(value) && typeof value["scale"] === "number" && typeof value["is_flipped"] === "boolean";
 }
 /** Return whether a value is an overlay state as the engine sends it. */
 export function isOverlayState(value) {
@@ -292,5 +302,6 @@ export function isOverlayState(value) {
         isArrayOf(value["jungle_paths"], isJunglePath) &&
         isArrayOf(value["camp_timers"], isCampTimer) &&
         isArrayOf(value["control_wards"], isWardEstimate) &&
+        (value["minimap"] === null || isMinimapLayout(value["minimap"])) &&
         isArrayOf(value["callouts"], isCallout));
 }

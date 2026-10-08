@@ -18,7 +18,7 @@ from dataclasses import dataclass
 from typing import Final
 
 from leagueasymode.game_state import ScoreboardPlayer
-from leagueasymode.inference.rift_map import RIFT_MAP, TEAM_PREFIX, fountain_of
+from leagueasymode.inference.rift_map import RIFT_MAP, TEAM_PREFIX, fountain_of, region_center
 from leagueasymode.overlay_state import PositionClue, PositionEstimate, RegionChance
 
 # How much a player of each role is found in each region, as the region stands to their team:
@@ -145,7 +145,13 @@ def position_estimate(
     likeliest = sorted(chance_by_region.items(), key=lambda entry: entry[1], reverse=True)
     return PositionEstimate(
         regions=[
-            RegionChance(region=region, label=_region_label(region, ally_team), chance=chance)
+            RegionChance(
+                region=region,
+                label=_region_label(region, ally_team),
+                chance=chance,
+                x_position=region_center(region)[0],
+                y_position=region_center(region)[1],
+            )
             for region, chance in likeliest[:SHOWN_REGION_COUNT]
         ],
         away_chance=(

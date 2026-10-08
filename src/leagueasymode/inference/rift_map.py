@@ -234,6 +234,24 @@ class RiftMap:
         )
 
 
+def region_center(region: str) -> tuple[float, float]:
+    """Return the middle of a region of the map: the mean of its points.
+
+    Args:
+        region: The map's region.
+
+    Returns:
+        The middle's x and y, in game units; the map's center for a region with no point.
+    """
+    points = [point for point in RIFT_MAP.points.values() if point.region == region]
+    if not points:
+        return MAP_CENTER
+    return (
+        sum(point.x_position for point in points) / len(points),
+        sum(point.y_position for point in points) / len(points),
+    )
+
+
 def fountain_of(team: str) -> str:
     """Return the name of a team's fountain.
 

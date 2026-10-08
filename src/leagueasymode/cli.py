@@ -33,6 +33,7 @@ from leagueasymode.league_client import (
     SharedAnswers,
     find_client_credentials,
 )
+from leagueasymode.league_settings import DEFAULT_GAME_CONFIG_PATH, read_minimap_layout
 from leagueasymode.overlay_server import create_overlay_application
 from leagueasymode.patch_data import GAME_VERSION_PATH, game_version_of
 from leagueasymode.player_intel import PLAYER_LOOKUP_PATH_PREFIXES
@@ -109,6 +110,9 @@ async def run_overlay(
             _client_connector(session, settings, shared_answers),
             _patch_stats_loader(session, settings),
             settings.player_lookup_pause_seconds,
+            minimap_layout=await asyncio.to_thread(
+                read_minimap_layout, settings.league_game_config or DEFAULT_GAME_CONFIG_PATH
+            ),
         )
         runner = web.AppRunner(create_overlay_application(engine))
         await runner.setup()

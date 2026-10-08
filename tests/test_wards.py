@@ -13,8 +13,16 @@ CONTROL_WARD: Final = (2055, "Control Ward", 75)
 VI_JUNGLER: Final = ("CHAOS", "vi")
 IN_THE_RIVER: Final = PositionEstimate(
     regions=[
-        RegionChance(region="top_river", label="top river", chance=0.6),
-        RegionChance(region="chaos_top_jungle", label="their top jungle", chance=0.3),
+        RegionChance(
+            region="top_river", label="top river", chance=0.6, x_position=4700.0, y_position=9800.0
+        ),
+        RegionChance(
+            region="chaos_top_jungle",
+            label="their top jungle",
+            chance=0.3,
+            x_position=7000.0,
+            y_position=11000.0,
+        ),
     ],
     away_chance=0.4,
     unseen_seconds=12.0,
@@ -52,6 +60,8 @@ def test_a_control_ward_leaving_the_inventory_was_placed_where_they_likely_were(
             region="top_river",
             label="top river",
             chance=0.6,
+            x_position=4700.0,
+            y_position=9800.0,
         )
     ]
 
@@ -61,7 +71,17 @@ def test_a_new_ward_replaces_the_last_one_of_the_same_player() -> None:
     tracker.update(snapshot_with_vi_wards(600.0, 2), locations())
     tracker.update(snapshot_with_vi_wards(601.0, 1), locations())
     elsewhere = IN_THE_RIVER.model_copy(
-        update={"regions": [RegionChance(region="bot_river", label="bot river", chance=0.5)]}
+        update={
+            "regions": [
+                RegionChance(
+                    region="bot_river",
+                    label="bot river",
+                    chance=0.5,
+                    x_position=10100.0,
+                    y_position=5000.0,
+                )
+            ]
+        }
     )
     wards = tracker.update(snapshot_with_vi_wards(700.0, 0), locations(elsewhere))
     assert [(ward.label, ward.placed_at_game_time_seconds) for ward in wards] == [
