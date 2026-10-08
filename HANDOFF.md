@@ -3,9 +3,8 @@
 If you are picking this work up, human or model: read this file top to bottom first. The `handoff` skill
 refreshes it; it describes the current state.
 
-Last updated: 2026-10-08, on branch `feat/exact-facts` at `5819bb0`, which stacks phase 2 on
+Last updated: 2026-10-08, on branch `feat/exact-facts`, pull request #3, which stacks phase 2 on
 `feat/overlay-and-inference` (pull request #2 into `main`, green on all 10 jobs at `ab70ce8`).
-`feat/exact-facts` is local only: not pushed.
 
 ## Where things stand
 
@@ -43,9 +42,9 @@ In `AGENTS.md`, this project's own included: every session reads that file.
 
 ## Open, for the owner
 
-1. **Review and merge pull request #2** (https://github.com/NickHarder/LeagueasyMode/pull/2) when
-   you are ready; it is green and has no conflict. Then say whether to push `feat/exact-facts`
-   and open its pull request (into `main` once #2 is merged, or stacked on #2 before).
+1. **Review and merge pull request #2** (https://github.com/NickHarder/LeagueasyMode/pull/2), then
+   #3 (https://github.com/NickHarder/LeagueasyMode/pull/3), which merges into #2's branch; GitHub
+   moves #3 onto `main` when #2's branch is deleted on merge, or change its base by hand.
 2. **Champion base stats** for combat stats (phase 2's decision 1): a table generated each patch
    from Data Dragon by a CI job (recommended), learned from recordings, or none.
 3. **This season's objective timers**: Voidgrubs 8:00, Herald 15:00 and Baron 20:00 come from the

@@ -6,6 +6,7 @@ skill has the format.
 
 ## 2026-10-08
 
+- Phase 2 pushed and opened as pull request #3, stacked on #2 so that its diff shows phase 2 alone.
 - Phase 2 stands built but for structures, left out because League's own scoreboard shows tower
   counts and the lane naming is unconfirmed, and combat stats, which wait on the owner's choice of
   a source for champion base stats. The handoff and the phase 2 plan say where each slice is.
