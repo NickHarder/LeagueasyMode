@@ -1,0 +1,233 @@
+[
+  {
+    "id": 1001,
+    "name": "Boots",
+    "description": "<mainText><stats><attention>25</attention> Move Speed</stats></mainText>",
+    "active": false,
+    "inStore": true,
+    "from": [],
+    "to": [
+      3006
+    ],
+    "categories": [
+      "Boots"
+    ],
+    "maxStacks": 1,
+    "requiredChampion": "",
+    "requiredAlly": "",
+    "requiredBuffCurrencyName": "",
+    "requiredBuffCurrencyCost": 0,
+    "specialRecipe": 0,
+    "isEnchantment": false,
+    "price": 300,
+    "priceTotal": 300,
+    "displayInItemSets": true,
+    "iconPath": "/lol-game-data/assets/ASSETS/Items/Icons2D/1001.png"
+  },
+  {
+    "id": 1018,
+    "name": "Cloak of Agility",
+    "description": "<mainText><stats><attention>15%</attention> Critical Strike Chance</stats></mainText>",
+    "active": false,
+    "inStore": true,
+    "from": [],
+    "to": [
+      3031
+    ],
+    "categories": [
+      "CriticalStrike"
+    ],
+    "maxStacks": 1,
+    "requiredChampion": "",
+    "requiredAlly": "",
+    "requiredBuffCurrencyName": "",
+    "requiredBuffCurrencyCost": 0,
+    "specialRecipe": 0,
+    "isEnchantment": false,
+    "price": 600,
+    "priceTotal": 600,
+    "displayInItemSets": true,
+    "iconPath": "/lol-game-data/assets/ASSETS/Items/Icons2D/1018.png"
+  },
+  {
+    "id": 1036,
+    "name": "Long Sword",
+    "description": "<mainText><stats><attention>10</attention> Attack Damage</stats></mainText>",
+    "active": false,
+    "inStore": true,
+    "from": [],
+    "to": [
+      3031
+    ],
+    "categories": [
+      "Damage"
+    ],
+    "maxStacks": 1,
+    "requiredChampion": "",
+    "requiredAlly": "",
+    "requiredBuffCurrencyName": "",
+    "requiredBuffCurrencyCost": 0,
+    "specialRecipe": 0,
+    "isEnchantment": false,
+    "price": 350,
+    "priceTotal": 350,
+    "displayInItemSets": true,
+    "iconPath": "/lol-game-data/assets/ASSETS/Items/Icons2D/1036.png"
+  },
+  {
+    "id": 1038,
+    "name": "B. F. Sword",
+    "description": "<mainText><stats><attention>40</attention> Attack Damage</stats></mainText>",
+    "active": false,
+    "inStore": true,
+    "from": [],
+    "to": [
+      3031
+    ],
+    "categories": [
+      "Damage"
+    ],
+    "maxStacks": 1,
+    "requiredChampion": "",
+    "requiredAlly": "",
+    "requiredBuffCurrencyName": "",
+    "requiredBuffCurrencyCost": 0,
+    "specialRecipe": 0,
+    "isEnchantment": false,
+    "price": 1300,
+    "priceTotal": 1300,
+    "displayInItemSets": true,
+    "iconPath": "/lol-game-data/assets/ASSETS/Items/Icons2D/1038.png"
+  },
+  {
+    "id": 1042,
+    "name": "Dagger",
+    "description": "<mainText><stats><attention>10%</attention> Attack Speed</stats></mainText>",
+    "active": false,
+    "inStore": true,
+    "from": [],
+    "to": [
+      3006
+    ],
+    "categories": [
+      "AttackSpeed"
+    ],
+    "maxStacks": 1,
+    "requiredChampion": "",
+    "requiredAlly": "",
+    "requiredBuffCurrencyName": "",
+    "requiredBuffCurrencyCost": 0,
+    "specialRecipe": 0,
+    "isEnchantment": false,
+    "price": 250,
+    "priceTotal": 250,
+    "displayInItemSets": true,
+    "iconPath": "/lol-game-data/assets/ASSETS/Items/Icons2D/1042.png"
+  },
+  {
+    "id": 1055,
+    "name": "Doran's Blade",
+    "description": "",
+    "active": false,
+    "inStore": true,
+    "from": [],
+    "to": [],
+    "categories": [
+      "Damage",
+      "Health",
+      "LifeSteal",
+      "Lane"
+    ],
+    "maxStacks": 1,
+    "requiredChampion": "",
+    "requiredAlly": "",
+    "requiredBuffCurrencyName": "",
+    "requiredBuffCurrencyCost": 0,
+    "specialRecipe": 0,
+    "isEnchantment": false,
+    "price": 450,
+    "priceTotal": 450,
+    "displayInItemSets": true,
+    "iconPath": "/lol-game-data/assets/ASSETS/Items/Icons2D/1055.png"
+  },
+  {
+    "id": 2055,
+    "name": "Control Ward",
+    "description": "",
+    "active": false,
+    "inStore": true,
+    "from": [],
+    "to": [],
+    "categories": [
+      "Consumable",
+      "Vision",
+      "Active"
+    ],
+    "maxStacks": 1,
+    "requiredChampion": "",
+    "requiredAlly": "",
+    "requiredBuffCurrencyName": "",
+    "requiredBuffCurrencyCost": 0,
+    "specialRecipe": 0,
+    "isEnchantment": false,
+    "price": 75,
+    "priceTotal": 75,
+    "displayInItemSets": true,
+    "iconPath": "/lol-game-data/assets/ASSETS/Items/Icons2D/2055.png"
+  },
+  {
+    "id": 3006,
+    "name": "Berserker's Greaves",
+    "description": "",
+    "active": false,
+    "inStore": true,
+    "from": [
+      1001,
+      1042
+    ],
+    "to": [],
+    "categories": [
+      "Boots",
+      "AttackSpeed"
+    ],
+    "maxStacks": 1,
+    "requiredChampion": "",
+    "requiredAlly": "",
+    "requiredBuffCurrencyName": "",
+    "requiredBuffCurrencyCost": 0,
+    "specialRecipe": 0,
+    "isEnchantment": false,
+    "price": 450,
+    "priceTotal": 1000,
+    "displayInItemSets": true,
+    "iconPath": "/lol-game-data/assets/ASSETS/Items/Icons2D/3006.png"
+  },
+  {
+    "id": 3031,
+    "name": "Infinity Edge",
+    "description": "<mainText><stats><attention>65</attention> Attack Damage<br><attention>25%</attention> Critical Strike Chance</stats></mainText>",
+    "active": false,
+    "inStore": true,
+    "from": [
+      1038,
+      1018,
+      1036
+    ],
+    "to": [],
+    "categories": [
+      "Damage",
+      "CriticalStrike"
+    ],
+    "maxStacks": 1,
+    "requiredChampion": "",
+    "requiredAlly": "",
+    "requiredBuffCurrencyName": "",
+    "requiredBuffCurrencyCost": 0,
+    "specialRecipe": 0,
+    "isEnchantment": false,
+    "price": 1150,
+    "priceTotal": 3400,
+    "displayInItemSets": true,
+    "iconPath": "/lol-game-data/assets/ASSETS/Items/Icons2D/3031.png"
+  }
+]

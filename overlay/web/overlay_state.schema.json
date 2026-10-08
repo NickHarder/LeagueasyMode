@@ -1,5 +1,130 @@
 {
   "$defs": {
+    "BuffTimer": {
+      "additionalProperties": false,
+      "description": "A team's Baron or Elder buff, and when it runs out.",
+      "properties": {
+        "buff": {
+          "enum": [
+            "baron",
+            "elder"
+          ],
+          "title": "Buff",
+          "type": "string"
+        },
+        "holder": {
+          "enum": [
+            "ally",
+            "enemy"
+          ],
+          "title": "Holder",
+          "type": "string"
+        },
+        "ends_at_game_time_seconds": {
+          "title": "Ends At Game Time Seconds",
+          "type": "number"
+        }
+      },
+      "required": [
+        "buff",
+        "holder",
+        "ends_at_game_time_seconds"
+      ],
+      "title": "BuffTimer",
+      "type": "object"
+    },
+    "Callout": {
+      "additionalProperties": false,
+      "description": "A short notice shown for a few seconds when something happens; never an instruction.",
+      "properties": {
+        "callout_id": {
+          "title": "Callout Id",
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/$defs/CalloutKind"
+        },
+        "text": {
+          "title": "Text",
+          "type": "string"
+        },
+        "shown_until_game_time_seconds": {
+          "title": "Shown Until Game Time Seconds",
+          "type": "number"
+        }
+      },
+      "required": [
+        "callout_id",
+        "kind",
+        "text",
+        "shown_until_game_time_seconds"
+      ],
+      "title": "Callout",
+      "type": "object"
+    },
+    "CalloutKind": {
+      "enum": [
+        "numbers_window",
+        "level_spike",
+        "objective_soon",
+        "item_spike"
+      ],
+      "type": "string"
+    },
+    "CombatStats": {
+      "additionalProperties": false,
+      "description": "A player's combat stats.\n\nExact for the player on this machine, whose stats the game gives in full. For the others an\nestimate: the champion's base stats grown to their level, plus their items' stats, at this\npatch's numbers; runes, passives, stacks and buffs are not counted.",
+      "properties": {
+        "source": {
+          "enum": [
+            "exact",
+            "estimate"
+          ],
+          "title": "Source",
+          "type": "string"
+        },
+        "health": {
+          "title": "Health",
+          "type": "number"
+        },
+        "armor": {
+          "title": "Armor",
+          "type": "number"
+        },
+        "magic_resist": {
+          "title": "Magic Resist",
+          "type": "number"
+        },
+        "attack_damage": {
+          "title": "Attack Damage",
+          "type": "number"
+        },
+        "ability_power": {
+          "title": "Ability Power",
+          "type": "number"
+        },
+        "attack_speed": {
+          "title": "Attack Speed",
+          "type": "number"
+        },
+        "move_speed": {
+          "title": "Move Speed",
+          "type": "number"
+        }
+      },
+      "required": [
+        "source",
+        "health",
+        "armor",
+        "magic_resist",
+        "attack_damage",
+        "ability_power",
+        "attack_speed",
+        "move_speed"
+      ],
+      "title": "CombatStats",
+      "type": "object"
+    },
     "DragonTimer": {
       "additionalProperties": false,
       "description": "The next dragon or Elder Dragon: when it spawns, and the race for the soul.\n\nEvery value restates the kill feed and the map; nothing here is estimated.",
@@ -71,6 +196,230 @@
       ],
       "title": "DragonTimer",
       "type": "object"
+    },
+    "InhibitorTimer": {
+      "additionalProperties": false,
+      "description": "A destroyed inhibitor, and when it comes back.",
+      "properties": {
+        "side": {
+          "enum": [
+            "ally",
+            "enemy"
+          ],
+          "title": "Side",
+          "type": "string"
+        },
+        "lane": {
+          "enum": [
+            "top",
+            "mid",
+            "bot"
+          ],
+          "title": "Lane",
+          "type": "string"
+        },
+        "respawns_at_game_time_seconds": {
+          "title": "Respawns At Game Time Seconds",
+          "type": "number"
+        }
+      },
+      "required": [
+        "side",
+        "lane",
+        "respawns_at_game_time_seconds"
+      ],
+      "title": "InhibitorTimer",
+      "type": "object"
+    },
+    "NumbersWindow": {
+      "additionalProperties": false,
+      "description": "More of the enemy team is dead than of the player's, until the respawn that evens it.",
+      "properties": {
+        "ally_dead_count": {
+          "title": "Ally Dead Count",
+          "type": "integer"
+        },
+        "enemy_dead_count": {
+          "title": "Enemy Dead Count",
+          "type": "integer"
+        },
+        "ends_at_game_time_seconds": {
+          "title": "Ends At Game Time Seconds",
+          "type": "number"
+        }
+      },
+      "required": [
+        "ally_dead_count",
+        "enemy_dead_count",
+        "ends_at_game_time_seconds"
+      ],
+      "title": "NumbersWindow",
+      "type": "object"
+    },
+    "ObjectiveTimer": {
+      "additionalProperties": false,
+      "description": "The next spawn of an epic monster other than the dragons.\n\n`is_rule_verified` is false while its spawn rule is not yet confirmed for this season, so the\nwidget can mark the timer as provisional.",
+      "properties": {
+        "objective": {
+          "enum": [
+            "baron",
+            "rift_herald",
+            "voidgrubs"
+          ],
+          "title": "Objective",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "not_spawned",
+            "respawning",
+            "alive",
+            "gone"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "spawns_at_game_time_seconds": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Spawns At Game Time Seconds"
+        },
+        "is_rule_verified": {
+          "title": "Is Rule Verified",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "objective",
+        "status",
+        "spawns_at_game_time_seconds",
+        "is_rule_verified"
+      ],
+      "title": "ObjectiveTimer",
+      "type": "object"
+    },
+    "PlayerCard": {
+      "additionalProperties": false,
+      "description": "One player as the scoreboard shows them: side, role, level, and when they are back.",
+      "properties": {
+        "champion_name": {
+          "title": "Champion Name",
+          "type": "string"
+        },
+        "side": {
+          "enum": [
+            "ally",
+            "enemy"
+          ],
+          "title": "Side",
+          "type": "string"
+        },
+        "position": {
+          "title": "Position",
+          "type": "string"
+        },
+        "role": {
+          "default": "",
+          "title": "Role",
+          "type": "string"
+        },
+        "role_confidence": {
+          "default": "unknown",
+          "enum": [
+            "given",
+            "likely",
+            "guess",
+            "unknown"
+          ],
+          "title": "Role Confidence",
+          "type": "string"
+        },
+        "level": {
+          "title": "Level",
+          "type": "integer"
+        },
+        "is_dead": {
+          "title": "Is Dead",
+          "type": "boolean"
+        },
+        "respawns_at_game_time_seconds": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Respawns At Game Time Seconds"
+        },
+        "item_gold": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Item Gold"
+        },
+        "finished_item_names": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Finished Item Names",
+          "type": "array"
+        },
+        "combat_stats": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CombatStats"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "champion_name",
+        "side",
+        "position",
+        "level",
+        "is_dead",
+        "respawns_at_game_time_seconds"
+      ],
+      "title": "PlayerCard",
+      "type": "object"
+    },
+    "TeamItemGold": {
+      "additionalProperties": false,
+      "description": "What each team's items are worth: gold earned and spent, not gold in hand.",
+      "properties": {
+        "ally_item_gold": {
+          "title": "Ally Item Gold",
+          "type": "integer"
+        },
+        "enemy_item_gold": {
+          "title": "Enemy Item Gold",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "ally_item_gold",
+        "enemy_item_gold"
+      ],
+      "title": "TeamItemGold",
+      "type": "object"
     }
   },
   "additionalProperties": false,
@@ -102,6 +451,63 @@
         }
       ],
       "default": null
+    },
+    "objectives": {
+      "items": {
+        "$ref": "#/$defs/ObjectiveTimer"
+      },
+      "title": "Objectives",
+      "type": "array"
+    },
+    "buffs": {
+      "items": {
+        "$ref": "#/$defs/BuffTimer"
+      },
+      "title": "Buffs",
+      "type": "array"
+    },
+    "inhibitors": {
+      "items": {
+        "$ref": "#/$defs/InhibitorTimer"
+      },
+      "title": "Inhibitors",
+      "type": "array"
+    },
+    "players": {
+      "items": {
+        "$ref": "#/$defs/PlayerCard"
+      },
+      "title": "Players",
+      "type": "array"
+    },
+    "numbers_window": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/NumbersWindow"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "team_item_gold": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/TeamItemGold"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "callouts": {
+      "items": {
+        "$ref": "#/$defs/Callout"
+      },
+      "title": "Callouts",
+      "type": "array"
     }
   },
   "required": [

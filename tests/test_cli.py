@@ -8,7 +8,11 @@ from pydantic import JsonValue
 
 from game_payloads import all_game_data, game_start_event
 from leagueasymode.cli import main, record_until_stopped
-from leagueasymode.config import Settings, default_recordings_directory
+from leagueasymode.config import (
+    Settings,
+    default_patch_data_directory,
+    default_recordings_directory,
+)
 from leagueasymode.recording.reader import iter_game_frames
 from leagueasymode.recording.writer import RecordingWriter
 from local_servers import serve
@@ -56,6 +60,13 @@ def test_recordings_go_to_application_support_on_a_mac(monkeypatch: pytest.Monke
     monkeypatch.setattr("sys.platform", "darwin")
     assert default_recordings_directory() == (
         Path.home() / "Library" / "Application Support" / "LeagueasyMode" / "recordings"
+    )
+
+
+def test_patch_data_goes_to_application_support_on_a_mac(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("sys.platform", "darwin")
+    assert default_patch_data_directory() == (
+        Path.home() / "Library" / "Application Support" / "LeagueasyMode" / "patch-data"
     )
 
 

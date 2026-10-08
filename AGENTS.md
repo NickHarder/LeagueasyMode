@@ -1,6 +1,6 @@
 # LeagueasyMode
 
-A macOS overlay for League of Legends that infers what the scoreboard hides, from the game's local APIs only.
+A macOS overlay for League of Legends that infers what the scoreboard hides, from the game's local APIs (and each patch's public stats, from Riot's Data Dragon once a patch).
 
 These are the project's instructions for any coding agent. Claude Code and Cursor read this file directly.
 Keep it short: procedures belong in skills, the state of the work belongs in `HANDOFF.md`, and what

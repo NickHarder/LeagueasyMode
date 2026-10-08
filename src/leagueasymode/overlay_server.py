@@ -16,6 +16,9 @@ from leagueasymode.engine import OverlayEngine
 from leagueasymode.overlay_state import OverlayState
 
 ALLOWED_HOST_NAMES: Final = frozenset({"127.0.0.1", "localhost"})
+# Set when the server shuts down, so that open streams end at once instead of at their next
+# keep-alive, which would hold the shutdown up for as long as that.
+SHUTTING_DOWN_KEY: Final = web.AppKey("shutting_down", asyncio.Event)
 KEEPALIVE_INTERVAL_SECONDS: Final = 15.0
 WEB_ASSET_PACKAGE: Final = "leagueasymode.overlay_web"
 WEB_ASSETS: Final = {
@@ -38,12 +41,19 @@ def create_overlay_application(engine: OverlayEngine) -> web.Application:
         The application.
     """
     application = web.Application(middlewares=[_refuse_other_hosts])
+    shutting_down = asyncio.Event()
+    application[SHUTTING_DOWN_KEY] = shutting_down
+
+    async def announce_shutdown(_application: web.Application) -> None:
+        shutting_down.set()
+
+    application.on_shutdown.append(announce_shutdown)
 
     async def state(_request: web.Request) -> web.Response:
         return web.json_response(text=engine.current_state.model_dump_json())
 
     async def events(request: web.Request) -> web.StreamResponse:
-        return await _stream_states(request, engine)
+        return await _stream_states(request, engine, shutting_down)
 
     application.router.add_get("/state", state)
     application.router.add_get("/events", events)
@@ -69,15 +79,18 @@ async def _refuse_other_hosts(request: web.Request, handler: Handler) -> web.Str
     return await handler(request)
 
 
-async def _stream_states(request: web.Request, engine: OverlayEngine) -> web.StreamResponse:
+async def _stream_states(
+    request: web.Request, engine: OverlayEngine, shutting_down: asyncio.Event
+) -> web.StreamResponse:
     """Send the current state, then each new one, as server-sent events until the reader leaves.
 
     Args:
         request: The request.
         engine: The engine.
+        shutting_down: Set when the server shuts down, which ends the stream at once.
 
     Returns:
-        The stream, once the reader has gone.
+        The stream, once the reader has gone or the server is shutting down.
     """
     response = web.StreamResponse(
         headers={"Content-Type": "text/event-stream", "Cache-Control": "no-cache"}
@@ -86,19 +99,43 @@ async def _stream_states(request: web.Request, engine: OverlayEngine) -> web.Str
     updates = engine.subscribe()
     try:
         await response.write(_event_bytes(engine.current_state))
-        while True:
-            try:
-                new_state = await asyncio.wait_for(
-                    updates.get(), timeout=KEEPALIVE_INTERVAL_SECONDS
-                )
-            except TimeoutError:
+        while not shutting_down.is_set():
+            new_state = await _next_state_or_none(updates, shutting_down)
+            if new_state is not None:
+                await response.write(_event_bytes(new_state))
+            elif not shutting_down.is_set():
                 await response.write(b": keepalive\n\n")
-                continue
-            await response.write(_event_bytes(new_state))
+        return response
     except ConnectionResetError:
         return response
     finally:
         engine.unsubscribe(updates)
+
+
+async def _next_state_or_none(
+    updates: asyncio.Queue[OverlayState], shutting_down: asyncio.Event
+) -> OverlayState | None:
+    """Wait for the next state, the shutdown, or the keep-alive interval, whichever comes first.
+
+    Args:
+        updates: The subscriber's queue.
+        shutting_down: Set when the server shuts down.
+
+    Returns:
+        The next state, or None when the shutdown or the keep-alive interval came first.
+    """
+    next_state_task = asyncio.ensure_future(updates.get())
+    shutdown_task = asyncio.ensure_future(shutting_down.wait())
+    finished_tasks, pending_tasks = await asyncio.wait(
+        {next_state_task, shutdown_task},
+        timeout=KEEPALIVE_INTERVAL_SECONDS,
+        return_when=asyncio.FIRST_COMPLETED,
+    )
+    for pending_task in pending_tasks:
+        pending_task.cancel()
+    if next_state_task in finished_tasks:
+        return next_state_task.result()
+    return None
 
 
 def _event_bytes(state: OverlayState) -> bytes:

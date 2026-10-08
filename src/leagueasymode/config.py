@@ -7,6 +7,7 @@ from typing import Final
 from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from leagueasymode.data_dragon import DEFAULT_DATA_DRAGON_BASE_URL
 from leagueasymode.game_api import DEFAULT_GAME_API_BASE_URL
 
 # This file is <repository root>/src/leagueasymode/config.py.
@@ -15,16 +16,34 @@ ENV_FILE: Final = REPOSITORY_ROOT / ".env"
 APPLICATION_NAME: Final = "LeagueasyMode"
 
 
+def default_application_directory() -> Path:
+    """Return where the application keeps its files.
+
+    Returns:
+        `~/Library/Application Support/LeagueasyMode` on a Mac, and
+        `~/.local/share/leagueasymode` elsewhere.
+    """
+    if sys.platform == "darwin":
+        return Path.home() / "Library" / "Application Support" / APPLICATION_NAME
+    return Path.home() / ".local" / "share" / APPLICATION_NAME.lower()
+
+
 def default_recordings_directory() -> Path:
     """Return where recordings are kept when no setting says otherwise.
 
     Returns:
-        `~/Library/Application Support/LeagueasyMode/recordings` on a Mac, and
-        `~/.local/share/leagueasymode/recordings` elsewhere.
+        `recordings` in the application's directory (`default_application_directory`).
     """
-    if sys.platform == "darwin":
-        return Path.home() / "Library" / "Application Support" / APPLICATION_NAME / "recordings"
-    return Path.home() / ".local" / "share" / APPLICATION_NAME.lower() / "recordings"
+    return default_application_directory() / "recordings"
+
+
+def default_patch_data_directory() -> Path:
+    """Return where each patch's Data Dragon files are kept when no setting says otherwise.
+
+    Returns:
+        `patch-data` in the application's directory (`default_application_directory`).
+    """
+    return default_application_directory() / "patch-data"
 
 
 class Settings(BaseSettings):
@@ -58,10 +77,20 @@ class Settings(BaseSettings):
     recordings_directory: Path | None = None
     # The League client's lockfile, when League is installed somewhere other than the default.
     league_client_lockfile: Path | None = None
+    # A stand-in for the League client, such as a replay's address; empty to find the running one.
+    league_client_base_url: str | None = None
     # The overlay's local web server; 0 picks a free port, which `leagueasymode run` prints.
     overlay_port: int = 0
     # Whether `leagueasymode run` also records every game it shows.
     record_while_running: bool = True
+    # Whether the engine may fetch a patch's champion and item stats from Riot's Data Dragon, once
+    # a patch, the one request it makes beyond this machine; off, only patches on disk are used.
+    download_patch_stats: bool = True
+    # Data Dragon's address, or a stand-in's.
+    data_dragon_base_url: str = DEFAULT_DATA_DRAGON_BASE_URL
+    # Where each patch's Data Dragon files are kept; empty for the default
+    # (`default_patch_data_directory`).
+    patch_data_directory: Path | None = None
     # The model provider's key, for anything that calls the real model. An empty line in `.env`
     # leaves it unset. To change provider, change this value and the model id; no other place holds
     # a key.

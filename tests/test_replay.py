@@ -83,3 +83,53 @@ async def test_the_replay_answers_like_the_game(tmp_path: Path) -> None:
         clock.now_seconds += 60.0
         async with session.get(base_url + "/liveclientdata/allgamedata") as gone_response:
             assert gone_response.status == 404
+
+
+def write_recording_with_client_data(directory: Path) -> Path:
+    writer = RecordingWriter(directory / "client.jsonl", keyframe_interval_seconds=1.0)
+    writer.write_started(
+        started_at=datetime.datetime(2026, 10, 8, tzinfo=datetime.UTC),
+        recorder_version="test",
+        poll_interval_seconds=0.5,
+    )
+    writer.write_snapshot(received_at_seconds=0.0, payload=all_game_data(10.0))
+    writer.write_client_resource(
+        received_at_seconds=0.2,
+        path="/lol-game-data/assets/v1/items.json",
+        payload=[{"id": 1036, "name": "Long Sword", "priceTotal": 350}],
+    )
+    writer.write_client_resource(
+        received_at_seconds=30.0,
+        path="/lol-match-history/v1/game-timelines/1",
+        payload={"frames": []},
+    )
+    for index in range(1, 80):
+        writer.write_snapshot(
+            received_at_seconds=index * 0.5, payload=all_game_data(10.0 + index * 0.5)
+        )
+    writer.write_ended(received_at_seconds=40.0, reason="game ended")
+    return writer.close()
+
+
+async def test_the_replay_serves_the_clients_resources_once_reached(tmp_path: Path) -> None:
+    clock = ManualClock()
+    replay = RecordingReplay(write_recording_with_client_data(tmp_path), speed=1.0, clock=clock)
+    async with (
+        serve(create_replay_application(replay)) as base_url,
+        aiohttp.ClientSession() as session,
+    ):
+        clock.now_seconds += 1.0
+        async with session.get(base_url + "/lol-game-data/assets/v1/items.json") as items_response:
+            assert items_response.status == 200
+            assert (await items_response.json())[0]["name"] == "Long Sword"
+        async with session.get(
+            base_url + "/lol-match-history/v1/game-timelines/1"
+        ) as early_response:
+            assert early_response.status == 404
+        async with session.get(base_url + "/lol-gameflow/v1/session") as unknown_response:
+            assert unknown_response.status == 404
+        clock.now_seconds += 30.0
+        async with session.get(
+            base_url + "/lol-match-history/v1/game-timelines/1"
+        ) as late_response:
+            assert late_response.status == 200

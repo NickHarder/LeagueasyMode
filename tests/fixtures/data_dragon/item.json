@@ -1,0 +1,289 @@
+{
+ "type": "item",
+ "version": "16.19.1",
+ "basic": {
+  "name": "",
+  "stats": {}
+ },
+ "data": {
+  "1001": {
+   "name": "Boots",
+   "description": "",
+   "plaintext": "",
+   "image": {
+    "full": "1001.png"
+   },
+   "gold": {
+    "base": 300,
+    "purchasable": true,
+    "total": 300,
+    "sell": 210
+   },
+   "tags": [],
+   "maps": {
+    "11": true
+   },
+   "stats": {
+    "FlatMovementSpeedMod": 25
+   }
+  },
+  "1018": {
+   "name": "Cloak of Agility",
+   "description": "",
+   "plaintext": "",
+   "image": {
+    "full": "1018.png"
+   },
+   "gold": {
+    "base": 600,
+    "purchasable": true,
+    "total": 600,
+    "sell": 420
+   },
+   "tags": [],
+   "maps": {
+    "11": true
+   },
+   "stats": {
+    "FlatCritChanceMod": 0.15
+   }
+  },
+  "1036": {
+   "name": "Long Sword",
+   "description": "",
+   "plaintext": "",
+   "image": {
+    "full": "1036.png"
+   },
+   "gold": {
+    "base": 350,
+    "purchasable": true,
+    "total": 350,
+    "sell": 244
+   },
+   "tags": [],
+   "maps": {
+    "11": true
+   },
+   "stats": {
+    "FlatPhysicalDamageMod": 10
+   }
+  },
+  "1038": {
+   "name": "B. F. Sword",
+   "description": "",
+   "plaintext": "",
+   "image": {
+    "full": "1038.png"
+   },
+   "gold": {
+    "base": 1300,
+    "purchasable": true,
+    "total": 1300,
+    "sell": 909
+   },
+   "tags": [],
+   "maps": {
+    "11": true
+   },
+   "stats": {
+    "FlatPhysicalDamageMod": 40
+   }
+  },
+  "1042": {
+   "name": "Dagger",
+   "description": "",
+   "plaintext": "",
+   "image": {
+    "full": "1042.png"
+   },
+   "gold": {
+    "base": 250,
+    "purchasable": true,
+    "total": 250,
+    "sell": 175
+   },
+   "tags": [],
+   "maps": {
+    "11": true
+   },
+   "stats": {
+    "PercentAttackSpeedMod": 0.1
+   }
+  },
+  "1055": {
+   "name": "Doran's Blade",
+   "description": "",
+   "plaintext": "",
+   "image": {
+    "full": "1055.png"
+   },
+   "gold": {
+    "base": 450,
+    "purchasable": true,
+    "total": 450,
+    "sell": 315
+   },
+   "tags": [],
+   "maps": {
+    "11": true
+   },
+   "stats": {
+    "FlatPhysicalDamageMod": 10,
+    "FlatHPPoolMod": 80
+   }
+  },
+  "2055": {
+   "name": "Control Ward",
+   "description": "",
+   "plaintext": "",
+   "image": {
+    "full": "2055.png"
+   },
+   "gold": {
+    "base": 75,
+    "purchasable": true,
+    "total": 75,
+    "sell": 52
+   },
+   "tags": [],
+   "maps": {
+    "11": true
+   },
+   "stats": {}
+  },
+  "3006": {
+   "name": "Berserker's Greaves",
+   "description": "",
+   "plaintext": "",
+   "image": {
+    "full": "3006.png"
+   },
+   "gold": {
+    "base": 1000,
+    "purchasable": true,
+    "total": 1000,
+    "sell": 700
+   },
+   "tags": [],
+   "maps": {
+    "11": true
+   },
+   "stats": {
+    "PercentAttackSpeedMod": 0.25,
+    "FlatMovementSpeedMod": 45
+   }
+  },
+  "3031": {
+   "name": "Infinity Edge",
+   "description": "",
+   "plaintext": "",
+   "image": {
+    "full": "3031.png"
+   },
+   "gold": {
+    "base": 3400,
+    "purchasable": true,
+    "total": 3400,
+    "sell": 2380
+   },
+   "tags": [],
+   "maps": {
+    "11": true
+   },
+   "stats": {
+    "FlatPhysicalDamageMod": 65,
+    "FlatCritChanceMod": 0.25
+   }
+  },
+  "3075": {
+   "name": "Thornmail",
+   "description": "",
+   "plaintext": "",
+   "image": {
+    "full": "3075.png"
+   },
+   "gold": {
+    "base": 2450,
+    "purchasable": true,
+    "total": 2450,
+    "sell": 1715
+   },
+   "tags": [],
+   "maps": {
+    "11": true
+   },
+   "stats": {
+    "FlatHPPoolMod": 150,
+    "FlatArmorMod": 75
+   }
+  },
+  "3065": {
+   "name": "Spirit Visage",
+   "description": "",
+   "plaintext": "",
+   "image": {
+    "full": "3065.png"
+   },
+   "gold": {
+    "base": 2900,
+    "purchasable": true,
+    "total": 2900,
+    "sell": 2029
+   },
+   "tags": [],
+   "maps": {
+    "11": true
+   },
+   "stats": {
+    "FlatHPPoolMod": 450,
+    "FlatSpellBlockMod": 60
+   }
+  },
+  "3089": {
+   "name": "Rabadon's Deathcap",
+   "description": "",
+   "plaintext": "",
+   "image": {
+    "full": "3089.png"
+   },
+   "gold": {
+    "base": 3600,
+    "purchasable": true,
+    "total": 3600,
+    "sell": 2520
+   },
+   "tags": [],
+   "maps": {
+    "11": true
+   },
+   "stats": {
+    "FlatMagicDamageMod": 130
+   }
+  },
+  "3046": {
+   "name": "Phantom Dancer",
+   "description": "",
+   "plaintext": "",
+   "image": {
+    "full": "3046.png"
+   },
+   "gold": {
+    "base": 2650,
+    "purchasable": true,
+    "total": 2650,
+    "sell": 1854
+   },
+   "tags": [],
+   "maps": {
+    "11": true
+   },
+   "stats": {
+    "PercentAttackSpeedMod": 0.6,
+    "PercentMovementSpeedMod": 0.08
+   }
+  }
+ },
+ "groups": [],
+ "tree": []
+}

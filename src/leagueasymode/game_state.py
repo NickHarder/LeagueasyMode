@@ -30,6 +30,9 @@ class GameEvent(RiotPayloadModel):
     assister_names: list[str] = Field(default_factory=list, alias="Assisters")
     dragon_type: str | None = Field(default=None, alias="DragonType")
     is_stolen: bool = Field(default=False, alias="Stolen")
+    turret_killed_name: str | None = Field(default=None, alias="TurretKilled")
+    inhibitor_killed_name: str | None = Field(default=None, alias="InhibKilled")
+    inhibitor_respawned_name: str | None = Field(default=None, alias="InhibRespawned")
 
 
 class EventList(RiotPayloadModel):
@@ -38,10 +41,53 @@ class EventList(RiotPayloadModel):
     events: list[GameEvent] = Field(alias="Events")
 
 
+class ScoreboardItem(RiotPayloadModel):
+    """One item in a player's inventory."""
+
+    item_id: int = Field(alias="itemID")
+    display_name: str = Field(default="", alias="displayName")
+    count: int = 1
+    # What the scoreboard says the item is worth; the patch's catalog is preferred when known.
+    price: int = 0
+
+
+class SummonerSpell(RiotPayloadModel):
+    """One summoner spell, by the name the game shows (its cooldown is never sent)."""
+
+    display_name: str = Field(default="", alias="displayName")
+
+
+class SummonerSpells(RiotPayloadModel):
+    """A player's two summoner spells."""
+
+    first: SummonerSpell = Field(default_factory=SummonerSpell, alias="summonerSpellOne")
+    second: SummonerSpell = Field(default_factory=SummonerSpell, alias="summonerSpellTwo")
+
+    def names(self) -> list[str]:
+        """Return both spells' names.
+
+        Returns:
+            The names, empty ones left out.
+        """
+        return [spell.display_name for spell in (self.first, self.second) if spell.display_name]
+
+
+class Scores(RiotPayloadModel):
+    """A player's line on the scoreboard."""
+
+    kills: int = 0
+    deaths: int = 0
+    assists: int = 0
+    creep_score: int = Field(default=0, alias="creepScore")
+    ward_score: float = Field(default=0.0, alias="wardScore")
+
+
 class ScoreboardPlayer(RiotPayloadModel):
     """One of the ten players, as the scoreboard shows them."""
 
     champion_name: str = Field(alias="championName")
+    # "game_character_displayname_MonkeyKing": the same in every language, unlike the name.
+    raw_champion_name: str = Field(default="", alias="rawChampionName")
     team: str
     position: str = ""
     level: int = 1
@@ -50,6 +96,9 @@ class ScoreboardPlayer(RiotPayloadModel):
     summoner_name: str = Field(default="", alias="summonerName")
     riot_id: str = Field(default="", alias="riotId")
     riot_id_game_name: str = Field(default="", alias="riotIdGameName")
+    items: list[ScoreboardItem] = Field(default_factory=list)
+    summoner_spells: SummonerSpells = Field(default_factory=SummonerSpells, alias="summonerSpells")
+    scores: Scores = Field(default_factory=Scores)
 
     def is_named(self, name: str) -> bool:
         """Return whether the feed's name for someone is this player.
@@ -70,6 +119,18 @@ class ScoreboardPlayer(RiotPayloadModel):
         return bool(name) and (name in own_names or name in own_game_names)
 
 
+class ActiveChampionStats(RiotPayloadModel):
+    """The stats of the player on this machine, as the game works them out: runes and all."""
+
+    max_health: float = Field(alias="maxHealth")
+    armor: float
+    magic_resist: float = Field(alias="magicResist")
+    attack_damage: float = Field(alias="attackDamage")
+    ability_power: float = Field(alias="abilityPower")
+    attack_speed: float = Field(alias="attackSpeed")
+    move_speed: float = Field(alias="moveSpeed")
+
+
 class ActivePlayer(RiotPayloadModel):
     """The player on this machine. Absent when spectating."""
 
@@ -78,6 +139,7 @@ class ActivePlayer(RiotPayloadModel):
     riot_id_game_name: str = Field(default="", alias="riotIdGameName")
     level: int = 1
     current_gold: float = Field(default=0.0, alias="currentGold")
+    champion_stats: ActiveChampionStats | None = Field(default=None, alias="championStats")
 
 
 class GameData(RiotPayloadModel):
@@ -110,6 +172,23 @@ class GameSnapshot(RiotPayloadModel):
         if not name:
             return None
         return next((player.team for player in self.players if player.is_named(name)), None)
+
+    def is_active_player(self, player: ScoreboardPlayer) -> bool:
+        """Return whether a player of the scoreboard is the one on this machine.
+
+        Args:
+            player: A player of the scoreboard.
+
+        Returns:
+            Whether it is; never when spectating.
+        """
+        active_player = self.active_player
+        if active_player is None:
+            return False
+        return any(
+            player.is_named(active_name)
+            for active_name in (active_player.riot_id, active_player.summoner_name)
+        )
 
     def ally_team(self) -> str:
         """Return the team of the player on this machine; `ORDER` when spectating.
