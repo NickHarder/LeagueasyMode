@@ -35,7 +35,7 @@
     },
     "Callout": {
       "additionalProperties": false,
-      "description": "A short notice shown for a few seconds when something happens; never an instruction.",
+      "description": "A short notice shown for a few seconds when something happens.\n\nMost state a fact; a suggestion names an action.",
       "properties": {
         "callout_id": {
           "title": "Callout Id",
@@ -68,7 +68,8 @@
         "level_spike",
         "objective_soon",
         "item_spike",
-        "cooldown_ready"
+        "cooldown_ready",
+        "suggestion"
       ],
       "type": "string"
     },

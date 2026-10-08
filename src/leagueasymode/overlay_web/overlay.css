@@ -267,6 +267,11 @@ body {
   color: var(--widget-enemy);
 }
 
+.callout[data-kind="suggestion"] {
+  border-color: var(--widget-alive);
+  color: var(--widget-alive);
+}
+
 .callout[data-kind="item_spike"] {
   border-color: var(--widget-enemy);
 }

@@ -13,8 +13,8 @@ the owner on 2026-10-08). Phase 0 is done; phase 1, the tracer bullet, is built 
 test on a Mac; phase 2 ([docs/plans/phase-2-exact-facts.md](docs/plans/phase-2-exact-facts.md)) is
 built but for structures, left out until the first recordings. Phase 3
 ([docs/plans/phase-3-economy-and-open-policy.md](docs/plans/phase-3-economy-and-open-policy.md)) is
-approved by the owner; 3.1, loading-screen intel, is pull request #7; 3.2, marked cooldowns, is
-built on `feat/marked-cooldowns`; 3.3, suggestions, is next.
+approved by the owner; 3.1, loading-screen intel, is pull request #7; 3.2, marked cooldowns, #8;
+3.3, suggestions, is built on `feat/suggestions`; 3.4, the scoring harness, is next.
 
 | Area | State | Proof |
 |---|---|---|
@@ -105,6 +105,8 @@ In `AGENTS.md`. Also: a raw recording (it holds other players' names); only `ano
   this patch's, and the "finished item" rule (a full recipe of at least 2000 gold) and the support
   item names are to be checked on a real catalog.
 - The role costs are a hand-set prior, not yet fitted on recorded games.
+- The suggestions' wording is a first draft, and their thresholds (an objective within 0:30, a
+  window of at least 0:20) are hand-set; the owner tunes both.
 - Loading-screen intel reads the client's ranked stats and match history in the shapes other tools
   describe; no real answer has been seen. If the client does not answer for other players, or
   answers in another shape, the line under each enemy stays empty until the first recording shows

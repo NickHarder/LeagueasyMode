@@ -187,12 +187,15 @@ class CooldownTimer(BaseModel):
 
 
 type CalloutKind = Literal[
-    "numbers_window", "level_spike", "objective_soon", "item_spike", "cooldown_ready"
+    "numbers_window", "level_spike", "objective_soon", "item_spike", "cooldown_ready", "suggestion"
 ]
 
 
 class Callout(BaseModel):
-    """A short notice shown for a few seconds when something happens; never an instruction."""
+    """A short notice shown for a few seconds when something happens.
+
+    Most state a fact; a suggestion names an action.
+    """
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 

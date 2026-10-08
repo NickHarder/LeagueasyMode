@@ -6,6 +6,10 @@ skill has the format.
 
 ## 2026-10-08
 
+- Phase 3.3, suggestions: callouts that name an action when the facts line up (an objective in a
+  numbers window, their jungler dead, a Flash or ultimate just marked, a Baron or Elder buff just
+  taken), worded on a best guess for the owner to tune, text only. The callouts' docstring no
+  longer says the overlay never instructs, since the owner's policy now allows it.
 - Phase 3.2, marked cooldowns: ⌃⌥ and a digit picks an enemy in role order, then ⌃⌥ F, D or R
   marks their Flash, other summoner spell or ultimate; the engine times it from the patch's
   cooldowns, the enemy's level and their items' haste, shows it on their row and calls it out when

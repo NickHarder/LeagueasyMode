@@ -1,14 +1,15 @@
 """Callouts: short notices when something happens, worked out from one state to the next.
 
 A callout states a fact at the moment it becomes true ("Zed is level 6", "Baron in 1:00", "2
-enemies down for 0:24") and is shown for a few seconds. It never tells the player what to do: the
-plan's policy keeps instructions out of the overlay. Each callout is made once per game; a state
+enemies down for 0:24") and is shown for a few seconds; a suggestion (`suggestions.py`) names an
+action when facts line up, as the owner's policy allows. Each callout is made once per game; a state
 whose clock runs backwards starts a new game.
 """
 
 import math
 from typing import Final
 
+from leagueasymode.inference.suggestions import suggestions
 from leagueasymode.overlay_state import Callout, CalloutKind, OverlayState, PlayerCard
 
 CALLOUT_SHOWN_SECONDS: Final = 6.0
@@ -64,6 +65,7 @@ class CalloutTracker:
             *self._objectives_soon(state, game_time_seconds),
             *self._item_spikes(state, game_time_seconds),
             *self._cooldowns_ready(state, game_time_seconds),
+            *suggestions(self._previous_state, state, game_time_seconds),
         ]
         new_callouts = [
             callout

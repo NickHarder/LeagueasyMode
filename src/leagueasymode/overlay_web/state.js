@@ -18,6 +18,7 @@ const CALLOUT_KINDS = new Set([
     "objective_soon",
     "item_spike",
     "cooldown_ready",
+    "suggestion",
 ]);
 const MARKED_SPELLS = new Set(["flash", "summoner", "ultimate"]);
 /** Return whether a value is a plain object, so that its fields can be read. */

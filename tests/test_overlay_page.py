@@ -370,3 +370,21 @@ async def test_a_marked_flash_shows_on_the_enemys_row_and_counts_down(tmp_path: 
         )
         await expect(zed_cooldowns).to_have_text(re.compile(r"^F 4:5\d$|^F 5:00$"), timeout=5000)
         await keep_screenshot(page, "marked-cooldown")
+
+
+async def test_a_marked_flash_brings_a_suggestion(tmp_path: Path) -> None:
+    async with open_overlay(tmp_path, snapshot_count=60, speed=1.0) as page:
+        for _ in range(50):
+            mark_response = await page.request.post(
+                page.url + "marks",
+                data={"enemy_slot": 3, "spell": "flash"},
+                headers={"X-LeagueasyMode-Request": "mark"},
+            )
+            if mark_response.status == 200:
+                break
+            await asyncio.sleep(0.1)
+        suggestion = page.locator('#callouts .callout[data-kind="suggestion"]')
+        await expect(suggestion).to_have_text(
+            re.compile(r"^Zed has no Flash for (4:5\d|5:00): punish it$"), timeout=5000
+        )
+        await keep_screenshot(page, "suggestion")

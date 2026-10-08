@@ -128,7 +128,8 @@ export type CalloutKind =
   | "level_spike"
   | "objective_soon"
   | "item_spike"
-  | "cooldown_ready";
+  | "cooldown_ready"
+  | "suggestion";
 
 /** A short notice shown for a few seconds when something happens; never an instruction. */
 export interface Callout {
@@ -167,6 +168,7 @@ const CALLOUT_KINDS: ReadonlySet<string> = new Set([
   "objective_soon",
   "item_spike",
   "cooldown_ready",
+  "suggestion",
 ]);
 const MARKED_SPELLS: ReadonlySet<string> = new Set(["flash", "summoner", "ultimate"]);
 
