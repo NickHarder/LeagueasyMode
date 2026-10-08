@@ -282,6 +282,14 @@ export function isWardEstimate(value) {
 export function isMinimapLayout(value) {
     return isRecord(value) && typeof value["scale"] === "number" && typeof value["is_flipped"] === "boolean";
 }
+/** Return whether a value is one reason of the win chance as the engine sends it. */
+export function isWinReason(value) {
+    return isRecord(value) && typeof value["label"] === "string" && typeof value["effect"] === "number";
+}
+/** Return whether a value is the win chance as the engine sends it. */
+export function isWinChance(value) {
+    return isRecord(value) && typeof value["ally_chance"] === "number" && isArrayOf(value["reasons"], isWinReason);
+}
 /** Return whether a value is an overlay state as the engine sends it. */
 export function isOverlayState(value) {
     if (!isRecord(value)) {
@@ -303,5 +311,6 @@ export function isOverlayState(value) {
         isArrayOf(value["camp_timers"], isCampTimer) &&
         isArrayOf(value["control_wards"], isWardEstimate) &&
         (value["minimap"] === null || isMinimapLayout(value["minimap"])) &&
+        (value["win_chance"] === null || isWinChance(value["win_chance"])) &&
         isArrayOf(value["callouts"], isCallout));
 }

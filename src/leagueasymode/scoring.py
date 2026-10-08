@@ -30,6 +30,9 @@ compared with what is known to be true:
   is scored.
 - **The map** (phase 4.1): every player's position each minute on the timeline should lie near a
   path of the hand-built map; how far it lies on average says how well the map was drawn.
+- **Win chance** (estimator 12): the game's details say which team won. The chance given at the
+  start of each minute is scored by its Brier score, the mean squared distance from the result:
+  0.25 for a coin flip every minute, 0 for a sure and right answer.
 - **Backs** (estimator 6): the timeline records every purchase. One made alive (not within a
   minute of a death) past 1:30 starts a trip to base, and each purchase more than 30 seconds
   after a trip's first starts another; a trip the back tracker saw within 20 seconds of it is
@@ -55,12 +58,14 @@ from leagueasymode.inference.build_path import next_item
 from leagueasymode.inference.clues import ClueTracker
 from leagueasymode.inference.combat_stats import DEFAULT_MOVE_SPEED, estimated_combat_stats
 from leagueasymode.inference.experience import ExperienceTracker
-from leagueasymode.inference.gold import GoldTracker, PlayerKey, player_key
+from leagueasymode.inference.gold import GoldTracker, PlayerKey, player_key, team_gold_of
 from leagueasymode.inference.jungle_path import JunglePathTracker
+from leagueasymode.inference.objectives import buff_timers, dragon_timer, inhibitor_timers
 from leagueasymode.inference.positions import position_estimate
 from leagueasymode.inference.rift_map import RIFT_MAP, RiftMap
 from leagueasymode.inference.roles import assign_roles
 from leagueasymode.inference.wards import WardTracker
+from leagueasymode.inference.win_chance import WinFeatures, win_chance, win_features
 from leagueasymode.overlay_state import (
     CombatStats,
     GoldEstimate,
@@ -129,6 +134,9 @@ SCORE_DESCRIPTIONS: Final = {
     "mean_distance_units": (
         "{estimator}: {sample_count} positions, {value:.0f} units off on average"
     ),
+    "brier_score": (
+        "{estimator}: {sample_count} minutes, Brier score {value:.3f} (a coin flip scores 0.250)"
+    ),
 }
 
 
@@ -150,6 +158,7 @@ class EstimatorScore:
         "share_matched",
         "mean_distance_units",
         "mean_chance",
+        "brier_score",
     ]
 
     def describe(self) -> str:
@@ -187,6 +196,8 @@ class RecordedGame:
     minute_jungle_camps: Mapping[int, Mapping[PlayerKey, tuple[str, float]]]
     # When the ward tracker saw each player place a control ward, in game seconds.
     control_wards_seen: Mapping[PlayerKey, tuple[float, ...]]
+    # What the win chance read at the first answer of each minute, by minute.
+    minute_win_features: Mapping[int, WinFeatures]
 
 
 class DetailsTimeline(RiotPayloadModel):
@@ -206,10 +217,19 @@ class DetailsParticipant(RiotPayloadModel):
     timeline: DetailsTimeline = Field(default_factory=DetailsTimeline)
 
 
+class DetailsTeam(RiotPayloadModel):
+    """One team of the game's details, and whether it won."""
+
+    team_id: int = Field(default=0, alias="teamId")
+    # "Win" or "Fail".
+    win: str = ""
+
+
 class GameDetails(RiotPayloadModel):
     """The game's details from the League client, after the game."""
 
     participants: list[DetailsParticipant] = Field(default_factory=list)
+    teams: list[DetailsTeam] = Field(default_factory=list)
 
 
 class TimelinePosition(RiotPayloadModel):
@@ -302,6 +322,7 @@ def read_recorded_game(recording_path: Path) -> RecordedGame:
     snapshot_by_minute: dict[int, GameSnapshot] = {}
     gold_estimates_by_minute: dict[int, Mapping[PlayerKey, GoldEstimate]] = {}
     level_estimates_by_minute: dict[int, Mapping[PlayerKey, LevelEstimate]] = {}
+    win_features_by_minute: dict[int, WinFeatures] = {}
     for frame in iter_game_frames(recording_path):
         try:
             snapshot = GameSnapshot.model_validate(frame.payload)
@@ -330,6 +351,14 @@ def read_recorded_game(recording_path: Path) -> RecordedGame:
                 snapshot, position_clues
             )
             jungle_camps_by_minute[game_minute] = jungle_tracker.last_clears()
+            win_features_by_minute[game_minute] = win_features(
+                snapshot,
+                team_gold=team_gold_of(snapshot, gold_estimates),
+                team_item_gold=None,
+                dragon=dragon_timer(snapshot),
+                buffs=buff_timers(snapshot),
+                inhibitors=inhibitor_timers(snapshot),
+            )
     return RecordedGame(
         minute_snapshots=tuple(snapshot_by_minute[minute] for minute in sorted(snapshot_by_minute)),
         client_resources=client_resources,
@@ -339,6 +368,7 @@ def read_recorded_game(recording_path: Path) -> RecordedGame:
         minute_position_estimates=position_estimates_by_minute,
         minute_jungle_camps=jungle_camps_by_minute,
         control_wards_seen=ward_tracker.placements(),
+        minute_win_features=win_features_by_minute,
     )
 
 
@@ -774,6 +804,31 @@ def score_backs(game: RecordedGame) -> list[EstimatorScore]:
     ]
 
 
+def score_win_chance(game: RecordedGame) -> EstimatorScore | None:
+    """Score the win chance at the start of each minute against the game's result.
+
+    Args:
+        game: The recorded game.
+
+    Returns:
+        The Brier score; None when the recording has no result or no minute.
+    """
+    has_ally_won = _has_ally_won(game)
+    if has_ally_won is None or not game.minute_win_features:
+        return None
+    result = 1.0 if has_ally_won else 0.0
+    squared_errors = [
+        (win_chance(features).ally_chance - result) ** 2
+        for _, features in sorted(game.minute_win_features.items())
+    ]
+    return EstimatorScore(
+        estimator="win chance",
+        sample_count=len(squared_errors),
+        value=sum(squared_errors) / len(squared_errors),
+        measure="brier_score",
+    )
+
+
 def score_recording(recording_path: Path, patch_stats: PatchStats | None) -> list[EstimatorScore]:
     """Score every estimator the recording can score.
 
@@ -809,7 +864,11 @@ def score_game(game: RecordedGame, patch_stats: PatchStats | None) -> list[Estim
         *score_backs(game),
         *score_positions(game),
         *score_control_wards(game),
-        *(score for score in [score_jungle_path(game), score_map(game)] if score is not None),
+        *(
+            score
+            for score in [score_jungle_path(game), score_map(game), score_win_chance(game)]
+            if score is not None
+        ),
     ]
 
 
@@ -1097,14 +1156,14 @@ def _game_timeline(game: RecordedGame) -> GameTimeline | None:
         return None
 
 
-def _details_participants(game: RecordedGame) -> list[tuple[PlayerKey, DetailsParticipant]]:
-    """Return each participant of the game's details, by team and champion alias.
+def _game_details(game: RecordedGame) -> GameDetails | None:
+    """Return the game's details the recording holds.
 
     Args:
         game: The recorded game.
 
     Returns:
-        The participants; empty when the recording has no details or no champion summary.
+        The details, or None when the recording has none it can read.
     """
     details_payload = next(
         (
@@ -1114,10 +1173,43 @@ def _details_participants(game: RecordedGame) -> list[tuple[PlayerKey, DetailsPa
         ),
         None,
     )
-    alias_by_champion_id = champion_aliases(game.client_resources.get(CHAMPION_SUMMARY_PATH))
     try:
-        details = GameDetails.model_validate(details_payload)
+        return GameDetails.model_validate(details_payload)
     except ValidationError:
+        return None
+
+
+def _has_ally_won(game: RecordedGame) -> bool | None:
+    """Return whether the team of the player on this machine won, from the game's details.
+
+    Args:
+        game: The recorded game.
+
+    Returns:
+        Whether it won; None when the recording does not say.
+    """
+    details = _game_details(game)
+    if details is None or not game.minute_snapshots:
+        return None
+    ally_team = game.minute_snapshots[0].ally_team()
+    ally_result = next(
+        (team.win for team in details.teams if TEAM_BY_ID.get(team.team_id) == ally_team), None
+    )
+    return {"Win": True, "Fail": False}.get(ally_result or "")
+
+
+def _details_participants(game: RecordedGame) -> list[tuple[PlayerKey, DetailsParticipant]]:
+    """Return each participant of the game's details, by team and champion alias.
+
+    Args:
+        game: The recorded game.
+
+    Returns:
+        The participants; empty when the recording has no details or no champion summary.
+    """
+    details = _game_details(game)
+    alias_by_champion_id = champion_aliases(game.client_resources.get(CHAMPION_SUMMARY_PATH))
+    if details is None:
         return []
     return [
         (

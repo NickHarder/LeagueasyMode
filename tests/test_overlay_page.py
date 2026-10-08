@@ -489,6 +489,18 @@ async def test_the_enemy_strip_shows_what_each_enemy_holds_and_the_gold_lead(
         await keep_screenshot(page, "hidden-gold")
 
 
+async def test_the_enemy_strip_shows_the_win_chance_and_what_moves_it(tmp_path: Path) -> None:
+    async with open_overlay(tmp_path, snapshot_count=60, speed=1.0) as page:
+        # At 23:15 their team leads on gold (your Ahri holds 500 all game) and holds Baron.
+        win = page.locator("#enemy-strip .win-chance")
+        await expect(win).to_have_text(
+            re.compile(rf"^Win\s*~\d+% \u00b7 gold {MINUS_SIGN}4\.\dk, their Baron$"),
+            timeout=5000,
+        )
+        await expect(win).to_have_attribute("data-lead", "enemy")
+        await keep_screenshot(page, "win-chance")
+
+
 async def test_the_enemy_strip_shows_each_enemys_rank_and_record(tmp_path: Path) -> None:
     async with open_overlay(tmp_path, snapshot_count=60, speed=1.0) as page:
         zed_intel = page.locator("#enemy-strip .enemy-row", has_text="Zed").locator(".enemy-intel")

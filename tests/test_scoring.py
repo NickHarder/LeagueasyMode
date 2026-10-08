@@ -20,6 +20,7 @@ from leagueasymode.cli import main
 from leagueasymode.data_dragon import PatchStatsStore
 from leagueasymode.inference.gold import passive_gold
 from leagueasymode.inference.rift_map import RIFT_MAP, MapPoint, RiftMap
+from leagueasymode.inference.win_chance import win_chance
 from leagueasymode.league_client import GAMEFLOW_SESSION_PATH
 from leagueasymode.patch_data import CHAMPION_SUMMARY_PATH, GAME_VERSION_PATH, ITEMS_PATH
 from leagueasymode.recorder import GAME_DETAILS_PATH_TEMPLATE, TIMELINE_PATH_TEMPLATE
@@ -37,6 +38,7 @@ from leagueasymode.scoring import (
     score_positions,
     score_recording,
     score_roles,
+    score_win_chance,
 )
 
 # Clear signals for each role: Smite for the junglers, Teleport for the top laners, Heal for the
@@ -67,7 +69,9 @@ def players_at(*, are_positions_given: bool, level: int = 9) -> tuple[PlayerSeed
     )
 
 
-def game_details(positions_by_champion: dict[str, str]) -> JsonValue:
+def game_details(
+    positions_by_champion: dict[str, str], winning_team_id: int | None = None
+) -> JsonValue:
     lane_and_role = {
         "TOP": ("TOP", "SOLO"),
         "JUNGLE": ("JUNGLE", "NONE"),
@@ -89,6 +93,16 @@ def game_details(positions_by_champion: dict[str, str]) -> JsonValue:
             }
             for index, seed in enumerate(DEFAULT_PLAYERS)
         ],
+        **(
+            {
+                "teams": [
+                    {"teamId": team_id, "win": "Win" if team_id == winning_team_id else "Fail"}
+                    for team_id in (100, 200)
+                ]
+            }
+            if winning_team_id is not None
+            else {}
+        ),
     }
 
 
@@ -127,6 +141,7 @@ def write_scored_recording(
     timeline: JsonValue | None = None,
     zed_buys_at_minute: int | None = None,
     items_payload: JsonValue | None = None,
+    winning_team_id: int | None = None,
 ) -> Path:
     writer = RecordingWriter(directory / "game.jsonl", keyframe_interval_seconds=60.0)
     writer.write_started(
@@ -167,7 +182,7 @@ def write_scored_recording(
     writer.write_client_resource(
         received_at_seconds=1000.0,
         path=GAME_DETAILS_PATH_TEMPLATE.format(game_id=GAME_ID),
-        payload=game_details(details_positions),
+        payload=game_details(details_positions, winning_team_id),
     )
     if timeline is not None:
         writer.write_client_resource(
@@ -567,3 +582,34 @@ def test_control_wards_are_scored_against_the_timelines_placements(tmp_path: Pat
     of_the_timeline, of_those_seen = score_control_wards(read_recorded_game(writer.close()))
     assert of_the_timeline.describe() == "control wards (of the timeline's): 1/2 matched (50%)"
     assert of_those_seen.describe() == "control wards (of those seen): 1/1 matched (100%)"
+
+
+def test_the_win_chance_is_scored_against_the_games_result(tmp_path: Path) -> None:
+    # Ahri's exact gold stays at 500 while the others' estimates grow: her team looks behind.
+    (tmp_path / "lost").mkdir()
+    won = score_win_chance(
+        read_recorded_game(write_scored_recording(tmp_path, DEFAULT_PLAYERS, winning_team_id=100))
+    )
+    lost = score_win_chance(
+        read_recorded_game(
+            write_scored_recording(tmp_path / "lost", DEFAULT_PLAYERS, winning_team_id=200)
+        )
+    )
+    assert won is not None
+    assert lost is not None
+    assert (won.estimator, won.sample_count, won.measure) == ("win chance", 16, "brier_score")
+    assert 0.0 < lost.value < 0.25 < won.value < 1.0
+    assert won.describe().startswith("win chance: 16 minutes, Brier score 0.")
+    assert won.describe().endswith("(a coin flip scores 0.250)")
+
+
+def test_the_win_chance_at_the_start_is_the_blue_sides_lean(tmp_path: Path) -> None:
+    game = read_recorded_game(write_scored_recording(tmp_path, DEFAULT_PLAYERS))
+    start = game.minute_win_features[0]
+    assert (start.gold_lead, start.level_lead, start.is_blue_side) == (0.0, 0, True)
+    assert 0.5 < win_chance(start).ally_chance < 0.53
+
+
+def test_a_game_without_its_result_scores_no_win_chance(tmp_path: Path) -> None:
+    recording = write_scored_recording(tmp_path, DEFAULT_PLAYERS)
+    assert score_win_chance(read_recorded_game(recording)) is None

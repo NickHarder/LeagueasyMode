@@ -42,6 +42,8 @@ const LIKELY_NEXT_ITEM = 0.5;
 // From this chance an enemy is taken to be able to afford their next item.
 const LIKELY_TO_AFFORD = 0.75;
 const PERCENT = 100;
+// A win chance above this leans to the player's team.
+const EVEN_CHANCE = 0.5;
 // At most this many camps are shown under the strip's header.
 const SHOWN_CAMP_COUNT = 4;
 // At most this many of the enemies' control wards are shown under it.
@@ -357,9 +359,24 @@ function leadElement(className, label, leadGold, valueText) {
     header.append(labelElement, valueElement);
     return header;
 }
-/** Return the enemy strip's headers: the item-gold lead and the estimated gold lead, when known. */
+/** Return the win chance in words, with its two reasons: "~64% · gold +2.1k, Baron". */
+export function formatWinChance(chance) {
+    const percentText = `~${String(Math.round(chance.ally_chance * PERCENT))}%`;
+    const reasonsText = chance.reasons.map((reason) => reason.label).join(", ");
+    return reasonsText === "" ? percentText : `${percentText} \u00b7 ${reasonsText}`;
+}
+/**
+ * Return the enemy strip's headers: the win chance, the item-gold lead and the estimated gold lead,
+ * when known.
+ */
 function leadElements(state) {
     const headers = [];
+    const winChance = state.win_chance;
+    if (winChance !== null) {
+        // Colored by side like a lead: "ally" above an even chance.
+        const leaning = Math.round((winChance.ally_chance - EVEN_CHANCE) * PERCENT);
+        headers.push(leadElement("win-chance", "Win", leaning, formatWinChance(winChance)));
+    }
     const itemGold = state.team_item_gold;
     if (itemGold !== null) {
         const itemLeadGold = itemGold.ally_item_gold - itemGold.enemy_item_gold;
