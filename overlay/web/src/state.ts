@@ -94,6 +94,17 @@ export interface CooldownTimer {
   readonly ready_at_game_time_seconds: number;
 }
 
+/**
+ * A player's gold: earned this game and unspent. Exact for the player on this machine; for the
+ * others an estimate, with a band that holds the truth about 4 times in 5.
+ */
+export interface GoldEstimate {
+  readonly source: "exact" | "estimate";
+  readonly total_gold: number;
+  readonly unspent_gold: number;
+  readonly band_gold: number;
+}
+
 /** One player as the scoreboard shows them: side, role, level, and when they are back. */
 export interface PlayerCard {
   readonly champion_name: string;
@@ -108,12 +119,20 @@ export interface PlayerCard {
   readonly finished_item_names: readonly string[];
   readonly combat_stats: CombatStats | null;
   readonly intel: PlayerIntel | null;
+  readonly gold: GoldEstimate | null;
 }
 
 /** What each team's items are worth: gold earned and spent, not gold in hand. */
 export interface TeamItemGold {
   readonly ally_item_gold: number;
   readonly enemy_item_gold: number;
+}
+
+/** What each team has earned this game: estimated, but for the player's own gold. */
+export interface TeamGold {
+  readonly ally_total_gold: number;
+  readonly enemy_total_gold: number;
+  readonly lead_band_gold: number;
 }
 
 /** More of the enemy team is dead than of the player's, until the respawn that evens it. */
@@ -150,6 +169,7 @@ export interface OverlayState {
   readonly players: readonly PlayerCard[];
   readonly numbers_window: NumbersWindow | null;
   readonly team_item_gold: TeamItemGold | null;
+  readonly team_gold: TeamGold | null;
   readonly cooldowns: readonly CooldownTimer[];
   readonly callouts: readonly Callout[];
 }
@@ -295,6 +315,17 @@ export function isPlayerIntel(value: unknown): value is PlayerIntel {
   );
 }
 
+/** Return whether a value is a player's gold as the engine sends it. */
+export function isGoldEstimate(value: unknown): value is GoldEstimate {
+  return (
+    isRecord(value) &&
+    isOneOf(value["source"], COMBAT_STAT_SOURCES) &&
+    typeof value["total_gold"] === "number" &&
+    typeof value["unspent_gold"] === "number" &&
+    typeof value["band_gold"] === "number"
+  );
+}
+
 /** Return whether a value is a player's card as the engine sends it. */
 export function isPlayerCard(value: unknown): value is PlayerCard {
   return (
@@ -310,7 +341,8 @@ export function isPlayerCard(value: unknown): value is PlayerCard {
     isNumberOrNull(value["item_gold"]) &&
     isArrayOf(value["finished_item_names"], (name: unknown): name is string => typeof name === "string") &&
     (value["combat_stats"] === null || isCombatStats(value["combat_stats"])) &&
-    (value["intel"] === null || isPlayerIntel(value["intel"]))
+    (value["intel"] === null || isPlayerIntel(value["intel"])) &&
+    (value["gold"] === null || isGoldEstimate(value["gold"]))
   );
 }
 
@@ -320,6 +352,16 @@ export function isTeamItemGold(value: unknown): value is TeamItemGold {
     isRecord(value) &&
     typeof value["ally_item_gold"] === "number" &&
     typeof value["enemy_item_gold"] === "number"
+  );
+}
+
+/** Return whether a value is each team's gold as the engine sends it. */
+export function isTeamGold(value: unknown): value is TeamGold {
+  return (
+    isRecord(value) &&
+    typeof value["ally_total_gold"] === "number" &&
+    typeof value["enemy_total_gold"] === "number" &&
+    typeof value["lead_band_gold"] === "number"
   );
 }
 
@@ -374,6 +416,7 @@ export function isOverlayState(value: unknown): value is OverlayState {
     isArrayOf(value["players"], isPlayerCard) &&
     (value["numbers_window"] === null || isNumbersWindow(value["numbers_window"])) &&
     (value["team_item_gold"] === null || isTeamItemGold(value["team_item_gold"])) &&
+    (value["team_gold"] === null || isTeamGold(value["team_gold"])) &&
     isArrayOf(value["cooldowns"], isCooldownTimer) &&
     isArrayOf(value["callouts"], isCallout)
   );

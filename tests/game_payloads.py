@@ -177,6 +177,7 @@ def all_game_data(
     players: tuple[PlayerSeed, ...] = DEFAULT_PLAYERS,
     active_player_index: int = ACTIVE_PLAYER_INDEX,
     map_terrain: str = "Default",
+    current_gold: float = 500.0,
 ) -> JsonValue:
     active_seed = players[active_player_index]
     return {
@@ -205,7 +206,7 @@ def all_game_data(
                 "resourceType": "MANA",
                 "resourceValue": 418.0,
             },
-            "currentGold": 500.0,
+            "currentGold": current_gold,
             "fullRunes": {
                 "generalRunes": [],
                 "keystone": {},
@@ -406,4 +407,21 @@ def inhibitor_respawned_event(
         "EventName": "InhibRespawned",
         "EventTime": event_time,
         "InhibRespawned": inhibitor_name,
+    }
+
+
+def turret_killed_event(
+    event_id: int,
+    event_time: float,
+    turret_name: str,
+    killer_name: str,
+    assisters: list[str] | None = None,
+) -> dict[str, JsonValue]:
+    return {
+        "EventID": event_id,
+        "EventName": "TurretKilled",
+        "EventTime": event_time,
+        "TurretKilled": turret_name,
+        "KillerName": killer_name,
+        "Assisters": list[JsonValue](assisters or []),
     }

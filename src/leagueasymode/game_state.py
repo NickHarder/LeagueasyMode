@@ -55,6 +55,8 @@ class ScoreboardItem(RiotPayloadModel):
     count: int = 1
     # What the scoreboard says the item is worth; the patch's catalog is preferred when known.
     price: int = 0
+    # Used up when used: a potion, a ward.
+    is_consumable: bool = Field(default=False, alias="consumable")
 
 
 class SummonerSpell(RiotPayloadModel):

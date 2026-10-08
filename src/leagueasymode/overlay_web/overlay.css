@@ -196,6 +196,13 @@ body {
   font-weight: 500;
 }
 
+.enemy-unspent {
+  grid-column: 2 / -1;
+  color: var(--widget-alive);
+  font-size: 10px;
+  font-weight: 500;
+}
+
 .enemy-row[data-dead="true"] .enemy-name {
   opacity: 0.55;
   text-decoration: line-through;

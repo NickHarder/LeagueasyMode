@@ -6,6 +6,14 @@ skill has the format.
 
 ## 2026-10-08
 
+- Phase 3.5, hidden gold (estimator 3): each player's earned and unspent gold, exact for you and
+  estimated with a band for the others. An income model with this season's numbers (patch 26.16's
+  passive and minion gold, 25.9's bounties by level; the unconfirmed ones marked) is corrected by
+  what the inventory proves: its cost is a floor, and the end of a shopping trip is weighed
+  against the model as a Kalman filter weighs a measurement. Gold per creep is tuned live on your
+  own exact gold, since it is the same for every laner and every jungler. The scoring harness
+  scores it against the timeline's gold for every player but you, band included. The chance of
+  affording the next item is worked out but shown with 3.8, which predicts the item.
 - Phase 3.4, the scoring harness: `leagueasymode score <recording>` scores the role estimator (its
   positions hidden, against the game's own or its details') and the combat stats estimate (against
   the exact stats the game gives for the player on this machine) on a recorded game. The thresholds

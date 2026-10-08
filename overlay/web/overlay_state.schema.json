@@ -249,6 +249,40 @@
       "title": "DragonTimer",
       "type": "object"
     },
+    "GoldEstimate": {
+      "additionalProperties": false,
+      "description": "A player's gold: what they have earned this game, and what they hold unspent.\n\nExact for the player on this machine, whose gold the game gives; their total adds what they\nown and what they drank, placed or lost on a sale. For the others an estimate\n(`inference/gold.py`), with a band that holds the truth about 4 times in 5.",
+      "properties": {
+        "source": {
+          "enum": [
+            "exact",
+            "estimate"
+          ],
+          "title": "Source",
+          "type": "string"
+        },
+        "total_gold": {
+          "title": "Total Gold",
+          "type": "integer"
+        },
+        "unspent_gold": {
+          "title": "Unspent Gold",
+          "type": "integer"
+        },
+        "band_gold": {
+          "title": "Band Gold",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "source",
+        "total_gold",
+        "unspent_gold",
+        "band_gold"
+      ],
+      "title": "GoldEstimate",
+      "type": "object"
+    },
     "InhibitorTimer": {
       "additionalProperties": false,
       "description": "A destroyed inhibitor, and when it comes back.",
@@ -451,6 +485,17 @@
             }
           ],
           "default": null
+        },
+        "gold": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/GoldEstimate"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         }
       },
       "required": [
@@ -564,6 +609,31 @@
       "title": "RankedStanding",
       "type": "object"
     },
+    "TeamGold": {
+      "additionalProperties": false,
+      "description": "What each team has earned this game: estimated, but for the player's own gold.",
+      "properties": {
+        "ally_total_gold": {
+          "title": "Ally Total Gold",
+          "type": "integer"
+        },
+        "enemy_total_gold": {
+          "title": "Enemy Total Gold",
+          "type": "integer"
+        },
+        "lead_band_gold": {
+          "title": "Lead Band Gold",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "ally_total_gold",
+        "enemy_total_gold",
+        "lead_band_gold"
+      ],
+      "title": "TeamGold",
+      "type": "object"
+    },
     "TeamItemGold": {
       "additionalProperties": false,
       "description": "What each team's items are worth: gold earned and spent, not gold in hand.",
@@ -658,6 +728,17 @@
       "anyOf": [
         {
           "$ref": "#/$defs/TeamItemGold"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "team_gold": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/TeamGold"
         },
         {
           "type": "null"

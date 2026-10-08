@@ -4,7 +4,7 @@ title: Recordings
 description: What a recording of a game holds, how it is written and read, what is asked of the League client and when, and how a copy is anonymized before it may enter the repository.
 tags: [recording, data, privacy]
 status: draft
-generated: { by: claude-code/cloud, at: 2026-10-08T21:36:01Z }
+generated: { by: claude-code/cloud, at: 2026-10-08T22:00:20Z }
 sources:
   - id: file-format
     resource: ../../src/leagueasymode/recording/file_format.py
@@ -31,9 +31,11 @@ the match timeline, which is the ground truth.
 
 `uv run leagueasymode score <recording>` prints how far each estimator is from the truth on one
 recorded game: the role estimator against the positions the game gave or its details recorded
-(with the positions hidden from it), and the combat stats estimate against the exact stats the game
-gives for the player on this machine, once a minute. The estimators still to come are scored there
-too, against the post-game timeline.[^scoring]
+(with the positions hidden from it), the combat stats estimate against the exact stats the game
+gives for the player on this machine, once a minute, and the gold estimates of every other player
+against the match timeline's earned and unspent gold at the start of each minute, with how often
+the band holds the truth (it should, about 4 times in 5). The estimators still to come are scored
+there too, against the timeline's XP and positions.[^scoring]
 
 # How to make one
 

@@ -122,6 +122,24 @@ class PlayerIntel(BaseModel):
     is_off_role: bool
 
 
+class GoldEstimate(BaseModel):
+    """A player's gold: what they have earned this game, and what they hold unspent.
+
+    Exact for the player on this machine, whose gold the game gives; their total adds what they
+    own and what they drank, placed or lost on a sale. For the others an estimate
+    (`inference/gold.py`), with a band that holds the truth about 4 times in 5.
+    """
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    source: Literal["exact", "estimate"]
+    # Earned this game, the starting gold included.
+    total_gold: int
+    unspent_gold: int
+    # Half the band's width, in gold; 0 when exact.
+    band_gold: int
+
+
 class PlayerCard(BaseModel):
     """One player as the scoreboard shows them: side, role, level, and when they are back."""
 
@@ -145,6 +163,8 @@ class PlayerCard(BaseModel):
     combat_stats: CombatStats | None = None
     # None until the League client has answered for this player.
     intel: PlayerIntel | None = None
+    # None while the engine does not follow the game's gold.
+    gold: GoldEstimate | None = None
 
 
 class TeamItemGold(BaseModel):
@@ -154,6 +174,17 @@ class TeamItemGold(BaseModel):
 
     ally_item_gold: int
     enemy_item_gold: int
+
+
+class TeamGold(BaseModel):
+    """What each team has earned this game: estimated, but for the player's own gold."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    ally_total_gold: int
+    enemy_total_gold: int
+    # Half the band of the lead (ally minus enemy), in gold.
+    lead_band_gold: int
 
 
 class NumbersWindow(BaseModel):
@@ -220,6 +251,7 @@ class OverlayState(BaseModel):
     players: list[PlayerCard] = Field(default_factory=list)
     numbers_window: NumbersWindow | None = None
     team_item_gold: TeamItemGold | None = None
+    team_gold: TeamGold | None = None
     cooldowns: list[CooldownTimer] = Field(default_factory=list)
     callouts: list[Callout] = Field(default_factory=list)
 
