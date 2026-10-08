@@ -12,6 +12,7 @@ from leagueasymode.game_api import GameApiClient
 from leagueasymode.game_state import GameSnapshot
 from leagueasymode.inference.callouts import CalloutTracker
 from leagueasymode.inference.cooldowns import MarkedSpell, marked_cooldown, running_cooldowns
+from leagueasymode.inference.gold import GoldTracker, team_gold
 from leagueasymode.inference.objectives import (
     buff_timers,
     dragon_timer,
@@ -40,9 +41,11 @@ logger = logging.getLogger(__name__)
 def compute_overlay_state(
     payload: JsonValue | None,
     item_catalog: ItemCatalog | None = None,
+    *,
     patch_stats: PatchStats | None = None,
     player_records: PlayerRecords | None = None,
     cooldown_timers: list[CooldownTimer] | None = None,
+    gold_tracker: GoldTracker | None = None,
 ) -> OverlayState:
     """Return what the overlay shows for one answer of the game's API.
 
@@ -54,6 +57,8 @@ def compute_overlay_state(
         player_records: Each player's record from the League client, for their intel; None
             while unknown.
         cooldown_timers: The spells marked this game; those not back yet are shown.
+        gold_tracker: Follows each player's gold from answer to answer, and takes in this one;
+            None to show no gold.
 
     Returns:
         The overlay's state; no game running when there is no answer or it cannot be read.
@@ -65,7 +70,10 @@ def compute_overlay_state(
     except ValidationError as error:
         logger.warning("could not read the game's answer (%d problems)", error.error_count())
         return NOT_RUNNING
-    cards = player_cards(snapshot, item_catalog, patch_stats, player_records)
+    gold_estimates = (
+        gold_tracker.update(snapshot, item_catalog) if gold_tracker is not None else None
+    )
+    cards = player_cards(snapshot, item_catalog, patch_stats, player_records, gold_estimates)
     return OverlayState(
         is_game_running=True,
         game_time_seconds=snapshot.game_data.game_time_seconds,
@@ -76,6 +84,7 @@ def compute_overlay_state(
         players=cards,
         numbers_window=numbers_window(snapshot),
         team_item_gold=team_item_gold(cards),
+        team_gold=team_gold(cards),
         cooldowns=running_cooldowns(cooldown_timers or [], snapshot.game_data.game_time_seconds),
     )
 
@@ -122,6 +131,8 @@ class OverlayEngine:
         # The last answer of the game, which a mark is read against.
         self._last_payload: JsonValue | None = None
         self._cooldown_timers: list[CooldownTimer] = []
+        # Starts over by itself when a new game's clock begins.
+        self._gold_tracker: Final = GoldTracker()
         self._current_state = NOT_RUNNING
         self._callouts: Final = CalloutTracker()
         self._subscribers: Final[set[asyncio.Queue[OverlayState]]] = set()
@@ -193,9 +204,10 @@ class OverlayEngine:
             answer_state = compute_overlay_state(
                 payload,
                 self._item_catalog,
-                self._patch_stats,
-                self._player_records,
-                self._cooldown_timers,
+                patch_stats=self._patch_stats,
+                player_records=self._player_records,
+                cooldown_timers=self._cooldown_timers,
+                gold_tracker=self._gold_tracker,
             )
             self._last_payload = payload if answer_state.is_game_running else None
             if answer_state.is_game_running and not self._current_state.is_game_running:

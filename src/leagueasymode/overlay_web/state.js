@@ -117,6 +117,14 @@ export function isPlayerIntel(value) {
         typeof value["usual_position"] === "string" &&
         typeof value["is_off_role"] === "boolean");
 }
+/** Return whether a value is a player's gold as the engine sends it. */
+export function isGoldEstimate(value) {
+    return (isRecord(value) &&
+        isOneOf(value["source"], COMBAT_STAT_SOURCES) &&
+        typeof value["total_gold"] === "number" &&
+        typeof value["unspent_gold"] === "number" &&
+        typeof value["band_gold"] === "number");
+}
 /** Return whether a value is a player's card as the engine sends it. */
 export function isPlayerCard(value) {
     return (isRecord(value) &&
@@ -131,13 +139,21 @@ export function isPlayerCard(value) {
         isNumberOrNull(value["item_gold"]) &&
         isArrayOf(value["finished_item_names"], (name) => typeof name === "string") &&
         (value["combat_stats"] === null || isCombatStats(value["combat_stats"])) &&
-        (value["intel"] === null || isPlayerIntel(value["intel"])));
+        (value["intel"] === null || isPlayerIntel(value["intel"])) &&
+        (value["gold"] === null || isGoldEstimate(value["gold"])));
 }
 /** Return whether a value is each team's item gold as the engine sends it. */
 export function isTeamItemGold(value) {
     return (isRecord(value) &&
         typeof value["ally_item_gold"] === "number" &&
         typeof value["enemy_item_gold"] === "number");
+}
+/** Return whether a value is each team's gold as the engine sends it. */
+export function isTeamGold(value) {
+    return (isRecord(value) &&
+        typeof value["ally_total_gold"] === "number" &&
+        typeof value["enemy_total_gold"] === "number" &&
+        typeof value["lead_band_gold"] === "number");
 }
 /** Return whether a value is a numbers window as the engine sends it. */
 export function isNumbersWindow(value) {
@@ -180,6 +196,7 @@ export function isOverlayState(value) {
         isArrayOf(value["players"], isPlayerCard) &&
         (value["numbers_window"] === null || isNumbersWindow(value["numbers_window"])) &&
         (value["team_item_gold"] === null || isTeamItemGold(value["team_item_gold"])) &&
+        (value["team_gold"] === null || isTeamGold(value["team_gold"])) &&
         isArrayOf(value["cooldowns"], isCooldownTimer) &&
         isArrayOf(value["callouts"], isCallout));
 }

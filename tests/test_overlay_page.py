@@ -307,7 +307,7 @@ async def test_an_enemy_reaching_level_six_is_called_out(tmp_path: Path) -> None
 
 async def test_the_enemy_strip_shows_item_gold_and_the_lead(tmp_path: Path) -> None:
     async with open_overlay(tmp_path, snapshot_count=60, speed=1.0) as page:
-        lead = page.locator("#enemy-strip .item-lead")
+        lead = page.locator("#enemy-strip .item-lead.items")
         # Your Jinx holds two Long Swords (700), their Caitlyn an Infinity Edge (3400).
         await expect(lead).to_have_text(
             re.compile(rf"^Item gold\s*{MINUS_SIGN}2\.7k$"), timeout=5000
@@ -335,6 +335,28 @@ async def test_the_enemy_strip_shows_each_enemys_health_armor_and_magic_resist(
         await expect(caitlyn_stats).to_have_text("1.3k HP · 59 AR · 39 MR", timeout=5000)
         await expect(caitlyn_stats).to_have_attribute("data-source", "estimate")
         await keep_screenshot(page, "combat-stats")
+
+
+async def test_the_enemy_strip_shows_what_each_enemy_holds_and_the_gold_lead(
+    tmp_path: Path,
+) -> None:
+    async with open_overlay(tmp_path, snapshot_count=60, speed=1.0) as page:
+        caitlyn_unspent = page.locator("#enemy-strip .enemy-row", has_text="Caitlyn").locator(
+            ".enemy-unspent"
+        )
+        # At 23:15 Caitlyn has earned about 3.6k (starting and passive gold, and Baron's 300) and
+        # holds an Infinity Edge (3.4k): about 0.2k in hand, give or take 0.3k.
+        await expect(caitlyn_unspent).to_have_text(
+            re.compile(r"^0\.[23]k \u00b10\.3k unspent$"), timeout=5000
+        )
+        await expect(caitlyn_unspent).to_have_attribute("data-source", "estimate")
+        # The built game gives your Ahri 500 gold all game, so their team leads.
+        gold_lead = page.locator("#enemy-strip .gold-lead")
+        await expect(gold_lead).to_have_text(
+            re.compile(rf"^Gold\s*{MINUS_SIGN}4\.\dk \u00b10\.8k$")
+        )
+        await expect(gold_lead).to_have_attribute("data-lead", "enemy")
+        await keep_screenshot(page, "hidden-gold")
 
 
 async def test_the_enemy_strip_shows_each_enemys_rank_and_record(tmp_path: Path) -> None:

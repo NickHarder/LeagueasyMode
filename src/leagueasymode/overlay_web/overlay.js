@@ -37,6 +37,8 @@ const LANE_NAMES = {
     bot: "bot",
 };
 const ONE_THOUSAND = 1000;
+// A band narrower than this rounds to nothing at one decimal of a thousand, so it is left out.
+const SMALLEST_BAND_SHOWN_GOLD = 50;
 const ROLE_ORDER = ["TOP", "JUNGLE", "MIDDLE", "BOTTOM", "UTILITY"];
 const ROLE_SHORT_NAMES = {
     TOP: "TOP",
@@ -223,23 +225,42 @@ export function formatGoldLead(leadGold) {
     }
     return roundedLead > 0 ? `+${formatGold(roundedLead)}` : `\u2212${formatGold(-roundedLead)}`;
 }
-/** Return the enemy strip's header: the player's team's item-gold lead, when it is known. */
-function itemLeadElement(state) {
-    const teamGold = state.team_item_gold;
-    if (teamGold === null) {
-        return null;
-    }
-    const leadGold = teamGold.ally_item_gold - teamGold.enemy_item_gold;
+/** Return a band of gold to add after an amount: " ±0.3k", or nothing when it is too narrow. */
+export function formatBand(bandGold) {
+    return bandGold >= SMALLEST_BAND_SHOWN_GOLD ? ` \u00b1${formatThousands(bandGold)}` : "";
+}
+/** Return what an enemy holds unspent, with its band: "1.4k ±0.3k unspent". */
+export function formatUnspentGold(gold) {
+    return `${formatThousands(gold.unspent_gold)}${formatBand(gold.band_gold)} unspent`;
+}
+/** Return a header of the enemy strip: a label and the player's team's lead, colored by side. */
+function leadElement(className, label, leadGold, valueText) {
     const header = document.createElement("div");
-    header.className = "item-lead";
+    header.className = `item-lead ${className}`;
     header.dataset["lead"] = leadGold > 0 ? "ally" : leadGold < 0 ? "enemy" : "even";
     const labelElement = document.createElement("span");
-    labelElement.textContent = "Item gold";
+    labelElement.textContent = label;
     const valueElement = document.createElement("span");
     valueElement.className = "item-lead-value";
-    valueElement.textContent = formatGoldLead(leadGold);
+    valueElement.textContent = valueText;
     header.append(labelElement, valueElement);
     return header;
+}
+/** Return the enemy strip's headers: the item-gold lead and the estimated gold lead, when known. */
+function leadElements(state) {
+    const headers = [];
+    const itemGold = state.team_item_gold;
+    if (itemGold !== null) {
+        const itemLeadGold = itemGold.ally_item_gold - itemGold.enemy_item_gold;
+        headers.push(leadElement("items", "Item gold", itemLeadGold, formatGoldLead(itemLeadGold)));
+    }
+    const teamGold = state.team_gold;
+    if (teamGold !== null) {
+        const goldLead = teamGold.ally_total_gold - teamGold.enemy_total_gold;
+        const valueText = `${formatGoldLead(goldLead)}${formatBand(teamGold.lead_band_gold)}`;
+        headers.push(leadElement("gold-lead", "Gold", goldLead, valueText));
+    }
+    return headers;
 }
 /** Return the line of an enemy's defensive stats: "1.3k HP · 59 AR · 39 MR". */
 export function formatDefensiveStats(stats) {
@@ -344,6 +365,13 @@ function enemyRowElement(card, gameTimeSeconds, cooldowns) {
         statsElement.textContent = formatDefensiveStats(card.combat_stats);
         row.append(statsElement);
     }
+    if (card.gold !== null) {
+        const unspentElement = document.createElement("span");
+        unspentElement.className = "enemy-unspent";
+        unspentElement.dataset["source"] = card.gold.source;
+        unspentElement.textContent = formatUnspentGold(card.gold);
+        row.append(unspentElement);
+    }
     return row;
 }
 /** Return the badge of one marked spell: its label and the time until it is back, "F 4:12". */
@@ -371,9 +399,8 @@ function renderEnemyStrip(nowMilliseconds) {
     }
     const enemyCards = [...received.state.players.filter((card) => card.side === "enemy")].sort((first, second) => roleRank(first) - roleRank(second));
     strip.hidden = enemyCards.length === 0;
-    const header = itemLeadElement(received.state);
     const rows = enemyCards.map((card) => enemyRowElement(card, gameTimeSeconds, received.state.cooldowns));
-    strip.replaceChildren(...(header === null ? rows : [header, ...rows]));
+    strip.replaceChildren(...leadElements(received.state), ...rows);
 }
 /** Return the element that draws one callout. */
 function calloutElement(callout) {

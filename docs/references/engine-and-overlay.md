@@ -4,7 +4,7 @@ title: The engine and the overlay page
 description: How the engine turns the game's answers into the overlay's state, how that state reaches the widgets, how the page is built and tested, and how to run it all against a replay.
 tags: [engine, overlay, architecture]
 status: draft
-generated: { by: claude-code/cloud, at: 2026-10-08T21:19:42Z }
+generated: { by: claude-code/cloud, at: 2026-10-08T22:00:20Z }
 sources:
   - id: engine
     resource: ../../src/leagueasymode/engine.py
@@ -30,6 +30,8 @@ sources:
     resource: ../../src/leagueasymode/inference/cooldowns.py
   - id: suggestions
     resource: ../../src/leagueasymode/inference/suggestions.py
+  - id: gold
+    resource: ../../src/leagueasymode/inference/gold.py
   - id: overlay-state
     resource: ../../src/leagueasymode/overlay_state.py
   - id: overlay-server
@@ -81,15 +83,17 @@ game API ─▶ GameApiClient ─▶ GameSnapshot ─▶ estimators ─▶ Overl
 | Loading-screen intel (phase 3.1) | exact: restates the League client's answers | each player's solo rank (flex when solo has none); wins and losses over their last 20 games on Summoner's Rift, remakes (under 5:00) left out; the streak from the latest game; games and wins on this game's champion; the position at least 60% of at least five recent games were in, and "off-role" when this game's position, given or likely, differs[^intel] |
 | Marked cooldowns (phase 3.2) | estimate | the player marks an enemy's spell from the macOS app (an enemy in role order, then Flash, their other summoner spell, or their ultimate); the timer starts at the game time of the mark and lasts the patch's cooldown, the ultimate's at the rank the enemy's level gives (6, 11, 16), times 100 / (100 + haste), with the ability and summoner spell haste their items' descriptions state. Runes and other haste are not known, so a spell may be back sooner. A callout says when it is back; a new game clears them[^cooldowns] |
 | Suggestions (phase 3.3) | a rule over the facts above; first-draft wording | callouts that name an action, made once when their facts line up, never from the first state seen: an objective up or spawning within 0:30 while more enemies than allies are dead for at least 0:20 ("Baron up, 2 enemies down for 0:40: take it"); their jungler dead for at least 0:20 ("take Dragon" when one is up or within a minute, else "invade or push"); a Flash or ultimate just marked ("punish it", "fight now"); a Baron or Elder buff just taken, by who holds it ("group and push", "group and defend", "force a fight", "avoid fights"). Text only[^suggestions] |
+| Hidden gold (estimator 3, phase 3.5) | exact for the player on this machine (`activePlayer.currentGold`); an estimate with a band for the others | an income model: 500 to start; passive gold of 2.1 a second from 1:30, 2.3 from 15:00, 2.6 from 25:00 (patch 26.16); each creep at the rate of when it died, about 18.5 gold a lane creep before 15:00, 20.1 to 25:00 and 23.9 after (melee 19, ranged 14, cannons by wave), 22 a point of a jungler's (one with Smite) creep score, unconfirmed; a kill 300 gold up to level 6 and 10 more a level to 420, plus a bounty of a third of the victim's kill and assist gold since their last death less 100 (up to 700, unconfirmed), and half the base shared by the assisters (patch 25.9); turrets 50/25/25 to each of the destroying team and 250/425/375 shared by the champions the feed credits (outer, inner, inhibitor), an inhibitor 50 shared, Baron 300 each, all unconfirmed; the support item's quest at 0.75 gold a second within its stage (World Atlas below 400, Runic Compass below 1200), pinned when it reaches the next. A filter corrects it: total gold is a normal estimate carried forward by that income and widened by how unsure each kind is (12% of creep gold, 25% of kill gold, 30% of objective and quest gold, and 0.15 gold a second unseen, turret plates among it); it is never below what the inventory cost plus what was drunk, placed or lost on a sale (30%); a shopping trip of at least 300 gold, over once nothing is bought for 5 seconds, is a measurement of the inventory's cost plus 300 ± 175 left in hand, weighed against the model as a Kalman filter weighs one. Gold per creep is tuned for your kind (lane or jungle) by the gold your own creeps must have paid, weighed 1 per 1000 of it against the model's 1, between 0.75 and 1.33. The band holds the truth about 4 times in 5 (1.28 standard deviations); each team's total is the sum, its band the bands in quadrature. A clock that runs back starts a new game[^gold] |
 | Inhibitors down | exact | back 5:00 after they fall, or when the feed says they respawned; `Barracks_T1_L1` is team 1's top inhibitor (L, C and R taken as top, mid and bottom, to be confirmed) |
 
 Every rule is checked again against the first recordings. The widgets show the dragon always,
 and beside it the numbers window while it is open, any other monster up or within 90 seconds of
-spawning, each running buff, and each inhibitor down; on the right, each team's item-gold lead,
-and each enemy in role order with their role (in italics when worked out, with "?" when only a
-guess), champion, level, item gold and death timer, and under each the spells marked ("F 4:12",
-"R 1:05"), their record ("P4 · 3–2 W3 ·
-3 on champ · off-role (MID)") and their health, armor and magic resist ("1.3k HP · 59 AR · 39 MR").
+spawning, each running buff, and each inhibitor down; on the right, each team's item-gold lead
+and estimated gold lead ("Gold −1.8k ±0.6k"), and each enemy in role order with their role (in
+italics when worked out, with "?" when only a guess), champion, level, item gold and death timer,
+and under each the spells marked ("F 4:12", "R 1:05"), their record ("P4 · 3–2 W3 · 3 on champ ·
+off-role (MID)"), their health, armor and magic resist ("1.3k HP · 59 AR · 39 MR") and the gold
+they hold ("1.4k ±0.3k unspent"; a band under 50 gold is left out).
 
 # Patch data
 
@@ -173,3 +177,4 @@ Chromium against a replay (Chromium from `uv run playwright install chromium`, o
 [^intel]: `src/leagueasymode/inference/intel.py`
 [^cooldowns]: `src/leagueasymode/inference/cooldowns.py`
 [^suggestions]: `src/leagueasymode/inference/suggestions.py`
+[^gold]: `src/leagueasymode/inference/gold.py`

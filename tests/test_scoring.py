@@ -18,13 +18,15 @@ from game_payloads import (
 )
 from leagueasymode.cli import main
 from leagueasymode.data_dragon import PatchStatsStore
+from leagueasymode.inference.gold import passive_gold
 from leagueasymode.league_client import GAMEFLOW_SESSION_PATH
 from leagueasymode.patch_data import CHAMPION_SUMMARY_PATH, GAME_VERSION_PATH
-from leagueasymode.recorder import GAME_DETAILS_PATH_TEMPLATE
+from leagueasymode.recorder import GAME_DETAILS_PATH_TEMPLATE, TIMELINE_PATH_TEMPLATE
 from leagueasymode.recording.writer import RecordingWriter
 from leagueasymode.scoring import (
     read_recorded_game,
     score_combat_stats,
+    score_gold,
     score_recording,
     score_roles,
 )
@@ -82,10 +84,37 @@ def game_details(positions_by_champion: dict[str, str]) -> JsonValue:
     }
 
 
+def game_timeline(gold_off_by: int = 0) -> JsonValue:
+    """A timeline in which every player has earned the starting and passive gold, and spent none."""
+    return {
+        "frameInterval": 60000,
+        "frames": [
+            {
+                "timestamp": minute * 60000 + 25,
+                "participantFrames": {
+                    str(index + 1): {
+                        "participantId": index + 1,
+                        "currentGold": round(500 + passive_gold(minute * 60.0)) + gold_off_by,
+                        "totalGold": round(500 + passive_gold(minute * 60.0)) + gold_off_by,
+                        "level": 1,
+                        "xp": 0,
+                        "minionsKilled": 0,
+                        "jungleMinionsKilled": 0,
+                    }
+                    for index in range(len(DEFAULT_PLAYERS))
+                },
+                "events": [],
+            }
+            for minute in range(16)
+        ],
+    }
+
+
 def write_scored_recording(
     directory: Path,
     players: tuple[PlayerSeed, ...],
     positions_by_champion: dict[str, str] | None = None,
+    timeline: JsonValue | None = None,
 ) -> Path:
     writer = RecordingWriter(directory / "game.jsonl", keyframe_interval_seconds=60.0)
     writer.write_started(
@@ -115,6 +144,12 @@ def write_scored_recording(
         path=GAME_DETAILS_PATH_TEMPLATE.format(game_id=GAME_ID),
         payload=game_details(details_positions),
     )
+    if timeline is not None:
+        writer.write_client_resource(
+            received_at_seconds=1000.0,
+            path=TIMELINE_PATH_TEMPLATE.format(game_id=GAME_ID),
+            payload=timeline,
+        )
     writer.write_ended(received_at_seconds=1000.0, reason="game ended")
     return writer.close()
 
@@ -192,3 +227,31 @@ def test_scores_come_together_for_a_recording(tmp_path: Path) -> None:
     recording = write_scored_recording(tmp_path, players_at(are_positions_given=True, level=1))
     scores = score_recording(recording, fixture_patch_stats())
     assert [score.estimator for score in scores] == ["roles", "combat stats (yours)"]
+
+
+def test_gold_is_scored_for_every_player_but_you_against_the_timeline(tmp_path: Path) -> None:
+    recording = write_scored_recording(tmp_path, DEFAULT_PLAYERS, timeline=game_timeline())
+    scores = score_gold(read_recorded_game(recording))
+    # Nine players (your own gold is exact) at each of 15 minutes, all exactly right.
+    assert [(score.estimator, score.sample_count, score.value) for score in scores] == [
+        ("gold earned", 135, 0.0),
+        ("gold unspent", 135, 0.0),
+        ("gold band", 135, 1.0),
+    ]
+
+
+def test_gold_off_by_more_than_the_band_is_scored_as_outside_it(tmp_path: Path) -> None:
+    recording = write_scored_recording(
+        tmp_path, DEFAULT_PLAYERS, timeline=game_timeline(gold_off_by=100)
+    )
+    earned, unspent, band = score_gold(read_recorded_game(recording))
+    assert (earned.value, unspent.value) == (100.0, 100.0)
+    # The band passes 100 gold from 11:00, when 9:30 of unseen income is that unsure.
+    assert band.value == pytest.approx(5 / 15)
+    assert band.describe() == "gold band: holds the truth 45/135 times (33%)"
+    assert earned.describe() == "gold earned: 135 player-minutes, 100 gold off on average"
+
+
+def test_a_recording_without_a_timeline_scores_no_gold(tmp_path: Path) -> None:
+    recording = write_scored_recording(tmp_path, DEFAULT_PLAYERS)
+    assert score_gold(read_recorded_game(recording)) == []

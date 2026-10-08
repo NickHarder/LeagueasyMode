@@ -4,13 +4,17 @@ Exact: the scoreboard gives every player's level and, while they are dead, the s
 respawn. The numbers window follows from those alone, since a death to come cannot be known.
 """
 
+from collections.abc import Mapping
+
 from leagueasymode.data_dragon import PatchStats
 from leagueasymode.game_state import GameSnapshot, ScoreboardPlayer
 from leagueasymode.inference.combat_stats import estimated_combat_stats, exact_combat_stats
+from leagueasymode.inference.gold import PlayerKey, player_key
 from leagueasymode.inference.intel import player_intel
 from leagueasymode.inference.roles import RoleGuess, assign_roles
 from leagueasymode.overlay_state import (
     CombatStats,
+    GoldEstimate,
     NumbersWindow,
     PlayerCard,
     PlayerIntel,
@@ -25,6 +29,7 @@ def player_cards(
     item_catalog: ItemCatalog | None = None,
     patch_stats: PatchStats | None = None,
     player_records: PlayerRecords | None = None,
+    gold_estimates: Mapping[PlayerKey, GoldEstimate] | None = None,
 ) -> list[PlayerCard]:
     """Return a card for every player, the player's own team first, each team in scoreboard order.
 
@@ -35,6 +40,7 @@ def player_cards(
             unknown.
         player_records: Each player's record from the League client, for their intel; None
             while unknown.
+        gold_estimates: Each player's gold, by key; None while the game's gold is not followed.
 
     Returns:
         The cards.
@@ -59,6 +65,7 @@ def player_cards(
             finished_item_names=_finished_item_names(player, item_catalog),
             combat_stats=_combat_stats(snapshot, player, patch_stats),
             intel=_intel(player, role_guesses[index], player_records),
+            gold=gold_estimates.get(player_key(player)) if gold_estimates is not None else None,
         )
         for index, player in [*allies, *enemies]
     ]

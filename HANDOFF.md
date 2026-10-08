@@ -3,8 +3,8 @@
 If you are picking this work up, human or model: read this file top to bottom first. The `handoff` skill
 refreshes it; it describes the current state.
 
-Last updated: 2026-10-08, on branch `feat/phase-3-plan`. `main` holds phases 0 to 2 (pull requests
-#2 to #5, merged); the stacked branches are deleted.
+Last updated: 2026-10-08, on branch `feat/hidden-gold`. `main` holds phases 0 to 2 and phase 3.1
+to 3.3 (pull requests #2 to #9, merged); the merged branches are deleted.
 
 ## Where things stand
 
@@ -14,13 +14,14 @@ test on a Mac; phase 2 ([docs/plans/phase-2-exact-facts.md](docs/plans/phase-2-e
 built but for structures, left out until the first recordings. Phase 3
 ([docs/plans/phase-3-economy-and-open-policy.md](docs/plans/phase-3-economy-and-open-policy.md)) is
 approved by the owner; 3.1 to 3.3 (loading-screen intel, marked cooldowns, suggestions) are merged
-into `main`; 3.4, the scoring harness, is built on `feat/scoring-harness`; 3.5, hidden gold, is
-next.
+into `main`; 3.4, the scoring harness, is pull request #10 (`feat/scoring-harness`); 3.5, hidden
+gold, is built on `feat/hidden-gold`, which carries 3.4 too; 3.6, hidden XP, is next. Each slice
+goes up as its own pull request into `main` without waiting for the one before to merge.
 
 | Area | State | Proof |
 |---|---|---|
 | Scaffold | ai-kit v0.11.1, Python layer, GitHub CI | `.copier-answers.yml` |
-| Gate | Green: lint, 470 tests, secrets | `make gate` |
+| Gate | Green: lint, 555 tests (and 12 in Chromium), secrets | `make gate` |
 | Recorder | Records games, the client's patch data and the post-game timeline; anonymized copies | `uv run leagueasymode record`; `tests/test_recorder.py`, `tests/test_anonymize.py` |
 | Replay | A recording served as a stand-in game API | `uv run leagueasymode replay <recording>`; `tests/test_replay.py` |
 | Engine and overlay page | The dragon and Elder timer, from the game's answer to the page | `uv run leagueasymode run`; `tests/test_tracer_bullet.py` |
@@ -58,7 +59,11 @@ In `AGENTS.md`, this project's own included: every session reads that file.
 4. **The kit's gate skills** (`kickoff`, `audit-codebase`, `define-personas`, `plan-architecture`,
    `define-key-metrics`) have not been run; the approved plan stands in for the plan and the
    architecture. Say whether to run any of them.
-5. **Documents waiting for approval** (`make docs-status`): the approved plan v2 and phase 2's
+5. **Hidden gold's wording and look (3.5)**, on a best guess as with the suggestions: each
+   enemy's row says "1.4k ±0.3k unspent" in gold, and the strip's header adds "Gold −1.8k ±0.6k"
+   under the item-gold lead. The chance an enemy can afford their next item is worked out
+   (`chance_of_affording`) and shows with 3.8, which predicts that item.
+6. **Documents waiting for approval** (`make docs-status`): the approved plan v2 and phase 2's
    plan, the retrospective, and the references on recordings, the engine and the macOS app, all
    drafts. Phase 3's plan is approved.
 
