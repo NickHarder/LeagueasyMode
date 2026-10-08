@@ -435,6 +435,8 @@ class JunglePathTracker:
                 label=camp_label(camp, ally_team),
                 cleared_by=side,
                 respawns_at_game_time_seconds=cleared_at + self._respawn_seconds(camp_kind(camp)),
+                x_position=RIFT_MAP.points[camp].x_position,
+                y_position=RIFT_MAP.points[camp].y_position,
             )
             for camp, cleared_at in last_clears.items()
             if cleared_at + self._respawn_seconds(camp_kind(camp)) > game_time_seconds

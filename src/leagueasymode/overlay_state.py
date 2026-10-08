@@ -226,6 +226,10 @@ class RegionChance(BaseModel):
     region: str
     label: str
     chance: float
+    # The region's middle, in the game's coordinates (x to the right, y up, from the blue
+    # team's corner), for the minimap.
+    x_position: float
+    y_position: float
 
 
 class PositionEstimate(BaseModel):
@@ -366,6 +370,9 @@ class CampTimer(BaseModel):
     label: str
     cleared_by: Literal["ally", "enemy"]
     respawns_at_game_time_seconds: float
+    # The camp, in the game's coordinates, for the minimap.
+    x_position: float
+    y_position: float
 
 
 class JunglePath(BaseModel):
@@ -398,6 +405,20 @@ class WardEstimate(BaseModel):
     region: str
     label: str
     chance: float
+    # The region's middle, in the game's coordinates, for the minimap.
+    x_position: float
+    y_position: float
+
+
+class MinimapLayout(BaseModel):
+    """Where League draws its minimap, from League's own settings (`game.cfg`)."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    # League's minimap scale setting, 1 by default.
+    scale: float
+    # Whether the minimap is on the left (League's "flip minimap"); on the right otherwise.
+    is_flipped: bool
 
 
 class Callout(BaseModel):
@@ -434,6 +455,8 @@ class OverlayState(BaseModel):
     jungle_paths: list[JunglePath] = Field(default_factory=list)
     camp_timers: list[CampTimer] = Field(default_factory=list)
     control_wards: list[WardEstimate] = Field(default_factory=list)
+    # None while League's settings are not known; the minimap layer then takes the default place.
+    minimap: MinimapLayout | None = None
     callouts: list[Callout] = Field(default_factory=list)
 
 

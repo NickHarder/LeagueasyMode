@@ -6,6 +6,10 @@ skill has the format.
 
 ## 2026-10-08
 
+- Phase 4.6, the minimap layer: `leagueasymode run` reads League's own settings (`game.cfg`) for
+  the minimap's scale and side, and draws there each enemy's likeliest region, the camps down and
+  the enemy control wards. Regions, camps and wards now carry their place on the map. Its size
+  against League's minimap is a first guess for the owner to check on the Mac. Phase 4 is built.
 - Phase 4.5, control wards (estimator 9): a player's control ward count dropping while alive is a
   placement, placed where the position estimate likely has them then; one per player at a time,
   shown up to five minutes. The strip lists the enemies' latest. Scored against the timeline's

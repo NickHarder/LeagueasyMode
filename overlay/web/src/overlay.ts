@@ -708,12 +708,103 @@ function renderCallouts(nowMilliseconds: number): void {
 }
 
 /** Draw every widget. */
+// The map's side in the game's coordinates, which run from the blue team's corner.
+const MAP_SIZE_UNITS = 14800;
+const SVG_NAMESPACE = "http://www.w3.org/2000/svg";
+// An enemy's mark on the minimap: its least radius, and how much more at full chance, in map units.
+const MARK_BASE_RADIUS_UNITS = 600;
+const MARK_CHANCE_RADIUS_UNITS = 900;
+const MARK_LABEL_LENGTH = 3;
+const WARD_HALF_SIZE_UNITS = 260;
+
+/** Return an element of the minimap's drawing. */
+function svgElement(name: string, attributes: Readonly<Record<string, string>>): SVGElement {
+  const element = document.createElementNS(SVG_NAMESPACE, name);
+  for (const [attributeName, value] of Object.entries(attributes)) {
+    element.setAttribute(attributeName, value);
+  }
+  return element;
+}
+
+/** Return the minimap's y for the game's: the game's y runs up, the drawing's down. */
+function mapY(yPosition: number): string {
+  return String(MAP_SIZE_UNITS - yPosition);
+}
+
+/** Return the marks of an enemy's likeliest region, sized and shaded by its chance. */
+function enemyMarks(card: PlayerCard): SVGElement[] {
+  const likeliest = card.location?.regions[0];
+  if (likeliest === undefined) {
+    return [];
+  }
+  const circle = svgElement("circle", {
+    cx: String(likeliest.x_position),
+    cy: mapY(likeliest.y_position),
+    r: String(MARK_BASE_RADIUS_UNITS + MARK_CHANCE_RADIUS_UNITS * likeliest.chance),
+    class: "minimap-enemy",
+    "fill-opacity": String(0.25 + 0.5 * likeliest.chance),
+    "data-champion": card.champion_name,
+  });
+  const label = svgElement("text", {
+    x: String(likeliest.x_position),
+    y: mapY(likeliest.y_position),
+    class: "minimap-label",
+  });
+  label.textContent = card.champion_name.slice(0, MARK_LABEL_LENGTH);
+  return [circle, label];
+}
+
+/** Draw the minimap layer where League's minimap is: each enemy's likely region, camps, wards. */
+function renderMinimap(nowMilliseconds: number): void {
+  const minimap = requireElement("minimap");
+  const received = latestReceivedState;
+  const gameTimeSeconds = received === null ? null : currentGameTimeSeconds(received, nowMilliseconds);
+  if (received === null || !received.state.is_game_running || gameTimeSeconds === null) {
+    minimap.hidden = true;
+    minimap.replaceChildren();
+    return;
+  }
+  const state = received.state;
+  const layout = state.minimap ?? { scale: 1, is_flipped: false };
+  minimap.style.setProperty("--minimap-scale", String(layout.scale));
+  minimap.dataset["side"] = layout.is_flipped ? "left" : "right";
+  const drawing = svgElement("svg", { viewBox: `0 0 ${String(MAP_SIZE_UNITS)} ${String(MAP_SIZE_UNITS)}` });
+  const enemyCards = state.players.filter((card) => card.side === "enemy" && !card.is_dead);
+  const camps = state.camp_timers
+    .filter((timer) => timer.respawns_at_game_time_seconds > gameTimeSeconds)
+    .map((timer) => {
+      const campText = svgElement("text", {
+        x: String(timer.x_position),
+        y: mapY(timer.y_position),
+        class: "minimap-camp",
+      });
+      campText.textContent = formatCountdown(timer.respawns_at_game_time_seconds - gameTimeSeconds);
+      return campText;
+    });
+  const wards = state.control_wards
+    .filter((ward) => ward.side === "enemy")
+    .map((ward) =>
+      svgElement("rect", {
+        x: String(ward.x_position - WARD_HALF_SIZE_UNITS),
+        y: String(MAP_SIZE_UNITS - ward.y_position - WARD_HALF_SIZE_UNITS),
+        width: String(2 * WARD_HALF_SIZE_UNITS),
+        height: String(2 * WARD_HALF_SIZE_UNITS),
+        class: "minimap-ward",
+        transform: `rotate(45 ${String(ward.x_position)} ${mapY(ward.y_position)})`,
+      }),
+    );
+  drawing.replaceChildren(...camps, ...wards, ...enemyCards.flatMap(enemyMarks));
+  minimap.hidden = drawing.childElementCount === 0;
+  minimap.replaceChildren(drawing);
+}
+
 function render(): void {
   const nowMilliseconds = performance.now();
   renderDragonWidget(nowMilliseconds);
   renderObjectivePills(nowMilliseconds);
   renderEnemyStrip(nowMilliseconds);
   renderCallouts(nowMilliseconds);
+  renderMinimap(nowMilliseconds);
 }
 
 /** Listen to the engine; the browser reconnects by itself when the stream drops. */

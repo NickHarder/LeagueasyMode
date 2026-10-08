@@ -120,4 +120,6 @@ def _ward_at(
         region=likeliest.region,
         label=likeliest.label,
         chance=likeliest.chance,
+        x_position=likeliest.x_position,
+        y_position=likeliest.y_position,
     )

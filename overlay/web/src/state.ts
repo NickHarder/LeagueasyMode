@@ -148,6 +148,8 @@ export interface RegionChance {
   readonly region: string;
   readonly label: string;
   readonly chance: number;
+  readonly x_position: number;
+  readonly y_position: number;
 }
 
 /** Where a player likely is now, and how soon they could be in each lane: an estimate. */
@@ -229,6 +231,8 @@ export interface CampTimer {
   readonly label: string;
   readonly cleared_by: Side;
   readonly respawns_at_game_time_seconds: number;
+  readonly x_position: number;
+  readonly y_position: number;
 }
 
 /** A jungler's likely clear: the camps lately, and their likely next camp. */
@@ -249,6 +253,14 @@ export interface WardEstimate {
   readonly region: string;
   readonly label: string;
   readonly chance: number;
+  readonly x_position: number;
+  readonly y_position: number;
+}
+
+/** Where League draws its minimap, from League's own settings. */
+export interface MinimapLayout {
+  readonly scale: number;
+  readonly is_flipped: boolean;
 }
 
 /** Everything the overlay shows at one moment. */
@@ -267,6 +279,7 @@ export interface OverlayState {
   readonly jungle_paths: readonly JunglePath[];
   readonly camp_timers: readonly CampTimer[];
   readonly control_wards: readonly WardEstimate[];
+  readonly minimap: MinimapLayout | null;
   readonly callouts: readonly Callout[];
 }
 
@@ -481,7 +494,9 @@ export function isRegionChance(value: unknown): value is RegionChance {
     isRecord(value) &&
     typeof value["region"] === "string" &&
     typeof value["label"] === "string" &&
-    typeof value["chance"] === "number"
+    typeof value["chance"] === "number" &&
+    typeof value["x_position"] === "number" &&
+    typeof value["y_position"] === "number"
   );
 }
 
@@ -585,7 +600,9 @@ export function isCampTimer(value: unknown): value is CampTimer {
     typeof value["camp"] === "string" &&
     typeof value["label"] === "string" &&
     isOneOf(value["cleared_by"], SIDES) &&
-    typeof value["respawns_at_game_time_seconds"] === "number"
+    typeof value["respawns_at_game_time_seconds"] === "number" &&
+    typeof value["x_position"] === "number" &&
+    typeof value["y_position"] === "number"
   );
 }
 
@@ -611,8 +628,15 @@ export function isWardEstimate(value: unknown): value is WardEstimate {
     typeof value["placed_at_game_time_seconds"] === "number" &&
     typeof value["region"] === "string" &&
     typeof value["label"] === "string" &&
-    typeof value["chance"] === "number"
+    typeof value["chance"] === "number" &&
+    typeof value["x_position"] === "number" &&
+    typeof value["y_position"] === "number"
   );
+}
+
+/** Return whether a value is where League draws its minimap as the engine sends it. */
+export function isMinimapLayout(value: unknown): value is MinimapLayout {
+  return isRecord(value) && typeof value["scale"] === "number" && typeof value["is_flipped"] === "boolean";
 }
 
 /** Return whether a value is an overlay state as the engine sends it. */
@@ -636,6 +660,7 @@ export function isOverlayState(value: unknown): value is OverlayState {
     isArrayOf(value["jungle_paths"], isJunglePath) &&
     isArrayOf(value["camp_timers"], isCampTimer) &&
     isArrayOf(value["control_wards"], isWardEstimate) &&
+    (value["minimap"] === null || isMinimapLayout(value["minimap"])) &&
     isArrayOf(value["callouts"], isCallout)
   );
 }
