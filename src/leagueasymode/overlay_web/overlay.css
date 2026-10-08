@@ -196,6 +196,13 @@ body {
   font-weight: 500;
 }
 
+.enemy-power-level {
+  grid-column: 2 / -1;
+  color: var(--widget-enemy);
+  font-size: 10px;
+  font-weight: 600;
+}
+
 .enemy-unspent {
   grid-column: 2 / -1;
   color: var(--widget-alive);
@@ -234,7 +241,8 @@ body {
   border-color: var(--widget-advantage);
 }
 
-.callout[data-kind="level_spike"] {
+.callout[data-kind="level_spike"],
+.callout[data-kind="level_soon"] {
   border-color: var(--widget-enemy);
 }
 

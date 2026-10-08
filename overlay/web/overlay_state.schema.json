@@ -66,6 +66,7 @@
       "enum": [
         "numbers_window",
         "level_spike",
+        "level_soon",
         "objective_soon",
         "item_spike",
         "cooldown_ready",
@@ -317,6 +318,74 @@
       "title": "InhibitorTimer",
       "type": "object"
     },
+    "LevelEstimate": {
+      "additionalProperties": false,
+      "description": "How far a player is to their next level, and when they reach the next of 6, 11 and 16.\n\nAn estimate for every player, yours included: the scoreboard gives levels, not experience.\nEach level-up seen pins a player's experience; between them it grows at their own rate\n(`inference/experience.py`), with a band that holds the truth about 4 times in 5.",
+      "properties": {
+        "experience": {
+          "title": "Experience",
+          "type": "integer"
+        },
+        "band_experience": {
+          "title": "Band Experience",
+          "type": "integer"
+        },
+        "progress_to_next_level": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Progress To Next Level"
+        },
+        "next_power_level": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Next Power Level"
+        },
+        "power_level_at_game_time_seconds": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Power Level At Game Time Seconds"
+        },
+        "power_level_band_seconds": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Power Level Band Seconds"
+        }
+      },
+      "required": [
+        "experience",
+        "band_experience",
+        "progress_to_next_level",
+        "next_power_level",
+        "power_level_at_game_time_seconds",
+        "power_level_band_seconds"
+      ],
+      "title": "LevelEstimate",
+      "type": "object"
+    },
     "NumbersWindow": {
       "additionalProperties": false,
       "description": "More of the enemy team is dead than of the player's, until the respawn that evens it.",
@@ -490,6 +559,17 @@
           "anyOf": [
             {
               "$ref": "#/$defs/GoldEstimate"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "level_estimate": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/LevelEstimate"
             },
             {
               "type": "null"

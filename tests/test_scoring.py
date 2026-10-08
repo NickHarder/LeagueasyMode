@@ -26,6 +26,7 @@ from leagueasymode.recording.writer import RecordingWriter
 from leagueasymode.scoring import (
     read_recorded_game,
     score_combat_stats,
+    score_experience,
     score_gold,
     score_recording,
     score_roles,
@@ -255,3 +256,16 @@ def test_gold_off_by_more_than_the_band_is_scored_as_outside_it(tmp_path: Path) 
 def test_a_recording_without_a_timeline_scores_no_gold(tmp_path: Path) -> None:
     recording = write_scored_recording(tmp_path, DEFAULT_PLAYERS)
     assert score_gold(read_recorded_game(recording)) == []
+
+
+def test_experience_is_scored_for_every_player_against_the_timeline(tmp_path: Path) -> None:
+    # Everyone stays level 1 with no experience; the estimate grows at each role's prior rate from
+    # 1:30, a solo laner 8.5 a second, a duo laner 6, a jungler 8, until the level's 279.
+    recording = write_scored_recording(tmp_path, DEFAULT_PLAYERS, timeline=game_timeline())
+    experience, band = score_experience(read_recorded_game(recording))
+    at_two_minutes = 2 * (8.5 + 8.0 + 8.5 + 6.0 + 6.0) * 30
+    from_three_minutes = 10 * 13 * 279
+    assert experience.sample_count == 150
+    assert experience.value == pytest.approx((at_two_minutes + from_three_minutes) / 150, abs=0.1)
+    assert experience.describe().startswith("experience: 150 player-minutes, 257 experience off")
+    assert band.estimator == "experience band"

@@ -37,6 +37,8 @@ const LANE_NAMES = {
     bot: "bot",
 };
 const ONE_THOUSAND = 1000;
+// An enemy's next power level (6, 11, 16) is shown once it is estimated this close.
+const POWER_LEVEL_SHOWN_SECONDS = 90;
 // A band narrower than this rounds to nothing at one decimal of a thousand, so it is left out.
 const SMALLEST_BAND_SHOWN_GOLD = 50;
 const ROLE_ORDER = ["TOP", "JUNGLE", "MIDDLE", "BOTTOM", "UTILITY"];
@@ -233,6 +235,23 @@ export function formatBand(bandGold) {
 export function formatUnspentGold(gold) {
     return `${formatThousands(gold.unspent_gold)}${formatBand(gold.band_gold)} unspent`;
 }
+/**
+ * Return when an enemy reaches their next power level, "6 in ~0:35", or null when that is not
+ * known or more than 90 seconds away.
+ */
+export function formatPowerLevelSoon(estimate, gameTimeSeconds) {
+    const reachesAtSeconds = estimate.power_level_at_game_time_seconds;
+    if (estimate.next_power_level === null || reachesAtSeconds === null) {
+        return null;
+    }
+    const remainingSeconds = reachesAtSeconds - gameTimeSeconds;
+    if (remainingSeconds > POWER_LEVEL_SHOWN_SECONDS) {
+        return null;
+    }
+    return remainingSeconds <= 0
+        ? `${String(estimate.next_power_level)} any moment`
+        : `${String(estimate.next_power_level)} in ~${formatCountdown(remainingSeconds)}`;
+}
 /** Return a header of the enemy strip: a label and the player's team's lead, colored by side. */
 function leadElement(className, label, leadGold, valueText) {
     const header = document.createElement("div");
@@ -364,6 +383,13 @@ function enemyRowElement(card, gameTimeSeconds, cooldowns) {
         statsElement.dataset["source"] = card.combat_stats.source;
         statsElement.textContent = formatDefensiveStats(card.combat_stats);
         row.append(statsElement);
+    }
+    const powerLevelText = card.level_estimate === null ? null : formatPowerLevelSoon(card.level_estimate, gameTimeSeconds);
+    if (powerLevelText !== null) {
+        const powerLevelElement = document.createElement("span");
+        powerLevelElement.className = "enemy-power-level";
+        powerLevelElement.textContent = powerLevelText;
+        row.append(powerLevelElement);
     }
     if (card.gold !== null) {
         const unspentElement = document.createElement("span");
