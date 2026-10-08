@@ -4,7 +4,7 @@ title: The engine and the overlay page
 description: How the engine turns the game's answers into the overlay's state, how that state reaches the widgets, how the page is built and tested, and how to run it all against a replay.
 tags: [engine, overlay, architecture]
 status: draft
-generated: { by: claude-code/cloud, at: 2026-10-08T15:35:00Z }
+generated: { by: claude-code/cloud, at: 2026-10-08T15:55:00Z }
 sources:
   - id: engine
     resource: ../../src/leagueasymode/engine.py
@@ -14,6 +14,8 @@ sources:
     resource: ../../src/leagueasymode/inference/objectives.py
   - id: players
     resource: ../../src/leagueasymode/inference/players.py
+  - id: patch-data
+    resource: ../../src/leagueasymode/patch_data.py
   - id: overlay-state
     resource: ../../src/leagueasymode/overlay_state.py
   - id: overlay-server
@@ -58,12 +60,23 @@ game API ─▶ GameApiClient ─▶ GameSnapshot ─▶ estimators ─▶ Overl
 | Players and death timers | exact | each player's side, role as the game names it, level, and, while dead, when they respawn (`respawnTimer` added to the clock) |
 | Numbers window | exact | open while more enemies than allies are dead; it closes at the first respawn after which no more enemies than allies are dead; a death to come cannot be known, so it is never counted |
 | Callouts | exact: each states a fact at the moment it becomes true | "Zed is level 6" when an enemy crosses 6, 11 or 16 between two answers (not for levels already reached when the overlay starts); "2 enemies down for 0:24" when a numbers window opens or widens; "Baron in 1:00" (with "~" when the spawn time is provisional) when an objective comes within a minute; each once per game, shown for six game seconds; a clock that runs back more than five seconds starts a new game |
+| Item gold, finished items, each team's item gold | exact, at the patch's prices | each player's inventory priced at the catalog's total price (the scoreboard's price for an item the catalog lacks); a finished item is built from parts and into nothing, is not boots or a consumable, and costs at least 2000 gold, a floor to check on real data; a team's item gold is gold earned and spent, not gold in hand |
+| Item callouts | exact | "Caitlyn finished Infinity Edge" when a finished item appears in an enemy's inventory between two answers whose items were both known |
 | Inhibitors down | exact | back 5:00 after they fall, or when the feed says they respawned; `Barracks_T1_L1` is team 1's top inhibitor (L, C and R taken as top, mid and bottom, to be confirmed) |
 
 The long-standing rules are written as verified; the rest are checked against the first
 recordings. The widgets show the dragon always, and beside it the numbers window while it is
 open, any other monster up or within 90 seconds of spawning, each running buff, and each
-inhibitor down; on the right, each enemy's champion, level and death timer.
+inhibitor down; on the right, each team's item-gold lead, and each enemy's champion, level, item
+gold and death timer.
+
+# Patch data
+
+The patch's item catalog comes from the League client (`/lol-game-data/assets/v1/items.json`),
+which the engine asks for when a game starts and keeps; until it has it, the item facts are
+absent rather than guessed.[^patch-data] Against a replay, the replay serves the client's recorded
+resources too, under their own paths, from the moment of the recording they were received at, so
+`LEAGUEASYMODE_LEAGUE_CLIENT_BASE_URL` points the engine at the replay as its client.
 
 # The local server
 
@@ -85,8 +98,9 @@ seconds, so it ticks smoothly without running down during a pause.[^widgets]
 # Working without a game
 
 ```bash
-uv run leagueasymode replay <recording> --speed 10          # a stand-in game API on 127.0.0.1:2998
-LEAGUEASYMODE_GAME_API_BASE_URL=http://127.0.0.1:2998 uv run leagueasymode run
+uv run leagueasymode replay <recording> --speed 10          # a stand-in game API and client on 127.0.0.1:2998
+LEAGUEASYMODE_GAME_API_BASE_URL=http://127.0.0.1:2998 \
+LEAGUEASYMODE_LEAGUE_CLIENT_BASE_URL=http://127.0.0.1:2998 uv run leagueasymode run
 ```
 
 Then open the printed address in a browser.[^replay] `uv run pytest -m browser` renders the page in
@@ -101,3 +115,4 @@ Chromium against a replay (Chromium from `uv run playwright install chromium`, o
 [^overlay-server]: `src/leagueasymode/overlay_server.py`
 [^widgets]: `overlay/web/src/overlay.ts`
 [^replay]: `src/leagueasymode/replay.py`
+[^patch-data]: `src/leagueasymode/patch_data.py`

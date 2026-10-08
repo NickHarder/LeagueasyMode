@@ -78,6 +78,18 @@ class PlayerCard(BaseModel):
     level: int
     is_dead: bool
     respawns_at_game_time_seconds: float | None
+    # The patch price of everything in the inventory; None until the item catalog is known.
+    item_gold: int | None = None
+    finished_item_names: list[str] = Field(default_factory=list)
+
+
+class TeamItemGold(BaseModel):
+    """What each team's items are worth: gold earned and spent, not gold in hand."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    ally_item_gold: int
+    enemy_item_gold: int
 
 
 class NumbersWindow(BaseModel):
@@ -90,7 +102,7 @@ class NumbersWindow(BaseModel):
     ends_at_game_time_seconds: float
 
 
-type CalloutKind = Literal["numbers_window", "level_spike", "objective_soon"]
+type CalloutKind = Literal["numbers_window", "level_spike", "objective_soon", "item_spike"]
 
 
 class Callout(BaseModel):
@@ -118,6 +130,7 @@ class OverlayState(BaseModel):
     inhibitors: list[InhibitorTimer] = Field(default_factory=list)
     players: list[PlayerCard] = Field(default_factory=list)
     numbers_window: NumbersWindow | None = None
+    team_item_gold: TeamItemGold | None = None
     callouts: list[Callout] = Field(default_factory=list)
 
 

@@ -144,7 +144,7 @@ body {
 
 .enemy-row {
   display: grid;
-  grid-template-columns: 1fr 2ch 4ch;
+  grid-template-columns: 1fr 2ch 4.5ch 4ch;
   gap: 6px;
   align-items: baseline;
 }
@@ -205,4 +205,31 @@ body {
   .callout {
     animation: none;
   }
+}
+
+.enemy-gold {
+  text-align: right;
+  color: var(--widget-muted);
+}
+
+.item-lead {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 3px;
+  margin-bottom: 2px;
+  border-bottom: 1px solid var(--widget-border);
+  color: var(--widget-muted);
+}
+
+.item-lead[data-lead="ally"] .item-lead-value {
+  color: var(--widget-ally);
+}
+
+.item-lead[data-lead="enemy"] .item-lead-value {
+  color: var(--widget-enemy);
+}
+
+.callout[data-kind="item_spike"] {
+  border-color: var(--widget-enemy);
 }

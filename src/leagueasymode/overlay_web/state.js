@@ -11,7 +11,12 @@ const EPIC_OBJECTIVES = new Set(["baron", "rift_herald", "voidgrubs"]);
 const OBJECTIVE_STATUSES = new Set(["not_spawned", "respawning", "alive", "gone"]);
 const BUFFS = new Set(["baron", "elder"]);
 const LANES = new Set(["top", "mid", "bot"]);
-const CALLOUT_KINDS = new Set(["numbers_window", "level_spike", "objective_soon"]);
+const CALLOUT_KINDS = new Set([
+    "numbers_window",
+    "level_spike",
+    "objective_soon",
+    "item_spike",
+]);
 /** Return whether a value is a plain object, so that its fields can be read. */
 function isRecord(value) {
     return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -77,7 +82,15 @@ export function isPlayerCard(value) {
         typeof value["position"] === "string" &&
         typeof value["level"] === "number" &&
         typeof value["is_dead"] === "boolean" &&
-        isNumberOrNull(value["respawns_at_game_time_seconds"]));
+        isNumberOrNull(value["respawns_at_game_time_seconds"]) &&
+        isNumberOrNull(value["item_gold"]) &&
+        isArrayOf(value["finished_item_names"], (name) => typeof name === "string"));
+}
+/** Return whether a value is each team's item gold as the engine sends it. */
+export function isTeamItemGold(value) {
+    return (isRecord(value) &&
+        typeof value["ally_item_gold"] === "number" &&
+        typeof value["enemy_item_gold"] === "number");
 }
 /** Return whether a value is a numbers window as the engine sends it. */
 export function isNumbersWindow(value) {
@@ -108,5 +121,6 @@ export function isOverlayState(value) {
         isArrayOf(value["inhibitors"], isInhibitorTimer) &&
         isArrayOf(value["players"], isPlayerCard) &&
         (value["numbers_window"] === null || isNumbersWindow(value["numbers_window"])) &&
+        (value["team_item_gold"] === null || isTeamItemGold(value["team_item_gold"])) &&
         isArrayOf(value["callouts"], isCallout));
 }

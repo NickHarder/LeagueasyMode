@@ -58,6 +58,8 @@ class Settings(BaseSettings):
     recordings_directory: Path | None = None
     # The League client's lockfile, when League is installed somewhere other than the default.
     league_client_lockfile: Path | None = None
+    # A stand-in for the League client, such as a replay's address; empty to find the running one.
+    league_client_base_url: str | None = None
     # The overlay's local web server; 0 picks a free port, which `leagueasymode run` prints.
     overlay_port: int = 0
     # Whether `leagueasymode run` also records every game it shows.

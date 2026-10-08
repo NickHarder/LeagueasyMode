@@ -17,6 +17,7 @@ from pydantic import JsonValue
 
 from leagueasymode.recording.delta import apply_patch
 from leagueasymode.recording.file_format import (
+    ClientResource,
     RecordingFormatError,
     SnapshotDelta,
     SnapshotKeyframe,
@@ -57,10 +58,12 @@ class RecordingReplay:
         Raises:
             RecordingFormatError: The recording holds no snapshot.
         """
+        recording_lines = list(iter_recording_lines(recording_path))
         self.snapshot_lines: Final = [
-            line
-            for line in iter_recording_lines(recording_path)
-            if isinstance(line, SnapshotKeyframe | SnapshotDelta)
+            line for line in recording_lines if isinstance(line, SnapshotKeyframe | SnapshotDelta)
+        ]
+        self.client_resources: Final = [
+            line for line in recording_lines if isinstance(line, ClientResource)
         ]
         if not self.snapshot_lines or not isinstance(self.snapshot_lines[0], SnapshotKeyframe):
             raise RecordingFormatError(f"{recording_path} holds no snapshot to replay")
@@ -72,14 +75,39 @@ class RecordingReplay:
         self._next_line_index = 0
         self._current_payload: JsonValue = None
 
+    def recording_seconds_now(self) -> float:
+        """Return the moment of the recording the replay has reached.
+
+        Returns:
+            Seconds since the recording started, as its records count them.
+        """
+        elapsed_clock_seconds = self.clock() - self.started_at_clock_seconds
+        return self.first_received_at_seconds + elapsed_clock_seconds * self.speed
+
+    def client_resource_now(self, path: str) -> JsonValue | None:
+        """Return what the League client served for a path, as of this moment of the replay.
+
+        Args:
+            path: The resource's path.
+
+        Returns:
+            The latest answer recorded for the path up to now, or None when there is none yet.
+        """
+        recording_seconds = self.recording_seconds_now()
+        reached_answers = [
+            resource.payload
+            for resource in self.client_resources
+            if resource.path == path and resource.received_at_seconds <= recording_seconds
+        ]
+        return reached_answers[-1] if reached_answers else None
+
     def payload_now(self) -> JsonValue | None:
         """Return the snapshot the recording held at this moment of the replay.
 
         Returns:
             The snapshot, or None once the replayed game is over.
         """
-        elapsed_clock_seconds = self.clock() - self.started_at_clock_seconds
-        recording_seconds = self.first_received_at_seconds + elapsed_clock_seconds * self.speed
+        recording_seconds = self.recording_seconds_now()
         if recording_seconds > self.last_received_at_seconds + LINGER_AFTER_LAST_SNAPSHOT_SECONDS:
             return None
         while (
@@ -128,7 +156,16 @@ def create_replay_application(replay: RecordingReplay) -> web.Application:
 
         return part
 
+    async def client_resource(request: web.Request) -> web.Response:
+        payload = replay.client_resource_now(request.path)
+        if payload is None:
+            return web.json_response({"message": "not in the recording yet"}, status=404)
+        return web.json_response(payload)
+
     application.router.add_get("/liveclientdata/allgamedata", all_game_data)
+    # The League client's resources are all under /lol-…; the replay serves them without a
+    # password, so the engine is pointed at it with LEAGUEASYMODE_LEAGUE_CLIENT_BASE_URL.
+    application.router.add_get("/{client_path:lol-.+}", client_resource)
     for route_path, part_key in PART_ROUTES.items():
         application.router.add_get(route_path, part_route(part_key))
     return application

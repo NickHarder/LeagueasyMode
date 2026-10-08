@@ -113,3 +113,33 @@ def test_a_new_game_starts_the_callouts_over() -> None:
 
 def test_no_game_is_no_callout() -> None:
     assert CalloutTracker().update(OverlayState(is_game_running=False)) == []
+
+
+def enemy_with_items(champion_name: str, finished_item_names: list[str]) -> PlayerCard:
+    return enemy(champion_name, 9).model_copy(
+        update={
+            "item_gold": 3400 * len(finished_item_names),
+            "finished_item_names": finished_item_names,
+        }
+    )
+
+
+def test_an_enemy_finishing_an_item_is_called_out_once() -> None:
+    tracker = CalloutTracker()
+    tracker.update(state_at(900.0, [enemy_with_items("Caitlyn", [])]))
+    callouts = tracker.update(state_at(901.0, [enemy_with_items("Caitlyn", ["Infinity Edge"])]))
+    assert [(callout.kind, callout.text) for callout in callouts] == [
+        ("item_spike", "Caitlyn finished Infinity Edge")
+    ]
+    later = tracker.update(state_at(920.0, [enemy_with_items("Caitlyn", ["Infinity Edge"])]))
+    assert later == []
+
+
+def test_items_owned_when_the_catalog_arrives_are_not_called_out() -> None:
+    tracker = CalloutTracker()
+    before_catalog = enemy("Caitlyn", 9)  # item_gold None: the catalog is not known yet
+    after_catalog = enemy("Caitlyn", 9).model_copy(
+        update={"item_gold": 3400, "finished_item_names": ["Infinity Edge"]}
+    )
+    tracker.update(state_at(900.0, [before_catalog]))
+    assert tracker.update(state_at(901.0, [after_catalog])) == []

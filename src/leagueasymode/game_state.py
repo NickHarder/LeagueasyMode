@@ -41,6 +41,16 @@ class EventList(RiotPayloadModel):
     events: list[GameEvent] = Field(alias="Events")
 
 
+class ScoreboardItem(RiotPayloadModel):
+    """One item in a player's inventory."""
+
+    item_id: int = Field(alias="itemID")
+    display_name: str = Field(default="", alias="displayName")
+    count: int = 1
+    # What the scoreboard says the item is worth; the patch's catalog is preferred when known.
+    price: int = 0
+
+
 class ScoreboardPlayer(RiotPayloadModel):
     """One of the ten players, as the scoreboard shows them."""
 
@@ -53,6 +63,7 @@ class ScoreboardPlayer(RiotPayloadModel):
     summoner_name: str = Field(default="", alias="summonerName")
     riot_id: str = Field(default="", alias="riotId")
     riot_id_game_name: str = Field(default="", alias="riotIdGameName")
+    items: list[ScoreboardItem] = Field(default_factory=list)
 
     def is_named(self, name: str) -> bool:
         """Return whether the feed's name for someone is this player.

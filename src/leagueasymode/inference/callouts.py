@@ -62,6 +62,7 @@ class CalloutTracker:
             *self._level_spikes(state, game_time_seconds),
             *self._numbers_window(state, game_time_seconds),
             *self._objectives_soon(state, game_time_seconds),
+            *self._item_spikes(state, game_time_seconds),
         ]
         new_callouts = [
             callout
@@ -113,6 +114,40 @@ class CalloutTracker:
             if card.side == "enemy"
             for spike_level in LEVEL_SPIKES
             if _has_just_reached(previous_levels, card, spike_level)
+        ]
+
+    def _item_spikes(self, state: OverlayState, game_time_seconds: float) -> list[Callout]:
+        """Return a callout for each finished item an enemy has bought since the last state.
+
+        Items already owned when the overlay first sees the game, or when the item catalog arrives,
+        are not called out: only an enemy whose items were known in the last state counts.
+
+        Args:
+            state: The new state.
+            game_time_seconds: Its game time.
+
+        Returns:
+            The callouts.
+        """
+        if self._previous_state is None:
+            return []
+        previous_items = {
+            card.champion_name: card.finished_item_names
+            for card in self._previous_state.players
+            if card.side == "enemy" and card.item_gold is not None
+        }
+        return [
+            _callout(
+                f"item:{card.champion_name}:{item_name}:{card.finished_item_names.count(item_name)}",
+                "item_spike",
+                f"{card.champion_name} finished {item_name}",
+                game_time_seconds,
+            )
+            for card in state.players
+            if card.side == "enemy" and card.champion_name in previous_items
+            for item_name in set(card.finished_item_names)
+            if card.finished_item_names.count(item_name)
+            > previous_items[card.champion_name].count(item_name)
         ]
 
     def _numbers_window(self, state: OverlayState, game_time_seconds: float) -> list[Callout]:

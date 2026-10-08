@@ -54,6 +54,14 @@ export interface PlayerCard {
   readonly level: number;
   readonly is_dead: boolean;
   readonly respawns_at_game_time_seconds: number | null;
+  readonly item_gold: number | null;
+  readonly finished_item_names: readonly string[];
+}
+
+/** What each team's items are worth: gold earned and spent, not gold in hand. */
+export interface TeamItemGold {
+  readonly ally_item_gold: number;
+  readonly enemy_item_gold: number;
 }
 
 /** More of the enemy team is dead than of the player's, until the respawn that evens it. */
@@ -63,7 +71,7 @@ export interface NumbersWindow {
   readonly ends_at_game_time_seconds: number;
 }
 
-export type CalloutKind = "numbers_window" | "level_spike" | "objective_soon";
+export type CalloutKind = "numbers_window" | "level_spike" | "objective_soon" | "item_spike";
 
 /** A short notice shown for a few seconds when something happens; never an instruction. */
 export interface Callout {
@@ -83,6 +91,7 @@ export interface OverlayState {
   readonly inhibitors: readonly InhibitorTimer[];
   readonly players: readonly PlayerCard[];
   readonly numbers_window: NumbersWindow | null;
+  readonly team_item_gold: TeamItemGold | null;
   readonly callouts: readonly Callout[];
 }
 
@@ -93,7 +102,12 @@ const EPIC_OBJECTIVES: ReadonlySet<string> = new Set(["baron", "rift_herald", "v
 const OBJECTIVE_STATUSES: ReadonlySet<string> = new Set(["not_spawned", "respawning", "alive", "gone"]);
 const BUFFS: ReadonlySet<string> = new Set(["baron", "elder"]);
 const LANES: ReadonlySet<string> = new Set(["top", "mid", "bot"]);
-const CALLOUT_KINDS: ReadonlySet<string> = new Set(["numbers_window", "level_spike", "objective_soon"]);
+const CALLOUT_KINDS: ReadonlySet<string> = new Set([
+  "numbers_window",
+  "level_spike",
+  "objective_soon",
+  "item_spike",
+]);
 
 /** Return whether a value is a plain object, so that its fields can be read. */
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -177,7 +191,18 @@ export function isPlayerCard(value: unknown): value is PlayerCard {
     typeof value["position"] === "string" &&
     typeof value["level"] === "number" &&
     typeof value["is_dead"] === "boolean" &&
-    isNumberOrNull(value["respawns_at_game_time_seconds"])
+    isNumberOrNull(value["respawns_at_game_time_seconds"]) &&
+    isNumberOrNull(value["item_gold"]) &&
+    isArrayOf(value["finished_item_names"], (name: unknown): name is string => typeof name === "string")
+  );
+}
+
+/** Return whether a value is each team's item gold as the engine sends it. */
+export function isTeamItemGold(value: unknown): value is TeamItemGold {
+  return (
+    isRecord(value) &&
+    typeof value["ally_item_gold"] === "number" &&
+    typeof value["enemy_item_gold"] === "number"
   );
 }
 
@@ -217,6 +242,7 @@ export function isOverlayState(value: unknown): value is OverlayState {
     isArrayOf(value["inhibitors"], isInhibitorTimer) &&
     isArrayOf(value["players"], isPlayerCard) &&
     (value["numbers_window"] === null || isNumbersWindow(value["numbers_window"])) &&
+    (value["team_item_gold"] === null || isTeamItemGold(value["team_item_gold"])) &&
     isArrayOf(value["callouts"], isCallout)
   );
 }

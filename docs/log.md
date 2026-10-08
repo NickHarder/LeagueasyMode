@@ -6,6 +6,10 @@ skill has the format.
 
 ## 2026-10-08
 
+- Phases 2.4 and 2.5: the patch's item catalog, from the League client or from a replay that now
+  serves the recorded client resources too; each player's item gold and finished items, each
+  team's item gold, and a callout when an enemy finishes an item. Items already owned when the
+  catalog arrives are not called out, which the first browser run showed was happening.
 - Phase 2.3, callouts: short notices when an enemy reaches 6, 11 or 16, a numbers window opens,
   or an objective comes within a minute, each once per game and shown for six game seconds. They
   state facts; the policy keeps instructions out.

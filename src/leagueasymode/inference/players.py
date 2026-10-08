@@ -5,14 +5,18 @@ respawn. The numbers window follows from those alone, since a death to come cann
 """
 
 from leagueasymode.game_state import GameSnapshot, ScoreboardPlayer
-from leagueasymode.overlay_state import NumbersWindow, PlayerCard
+from leagueasymode.overlay_state import NumbersWindow, PlayerCard, TeamItemGold
+from leagueasymode.patch_data import ItemCatalog
 
 
-def player_cards(snapshot: GameSnapshot) -> list[PlayerCard]:
+def player_cards(
+    snapshot: GameSnapshot, item_catalog: ItemCatalog | None = None
+) -> list[PlayerCard]:
     """Return a card for every player, the player's own team first, each team in scoreboard order.
 
     Args:
         snapshot: The game's state.
+        item_catalog: The patch's items, for item gold and finished items; None while unknown.
 
     Returns:
         The cards.
@@ -29,8 +33,69 @@ def player_cards(snapshot: GameSnapshot) -> list[PlayerCard]:
             level=player.level,
             is_dead=player.is_dead,
             respawns_at_game_time_seconds=_respawns_at_seconds(player, game_time_seconds),
+            item_gold=_item_gold(player, item_catalog),
+            finished_item_names=_finished_item_names(player, item_catalog),
         )
         for player in [*allies, *enemies]
+    ]
+
+
+def team_item_gold(cards: list[PlayerCard]) -> TeamItemGold | None:
+    """Return what each team's items are worth, or None while any player's is unknown.
+
+    Args:
+        cards: Every player's card.
+
+    Returns:
+        Each team's item gold, or None.
+    """
+    item_golds_by_side = {
+        side: [card.item_gold for card in cards if card.side == side] for side in ("ally", "enemy")
+    }
+    all_item_golds = [*item_golds_by_side["ally"], *item_golds_by_side["enemy"]]
+    if not all_item_golds or any(item_gold is None for item_gold in all_item_golds):
+        return None
+    return TeamItemGold(
+        ally_item_gold=sum(gold for gold in item_golds_by_side["ally"] if gold is not None),
+        enemy_item_gold=sum(gold for gold in item_golds_by_side["enemy"] if gold is not None),
+    )
+
+
+def _item_gold(player: ScoreboardPlayer, item_catalog: ItemCatalog | None) -> int | None:
+    """Return what a player's inventory is worth at this patch's prices.
+
+    An item the catalog does not have counts at the price the scoreboard gives it.
+
+    Args:
+        player: The player.
+        item_catalog: The patch's items; None while unknown.
+
+    Returns:
+        The gold, or None while the catalog is unknown.
+    """
+    if item_catalog is None:
+        return None
+    return sum(
+        (item_catalog.total_price(item.item_id) or item.price) * item.count for item in player.items
+    )
+
+
+def _finished_item_names(player: ScoreboardPlayer, item_catalog: ItemCatalog | None) -> list[str]:
+    """Return the names of a player's finished items, in inventory order.
+
+    Args:
+        player: The player.
+        item_catalog: The patch's items; None while unknown.
+
+    Returns:
+        The names; empty while the catalog is unknown.
+    """
+    if item_catalog is None:
+        return []
+    return [
+        item_catalog.name_of(item.item_id) or item.display_name
+        for item in player.items
+        if item_catalog.is_finished(item.item_id)
     ]
 
 

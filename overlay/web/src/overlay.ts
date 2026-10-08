@@ -48,6 +48,7 @@ const LANE_NAMES: Readonly<Record<InhibitorTimer["lane"], string>> = {
   mid: "mid",
   bot: "bot",
 };
+const GOLD_PER_THOUSAND = 1000;
 // A timer whose rule is not yet confirmed for this season is shown with this mark.
 const PROVISIONAL_MARK = "~";
 
@@ -239,7 +240,40 @@ function renderObjectivePills(nowMilliseconds: number): void {
   pillRow.replaceChildren(...stripPills(received.state, gameTimeSeconds).map(pillElement));
 }
 
-/** Return the row that draws one enemy: champion, level, and the death timer while dead. */
+/** Return gold in thousands with one decimal: 3400 is "3.4k". */
+export function formatGold(gold: number): string {
+  return `${(gold / GOLD_PER_THOUSAND).toFixed(1)}k`;
+}
+
+/** Return a team's item-gold lead with its sign: "+1.2k", "−0.8k", or "even". */
+export function formatGoldLead(leadGold: number): string {
+  const roundedLead = Math.round(leadGold / 100) * 100;
+  if (roundedLead === 0) {
+    return "even";
+  }
+  return roundedLead > 0 ? `+${formatGold(roundedLead)}` : `\u2212${formatGold(-roundedLead)}`;
+}
+
+/** Return the enemy strip's header: the player's team's item-gold lead, when it is known. */
+function itemLeadElement(state: OverlayState): HTMLElement | null {
+  const teamGold = state.team_item_gold;
+  if (teamGold === null) {
+    return null;
+  }
+  const leadGold = teamGold.ally_item_gold - teamGold.enemy_item_gold;
+  const header = document.createElement("div");
+  header.className = "item-lead";
+  header.dataset["lead"] = leadGold > 0 ? "ally" : leadGold < 0 ? "enemy" : "even";
+  const labelElement = document.createElement("span");
+  labelElement.textContent = "Item gold";
+  const valueElement = document.createElement("span");
+  valueElement.className = "item-lead-value";
+  valueElement.textContent = formatGoldLead(leadGold);
+  header.append(labelElement, valueElement);
+  return header;
+}
+
+/** Return the row that draws one enemy: champion, level, item gold, and the death timer. */
 function enemyRowElement(card: PlayerCard, gameTimeSeconds: number): HTMLElement {
   const row = document.createElement("div");
   row.className = "enemy-row";
@@ -250,7 +284,10 @@ function enemyRowElement(card: PlayerCard, gameTimeSeconds: number): HTMLElement
   const levelElement = document.createElement("span");
   levelElement.className = "enemy-level";
   levelElement.textContent = String(card.level);
-  row.append(nameElement, levelElement);
+  const goldElement = document.createElement("span");
+  goldElement.className = "enemy-gold";
+  goldElement.textContent = card.item_gold === null ? "" : formatGold(card.item_gold);
+  row.append(nameElement, levelElement, goldElement);
   const respawnsAtSeconds = card.respawns_at_game_time_seconds;
   if (card.is_dead && respawnsAtSeconds !== null) {
     const respawnElement = document.createElement("span");
@@ -273,7 +310,9 @@ function renderEnemyStrip(nowMilliseconds: number): void {
   }
   const enemyCards = received.state.players.filter((card) => card.side === "enemy");
   strip.hidden = enemyCards.length === 0;
-  strip.replaceChildren(...enemyCards.map((card) => enemyRowElement(card, gameTimeSeconds)));
+  const header = itemLeadElement(received.state);
+  const rows = enemyCards.map((card) => enemyRowElement(card, gameTimeSeconds));
+  strip.replaceChildren(...(header === null ? rows : [header, ...rows]));
 }
 
 /** Return the element that draws one callout. */

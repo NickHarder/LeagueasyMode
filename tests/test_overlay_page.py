@@ -17,7 +17,7 @@ from typing import Final
 
 import pytest
 from playwright.async_api import Page, async_playwright, expect
-from pydantic import JsonValue
+from pydantic import JsonValue, TypeAdapter
 
 from game_payloads import (
     DEFAULT_PLAYERS,
@@ -30,6 +30,7 @@ from game_payloads import (
 )
 from leagueasymode.cli import run_overlay
 from leagueasymode.config import Settings
+from leagueasymode.patch_data import ITEMS_PATH
 from leagueasymode.recording.writer import RecordingWriter
 from leagueasymode.replay import RecordingReplay, create_replay_application
 from local_servers import serve
@@ -38,6 +39,12 @@ pytestmark = pytest.mark.browser
 
 ENEMY_JUNGLER: Final = DEFAULT_PLAYERS[6].riot_id_game_name
 EN_DASH: Final = "\u2013"
+MINUS_SIGN: Final = "\u2212"
+ITEMS_FIXTURE: Final = Path(__file__).parent / "fixtures" / "client" / "items.json"
+ITEMS_BY_CHAMPION: Final = {
+    "Caitlyn": ((3031, "Infinity Edge", 1150),),
+    "Jinx": ((1036, "Long Sword", 350), (1036, "Long Sword", 350)),
+}
 
 
 def scoreboard_at(
@@ -53,12 +60,15 @@ def scoreboard_at(
     return tuple(
         dataclasses.replace(
             seed,
+            items=ITEMS_BY_CHAMPION.get(seed.champion_name, ()),
             level=level_of(seed),
             is_dead=True,
             respawn_timer_seconds=respawn_at_by_champion[seed.champion_name] - game_time_seconds,
         )
         if respawn_at_by_champion.get(seed.champion_name, 0.0) > game_time_seconds
-        else dataclasses.replace(seed, level=level_of(seed))
+        else dataclasses.replace(
+            seed, level=level_of(seed), items=ITEMS_BY_CHAMPION.get(seed.champion_name, ())
+        )
         for seed in DEFAULT_PLAYERS
     )
 
@@ -74,6 +84,11 @@ def write_recording(
         started_at=datetime.datetime(2026, 10, 8, tzinfo=datetime.UTC),
         recorder_version="test",
         poll_interval_seconds=0.5,
+    )
+    writer.write_client_resource(
+        received_at_seconds=0.0,
+        path=ITEMS_PATH,
+        payload=TypeAdapter[JsonValue](JsonValue).validate_json(ITEMS_FIXTURE.read_bytes()),
     )
     for index in range(snapshot_count):
         game_time_seconds = 1395.0 + index * 0.5
@@ -123,7 +138,10 @@ async def open_overlay(
 
     async with serve(create_replay_application(replay)) as game_url:
         settings = Settings(
-            game_api_base_url=game_url, poll_interval_seconds=0.1, record_while_running=False
+            game_api_base_url=game_url,
+            league_client_base_url=game_url,
+            poll_interval_seconds=0.1,
+            record_while_running=False,
         )
         stop_requested = asyncio.Event()
         overlay_task = asyncio.create_task(run_overlay(settings, stop_requested, note_overlay_url))
@@ -216,3 +234,18 @@ async def test_an_enemy_reaching_level_six_is_called_out(tmp_path: Path) -> None
         await keep_screenshot(page, "callout")
         # Shown for six seconds of game time, then gone.
         await expect(callout).to_have_count(0, timeout=10000)
+
+
+async def test_the_enemy_strip_shows_item_gold_and_the_lead(tmp_path: Path) -> None:
+    async with open_overlay(tmp_path, snapshot_count=60, speed=1.0) as page:
+        lead = page.locator("#enemy-strip .item-lead")
+        # Your Jinx holds two Long Swords (700), their Caitlyn an Infinity Edge (3400).
+        await expect(lead).to_have_text(
+            re.compile(rf"^Item gold\s*{MINUS_SIGN}2\.7k$"), timeout=5000
+        )
+        await expect(lead).to_have_attribute("data-lead", "enemy")
+        caitlyn_gold = page.locator("#enemy-strip .enemy-row", has_text="Caitlyn").locator(
+            ".enemy-gold"
+        )
+        await expect(caitlyn_gold).to_have_text("3.4k")
+        await keep_screenshot(page, "item-gold")

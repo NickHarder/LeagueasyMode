@@ -17,11 +17,12 @@ from leagueasymode.engine import OverlayEngine
 from leagueasymode.game_api import GameApiClient
 from leagueasymode.league_client import (
     DEFAULT_LOCKFILE_PATHS,
+    ClientConnector,
     LeagueClient,
     find_client_credentials,
 )
 from leagueasymode.overlay_server import create_overlay_application
-from leagueasymode.recorder import ClientConnector, RecorderTimings, record_games
+from leagueasymode.recorder import RecorderTimings, record_games
 from leagueasymode.recording.anonymize import IdentityLeakError, anonymize_recording
 from leagueasymode.recording.file_format import COMPRESSED_SUFFIX, PLAIN_SUFFIX
 from leagueasymode.replay import DEFAULT_REPLAY_PORT, RecordingReplay, create_replay_application
@@ -83,7 +84,11 @@ async def run_overlay(
         announce_url: Called once with the overlay page's address, when the server is up.
     """
     async with aiohttp.ClientSession() as session:
-        engine = OverlayEngine(_game_api(session, settings), settings.poll_interval_seconds)
+        engine = OverlayEngine(
+            _game_api(session, settings),
+            settings.poll_interval_seconds,
+            _client_connector(session, settings),
+        )
         runner = web.AppRunner(create_overlay_application(engine))
         await runner.setup()
         site = web.TCPSite(runner, LOCAL_HOST, settings.overlay_port)
@@ -161,13 +166,24 @@ def _game_api(session: aiohttp.ClientSession, settings: Settings) -> GameApiClie
 def _client_connector(session: aiohttp.ClientSession, settings: Settings) -> ClientConnector:
     """Return what finds the League client when a game starts.
 
+    With `league_client_base_url` set, the client is that address, such as a replay's, reached
+    over plain HTTP without a password; otherwise it is the running client, found by its lockfile.
+
     Args:
         session: The HTTP session.
-        settings: Where the client's lockfile is.
+        settings: Where the client's lockfile is, or a stand-in's address.
 
     Returns:
         A function returning the client, or None when it is not running.
     """
+    stand_in_base_url = settings.league_client_base_url
+    if stand_in_base_url:
+
+        async def connect_to_stand_in() -> LeagueClient | None:
+            return LeagueClient(session, stand_in_base_url, password="", tls_context=None)
+
+        return connect_to_stand_in
+
     lockfile_paths = (
         [settings.league_client_lockfile]
         if settings.league_client_lockfile is not None
@@ -177,7 +193,7 @@ def _client_connector(session: aiohttp.ClientSession, settings: Settings) -> Cli
     async def connect_to_client() -> LeagueClient | None:
         credentials = await find_client_credentials(lockfile_paths)
         if credentials is None:
-            logger.warning("the League client is not running; recording the game alone")
+            logger.warning("the League client is not running; going on without its data")
             return None
         return LeagueClient(
             session, credentials.base_url, credentials.password, create_riot_tls_context()
@@ -200,8 +216,8 @@ async def _serve_replay(replay: RecordingReplay, port: int, stop_requested: asyn
     await site.start()
     bound_port = runner.addresses[0][1]
     logger.info(
-        "replaying at %sx; point the engine at it with"
-        " LEAGUEASYMODE_GAME_API_BASE_URL=http://%s:%d",
+        "replaying at %sx; point the engine at it with LEAGUEASYMODE_GAME_API_BASE_URL and"
+        " LEAGUEASYMODE_LEAGUE_CLIENT_BASE_URL both set to http://%s:%d",
         replay.speed,
         LOCAL_HOST,
         bound_port,

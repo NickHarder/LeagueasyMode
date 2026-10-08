@@ -66,7 +66,8 @@
       "enum": [
         "numbers_window",
         "level_spike",
-        "objective_soon"
+        "objective_soon",
+        "item_spike"
       ],
       "type": "string"
     },
@@ -287,6 +288,25 @@
             }
           ],
           "title": "Respawns At Game Time Seconds"
+        },
+        "item_gold": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Item Gold"
+        },
+        "finished_item_names": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Finished Item Names",
+          "type": "array"
         }
       },
       "required": [
@@ -298,6 +318,26 @@
         "respawns_at_game_time_seconds"
       ],
       "title": "PlayerCard",
+      "type": "object"
+    },
+    "TeamItemGold": {
+      "additionalProperties": false,
+      "description": "What each team's items are worth: gold earned and spent, not gold in hand.",
+      "properties": {
+        "ally_item_gold": {
+          "title": "Ally Item Gold",
+          "type": "integer"
+        },
+        "enemy_item_gold": {
+          "title": "Enemy Item Gold",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "ally_item_gold",
+        "enemy_item_gold"
+      ],
+      "title": "TeamItemGold",
       "type": "object"
     }
   },
@@ -363,6 +403,17 @@
       "anyOf": [
         {
           "$ref": "#/$defs/NumbersWindow"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "team_item_gold": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/TeamItemGold"
         },
         {
           "type": "null"

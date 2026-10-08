@@ -12,6 +12,7 @@ from pydantic import JsonValue
 from game_payloads import DEFAULT_PLAYERS, all_game_data, dragon_kill_event, game_start_event
 from leagueasymode.engine import OverlayEngine, compute_overlay_state
 from leagueasymode.game_api import GameApiClient
+from leagueasymode.league_client import LeagueClient
 from leagueasymode.overlay_server import create_overlay_application
 from leagueasymode.overlay_state import OverlayState
 from local_servers import serve, unused_local_url
@@ -192,3 +193,37 @@ async def test_the_engine_adds_a_callout_when_an_enemy_reaches_level_six() -> No
         await engine_task
     assert first_state.callouts == []
     assert [callout.text for callout in second_state.callouts] == ["Zed is level 6"]
+
+
+async def test_the_engine_loads_the_item_catalog_from_the_client_when_a_game_starts() -> None:
+    answers = [game_with_a_dragon_taken_at(400.0, 450.0 + index) for index in range(20)]
+    client_application = web.Application()
+
+    async def items_route(_request: web.Request) -> web.Response:
+        return web.json_response([{"id": 3031, "name": "Infinity Edge", "priceTotal": 3400}])
+
+    client_application.router.add_get("/lol-game-data/assets/v1/items.json", items_route)
+    async with (
+        serve(scripted_game(answers)) as game_url,
+        serve(client_application) as client_url,
+        aiohttp.ClientSession() as session,
+    ):
+
+        async def connect_to_client() -> LeagueClient | None:
+            return LeagueClient(session, client_url, password="", tls_context=None)
+
+        engine = OverlayEngine(
+            GameApiClient(session, game_url, tls_context=None),
+            poll_interval_seconds=0.01,
+            connect_to_client=connect_to_client,
+        )
+        stop_requested = asyncio.Event()
+        engine_task = asyncio.create_task(engine.run(stop_requested))
+        for _ in range(100):
+            if engine.item_catalog is not None:
+                break
+            await asyncio.sleep(0.01)
+        stop_requested.set()
+        await engine_task
+    assert engine.item_catalog is not None
+    assert engine.item_catalog.total_price(3031) == 3400

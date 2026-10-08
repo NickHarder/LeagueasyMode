@@ -10,7 +10,6 @@ import asyncio
 import datetime
 import logging
 import time
-from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Final
@@ -19,7 +18,8 @@ from pydantic import JsonValue
 
 from leagueasymode import __version__
 from leagueasymode.game_api import GameApiClient
-from leagueasymode.league_client import LeagueClient
+from leagueasymode.league_client import ClientConnector, LeagueClient
+from leagueasymode.patch_data import ITEMS_PATH
 from leagueasymode.recording.file_format import PLAIN_SUFFIX
 from leagueasymode.recording.writer import DEFAULT_KEYFRAME_INTERVAL_SECONDS, RecordingWriter
 
@@ -28,7 +28,7 @@ CHAMPION_SUMMARY_PATH: Final = "/lol-game-data/assets/v1/champion-summary.json"
 # This patch's game data, as the client serves it. A path the client does not have is skipped.
 STATIC_CLIENT_PATHS: Final = (
     "/lol-patch/v1/game-version",
-    "/lol-game-data/assets/v1/items.json",
+    ITEMS_PATH,
     CHAMPION_SUMMARY_PATH,
     "/lol-game-data/assets/v1/summoner-spells.json",
     "/lol-game-data/assets/v1/perks.json",
@@ -49,8 +49,6 @@ REASON_RECORDING_STOPPED: Final = "recording stopped"
 REASON_RECORDING_CANCELLED: Final = "recording cancelled"
 
 logger = logging.getLogger(__name__)
-
-type ClientConnector = Callable[[], Awaitable[LeagueClient | None]]
 
 
 @dataclass(frozen=True)
