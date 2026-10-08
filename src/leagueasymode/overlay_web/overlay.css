@@ -203,6 +203,13 @@ body {
   font-weight: 600;
 }
 
+.enemy-location {
+  grid-column: 2 / -1;
+  color: var(--widget-alive);
+  font-size: 10px;
+  font-weight: 500;
+}
+
 .enemy-seen {
   grid-column: 2 / -1;
   color: var(--widget-muted);
@@ -267,6 +274,7 @@ body {
   border-color: var(--widget-advantage);
 }
 
+.callout[data-kind="missing"],
 .callout[data-kind="level_spike"],
 .callout[data-kind="level_soon"] {
   border-color: var(--widget-enemy);

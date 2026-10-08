@@ -42,6 +42,8 @@ const LIKELY_NEXT_ITEM = 0.5;
 // From this chance an enemy is taken to be able to afford their next item.
 const LIKELY_TO_AFFORD = 0.75;
 const PERCENT = 100;
+// An enemy's likely place is shown once they have been unseen this long.
+const LOCATION_SHOWN_AFTER_SECONDS = 10;
 // An enemy's latest clue to their place is shown for this long after it.
 const CLUE_SHOWN_SECONDS = 120;
 // An enemy's last trip to base is shown for this long after they shopped.
@@ -295,6 +297,16 @@ export function formatLastClue(clue, gameTimeSeconds) {
     }
     return `${clue.place} ${formatCountdown(ageSeconds)} ago`;
 }
+/** Return where an unseen enemy likely is, "likely bot lane 60% · unseen 0:25", or null. */
+export function formatLocation(location) {
+    const likeliest = location.regions[0];
+    const unseenSeconds = location.unseen_seconds;
+    if (likeliest === undefined || unseenSeconds === null || unseenSeconds < LOCATION_SHOWN_AFTER_SECONDS) {
+        return null;
+    }
+    const chanceText = `${String(Math.round(likeliest.chance * PERCENT))}%`;
+    return `likely ${likeliest.label} ${chanceText} \u00b7 unseen ${formatCountdown(unseenSeconds)}`;
+}
 /** Return a header of the enemy strip: a label and the player's team's lead, colored by side. */
 function leadElement(className, label, leadGold, valueText) {
     const header = document.createElement("div");
@@ -433,6 +445,13 @@ function enemyRowElement(card, gameTimeSeconds, cooldowns) {
         powerLevelElement.className = "enemy-power-level";
         powerLevelElement.textContent = powerLevelText;
         row.append(powerLevelElement);
+    }
+    const locationText = card.location === null ? null : formatLocation(card.location);
+    if (locationText !== null) {
+        const locationElement = document.createElement("span");
+        locationElement.className = "enemy-location";
+        locationElement.textContent = locationText;
+        row.append(locationElement);
     }
     const lastClueText = card.last_clue === null || card.is_dead ? null : formatLastClue(card.last_clue, gameTimeSeconds);
     if (lastClueText !== null) {

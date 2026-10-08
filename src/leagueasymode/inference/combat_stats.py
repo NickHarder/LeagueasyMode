@@ -12,7 +12,7 @@ from collections.abc import Callable
 from typing import Final
 
 from leagueasymode.data_dragon import ChampionBaseStats, ItemStatBonuses, PatchStats
-from leagueasymode.game_state import ActiveChampionStats, ScoreboardPlayer
+from leagueasymode.game_state import ActiveChampionStats, GameSnapshot, ScoreboardPlayer
 from leagueasymode.overlay_state import CombatStats
 
 # The growth formula's constants (League of Legends Wiki, "Champion statistic"): at level 18 the
@@ -26,6 +26,8 @@ MOVE_SPEED_FIRST_CAP: Final = 415.0
 MOVE_SPEED_SECOND_CAP: Final = 490.0
 MOVE_SPEED_FLOOR: Final = 220.0
 PERCENT: Final = 100.0
+# A champion's move speed when the patch's stats are not known: a base speed with boots.
+DEFAULT_MOVE_SPEED: Final = 380.0
 
 
 def stat_growth(level: int) -> float:
@@ -186,3 +188,27 @@ def _sum_of(
         The sum.
     """
     return sum(stat_of(bonuses) for bonuses in item_bonuses)
+
+
+def move_speed_of(
+    snapshot: GameSnapshot, player: ScoreboardPlayer, patch_stats: PatchStats | None
+) -> float:
+    """Return a player's move speed: the game's own for you, the estimate for the others.
+
+    Args:
+        snapshot: The game's state.
+        player: The player.
+        patch_stats: The patch's stats; None while unknown.
+
+    Returns:
+        The speed, in game units a second; 380 when it cannot be estimated.
+    """
+    active_player = snapshot.active_player
+    if (
+        active_player is not None
+        and active_player.champion_stats is not None
+        and snapshot.is_active_player(player)
+    ):
+        return active_player.champion_stats.move_speed
+    estimate = estimated_combat_stats(player, patch_stats) if patch_stats is not None else None
+    return estimate.move_speed if estimate is not None else DEFAULT_MOVE_SPEED

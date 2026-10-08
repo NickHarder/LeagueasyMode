@@ -364,6 +364,13 @@ async def test_an_enemy_seen_at_an_objective_shows_where_and_how_long_ago(tmp_pa
         await expect(vi_seen).to_have_text(re.compile(r"^at Dragon 0:[0-4]\d ago$"), timeout=5000)
         await expect(vi_seen).to_have_attribute("data-kind", "objective")
         await keep_screenshot(page, "last-seen")
+        # Ten seconds after that, where they likely are shows too.
+        vi_location = page.locator("#enemy-strip .enemy-row", has_text="Vi").locator(
+            ".enemy-location"
+        )
+        await expect(vi_location).to_have_text(
+            re.compile(r"^likely .+ \d+% \u00b7 unseen 0:[1-4]\d$"), timeout=10000
+        )
 
 
 async def test_the_enemy_strip_shows_item_gold_and_the_lead(tmp_path: Path) -> None:

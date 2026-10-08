@@ -216,6 +216,39 @@ class PositionClue(BaseModel):
     region: str
 
 
+class RegionChance(BaseModel):
+    """The chance a player is in one region of the map."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    # The map's region (`inference/rift_map.py`), and in words from the player's side: "bot
+    # lane", "their top jungle", "your base".
+    region: str
+    label: str
+    chance: float
+
+
+class PositionEstimate(BaseModel):
+    """Where a player likely is now, and how soon they could be in each lane.
+
+    An estimate (`inference/positions.py`), from their latest clue, their move speed and where a
+    player of their role spends their time; it widens as the clue ages.
+    """
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    # The likeliest regions, most likely first, at most three.
+    regions: list[RegionChance]
+    # The chance they are away from where they play: their lane, or their jungle.
+    away_chance: float
+    # Since their latest clue; None without one.
+    unseen_seconds: float | None
+    # The soonest they could be in the middle of each lane; 0 when they could be there now.
+    reach_top_seconds: float
+    reach_mid_seconds: float
+    reach_bot_seconds: float
+
+
 class PlayerCard(BaseModel):
     """One player as the scoreboard shows them: side, role, level, and when they are back."""
 
@@ -223,6 +256,8 @@ class PlayerCard(BaseModel):
 
     champion_name: str
     side: Literal["ally", "enemy"]
+    # Whether this is the player on this machine.
+    is_you: bool = False
     # As the game names it ("TOP", "JUNGLE", "MIDDLE", "BOTTOM", "UTILITY"); empty when the queue
     # assigns none.
     position: str
@@ -249,6 +284,8 @@ class PlayerCard(BaseModel):
     next_item: NextItemEstimate | None = None
     # The latest clue to where they are; None until there is one.
     last_clue: PositionClue | None = None
+    # Where they likely are; None while dead, or while positions are not estimated.
+    location: PositionEstimate | None = None
 
 
 class TeamItemGold(BaseModel):
@@ -310,6 +347,7 @@ type CalloutKind = Literal[
     "item_soon",
     "cooldown_ready",
     "went_back",
+    "missing",
     "suggestion",
 ]
 

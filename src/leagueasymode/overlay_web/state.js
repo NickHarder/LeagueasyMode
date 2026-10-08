@@ -21,6 +21,7 @@ const CALLOUT_KINDS = new Set([
     "item_soon",
     "cooldown_ready",
     "went_back",
+    "missing",
     "suggestion",
 ]);
 const MARKED_SPELLS = new Set(["flash", "summoner", "ultimate"]);
@@ -164,11 +165,29 @@ export function isPositionClue(value) {
         (value["point_name"] === null || typeof value["point_name"] === "string") &&
         typeof value["region"] === "string");
 }
+/** Return whether a value is a region's chance as the engine sends it. */
+export function isRegionChance(value) {
+    return (isRecord(value) &&
+        typeof value["region"] === "string" &&
+        typeof value["label"] === "string" &&
+        typeof value["chance"] === "number");
+}
+/** Return whether a value is a player's position as the engine sends it. */
+export function isPositionEstimate(value) {
+    return (isRecord(value) &&
+        isArrayOf(value["regions"], isRegionChance) &&
+        typeof value["away_chance"] === "number" &&
+        isNumberOrNull(value["unseen_seconds"]) &&
+        typeof value["reach_top_seconds"] === "number" &&
+        typeof value["reach_mid_seconds"] === "number" &&
+        typeof value["reach_bot_seconds"] === "number");
+}
 /** Return whether a value is a player's card as the engine sends it. */
 export function isPlayerCard(value) {
     return (isRecord(value) &&
         typeof value["champion_name"] === "string" &&
         isOneOf(value["side"], SIDES) &&
+        typeof value["is_you"] === "boolean" &&
         typeof value["position"] === "string" &&
         typeof value["role"] === "string" &&
         isOneOf(value["role_confidence"], ROLE_CONFIDENCES) &&
@@ -183,7 +202,8 @@ export function isPlayerCard(value) {
         (value["level_estimate"] === null || isLevelEstimate(value["level_estimate"])) &&
         (value["last_back"] === null || isBackEstimate(value["last_back"])) &&
         (value["next_item"] === null || isNextItemEstimate(value["next_item"])) &&
-        (value["last_clue"] === null || isPositionClue(value["last_clue"])));
+        (value["last_clue"] === null || isPositionClue(value["last_clue"])) &&
+        (value["location"] === null || isPositionEstimate(value["location"])));
 }
 /** Return whether a value is each team's item gold as the engine sends it. */
 export function isTeamItemGold(value) {

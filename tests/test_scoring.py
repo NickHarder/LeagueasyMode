@@ -32,6 +32,7 @@ from leagueasymode.scoring import (
     score_gold,
     score_map,
     score_next_items,
+    score_positions,
     score_recording,
     score_roles,
 )
@@ -414,3 +415,26 @@ def test_the_map_is_scored_by_how_far_the_timelines_positions_lie_from_its_paths
     score = score_map(read_recorded_game(recording), one_path)
     assert score is not None
     assert score.describe() == "map: 2 positions, 150 units from its paths on average"
+
+
+def test_positions_are_scored_against_the_timelines(tmp_path: Path) -> None:
+    # With no clue all game, each player's role decides: Zed (participant 8) is likeliest in the
+    # mid lane, where the timeline has him; Caitlyn (9) likeliest in the bot lane, but she is there
+    # too, in the middle of the map.
+    at_center: JsonValue = {"x": 7400, "y": 7400}
+    frames: JsonValue = {
+        "frames": [
+            {
+                "timestamp": minute * 60000,
+                "participantFrames": {
+                    "8": {"participantId": 8, "position": at_center},
+                    "9": {"participantId": 9, "position": at_center},
+                },
+            }
+            for minute in (5, 6)
+        ]
+    }
+    recording = write_scored_recording(tmp_path, DEFAULT_PLAYERS, timeline=frames)
+    likeliest, chance_on_truth = score_positions(read_recorded_game(recording))
+    assert likeliest.describe() == "positions (likeliest region): 2/4 correct (50%)"
+    assert 0.0 < chance_on_truth.value < 1.0

@@ -19,6 +19,9 @@ compared with what is known to be true:
 - **Build path** (estimator 5): the next item predicted for each player at the end of each
   minute, from their components and class (their match history is not in the harness), against
   the first finished item the timeline shows them buy after it.
+- **Positions** (estimator 7): each player's likely regions at the start of each minute, from the
+  clues as they came live, against the region of the map nearest their timeline position: how
+  often the likeliest was right, and the chance given to the true one on average.
 - **The map** (phase 4.1): every player's position each minute on the timeline should lie near a
   path of the hand-built map; how far it lies on average says how well the map was drawn.
 - **Backs** (estimator 6): the timeline records every purchase. One made alive (not within a
@@ -43,12 +46,20 @@ from leagueasymode.data_dragon import PatchStats
 from leagueasymode.game_state import GameSnapshot, RiotPayloadModel
 from leagueasymode.inference.backs import BackTracker
 from leagueasymode.inference.build_path import next_item
-from leagueasymode.inference.combat_stats import estimated_combat_stats
+from leagueasymode.inference.clues import ClueTracker
+from leagueasymode.inference.combat_stats import DEFAULT_MOVE_SPEED, estimated_combat_stats
 from leagueasymode.inference.experience import ExperienceTracker
 from leagueasymode.inference.gold import GoldTracker, PlayerKey, player_key
+from leagueasymode.inference.positions import position_estimate
 from leagueasymode.inference.rift_map import RIFT_MAP, RiftMap
 from leagueasymode.inference.roles import assign_roles
-from leagueasymode.overlay_state import CombatStats, GoldEstimate, LevelEstimate
+from leagueasymode.overlay_state import (
+    CombatStats,
+    GoldEstimate,
+    LevelEstimate,
+    PositionClue,
+    PositionEstimate,
+)
 from leagueasymode.patch_data import CHAMPION_SUMMARY_PATH, ITEMS_PATH, ItemCatalog
 from leagueasymode.player_intel import champion_aliases, history_position
 from leagueasymode.recording.file_format import ClientResource
@@ -98,6 +109,9 @@ SCORE_DESCRIPTIONS: Final = {
     "mean_absolute_error_experience": (
         "{estimator}: {sample_count} player-minutes, {value:.0f} experience off on average"
     ),
+    "mean_chance": (
+        "{estimator}: {sample_count} player-minutes, {percent:.0f}% on the truth on average"
+    ),
     "mean_distance_units": (
         "{estimator}: {sample_count} positions, {value:.0f} units from its paths on average"
     ),
@@ -121,6 +135,7 @@ class EstimatorScore:
         "share_within_band",
         "share_matched",
         "mean_distance_units",
+        "mean_chance",
     ]
 
     def describe(self) -> str:
@@ -152,6 +167,8 @@ class RecordedGame:
     minute_level_estimates: Mapping[int, Mapping[PlayerKey, LevelEstimate]]
     # When the back tracker saw each player shop on a trip to base, in game seconds.
     trips_seen: Mapping[PlayerKey, tuple[float, ...]]
+    # Where each player likely was at the first answer of each minute, by minute.
+    minute_position_estimates: Mapping[int, Mapping[PlayerKey, PositionEstimate]]
 
 
 class DetailsTimeline(RiotPayloadModel):
@@ -255,7 +272,9 @@ def read_recorded_game(recording_path: Path) -> RecordedGame:
     gold_tracker = GoldTracker()
     experience_tracker = ExperienceTracker()
     back_tracker = BackTracker()
+    clue_tracker = ClueTracker()
     trips_by_player: dict[PlayerKey, list[float]] = {}
+    position_estimates_by_minute: dict[int, Mapping[PlayerKey, PositionEstimate]] = {}
     snapshot_by_minute: dict[int, GameSnapshot] = {}
     gold_estimates_by_minute: dict[int, Mapping[PlayerKey, GoldEstimate]] = {}
     level_estimates_by_minute: dict[int, Mapping[PlayerKey, LevelEstimate]] = {}
@@ -269,22 +288,28 @@ def read_recorded_game(recording_path: Path) -> RecordedGame:
         snapshot_by_minute[game_minute] = snapshot
         gold_estimates = gold_tracker.update(snapshot, item_catalog)
         level_estimates = experience_tracker.update(snapshot)
-        for key, last_back in back_tracker.update(snapshot, item_catalog).items():
+        last_backs = back_tracker.update(snapshot, item_catalog)
+        for key, last_back in last_backs.items():
             player_trips = trips_by_player.setdefault(key, [])
             if last_back.shopped_at_game_time_seconds not in player_trips:
                 player_trips.append(last_back.shopped_at_game_time_seconds)
+        position_clues = clue_tracker.update(snapshot, last_backs)
         is_minute_start = game_time_seconds - game_minute * SECONDS_PER_MINUTE <= (
             FRAME_ALIGNMENT_SECONDS
         )
         if is_minute_start and game_minute not in gold_estimates_by_minute:
             gold_estimates_by_minute[game_minute] = gold_estimates
             level_estimates_by_minute[game_minute] = level_estimates
+            position_estimates_by_minute[game_minute] = _position_estimates(
+                snapshot, position_clues
+            )
     return RecordedGame(
         minute_snapshots=tuple(snapshot_by_minute[minute] for minute in sorted(snapshot_by_minute)),
         client_resources=client_resources,
         minute_gold_estimates=gold_estimates_by_minute,
         minute_level_estimates=level_estimates_by_minute,
         trips_seen={key: tuple(trips) for key, trips in trips_by_player.items()},
+        minute_position_estimates=position_estimates_by_minute,
     )
 
 
@@ -498,6 +523,52 @@ def score_next_items(game: RecordedGame, patch_stats: PatchStats | None) -> Esti
     )
 
 
+def score_positions(game: RecordedGame) -> list[EstimatorScore]:
+    """Score where each player was estimated to be against their timeline position.
+
+    Args:
+        game: The recorded game.
+
+    Returns:
+        How often the likeliest region was the true one, and the chance given to the true one on
+        average; nothing without positions to score.
+    """
+    scored_pairs = [
+        (estimate, RIFT_MAP.nearest_point(truth.position.x, truth.position.y).region)
+        for estimate, truth in _timeline_pairs(game, game.minute_position_estimates)
+        if truth.position is not None
+    ]
+    if not scored_pairs:
+        return []
+    pair_count = len(scored_pairs)
+    return [
+        EstimatorScore(
+            estimator="positions (likeliest region)",
+            sample_count=pair_count,
+            value=sum(
+                1
+                for estimate, true_region in scored_pairs
+                if estimate.regions and estimate.regions[0].region == true_region
+            )
+            / pair_count,
+            measure="share_correct",
+        ),
+        EstimatorScore(
+            estimator="positions (chance on the truth)",
+            sample_count=pair_count,
+            value=sum(
+                next(
+                    (chance.chance for chance in estimate.regions if chance.region == true_region),
+                    0.0,
+                )
+                for estimate, true_region in scored_pairs
+            )
+            / pair_count,
+            measure="mean_chance",
+        ),
+    ]
+
+
 def score_map(game: RecordedGame, rift_map: RiftMap = RIFT_MAP) -> EstimatorScore | None:
     """Score the map by how far the timeline's positions lie from its paths.
 
@@ -619,6 +690,7 @@ def score_game(game: RecordedGame, patch_stats: PatchStats | None) -> list[Estim
         *score_experience(game),
         *(score for score in [score_next_items(game, patch_stats)] if score is not None),
         *score_backs(game),
+        *score_positions(game),
         *(score for score in [score_map(game)] if score is not None),
     ]
 
@@ -695,6 +767,34 @@ def _timeline_trips(timeline: GameTimeline, participant_id: int) -> tuple[float,
         ):
             trip_seconds.append(bought_at_seconds)
     return tuple(trip_seconds)
+
+
+def _position_estimates(
+    snapshot: GameSnapshot, position_clues: Mapping[PlayerKey, list[PositionClue]]
+) -> dict[PlayerKey, PositionEstimate]:
+    """Return where each living player likely is, as the overlay would have shown it.
+
+    Move speeds are taken at the default, since the harness reads no patch stats.
+
+    Args:
+        snapshot: The game's state.
+        position_clues: Each player's clues so far.
+
+    Returns:
+        The estimates by key; the dead are left out.
+    """
+    estimates = {
+        player_key(player): position_estimate(
+            player,
+            role_guess.role,
+            position_clues.get(player_key(player), []),
+            move_speed=DEFAULT_MOVE_SPEED,
+            game_time_seconds=snapshot.game_data.game_time_seconds,
+            ally_team=snapshot.ally_team(),
+        )
+        for player, role_guess in zip(snapshot.players, assign_roles(snapshot), strict=True)
+    }
+    return {key: estimate for key, estimate in estimates.items() if estimate is not None}
 
 
 def _next_item_pairs(
