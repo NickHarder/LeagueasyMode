@@ -91,6 +91,8 @@ In `AGENTS.md`. Also: a raw recording (it holds other players' names); only `ano
   summoner spell timers and instructions to the player. Facts are still tagged exact or estimate,
   so the overlay can say how sure it is.
 - `truststore` as a dependency, for HTTPS to Data Dragon (the owner, 2026-10-08).
+- Pushing and opening pull requests need no asking; deletions on GitHub and force pushes stay off
+  limits (the owner, 2026-10-08; `AGENTS.md`, rule 1).
 
 ## Known limitations
 

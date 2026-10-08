@@ -6,6 +6,8 @@ skill has the format.
 
 ## 2026-10-08
 
+- The owner lifted the ask-before-push rule for this project: pushes and pull requests are free,
+  deletions on GitHub and force pushes are not. Recorded in `AGENTS.md`, rule 1.
 - Phase 3.1, loading-screen intel: each player's rank, recent record, streak, games on their
   champion and whether they are off-role, from the League client's own lookups, never a developer
   key. Each player is asked about once, one request at a time; the recorder keeps the answers to
