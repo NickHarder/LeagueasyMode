@@ -81,6 +81,9 @@ class DataDragonChampion(RiotPayloadModel):
 
     champion_id: str = Field(alias="id")
     name: str
+    # Its classes, the first its main one: "Marksman", "Mage", "Assassin", "Fighter", "Tank",
+    # "Support".
+    tags: list[str] = Field(default_factory=list)
     stats: ChampionBaseStats
     spells: list[DataDragonSpell] = Field(default_factory=list)
 
@@ -231,6 +234,19 @@ class PatchStats:
         """
         champion = self._champion(raw_champion_name, champion_name)
         return champion.stats if champion is not None else None
+
+    def champion_tags(self, raw_champion_name: str, champion_name: str) -> tuple[str, ...]:
+        """Return a champion's classes, its main one first.
+
+        Args:
+            raw_champion_name: The scoreboard's `rawChampionName`.
+            champion_name: The scoreboard's `championName`.
+
+        Returns:
+            The classes; empty for a champion this patch's files do not have.
+        """
+        champion = self._champion(raw_champion_name, champion_name)
+        return tuple(champion.tags) if champion is not None else ()
 
     def ultimate_cooldowns(
         self, raw_champion_name: str, champion_name: str

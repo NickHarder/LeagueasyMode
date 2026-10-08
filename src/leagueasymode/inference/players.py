@@ -8,6 +8,7 @@ from collections.abc import Mapping
 
 from leagueasymode.data_dragon import PatchStats
 from leagueasymode.game_state import GameSnapshot, ScoreboardPlayer
+from leagueasymode.inference.build_path import next_item
 from leagueasymode.inference.combat_stats import estimated_combat_stats, exact_combat_stats
 from leagueasymode.inference.gold import PlayerKey, player_key
 from leagueasymode.inference.intel import player_intel
@@ -17,6 +18,7 @@ from leagueasymode.overlay_state import (
     CombatStats,
     GoldEstimate,
     LevelEstimate,
+    NextItemEstimate,
     NumbersWindow,
     PlayerCard,
     PlayerIntel,
@@ -77,6 +79,14 @@ def player_cards(
                 level_estimates.get(player_key(player)) if level_estimates is not None else None
             ),
             last_back=last_backs.get(player_key(player)) if last_backs is not None else None,
+            next_item=_next_item(
+                snapshot,
+                player,
+                item_catalog,
+                patch_stats,
+                player_records=player_records,
+                gold=gold_estimates.get(player_key(player)) if gold_estimates is not None else None,
+            ),
         )
         for index, player in [*allies, *enemies]
     ]
@@ -126,6 +136,44 @@ def _combat_stats(
     if patch_stats is None:
         return None
     return estimated_combat_stats(player, patch_stats)
+
+
+def _next_item(
+    snapshot: GameSnapshot,
+    player: ScoreboardPlayer,
+    item_catalog: ItemCatalog | None,
+    patch_stats: PatchStats | None,
+    *,
+    player_records: PlayerRecords | None,
+    gold: GoldEstimate | None,
+) -> NextItemEstimate | None:
+    """Return a player's likely next finished item, with what their record says they build.
+
+    Args:
+        snapshot: The game's state.
+        player: The player.
+        item_catalog: The patch's items; None while unknown.
+        patch_stats: The patch's stats, for the champion's classes; None while unknown.
+        player_records: Each player's record; None while unknown.
+        gold: Their gold; None while it is not followed.
+
+    Returns:
+        The item, or None without the catalog or any candidate.
+    """
+    game_record = (
+        player_records.get((player.team, player.champion_alias().lower()))
+        if player_records is not None
+        else None
+    )
+    return next_item(
+        player,
+        item_catalog,
+        patch_stats,
+        record=game_record.record if game_record is not None else None,
+        champion_id=game_record.champion_id if game_record is not None else 0,
+        gold=gold,
+        game_time_seconds=snapshot.game_data.game_time_seconds,
+    )
 
 
 def _intel(

@@ -18,6 +18,7 @@ const CALLOUT_KINDS = new Set([
     "level_soon",
     "objective_soon",
     "item_spike",
+    "item_soon",
     "cooldown_ready",
     "went_back",
     "suggestion",
@@ -143,6 +144,16 @@ export function isBackEstimate(value) {
         typeof value["shopped_at_game_time_seconds"] === "number" &&
         typeof value["returns_at_game_time_seconds"] === "number");
 }
+/** Return whether a value is a player's next item as the engine sends it. */
+export function isNextItemEstimate(value) {
+    return (isRecord(value) &&
+        typeof value["item_id"] === "number" &&
+        typeof value["item_name"] === "string" &&
+        typeof value["likelihood"] === "number" &&
+        typeof value["remaining_gold"] === "number" &&
+        isNumberOrNull(value["chance_to_afford"]) &&
+        isNumberOrNull(value["affordable_at_game_time_seconds"]));
+}
 /** Return whether a value is a player's card as the engine sends it. */
 export function isPlayerCard(value) {
     return (isRecord(value) &&
@@ -160,7 +171,8 @@ export function isPlayerCard(value) {
         (value["intel"] === null || isPlayerIntel(value["intel"])) &&
         (value["gold"] === null || isGoldEstimate(value["gold"])) &&
         (value["level_estimate"] === null || isLevelEstimate(value["level_estimate"])) &&
-        (value["last_back"] === null || isBackEstimate(value["last_back"])));
+        (value["last_back"] === null || isBackEstimate(value["last_back"])) &&
+        (value["next_item"] === null || isNextItemEstimate(value["next_item"])));
 }
 /** Return whether a value is each team's item gold as the engine sends it. */
 export function isTeamItemGold(value) {

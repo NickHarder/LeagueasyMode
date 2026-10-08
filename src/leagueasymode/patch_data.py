@@ -35,6 +35,11 @@ class CatalogItem(RiotPayloadModel):
     builds_from: list[int] = Field(default_factory=list, alias="from")
     builds_into: list[int] = Field(default_factory=list, alias="to")
     categories: list[str] = Field(default_factory=list)
+    # The champion an item is only for, such as Kalista's spear; empty for anyone.
+    required_champion: str = Field(default="", alias="requiredChampion")
+    # The ally an item needs to be made, such as Ornn's upgrades; empty when bought.
+    required_ally: str = Field(default="", alias="requiredAlly")
+    is_in_store: bool = Field(default=True, alias="inStore")
 
 
 CATALOG_ITEMS_ADAPTER: Final = TypeAdapter[list[CatalogItem]](list[CatalogItem])

@@ -210,6 +210,17 @@ body {
   font-weight: 500;
 }
 
+.enemy-next-item {
+  grid-column: 2 / -1;
+  color: var(--widget-muted);
+  font-size: 10px;
+  font-weight: 500;
+}
+
+.enemy-next-item[data-likely="true"] {
+  color: var(--widget-enemy);
+}
+
 .enemy-unspent {
   grid-column: 2 / -1;
   color: var(--widget-alive);
@@ -295,7 +306,8 @@ body {
   color: var(--widget-alive);
 }
 
-.callout[data-kind="item_spike"] {
+.callout[data-kind="item_spike"],
+.callout[data-kind="item_soon"] {
   border-color: var(--widget-enemy);
 }
 

@@ -19,7 +19,10 @@
    "image": {
     "full": "Garen.png"
    },
-   "tags": [],
+   "tags": [
+    "Fighter",
+    "Tank"
+   ],
    "partype": "Mana",
    "stats": {
     "hp": 690,
@@ -117,7 +120,10 @@
    "image": {
     "full": "LeeSin.png"
    },
-   "tags": [],
+   "tags": [
+    "Fighter",
+    "Assassin"
+   ],
    "partype": "Mana",
    "stats": {
     "hp": 645,
@@ -215,7 +221,10 @@
    "image": {
     "full": "Ahri.png"
    },
-   "tags": [],
+   "tags": [
+    "Mage",
+    "Assassin"
+   ],
    "partype": "Mana",
    "stats": {
     "hp": 590,
@@ -313,7 +322,9 @@
    "image": {
     "full": "Jinx.png"
    },
-   "tags": [],
+   "tags": [
+    "Marksman"
+   ],
    "partype": "Mana",
    "stats": {
     "hp": 630,
@@ -411,7 +422,10 @@
    "image": {
     "full": "Thresh.png"
    },
-   "tags": [],
+   "tags": [
+    "Support",
+    "Fighter"
+   ],
    "partype": "Mana",
    "stats": {
     "hp": 620,
@@ -509,7 +523,10 @@
    "image": {
     "full": "Darius.png"
    },
-   "tags": [],
+   "tags": [
+    "Fighter",
+    "Tank"
+   ],
    "partype": "Mana",
    "stats": {
     "hp": 652,
@@ -607,7 +624,10 @@
    "image": {
     "full": "Vi.png"
    },
-   "tags": [],
+   "tags": [
+    "Fighter",
+    "Assassin"
+   ],
    "partype": "Mana",
    "stats": {
     "hp": 655,
@@ -705,7 +725,9 @@
    "image": {
     "full": "Zed.png"
    },
-   "tags": [],
+   "tags": [
+    "Assassin"
+   ],
    "partype": "Mana",
    "stats": {
     "hp": 654,
@@ -803,7 +825,9 @@
    "image": {
     "full": "Caitlyn.png"
    },
-   "tags": [],
+   "tags": [
+    "Marksman"
+   ],
    "partype": "Mana",
    "stats": {
     "hp": 580,
@@ -901,7 +925,10 @@
    "image": {
     "full": "Lux.png"
    },
-   "tags": [],
+   "tags": [
+    "Mage",
+    "Support"
+   ],
    "partype": "Mana",
    "stats": {
     "hp": 580,
@@ -999,7 +1026,10 @@
    "image": {
     "full": "MonkeyKing.png"
    },
-   "tags": [],
+   "tags": [
+    "Fighter",
+    "Tank"
+   ],
    "partype": "Mana",
    "stats": {
     "hp": 610,

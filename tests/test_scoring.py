@@ -20,7 +20,7 @@ from leagueasymode.cli import main
 from leagueasymode.data_dragon import PatchStatsStore
 from leagueasymode.inference.gold import passive_gold
 from leagueasymode.league_client import GAMEFLOW_SESSION_PATH
-from leagueasymode.patch_data import CHAMPION_SUMMARY_PATH, GAME_VERSION_PATH
+from leagueasymode.patch_data import CHAMPION_SUMMARY_PATH, GAME_VERSION_PATH, ITEMS_PATH
 from leagueasymode.recorder import GAME_DETAILS_PATH_TEMPLATE, TIMELINE_PATH_TEMPLATE
 from leagueasymode.recording.writer import RecordingWriter
 from leagueasymode.scoring import (
@@ -29,6 +29,7 @@ from leagueasymode.scoring import (
     score_combat_stats,
     score_experience,
     score_gold,
+    score_next_items,
     score_recording,
     score_roles,
 )
@@ -120,6 +121,7 @@ def write_scored_recording(
     positions_by_champion: dict[str, str] | None = None,
     timeline: JsonValue | None = None,
     zed_buys_at_minute: int | None = None,
+    items_payload: JsonValue | None = None,
 ) -> Path:
     writer = RecordingWriter(directory / "game.jsonl", keyframe_interval_seconds=60.0)
     writer.write_started(
@@ -136,6 +138,10 @@ def write_scored_recording(
     writer.write_client_resource(
         received_at_seconds=0.0, path=GAME_VERSION_PATH, payload="16.19.712.1234"
     )
+    if items_payload is not None:
+        writer.write_client_resource(
+            received_at_seconds=0.0, path=ITEMS_PATH, payload=items_payload
+        )
     for minute in range(16):
         has_zed_bought = zed_buys_at_minute is not None and minute >= zed_buys_at_minute
         writer.write_snapshot(
@@ -317,3 +323,67 @@ def test_backs_are_scored_against_the_timelines_purchases(tmp_path: Path) -> Non
     of_the_timeline, of_those_seen = score_backs(read_recorded_game(recording))
     assert of_the_timeline.describe() == "backs (of the timeline's): 1/3 matched (33%)"
     assert of_those_seen.describe() == "backs (of those seen): 1/1 matched (100%)"
+
+
+ITEMS_FOR_THE_BUILD_PATH: Final[JsonValue] = [
+    {"id": 1036, "name": "Long Sword", "priceTotal": 350, "to": [3031]},
+    {"id": 1038, "name": "B. F. Sword", "priceTotal": 1300, "to": [3031]},
+    {"id": 1018, "name": "Cloak of Agility", "priceTotal": 600, "to": [3031]},
+    {"id": 1029, "name": "Cloth Armor", "priceTotal": 300, "to": [3068]},
+    {"id": 1058, "name": "Needlessly Large Rod", "priceTotal": 1200, "to": [3089]},
+    {
+        "id": 3031,
+        "name": "Infinity Edge",
+        "priceTotal": 3400,
+        "from": [1038, 1018, 1036],
+        "categories": ["Damage", "CriticalStrike"],
+    },
+    {
+        "id": 3089,
+        "name": "Rabadon's Deathcap",
+        "priceTotal": 3600,
+        "from": [1058, 1058],
+        "categories": ["SpellDamage"],
+    },
+    {
+        "id": 3068,
+        "name": "Sunfire Aegis",
+        "priceTotal": 2700,
+        "from": [1029],
+        "categories": ["Health", "Armor"],
+    },
+]
+
+
+def item_purchase(participant_id: int, game_time_seconds: float, item_id: int) -> JsonValue:
+    return {
+        "type": "ITEM_PURCHASED",
+        "timestamp": round(game_time_seconds * 1000),
+        "participantId": participant_id,
+        "itemId": item_id,
+    }
+
+
+def test_next_items_are_scored_against_the_next_finished_item_bought(tmp_path: Path) -> None:
+    # Caitlyn (participant 9) holds a B. F. Sword and buys Infinity Edge at 15:00: right at each
+    # of minutes 0 to 14. Lux (10) buys Sunfire Aegis at 10:00, where a mage is taken to buy
+    # Rabadon's: wrong at minutes 0 to 9.
+    players = tuple(
+        dataclasses.replace(seed, items=((1038, "B. F. Sword", 1300),))
+        if seed.champion_name == "Caitlyn"
+        else seed
+        for seed in DEFAULT_PLAYERS
+    )
+    events_by_minute: dict[int, list[JsonValue]] = {
+        10: [item_purchase(10, 600.0, 3068)],
+        15: [item_purchase(9, 900.0, 3031)],
+    }
+    recording = write_scored_recording(
+        tmp_path,
+        players,
+        timeline=game_timeline(events_by_minute=events_by_minute),
+        items_payload=ITEMS_FOR_THE_BUILD_PATH,
+    )
+    score = score_next_items(read_recorded_game(recording), fixture_patch_stats())
+    assert score is not None
+    assert score.describe() == "next item: 15/25 correct (60%)"

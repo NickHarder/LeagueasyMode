@@ -329,6 +329,7 @@ class PastGame:
     is_win: bool
     map_id: int = 11
     duration_seconds: int = 1800
+    item_ids: tuple[int, ...] = ()
 
 
 def match_history(puuid: str, past_games: list[PastGame]) -> JsonValue:
@@ -353,7 +354,15 @@ def match_history(puuid: str, past_games: list[PastGame]) -> JsonValue:
                             "participantId": 1,
                             "championId": past_game.champion_id,
                             "teamId": 100,
-                            "stats": {"win": past_game.is_win, "kills": 5, "deaths": 3},
+                            "stats": {
+                                "win": past_game.is_win,
+                                "kills": 5,
+                                "deaths": 3,
+                                **{
+                                    f"item{slot}": item_id
+                                    for slot, item_id in enumerate(past_game.item_ids)
+                                },
+                            },
                             "timeline": {"lane": past_game.lane, "role": past_game.role},
                         }
                     ],

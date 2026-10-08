@@ -348,6 +348,13 @@ async def test_an_enemy_who_buys_alive_has_gone_back(tmp_path: Path) -> None:
             re.compile(r"^went back 23:25 \u00b7 returns ~0:[12]\d$"), timeout=15000
         )
         await keep_screenshot(page, "went-back")
+        # With a Long Sword, Infinity Edge is the stand-in catalog's one finished item left.
+        zed_next_item = page.locator("#enemy-strip .enemy-row", has_text="Zed").locator(
+            ".enemy-next-item"
+        )
+        await expect(zed_next_item).to_have_text(
+            re.compile(r"^next Infinity Edge \u00b7 3\.[01]k left \u00b7 \d+% now$")
+        )
 
 
 async def test_the_enemy_strip_shows_item_gold_and_the_lead(tmp_path: Path) -> None:

@@ -37,6 +37,11 @@ const LANE_NAMES = {
     bot: "bot",
 };
 const ONE_THOUSAND = 1000;
+// A next item less likely than this is shown as a guess, with "?".
+const LIKELY_NEXT_ITEM = 0.5;
+// From this chance an enemy is taken to be able to afford their next item.
+const LIKELY_TO_AFFORD = 0.75;
+const PERCENT = 100;
 // An enemy's last trip to base is shown for this long after they shopped.
 const BACK_SHOWN_SECONDS = 90;
 // An enemy's next power level (6, 11, 16) is shown once it is estimated this close.
@@ -268,6 +273,18 @@ export function formatLastBack(back, gameTimeSeconds) {
         ? `${shoppedText} \u00b7 returns ~${formatCountdown(returnsInSeconds)}`
         : shoppedText;
 }
+/** Return an enemy's likely next item: "next Infinity Edge · 2.1k left · 40% now". */
+export function formatNextItem(estimate) {
+    const guessMark = estimate.likelihood < LIKELY_NEXT_ITEM ? "?" : "";
+    const parts = [
+        `next ${estimate.item_name}${guessMark}`,
+        `${formatThousands(estimate.remaining_gold)} left`,
+    ];
+    if (estimate.chance_to_afford !== null) {
+        parts.push(`${String(Math.round(estimate.chance_to_afford * PERCENT))}% now`);
+    }
+    return parts.join(" \u00b7 ");
+}
 /** Return a header of the enemy strip: a label and the player's team's lead, colored by side. */
 function leadElement(className, label, leadGold, valueText) {
     const header = document.createElement("div");
@@ -413,6 +430,14 @@ function enemyRowElement(card, gameTimeSeconds, cooldowns) {
         backElement.className = "enemy-back";
         backElement.textContent = lastBackText;
         row.append(backElement);
+    }
+    if (card.next_item !== null) {
+        const nextItemElement = document.createElement("span");
+        nextItemElement.className = "enemy-next-item";
+        const chance = card.next_item.chance_to_afford;
+        nextItemElement.dataset["likely"] = chance !== null && chance >= LIKELY_TO_AFFORD ? "true" : "false";
+        nextItemElement.textContent = formatNextItem(card.next_item);
+        row.append(nextItemElement);
     }
     if (card.gold !== null) {
         const unspentElement = document.createElement("span");
