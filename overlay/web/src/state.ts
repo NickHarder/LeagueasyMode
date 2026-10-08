@@ -282,6 +282,22 @@ export interface ObjectiveContest {
   readonly likeliest_chance: number;
 }
 
+/** What a hundred gold of one defensive stat buys the player now, against the enemy's damage. */
+export interface DefenseValue {
+  readonly stat: "armor" | "magic_resist" | "health";
+  readonly effective_health_per_hundred_gold: number;
+}
+
+/** Facts about the player's build and pace, from their own exact numbers. */
+export interface YouPanel {
+  readonly defenses: readonly DefenseValue[];
+  readonly enemy_physical_share: number | null;
+  readonly unspent_gold: number;
+  readonly holding_gold_seconds: number | null;
+  readonly creep_score_per_minute: number | null;
+  readonly usual_creep_score_per_minute: number | null;
+}
+
 /** One thing moving the win chance, from the player's side: above 0 for their team. */
 export interface WinReason {
   readonly label: string;
@@ -314,6 +330,7 @@ export interface OverlayState {
   readonly win_chance: WinChance | null;
   readonly fight: FightEstimate | null;
   readonly contests: readonly ObjectiveContest[];
+  readonly you: YouPanel | null;
   readonly callouts: readonly Callout[];
 }
 
@@ -710,6 +727,30 @@ export function isObjectiveContest(value: unknown): value is ObjectiveContest {
   );
 }
 
+const DEFENSIVE_STATS: ReadonlySet<string> = new Set(["armor", "magic_resist", "health"]);
+
+/** Return whether a value is one defensive stat's value as the engine sends it. */
+export function isDefenseValue(value: unknown): value is DefenseValue {
+  return (
+    isRecord(value) &&
+    isOneOf(value["stat"], DEFENSIVE_STATS) &&
+    typeof value["effective_health_per_hundred_gold"] === "number"
+  );
+}
+
+/** Return whether a value is the You panel as the engine sends it. */
+export function isYouPanel(value: unknown): value is YouPanel {
+  return (
+    isRecord(value) &&
+    isArrayOf(value["defenses"], isDefenseValue) &&
+    isNumberOrNull(value["enemy_physical_share"]) &&
+    typeof value["unspent_gold"] === "number" &&
+    isNumberOrNull(value["holding_gold_seconds"]) &&
+    isNumberOrNull(value["creep_score_per_minute"]) &&
+    isNumberOrNull(value["usual_creep_score_per_minute"])
+  );
+}
+
 /** Return whether a value is an overlay state as the engine sends it. */
 export function isOverlayState(value: unknown): value is OverlayState {
   if (!isRecord(value)) {
@@ -735,6 +776,7 @@ export function isOverlayState(value: unknown): value is OverlayState {
     (value["win_chance"] === null || isWinChance(value["win_chance"])) &&
     (value["fight"] === null || isFightEstimate(value["fight"])) &&
     isArrayOf(value["contests"], isObjectiveContest) &&
+    (value["you"] === null || isYouPanel(value["you"])) &&
     isArrayOf(value["callouts"], isCallout)
   );
 }

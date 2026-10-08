@@ -594,6 +594,65 @@ function roleRank(card) {
     const rank = ROLE_ORDER.indexOf(card.role);
     return rank === -1 ? ROLE_ORDER.length : rank;
 }
+const DEFENSIVE_STAT_NAMES = {
+    armor: "Armor",
+    magic_resist: "MR",
+    health: "HP",
+};
+// Gold held this long, or longer, is shown.
+const HOLDING_SHOWN_SECONDS = 30;
+/** Return which defensive stat buys the most against their damage: "Armor 1.8× MR · their damage 70% physical". */
+export function formatDefenses(panel) {
+    const [best, second] = panel.defenses;
+    if (best === undefined || second === undefined || panel.enemy_physical_share === null) {
+        return null;
+    }
+    const physicalText = `their damage ${String(Math.round(panel.enemy_physical_share * PERCENT))}% physical`;
+    const secondValue = second.effective_health_per_hundred_gold;
+    const ratioText = secondValue > 0
+        ? `${(best.effective_health_per_hundred_gold / secondValue).toFixed(1)}\u00d7 ${DEFENSIVE_STAT_NAMES[second.stat]}`
+        : `over ${DEFENSIVE_STAT_NAMES[second.stat]}`;
+    return `${DEFENSIVE_STAT_NAMES[best.stat]} ${ratioText} \u00b7 ${physicalText}`;
+}
+/** Return how long the player has held their gold, "1.5k held 2:10", once it is worth saying. */
+export function formatHolding(panel) {
+    const heldSeconds = panel.holding_gold_seconds;
+    if (heldSeconds === null || heldSeconds < HOLDING_SHOWN_SECONDS) {
+        return null;
+    }
+    return `${formatThousands(panel.unspent_gold)} held ${formatCountdown(heldSeconds)}`;
+}
+/** Return the player's creep score pace: "CS 7.2/min · your usual 6.4". */
+export function formatCreepPace(panel) {
+    const pace = panel.creep_score_per_minute;
+    if (pace === null) {
+        return null;
+    }
+    const usual = panel.usual_creep_score_per_minute;
+    const usualText = usual === null ? "" : ` \u00b7 your usual ${usual.toFixed(1)}`;
+    return `CS ${pace.toFixed(1)}/min${usualText}`;
+}
+/** Draw the You panel: what to build against them, gold held, and creep score pace. */
+function renderYouPanel() {
+    const panelElement = requireElement("you-panel");
+    const received = latestReceivedState;
+    const panel = received !== null && received.state.is_game_running ? received.state.you : null;
+    const lines = panel === null
+        ? []
+        : [
+            ["you-defenses", formatDefenses(panel)],
+            ["you-holding", formatHolding(panel)],
+            ["you-pace", formatCreepPace(panel)],
+        ];
+    const shownLines = lines.filter((line) => line[1] !== null);
+    panelElement.hidden = shownLines.length === 0;
+    panelElement.replaceChildren(...shownLines.map(([className, lineText]) => {
+        const lineElement = document.createElement("div");
+        lineElement.className = className;
+        lineElement.textContent = lineText;
+        return lineElement;
+    }));
+}
 /** Draw the enemy strip: each enemy's champion, level and death timer. */
 function renderEnemyStrip(nowMilliseconds) {
     const strip = requireElement("enemy-strip");
@@ -748,6 +807,7 @@ function render() {
     renderEnemyStrip(nowMilliseconds);
     renderCallouts(nowMilliseconds);
     renderMinimap(nowMilliseconds);
+    renderYouPanel();
 }
 /** Listen to the engine; the browser reconnects by itself when the stream drops. */
 function listenToEngine() {

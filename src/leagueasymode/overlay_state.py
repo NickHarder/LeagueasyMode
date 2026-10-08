@@ -458,6 +458,33 @@ class ObjectiveContest(BaseModel):
     likeliest_chance: float
 
 
+class DefenseValue(BaseModel):
+    """What a hundred gold of one defensive stat buys you now, against the enemy's damage."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    stat: Literal["armor", "magic_resist", "health"]
+    effective_health_per_hundred_gold: float
+
+
+class YouPanel(BaseModel):
+    """Facts about your build and pace (`inference/you.py`), from your own exact numbers."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    # Armor, magic resist and health, the one that buys the most effective health first; empty
+    # while the enemy's damage is unknown.
+    defenses: list[DefenseValue]
+    # The share of the enemy's damage that is physical; None while unknown.
+    enemy_physical_share: float | None
+    unspent_gold: int
+    # How long your unspent gold has stayed at the threshold or more while alive; None while not.
+    holding_gold_seconds: float | None
+    # Your creep score a minute this game, from 3:00; and over your recent games, when known.
+    creep_score_per_minute: float | None
+    usual_creep_score_per_minute: float | None
+
+
 class WinReason(BaseModel):
     """One thing moving the win chance, from the player's side."""
 
@@ -522,6 +549,8 @@ class OverlayState(BaseModel):
     # None while any living player's combat stats are unknown.
     fight: FightEstimate | None = None
     contests: list[ObjectiveContest] = Field(default_factory=list)
+    # None while the engine does not follow you, or when spectating.
+    you: YouPanel | None = None
     callouts: list[Callout] = Field(default_factory=list)
 
 

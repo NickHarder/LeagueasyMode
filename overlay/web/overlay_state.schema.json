@@ -245,6 +245,31 @@
       "title": "CooldownTimer",
       "type": "object"
     },
+    "DefenseValue": {
+      "additionalProperties": false,
+      "description": "What a hundred gold of one defensive stat buys you now, against the enemy's damage.",
+      "properties": {
+        "stat": {
+          "enum": [
+            "armor",
+            "magic_resist",
+            "health"
+          ],
+          "title": "Stat",
+          "type": "string"
+        },
+        "effective_health_per_hundred_gold": {
+          "title": "Effective Health Per Hundred Gold",
+          "type": "number"
+        }
+      },
+      "required": [
+        "stat",
+        "effective_health_per_hundred_gold"
+      ],
+      "title": "DefenseValue",
+      "type": "object"
+    },
     "DragonTimer": {
       "additionalProperties": false,
       "description": "The next dragon or Elder Dragon: when it spawns, and the race for the soul.\n\nEvery value restates the kill feed and the map; nothing here is estimated.",
@@ -1309,6 +1334,77 @@
       ],
       "title": "WinReason",
       "type": "object"
+    },
+    "YouPanel": {
+      "additionalProperties": false,
+      "description": "Facts about your build and pace (`inference/you.py`), from your own exact numbers.",
+      "properties": {
+        "defenses": {
+          "items": {
+            "$ref": "#/$defs/DefenseValue"
+          },
+          "title": "Defenses",
+          "type": "array"
+        },
+        "enemy_physical_share": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Enemy Physical Share"
+        },
+        "unspent_gold": {
+          "title": "Unspent Gold",
+          "type": "integer"
+        },
+        "holding_gold_seconds": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Holding Gold Seconds"
+        },
+        "creep_score_per_minute": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Creep Score Per Minute"
+        },
+        "usual_creep_score_per_minute": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Usual Creep Score Per Minute"
+        }
+      },
+      "required": [
+        "defenses",
+        "enemy_physical_share",
+        "unspent_gold",
+        "holding_gold_seconds",
+        "creep_score_per_minute",
+        "usual_creep_score_per_minute"
+      ],
+      "title": "YouPanel",
+      "type": "object"
     }
   },
   "additionalProperties": false,
@@ -1469,6 +1565,17 @@
       },
       "title": "Contests",
       "type": "array"
+    },
+    "you": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/YouPanel"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
     },
     "callouts": {
       "items": {

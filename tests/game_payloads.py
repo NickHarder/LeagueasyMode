@@ -330,6 +330,7 @@ class PastGame:
     map_id: int = 11
     duration_seconds: int = 1800
     item_ids: tuple[int, ...] = ()
+    creep_score: int = 0
 
 
 def match_history(puuid: str, past_games: list[PastGame]) -> JsonValue:
@@ -358,6 +359,8 @@ def match_history(puuid: str, past_games: list[PastGame]) -> JsonValue:
                                 "win": past_game.is_win,
                                 "kills": 5,
                                 "deaths": 3,
+                                "totalMinionsKilled": past_game.creep_score,
+                                "neutralMinionsKilled": 0,
                                 **{
                                     f"item{slot}": item_id
                                     for slot, item_id in enumerate(past_game.item_ids)

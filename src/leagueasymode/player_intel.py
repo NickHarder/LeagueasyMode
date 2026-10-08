@@ -83,9 +83,11 @@ class RankedStats(RiotPayloadModel):
 
 
 class HistoryStats(RiotPayloadModel):
-    """A participant's end-of-game stats: the result and the inventory."""
+    """A participant's end-of-game stats: the result, creep score and the inventory."""
 
     win: bool = False
+    total_minions_killed: int = Field(default=0, alias="totalMinionsKilled")
+    neutral_minions_killed: int = Field(default=0, alias="neutralMinionsKilled")
     item0: int = 0
     item1: int = 0
     item2: int = 0
@@ -226,6 +228,9 @@ class RecentGame:
     is_win: bool
     # The items they held at its end.
     item_ids: tuple[int, ...] = ()
+    # Their creep score, lane and jungle, and the game's length.
+    creep_score: int = 0
+    duration_seconds: int = 0
 
 
 @dataclass(frozen=True)
@@ -308,8 +313,10 @@ def recent_games_of(payload: JsonValue | None, puuid: str) -> list[RecentGame]:
             position=history_position(line.timeline.lane, line.timeline.role, line.team_position),
             is_win=line.stats.win,
             item_ids=line.stats.item_ids(),
+            creep_score=line.stats.total_minions_killed + line.stats.neutral_minions_killed,
+            duration_seconds=game.game_duration_seconds,
         )
-        for _, line in newest_first
+        for game, line in newest_first
     ]
 
 
