@@ -3,7 +3,7 @@
 If you are picking this work up, human or model: read this file top to bottom first. The `handoff` skill
 refreshes it; it describes the current state.
 
-Last updated: 2026-10-08, on branch `feat/position-clues`. `main` holds phases 0 to 2 and phase 3.1
+Last updated: 2026-10-08, on branch `feat/positions`. `main` holds phases 0 to 2 and phase 3.1
 to 3.3 (pull requests #2 to #9, merged); the merged branches are deleted.
 
 ## Where things stand
@@ -20,14 +20,14 @@ pull request #12 (`feat/hidden-experience`, which carries both); 3.7, backs, is 
 (`feat/backs`); 3.8, the build path, is pull request #14 (`feat/build-path`): phase 3 is built.
 Phase 4 has a draft plan ([docs/plans/phase-4-positions.md](docs/plans/phase-4-positions.md)),
 built on its best guesses until the owner says otherwise; 4.1, the map, is pull request #15
-(`feat/rift-map`); 4.2, the clues, is built on `feat/position-clues`, which carries everything
-before it; 4.3, positions (the particle filter), is next. Each slice goes up
+(`feat/rift-map`); 4.2, the clues, is pull request #16 (`feat/position-clues`); 4.3, positions,
+is built on `feat/positions`, which carries everything before it; 4.4, the jungle path, is next. Each slice goes up
 as its own pull request into `main` without waiting for the one before to merge.
 
 | Area | State | Proof |
 |---|---|---|
 | Scaffold | ai-kit v0.11.1, Python layer, GitHub CI | `.copier-answers.yml` |
-| Gate | Green: lint, 615 tests (and 15 in Chromium), secrets | `make gate` |
+| Gate | Green: lint, 627 tests (and 15 in Chromium), secrets | `make gate` |
 | Recorder | Records games, the client's patch data and the post-game timeline; anonymized copies | `uv run leagueasymode record`; `tests/test_recorder.py`, `tests/test_anonymize.py` |
 | Replay | A recording served as a stand-in game API | `uv run leagueasymode replay <recording>`; `tests/test_replay.py` |
 | Engine and overlay page | The dragon and Elder timer, from the game's answer to the page | `uv run leagueasymode run`; `tests/test_tracer_bullet.py` |

@@ -13,7 +13,7 @@ from typing import Final
 
 from leagueasymode.data_dragon import PatchStats
 from leagueasymode.game_state import GameSnapshot, ScoreboardPlayer
-from leagueasymode.inference.combat_stats import estimated_combat_stats
+from leagueasymode.inference.combat_stats import move_speed_of
 from leagueasymode.inference.gold import (
     NEW_GAME_SLACK_SECONDS,
     PlayerKey,
@@ -37,7 +37,6 @@ class BackRules:
     # A purchase this soon after a trip's first belongs to it.
     same_trip_seconds: float = 30.0
     shopping_seconds: float = 5.0
-    default_move_speed: float = 380.0
 
 
 BACK_RULES: Final = BackRules()
@@ -100,7 +99,7 @@ class BackTracker:
             if self._is_a_new_trip(state, player, worth, game_time_seconds):
                 travel_seconds = RIFT_MAP.distance(
                     fountain_of(player.team), role_point_of(player.team, role_guess.role)
-                ) / self._move_speed(snapshot, player, patch_stats)
+                ) / move_speed_of(snapshot, player, patch_stats)
                 state.last_back = BackEstimate(
                     shopped_at_game_time_seconds=game_time_seconds,
                     returns_at_game_time_seconds=(
@@ -147,26 +146,3 @@ class BackTracker:
                 > rules.same_trip_seconds
             )
         )
-
-    def _move_speed(
-        self, snapshot: GameSnapshot, player: ScoreboardPlayer, patch_stats: PatchStats | None
-    ) -> float:
-        """Return a player's move speed: the game's own for you, else the estimate.
-
-        Args:
-            snapshot: The game's state.
-            player: The player.
-            patch_stats: The patch's stats; None while unknown.
-
-        Returns:
-            The speed, in game units a second.
-        """
-        active_player = snapshot.active_player
-        if (
-            active_player is not None
-            and active_player.champion_stats is not None
-            and snapshot.is_active_player(player)
-        ):
-            return active_player.champion_stats.move_speed
-        estimate = estimated_combat_stats(player, patch_stats) if patch_stats is not None else None
-        return estimate.move_speed if estimate is not None else self.rules.default_move_speed

@@ -92,6 +92,7 @@
         "item_soon",
         "cooldown_ready",
         "went_back",
+        "missing",
         "suggestion"
       ],
       "type": "string"
@@ -551,6 +552,11 @@
           "title": "Side",
           "type": "string"
         },
+        "is_you": {
+          "default": false,
+          "title": "Is You",
+          "type": "boolean"
+        },
         "position": {
           "title": "Position",
           "type": "string"
@@ -685,6 +691,17 @@
             }
           ],
           "default": null
+        },
+        "location": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PositionEstimate"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         }
       },
       "required": [
@@ -803,6 +820,56 @@
       "title": "PositionClue",
       "type": "object"
     },
+    "PositionEstimate": {
+      "additionalProperties": false,
+      "description": "Where a player likely is now, and how soon they could be in each lane.\n\nAn estimate (`inference/positions.py`), from their latest clue, their move speed and where a\nplayer of their role spends their time; it widens as the clue ages.",
+      "properties": {
+        "regions": {
+          "items": {
+            "$ref": "#/$defs/RegionChance"
+          },
+          "title": "Regions",
+          "type": "array"
+        },
+        "away_chance": {
+          "title": "Away Chance",
+          "type": "number"
+        },
+        "unseen_seconds": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Unseen Seconds"
+        },
+        "reach_top_seconds": {
+          "title": "Reach Top Seconds",
+          "type": "number"
+        },
+        "reach_mid_seconds": {
+          "title": "Reach Mid Seconds",
+          "type": "number"
+        },
+        "reach_bot_seconds": {
+          "title": "Reach Bot Seconds",
+          "type": "number"
+        }
+      },
+      "required": [
+        "regions",
+        "away_chance",
+        "unseen_seconds",
+        "reach_top_seconds",
+        "reach_mid_seconds",
+        "reach_bot_seconds"
+      ],
+      "title": "PositionEstimate",
+      "type": "object"
+    },
     "RankedStanding": {
       "additionalProperties": false,
       "description": "A player's rank in one ranked queue this season.",
@@ -845,6 +912,31 @@
         "losses"
       ],
       "title": "RankedStanding",
+      "type": "object"
+    },
+    "RegionChance": {
+      "additionalProperties": false,
+      "description": "The chance a player is in one region of the map.",
+      "properties": {
+        "region": {
+          "title": "Region",
+          "type": "string"
+        },
+        "label": {
+          "title": "Label",
+          "type": "string"
+        },
+        "chance": {
+          "title": "Chance",
+          "type": "number"
+        }
+      },
+      "required": [
+        "region",
+        "label",
+        "chance"
+      ],
+      "title": "RegionChance",
       "type": "object"
     },
     "TeamGold": {

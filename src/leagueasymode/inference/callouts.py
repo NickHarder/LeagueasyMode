@@ -10,6 +10,7 @@ whose clock runs backwards starts a new game.
 import math
 from typing import Final
 
+from leagueasymode.inference.positions import reach_seconds_of
 from leagueasymode.inference.suggestions import suggestions
 from leagueasymode.overlay_state import Callout, CalloutKind, OverlayState, PlayerCard
 
@@ -21,6 +22,13 @@ LEVEL_SOON_SECONDS: Final = 20.0
 LEVEL_SOON_MAX_BAND_SECONDS: Final = 20.0
 # An enemy whose chance to afford their next item reaches this is called out.
 ITEM_SOON_CHANCE: Final = 0.75
+# An enemy unseen this long, likely away from where they play, who could reach your lane this
+# soon, is called out as missing; one at a time, at most once in this long.
+MISSING_UNSEEN_SECONDS: Final = 20.0
+MISSING_AWAY_CHANCE: Final = 0.5
+MISSING_REACH_SECONDS: Final = 20.0
+MISSING_CALLOUT_GAP_SECONDS: Final = 30.0
+LANE_OF_ROLE: Final = {"TOP": "top", "MIDDLE": "mid", "BOTTOM": "bot", "UTILITY": "bot"}
 OBJECTIVE_SOON_SECONDS: Final = 60.0
 # A clock this far behind the last one is a new game, not a replayed second.
 NEW_GAME_CLOCK_DROP_SECONDS: Final = 5.0
@@ -43,6 +51,7 @@ class CalloutTracker:
         self._previous_state: OverlayState | None = None
         self._made_callout_ids: set[str] = set()
         self._shown_callouts: list[Callout] = []
+        self._last_missing_seconds: float | None = None
 
     def update(self, state: OverlayState) -> list[Callout]:
         """Take the next state and return the callouts to show with it.
@@ -71,6 +80,7 @@ class CalloutTracker:
             *_levels_soon(state, game_time_seconds),
             *self._jungler_backs(state, game_time_seconds),
             *self._items_soon(state, game_time_seconds),
+            *self._missing(state, game_time_seconds),
             *self._numbers_window(state, game_time_seconds),
             *self._objectives_soon(state, game_time_seconds),
             *self._item_spikes(state, game_time_seconds),
@@ -96,6 +106,7 @@ class CalloutTracker:
         self._previous_state = None
         self._made_callout_ids = set()
         self._shown_callouts = []
+        self._last_missing_seconds = None
 
     def _level_spikes(self, state: OverlayState, game_time_seconds: float) -> list[Callout]:
         """Return a callout for each enemy who has just reached level 6, 11 or 16.
@@ -158,6 +169,47 @@ class CalloutTracker:
             if card.side == "enemy" and card.role == "JUNGLE"
             for last_back in [card.last_back]
             if last_back is not None and previous_backs.get(card.champion_name) != last_back
+        ]
+
+    def _missing(self, state: OverlayState, game_time_seconds: float) -> list[Callout]:
+        """Return a callout for the missing enemy who could reach your lane soonest, if one could.
+
+        Args:
+            state: The new state.
+            game_time_seconds: Its game time.
+
+        Returns:
+            At most one callout, and none within 30 seconds of the last.
+        """
+        last_missing_seconds = self._last_missing_seconds
+        if self._previous_state is None or (
+            last_missing_seconds is not None
+            and game_time_seconds - last_missing_seconds < MISSING_CALLOUT_GAP_SECONDS
+        ):
+            return []
+        you = next((card for card in state.players if card.is_you), None)
+        lane = LANE_OF_ROLE.get(you.role) if you is not None else None
+        if lane is None:
+            return []
+        candidates = [
+            candidate
+            for card in state.players
+            if card.side == "enemy" and not card.is_dead
+            for candidate in [_missing_from(card, lane)]
+            if candidate is not None
+        ]
+        if not candidates:
+            return []
+        reach_seconds, unseen_seconds, champion_name = min(candidates)
+        self._last_missing_seconds = game_time_seconds
+        return [
+            _callout(
+                f"missing:{champion_name}:{game_time_seconds:.0f}",
+                "missing",
+                f"{champion_name} missing {_clock_text(unseen_seconds)}: can reach {lane} "
+                f"in ~{_clock_text(reach_seconds)}",
+                game_time_seconds,
+            )
         ]
 
     def _items_soon(self, state: OverlayState, game_time_seconds: float) -> list[Callout]:
@@ -387,6 +439,31 @@ def _level_soon(card: PlayerCard, game_time_seconds: float) -> Callout | None:
         f"{card.champion_name} hits {estimate.next_power_level} in ~{_clock_text(seconds_to_go)}",
         game_time_seconds,
     )
+
+
+def _missing_from(card: PlayerCard, lane: str) -> tuple[float, float, str] | None:
+    """Return how soon an enemy unseen and likely away could reach a lane, if soon enough.
+
+    Args:
+        card: The enemy.
+        lane: "top", "mid" or "bot".
+
+    Returns:
+        The seconds to reach it, the seconds unseen and their champion; None when they were seen
+        lately, are likely where they play, or could not reach it soon.
+    """
+    location = card.location
+    if location is None or location.unseen_seconds is None:
+        return None
+    reach_seconds = reach_seconds_of(location, lane)
+    if (
+        reach_seconds is None
+        or location.unseen_seconds < MISSING_UNSEEN_SECONDS
+        or location.away_chance < MISSING_AWAY_CHANCE
+        or reach_seconds > MISSING_REACH_SECONDS
+    ):
+        return None
+    return reach_seconds, location.unseen_seconds, card.champion_name
 
 
 def _was_likely(previous: tuple[int, float | None] | None, item_id: int) -> bool:

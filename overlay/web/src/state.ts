@@ -143,10 +143,28 @@ export interface PositionClue {
   readonly region: string;
 }
 
+/** The chance a player is in one region of the map, with the region in words. */
+export interface RegionChance {
+  readonly region: string;
+  readonly label: string;
+  readonly chance: number;
+}
+
+/** Where a player likely is now, and how soon they could be in each lane: an estimate. */
+export interface PositionEstimate {
+  readonly regions: readonly RegionChance[];
+  readonly away_chance: number;
+  readonly unseen_seconds: number | null;
+  readonly reach_top_seconds: number;
+  readonly reach_mid_seconds: number;
+  readonly reach_bot_seconds: number;
+}
+
 /** One player as the scoreboard shows them: side, role, level, and when they are back. */
 export interface PlayerCard {
   readonly champion_name: string;
   readonly side: Side;
+  readonly is_you: boolean;
   readonly position: string;
   readonly role: string;
   readonly role_confidence: "given" | "likely" | "guess" | "unknown";
@@ -162,6 +180,7 @@ export interface PlayerCard {
   readonly last_back: BackEstimate | null;
   readonly next_item: NextItemEstimate | null;
   readonly last_clue: PositionClue | null;
+  readonly location: PositionEstimate | null;
 }
 
 /** What each team's items are worth: gold earned and spent, not gold in hand. */
@@ -193,6 +212,7 @@ export type CalloutKind =
   | "item_soon"
   | "cooldown_ready"
   | "went_back"
+  | "missing"
   | "suggestion";
 
 /** A short notice shown for a few seconds when something happens; never an instruction. */
@@ -236,6 +256,7 @@ const CALLOUT_KINDS: ReadonlySet<string> = new Set([
   "item_soon",
   "cooldown_ready",
   "went_back",
+  "missing",
   "suggestion",
 ]);
 const MARKED_SPELLS: ReadonlySet<string> = new Set(["flash", "summoner", "ultimate"]);
@@ -423,12 +444,36 @@ export function isPositionClue(value: unknown): value is PositionClue {
   );
 }
 
+/** Return whether a value is a region's chance as the engine sends it. */
+export function isRegionChance(value: unknown): value is RegionChance {
+  return (
+    isRecord(value) &&
+    typeof value["region"] === "string" &&
+    typeof value["label"] === "string" &&
+    typeof value["chance"] === "number"
+  );
+}
+
+/** Return whether a value is a player's position as the engine sends it. */
+export function isPositionEstimate(value: unknown): value is PositionEstimate {
+  return (
+    isRecord(value) &&
+    isArrayOf(value["regions"], isRegionChance) &&
+    typeof value["away_chance"] === "number" &&
+    isNumberOrNull(value["unseen_seconds"]) &&
+    typeof value["reach_top_seconds"] === "number" &&
+    typeof value["reach_mid_seconds"] === "number" &&
+    typeof value["reach_bot_seconds"] === "number"
+  );
+}
+
 /** Return whether a value is a player's card as the engine sends it. */
 export function isPlayerCard(value: unknown): value is PlayerCard {
   return (
     isRecord(value) &&
     typeof value["champion_name"] === "string" &&
     isOneOf(value["side"], SIDES) &&
+    typeof value["is_you"] === "boolean" &&
     typeof value["position"] === "string" &&
     typeof value["role"] === "string" &&
     isOneOf(value["role_confidence"], ROLE_CONFIDENCES) &&
@@ -443,7 +488,8 @@ export function isPlayerCard(value: unknown): value is PlayerCard {
     (value["level_estimate"] === null || isLevelEstimate(value["level_estimate"])) &&
     (value["last_back"] === null || isBackEstimate(value["last_back"])) &&
     (value["next_item"] === null || isNextItemEstimate(value["next_item"])) &&
-    (value["last_clue"] === null || isPositionClue(value["last_clue"]))
+    (value["last_clue"] === null || isPositionClue(value["last_clue"])) &&
+    (value["location"] === null || isPositionEstimate(value["location"]))
   );
 }
 

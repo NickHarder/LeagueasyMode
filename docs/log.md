@@ -6,6 +6,12 @@ skill has the format.
 
 ## 2026-10-08
 
+- Phase 4.3, positions (estimator 7): where each player likely is, a chance for each of the
+  map's points spread from their latest clue at their move speed and weighed by their role's
+  habits. The plan named a particle filter; over 81 points the exact histogram filter does the
+  same work without sampling noise, and its tests are exact. Each enemy unseen for 0:10 shows
+  their likeliest region; the enemy unseen and away who could reach your lane soonest is called
+  out as missing, at most once every 30 seconds. Scored against the timeline's positions.
 - Phase 4.2, clues to positions: the moments the feed or the scoreboard pins a player's place
   (an objective's takers at it, a turret's victim at it, a respawn or trip to base in base,
   creep score in a lane or the jungle), each on the map. Each enemy's row shows the latest. The

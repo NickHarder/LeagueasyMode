@@ -9,9 +9,14 @@ from collections.abc import Mapping
 from leagueasymode.data_dragon import PatchStats
 from leagueasymode.game_state import GameSnapshot, ScoreboardPlayer
 from leagueasymode.inference.build_path import next_item
-from leagueasymode.inference.combat_stats import estimated_combat_stats, exact_combat_stats
+from leagueasymode.inference.combat_stats import (
+    estimated_combat_stats,
+    exact_combat_stats,
+    move_speed_of,
+)
 from leagueasymode.inference.gold import PlayerKey, player_key
 from leagueasymode.inference.intel import player_intel
+from leagueasymode.inference.positions import position_estimate
 from leagueasymode.inference.roles import RoleGuess, assign_roles
 from leagueasymode.overlay_state import (
     BackEstimate,
@@ -23,6 +28,7 @@ from leagueasymode.overlay_state import (
     PlayerCard,
     PlayerIntel,
     PositionClue,
+    PositionEstimate,
     TeamItemGold,
 )
 from leagueasymode.patch_data import ItemCatalog
@@ -68,6 +74,7 @@ def player_cards(
         PlayerCard(
             champion_name=player.champion_name,
             side="ally" if player.team == ally_team else "enemy",
+            is_you=snapshot.is_active_player(player),
             position=player.position,
             role=role_guesses[index].role,
             role_confidence=role_guesses[index].confidence,
@@ -92,6 +99,9 @@ def player_cards(
                 gold=gold_estimates.get(player_key(player)) if gold_estimates is not None else None,
             ),
             last_clue=_last_clue(player, position_clues),
+            location=_location(
+                snapshot, player, role_guesses[index].role, patch_stats, position_clues
+            ),
         )
         for index, player in [*allies, *enemies]
     ]
@@ -178,6 +188,37 @@ def _next_item(
         champion_id=game_record.champion_id if game_record is not None else 0,
         gold=gold,
         game_time_seconds=snapshot.game_data.game_time_seconds,
+    )
+
+
+def _location(
+    snapshot: GameSnapshot,
+    player: ScoreboardPlayer,
+    role: str,
+    patch_stats: PatchStats | None,
+    position_clues: Mapping[PlayerKey, list[PositionClue]] | None,
+) -> PositionEstimate | None:
+    """Return where a player likely is, from their clues.
+
+    Args:
+        snapshot: The game's state.
+        player: The player.
+        role: Their role, given or worked out.
+        patch_stats: The patch's stats, for their move speed; None while unknown.
+        position_clues: Each player's clues, oldest first; None while they are not gathered.
+
+    Returns:
+        The estimate; None while dead, or while clues are not gathered.
+    """
+    if position_clues is None:
+        return None
+    return position_estimate(
+        player,
+        role,
+        position_clues.get(player_key(player), []),
+        move_speed=move_speed_of(snapshot, player, patch_stats),
+        game_time_seconds=snapshot.game_data.game_time_seconds,
+        ally_team=snapshot.ally_team(),
     )
 
 

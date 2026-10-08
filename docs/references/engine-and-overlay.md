@@ -4,7 +4,7 @@ title: The engine and the overlay page
 description: How the engine turns the game's answers into the overlay's state, how that state reaches the widgets, how the page is built and tested, and how to run it all against a replay.
 tags: [engine, overlay, architecture]
 status: draft
-generated: { by: claude-code/cloud, at: 2026-10-08T22:35:52Z }
+generated: { by: claude-code/cloud, at: 2026-10-08T22:45:47Z }
 sources:
   - id: engine
     resource: ../../src/leagueasymode/engine.py
@@ -42,6 +42,8 @@ sources:
     resource: ../../src/leagueasymode/inference/rift_map.py
   - id: clues
     resource: ../../src/leagueasymode/inference/clues.py
+  - id: positions
+    resource: ../../src/leagueasymode/inference/positions.py
   - id: overlay-state
     resource: ../../src/leagueasymode/overlay_state.py
   - id: overlay-server
@@ -99,6 +101,7 @@ game API ─▶ GameApiClient ─▶ GameSnapshot ─▶ estimators ─▶ Overl
 | Backs (estimator 6, phase 3.7) | inferred; the way back an estimate | buying needs the fountain, so a purchase made alive is a trip to base: not one before 1:30, nor one while dead or within 0:30 of respawning, and purchases within 0:30 of a trip's first belong to it. The way back is 5 seconds of shopping, then the walk along the map from the fountain to where they play (their lane's outer turret, or their red buff for a jungler) at the player's move speed: the game's own for you, the combat stats estimate for the others, 380 without the patch's stats. A callout says when the enemy jungler, whom the map rarely shows, has gone back ("Vi went back: in the jungle again in ~0:20"), not for a trip made before the overlay starts[^backs] |
 | The map (phase 4.1) | a hand-built model of the Rift | 81 walkable points in the game's coordinates (fountains, bases, every lane's turrets, every camp, the river, the scuttle crabs, both pits) in regions (each lane, each team's jungle above and below mid, each side of the river, each base), joined by paths a champion can walk; the blue half is written down and the red half is its turn about the center. Walks are shortest paths along straight segments (Dijkstra), so a little short of a real path around the walls. The coordinates are from memory, to within a few hundred units; the harness measures how far the timeline's positions lie from the paths[^rift-map] |
 | Clues to positions (phase 4.2) | inferred | the moments a player's place is pinned: the killer and assisters of a turret or inhibitor at it, of Dragon at its pit, of Baron, the Herald or the Voidgrubs (`HordeKill`, to confirm) at Baron's; a champion a turret kills at that turret; a respawn, or a trip to base's shopping, in base; creep score rising, a laner in their lane (at its outer turret, for the map) or a jungler in a jungle (theirs or, invading, the other's: the score cannot tell). A kill between champions names no place and is no clue here. Each enemy's row shows the latest for two minutes, unless they are dead ("at Dragon 0:40 ago")[^clues] |
+| Positions (estimator 7, phase 4.3) | estimate | a chance for each of the map's points (a histogram filter, the exact form of the particle filter the plan names). From a player's latest clue (a point, or a lane's or a jungle's points), they can be at any point they could have walked to since at their move speed for 80% of the time; each is weighed by how much a player of their role is found in its region (a laner's lane 1.0, the river beside it 0.3, their own jungle behind it 0.15 to 0.2; a jungler's own jungle 1.0, the river 0.5, the other jungle 0.3; anything else 0.05, the bases less), a first guess to fit on the timeline's positions. Without a clue they start in their fountain at 0:00. Out of it: the three likeliest regions in words from your side ("their top jungle"), the chance they are away from where they play, the time unseen, and the soonest they could be in the middle of each lane (the walk at full speed less the time since). An enemy unseen 0:10 shows "likely bot lane 60% · unseen 0:25". The callout "Zed missing 0:25: can reach mid in ~0:12" names the enemy unseen 0:20 or more, likely (50%) away, who could reach your lane soonest within 0:20; one at a time, at most once every 0:30. Each card now says whether it is you (`is_you`)[^positions] |
 | Inhibitors down | exact | back 5:00 after they fall, or when the feed says they respawned; `Barracks_T1_L1` is team 1's top inhibitor (L, C and R taken as top, mid and bottom, to be confirmed) |
 
 Every rule is checked again against the first recordings. The widgets show the dragon always,
@@ -110,7 +113,8 @@ and under each the spells marked ("F 4:12", "R 1:05"), their record ("P4 · 3–
 off-role (MID)"), their health, armor and magic resist ("1.3k HP · 59 AR · 39 MR"), when they
 reach their next power level once it is within 1:30 ("6 in ~0:35"), their last trip to base for
 1:30 after it ("went back 7:42 · returns ~0:24"), the latest clue to where they are for 2:00
-after it ("at Dragon 0:40 ago"), their likely next item ("next Infinity Edge ·
+after it ("at Dragon 0:40 ago"), where they likely are once unseen for 0:10 ("likely bot lane 60%
+· unseen 0:25"), their likely next item ("next Infinity Edge ·
 2.1k left · 40% now", with "?" when less likely than not, in the enemy color from 75%), and the
 gold they hold ("1.4k ±0.3k unspent"; a band under 50 gold is left out).
 
@@ -202,3 +206,4 @@ Chromium against a replay (Chromium from `uv run playwright install chromium`, o
 [^build-path]: `src/leagueasymode/inference/build_path.py`
 [^rift-map]: `src/leagueasymode/inference/rift_map.py`
 [^clues]: `src/leagueasymode/inference/clues.py`
+[^positions]: `src/leagueasymode/inference/positions.py`
