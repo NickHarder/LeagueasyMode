@@ -304,7 +304,7 @@ def feed_gold(snapshot: GameSnapshot, rules: GoldRules = GOLD_RULES) -> dict[Pla
     earned_since_death: defaultdict[PlayerKey, float] = defaultdict(float)
     for event in snapshot.event_list.events:
         if event.event_name == CHAMPION_KILL_EVENT:
-            victim = _player_named(snapshot, event.victim_name)
+            victim = snapshot.player_named(event.victim_name)
             if victim is None:
                 continue
             for key, gold in _kill_payments(event, snapshot, victim, earned_since_death, rules):
@@ -792,21 +792,6 @@ def _gold_until(rates: GoldRates, game_time_seconds: float) -> float:
     )
 
 
-def _player_named(snapshot: GameSnapshot, name: str | None) -> ScoreboardPlayer | None:
-    """Return the player the feed names, or None for a minion, a turret, a monster or nobody.
-
-    Args:
-        snapshot: The game's state.
-        name: A name from the feed.
-
-    Returns:
-        The player, or None.
-    """
-    if not name:
-        return None
-    return next((player for player in snapshot.players if player.is_named(name)), None)
-
-
 def _kill_payments(
     event: GameEvent,
     snapshot: GameSnapshot,
@@ -833,10 +818,10 @@ def _kill_payments(
         - rules.unapplied_bounty_gold
     )
     kill_gold = base_gold + min(max(built_bounty_gold, 0.0), rules.max_bounty_gold)
-    killer = _player_named(snapshot, event.killer_name)
+    killer = snapshot.player_named(event.killer_name)
     assisters = [
         assister
-        for assister in (_player_named(snapshot, name) for name in event.assister_names)
+        for assister in (snapshot.player_named(name) for name in event.assister_names)
         if assister is not None and assister.team != victim.team
     ]
     killer_payments = (
@@ -870,7 +855,7 @@ def _objective_payments(
         destroying_team = OTHER_TEAM[TEAM_BY_NUMBER[inhibitor_match["team"]]]
         return _shared_payments(event, snapshot, destroying_team, rules.inhibitor_gold)
     if event.event_name == BARON_KILL_EVENT:
-        killer = _player_named(snapshot, event.killer_name)
+        killer = snapshot.player_named(event.killer_name)
         return _team_payments(snapshot, killer.team, rules.baron_gold) if killer else []
     return []
 
@@ -942,7 +927,7 @@ def _shared_payments(
     credited_names = [event.killer_name, *event.assister_names]
     takers = {
         player_key(player): player
-        for player in (_player_named(snapshot, name) for name in credited_names)
+        for player in (snapshot.player_named(name) for name in credited_names)
         if player is not None and player.team == team
     }
     return [(key, shared_gold / len(takers)) for key in takers]

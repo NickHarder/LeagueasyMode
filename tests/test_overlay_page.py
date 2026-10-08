@@ -357,6 +357,15 @@ async def test_an_enemy_who_buys_alive_has_gone_back(tmp_path: Path) -> None:
         )
 
 
+async def test_an_enemy_seen_at_an_objective_shows_where_and_how_long_ago(tmp_path: Path) -> None:
+    async with open_overlay(tmp_path, snapshot_count=60, speed=1.0) as page:
+        vi_seen = page.locator("#enemy-strip .enemy-row", has_text="Vi").locator(".enemy-seen")
+        # Their jungler took the third dragon at 23:10, after Baron at 23:00.
+        await expect(vi_seen).to_have_text(re.compile(r"^at Dragon 0:[0-4]\d ago$"), timeout=5000)
+        await expect(vi_seen).to_have_attribute("data-kind", "objective")
+        await keep_screenshot(page, "last-seen")
+
+
 async def test_the_enemy_strip_shows_item_gold_and_the_lead(tmp_path: Path) -> None:
     async with open_overlay(tmp_path, snapshot_count=60, speed=1.0) as page:
         lead = page.locator("#enemy-strip .item-lead.items")

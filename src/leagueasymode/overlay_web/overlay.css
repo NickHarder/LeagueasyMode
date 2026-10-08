@@ -203,6 +203,13 @@ body {
   font-weight: 600;
 }
 
+.enemy-seen {
+  grid-column: 2 / -1;
+  color: var(--widget-muted);
+  font-size: 10px;
+  font-weight: 500;
+}
+
 .enemy-back {
   grid-column: 2 / -1;
   color: var(--widget-advantage);

@@ -674,6 +674,17 @@
             }
           ],
           "default": null
+        },
+        "last_clue": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PositionClue"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         }
       },
       "required": [
@@ -741,6 +752,55 @@
         "is_off_role"
       ],
       "title": "PlayerIntel",
+      "type": "object"
+    },
+    "PositionClue": {
+      "additionalProperties": false,
+      "description": "A moment a player's place was known, or nearly: what pinned it, when, and where.\n\nInferred from the feed and the scoreboard (`inference/clues.py`): an objective's takers were\nat it, a respawn or a trip to base is in base, creep score rising is in a lane or the jungle.",
+      "properties": {
+        "kind": {
+          "enum": [
+            "fountain",
+            "objective",
+            "turret",
+            "lane",
+            "jungle"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "game_time_seconds": {
+          "title": "Game Time Seconds",
+          "type": "number"
+        },
+        "place": {
+          "title": "Place",
+          "type": "string"
+        },
+        "point_name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Point Name"
+        },
+        "region": {
+          "title": "Region",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "game_time_seconds",
+        "place",
+        "point_name",
+        "region"
+      ],
+      "title": "PositionClue",
       "type": "object"
     },
     "RankedStanding": {

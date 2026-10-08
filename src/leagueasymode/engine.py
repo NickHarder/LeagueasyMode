@@ -12,6 +12,7 @@ from leagueasymode.game_api import GameApiClient
 from leagueasymode.game_state import GameSnapshot
 from leagueasymode.inference.backs import BackTracker
 from leagueasymode.inference.callouts import CalloutTracker
+from leagueasymode.inference.clues import ClueTracker
 from leagueasymode.inference.cooldowns import MarkedSpell, marked_cooldown, running_cooldowns
 from leagueasymode.inference.experience import ExperienceTracker
 from leagueasymode.inference.gold import GoldTracker, team_gold
@@ -50,6 +51,7 @@ def compute_overlay_state(
     gold_tracker: GoldTracker | None = None,
     experience_tracker: ExperienceTracker | None = None,
     back_tracker: BackTracker | None = None,
+    clue_tracker: ClueTracker | None = None,
 ) -> OverlayState:
     """Return what the overlay shows for one answer of the game's API.
 
@@ -65,6 +67,7 @@ def compute_overlay_state(
             None to show no gold.
         experience_tracker: The same for each player's experience; None to show none.
         back_tracker: The same for each player's trips to base; None to show none.
+        clue_tracker: The same for the clues to where each player is; None to show none.
 
     Returns:
         The overlay's state; no game running when there is no answer or it cannot be read.
@@ -87,6 +90,9 @@ def compute_overlay_state(
         if back_tracker is not None
         else None
     )
+    position_clues = (
+        clue_tracker.update(snapshot, last_backs or {}) if clue_tracker is not None else None
+    )
     cards = player_cards(
         snapshot,
         item_catalog,
@@ -95,6 +101,7 @@ def compute_overlay_state(
         gold_estimates=gold_estimates,
         level_estimates=level_estimates,
         last_backs=last_backs,
+        position_clues=position_clues,
     )
     return OverlayState(
         is_game_running=True,
@@ -157,6 +164,7 @@ class OverlayEngine:
         self._gold_tracker: Final = GoldTracker()
         self._experience_tracker: Final = ExperienceTracker()
         self._back_tracker: Final = BackTracker()
+        self._clue_tracker: Final = ClueTracker()
         self._current_state = NOT_RUNNING
         self._callouts: Final = CalloutTracker()
         self._subscribers: Final[set[asyncio.Queue[OverlayState]]] = set()
@@ -234,6 +242,7 @@ class OverlayEngine:
                 gold_tracker=self._gold_tracker,
                 experience_tracker=self._experience_tracker,
                 back_tracker=self._back_tracker,
+                clue_tracker=self._clue_tracker,
             )
             self._last_payload = payload if answer_state.is_game_running else None
             if answer_state.is_game_running and not self._current_state.is_game_running:

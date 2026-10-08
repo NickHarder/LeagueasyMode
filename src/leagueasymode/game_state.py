@@ -202,6 +202,19 @@ class GameSnapshot(RiotPayloadModel):
             return None
         return next((player.team for player in self.players if player.is_named(name)), None)
 
+    def player_named(self, name: str | None) -> ScoreboardPlayer | None:
+        """Return the player the feed names, or None for a minion, a turret, a monster or nobody.
+
+        Args:
+            name: A name from the feed.
+
+        Returns:
+            The player, or None.
+        """
+        if not name:
+            return None
+        return next((player for player in self.players if player.is_named(name)), None)
+
     def is_active_player(self, player: ScoreboardPlayer) -> bool:
         """Return whether a player of the scoreboard is the one on this machine.
 

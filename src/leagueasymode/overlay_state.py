@@ -197,6 +197,25 @@ class NextItemEstimate(BaseModel):
     affordable_at_game_time_seconds: float | None
 
 
+class PositionClue(BaseModel):
+    """A moment a player's place was known, or nearly: what pinned it, when, and where.
+
+    Inferred from the feed and the scoreboard (`inference/clues.py`): an objective's takers were
+    at it, a respawn or a trip to base is in base, creep score rising is in a lane or the jungle.
+    """
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    kind: Literal["fountain", "objective", "turret", "lane", "jungle"]
+    game_time_seconds: float
+    # Where, in words: "at Dragon", "at the top outer turret", "in base", "in the mid lane".
+    place: str
+    # The map's point (`inference/rift_map.py`), when the clue names one.
+    point_name: str | None
+    # The map's region, or "order_jungle" or "chaos_jungle" for somewhere in a team's jungle.
+    region: str
+
+
 class PlayerCard(BaseModel):
     """One player as the scoreboard shows them: side, role, level, and when they are back."""
 
@@ -228,6 +247,8 @@ class PlayerCard(BaseModel):
     last_back: BackEstimate | None = None
     # None while the patch's items are unknown, or no finished item is left for them.
     next_item: NextItemEstimate | None = None
+    # The latest clue to where they are; None until there is one.
+    last_clue: PositionClue | None = None
 
 
 class TeamItemGold(BaseModel):

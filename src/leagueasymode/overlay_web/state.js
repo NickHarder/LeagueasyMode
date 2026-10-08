@@ -154,6 +154,16 @@ export function isNextItemEstimate(value) {
         isNumberOrNull(value["chance_to_afford"]) &&
         isNumberOrNull(value["affordable_at_game_time_seconds"]));
 }
+const CLUE_KINDS = new Set(["fountain", "objective", "turret", "lane", "jungle"]);
+/** Return whether a value is a clue to a player's place as the engine sends it. */
+export function isPositionClue(value) {
+    return (isRecord(value) &&
+        isOneOf(value["kind"], CLUE_KINDS) &&
+        typeof value["game_time_seconds"] === "number" &&
+        typeof value["place"] === "string" &&
+        (value["point_name"] === null || typeof value["point_name"] === "string") &&
+        typeof value["region"] === "string");
+}
 /** Return whether a value is a player's card as the engine sends it. */
 export function isPlayerCard(value) {
     return (isRecord(value) &&
@@ -172,7 +182,8 @@ export function isPlayerCard(value) {
         (value["gold"] === null || isGoldEstimate(value["gold"])) &&
         (value["level_estimate"] === null || isLevelEstimate(value["level_estimate"])) &&
         (value["last_back"] === null || isBackEstimate(value["last_back"])) &&
-        (value["next_item"] === null || isNextItemEstimate(value["next_item"])));
+        (value["next_item"] === null || isNextItemEstimate(value["next_item"])) &&
+        (value["last_clue"] === null || isPositionClue(value["last_clue"])));
 }
 /** Return whether a value is each team's item gold as the engine sends it. */
 export function isTeamItemGold(value) {
