@@ -21,6 +21,7 @@ import {
   type LevelEstimate,
   type NextItemEstimate,
   type NumbersWindow,
+  type ObjectiveContest,
   type ObjectiveTimer,
   type OverlayState,
   type PlayerCard,
@@ -54,6 +55,13 @@ const OBJECTIVE_NAMES: Readonly<Record<ObjectiveTimer["objective"], string>> = {
   rift_herald: "Herald",
   voidgrubs: "Voidgrubs",
 };
+const CONTESTED_NAMES: Readonly<Record<ObjectiveContest["objective"], string>> = {
+  dragon: "Dragon",
+  elder_dragon: "Elder",
+  baron: "Baron",
+};
+// The likeliest enemy to contest is named from this chance.
+const NAMED_CONTESTER_CHANCE = 0.2;
 const BUFF_NAMES: Readonly<Record<BuffTimer["buff"], string>> = {
   baron: "Baron buff",
   elder: "Elder buff",
@@ -100,7 +108,7 @@ const PROVISIONAL_MARK = "~";
 interface Pill {
   readonly label: string;
   readonly timeText: string;
-  readonly kind: "numbers" | "objective" | "buff" | "inhibitor";
+  readonly kind: "numbers" | "objective" | "buff" | "inhibitor" | "contest";
   readonly side: "ally" | "enemy" | "neutral";
   readonly isUp: boolean;
 }
@@ -244,6 +252,20 @@ export function numbersPill(window: NumbersWindow, gameTimeSeconds: number): Pil
   };
 }
 
+/** Return the pill of a monster's contest: "Baron ~0:38 with 4", "contest ~60% (Vi)". */
+export function contestPill(contest: ObjectiveContest): Pill {
+  const contester = contest.likeliest_contester;
+  const contesterText =
+    contester !== null && contest.likeliest_chance >= NAMED_CONTESTER_CHANCE ? ` (${contester})` : "";
+  return {
+    label: `${CONTESTED_NAMES[contest.objective]} ~${formatCountdown(contest.kill_seconds)} with ${String(contest.ally_fighters)}`,
+    timeText: `contest ~${String(Math.round(contest.contest_chance * PERCENT))}%${contesterText}`,
+    kind: "contest",
+    side: contest.contest_chance >= EVEN_CHANCE ? "enemy" : "ally",
+    isUp: false,
+  };
+}
+
 /** Return every pill to show beside the dragon, in a steady order. */
 function stripPills(state: OverlayState, gameTimeSeconds: number): Pill[] {
   const candidatePills = [
@@ -251,6 +273,7 @@ function stripPills(state: OverlayState, gameTimeSeconds: number): Pill[] {
     ...state.objectives.map((timer) => objectivePill(timer, gameTimeSeconds)),
     ...state.buffs.map((timer) => buffPill(timer, gameTimeSeconds)),
     ...state.inhibitors.map((timer) => inhibitorPill(timer, gameTimeSeconds)),
+    ...state.contests.map(contestPill),
   ];
   return candidatePills.filter((pill): pill is Pill => pill !== null);
 }

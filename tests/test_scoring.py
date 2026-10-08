@@ -29,6 +29,7 @@ from leagueasymode.scoring import (
     read_recorded_game,
     score_backs,
     score_combat_stats,
+    score_contests,
     score_control_wards,
     score_experience,
     score_fights,
@@ -671,3 +672,53 @@ def test_without_the_patchs_stats_fights_are_not_scored(tmp_path: Path) -> None:
         tmp_path, players_at(are_positions_given=True), timeline=timeline
     )
     assert score_fights(read_recorded_game(recording), None) is None
+
+
+def monster_kill(
+    game_time_seconds: float, team_id: int, monster_type: str, monster_sub_type: str = ""
+) -> JsonValue:
+    pit = (9866, 4414) if monster_type == "DRAGON" else (5007, 10471)
+    return {
+        "type": "ELITE_MONSTER_KILL",
+        "timestamp": round(game_time_seconds * 1000),
+        "killerTeamId": team_id,
+        "monsterType": monster_type,
+        "monsterSubType": monster_sub_type,
+        "position": {"x": pit[0], "y": pit[1]},
+    }
+
+
+def test_objective_contests_are_scored_on_your_teams_takes(tmp_path: Path) -> None:
+    timeline = game_timeline(
+        events_by_minute={
+            # Your team takes Dragon at 10:30 while Zed (8) dies at the pit: contested.
+            10: [
+                monster_kill(630.0, 100, "DRAGON", "FIRE_DRAGON"),
+                kill(625.0, 2, 8, [], place=(9800, 4500)),
+            ],
+            # Their team takes Dragon at 12:30: not your take, not scored.
+            12: [monster_kill(750.0, 200, "DRAGON", "WATER_DRAGON")],
+            # Your team takes the next Dragon at 15:00 with nobody in its way.
+            14: [monster_kill(870.0, 100, "DRAGON", "EARTH_DRAGON")],
+        }
+    )
+    recording = write_scored_recording(
+        tmp_path, players_at(are_positions_given=True), timeline=timeline
+    )
+    score = score_contests(read_recorded_game(recording), fixture_patch_stats())
+    assert score is not None
+    assert (score.estimator, score.sample_count, score.measure) == (
+        "objective contests",
+        2,
+        "contest_brier_score",
+    )
+    assert 0.0 < score.value < 1.0
+    assert score.describe().startswith("objective contests: 2 takes, Brier score ")
+
+
+def test_without_the_patchs_stats_contests_are_not_scored(tmp_path: Path) -> None:
+    timeline = game_timeline(events_by_minute={10: [monster_kill(630.0, 100, "DRAGON")]})
+    recording = write_scored_recording(
+        tmp_path, players_at(are_positions_given=True), timeline=timeline
+    )
+    assert score_contests(read_recorded_game(recording), None) is None

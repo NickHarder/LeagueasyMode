@@ -51,6 +51,7 @@ Proposed, built on a best guess until the owner says otherwise, as before:
 2. **Fight chance wording (5.2).** Proposed: "Fight now ~58% · their damage 70% physical" in
    the enemy strip's header, under the win chance, with "5v4" after the chance when the counts
    differ.
-3. **Contest wording (5.3).** Proposed: shown only while a monster is up or due within 0:30.
+3. **Contest wording (5.3).** Proposed: "Baron ~0:38 with 4 · contest ~60% (Vi)" in the
+   objective strip, only while a monster is up or due within 0:30.
 4. **The You panel's threshold (5.4).** Proposed: "holding gold" counts from the moment your
    unspent gold passes 1,300 (about a component and a ward) while alive and out of base.

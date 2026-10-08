@@ -272,6 +272,16 @@ export interface FightEstimate {
   readonly enemy_physical_share: number;
 }
 
+/** A monster up or soon: how long the player's team takes, and whether the enemy can come. */
+export interface ObjectiveContest {
+  readonly objective: "dragon" | "elder_dragon" | "baron";
+  readonly kill_seconds: number;
+  readonly ally_fighters: number;
+  readonly contest_chance: number;
+  readonly likeliest_contester: string | null;
+  readonly likeliest_chance: number;
+}
+
 /** One thing moving the win chance, from the player's side: above 0 for their team. */
 export interface WinReason {
   readonly label: string;
@@ -303,6 +313,7 @@ export interface OverlayState {
   readonly minimap: MinimapLayout | null;
   readonly win_chance: WinChance | null;
   readonly fight: FightEstimate | null;
+  readonly contests: readonly ObjectiveContest[];
   readonly callouts: readonly Callout[];
 }
 
@@ -684,6 +695,21 @@ export function isFightEstimate(value: unknown): value is FightEstimate {
   );
 }
 
+const CONTESTED_OBJECTIVES: ReadonlySet<string> = new Set(["dragon", "elder_dragon", "baron"]);
+
+/** Return whether a value is a monster's contest as the engine sends it. */
+export function isObjectiveContest(value: unknown): value is ObjectiveContest {
+  return (
+    isRecord(value) &&
+    isOneOf(value["objective"], CONTESTED_OBJECTIVES) &&
+    typeof value["kill_seconds"] === "number" &&
+    typeof value["ally_fighters"] === "number" &&
+    typeof value["contest_chance"] === "number" &&
+    (value["likeliest_contester"] === null || typeof value["likeliest_contester"] === "string") &&
+    typeof value["likeliest_chance"] === "number"
+  );
+}
+
 /** Return whether a value is an overlay state as the engine sends it. */
 export function isOverlayState(value: unknown): value is OverlayState {
   if (!isRecord(value)) {
@@ -708,6 +734,7 @@ export function isOverlayState(value: unknown): value is OverlayState {
     (value["minimap"] === null || isMinimapLayout(value["minimap"])) &&
     (value["win_chance"] === null || isWinChance(value["win_chance"])) &&
     (value["fight"] === null || isFightEstimate(value["fight"])) &&
+    isArrayOf(value["contests"], isObjectiveContest) &&
     isArrayOf(value["callouts"], isCallout)
   );
 }

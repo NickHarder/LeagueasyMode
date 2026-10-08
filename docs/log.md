@@ -6,6 +6,12 @@ skill has the format.
 
 ## 2026-10-08
 
+- Phase 5.3, objective contests (estimator 11): for Dragon, the Elder and Baron up or within 0:30,
+  the monster's 2026 health (patch 26.1's notes, unconfirmed) less a Smite over your living
+  team's damage through its resistances, against each enemy's chance to reach the pit first,
+  from the position filter's chances over the map (now exposed for this) or their respawn. The
+  objective strip shows it; the harness scores it on your team's takes against whether the other
+  team fought at the pit.
 - Phase 5.2, fights (estimator 10): an even fight now, every living player at full health. Each
   player's damage a second, physical and magic, from their combat stats and Riot's rating of
   the champion's damage (Data Dragon's `info`, now read), and their effective health against

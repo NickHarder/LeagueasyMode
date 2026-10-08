@@ -438,6 +438,26 @@ class FightEstimate(BaseModel):
     enemy_physical_share: float
 
 
+class ObjectiveContest(BaseModel):
+    """A monster up or soon: how long the player's team takes, and whether the enemy can come.
+
+    An estimate (`inference/contests.py`): the monster's health over the living team's damage,
+    against each enemy's chance to reach its pit before it dies.
+    """
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    objective: Literal["dragon", "elder_dragon", "baron"]
+    # From when it is up, with every living ally on it.
+    kill_seconds: float
+    ally_fighters: int
+    # The chance at least one enemy reaches its pit before it dies, counting the wait for its
+    # spawn; and the enemy likeliest to, with their chance.
+    contest_chance: float
+    likeliest_contester: str | None
+    likeliest_chance: float
+
+
 class WinReason(BaseModel):
     """One thing moving the win chance, from the player's side."""
 
@@ -501,6 +521,7 @@ class OverlayState(BaseModel):
     win_chance: WinChance | None = None
     # None while any living player's combat stats are unknown.
     fight: FightEstimate | None = None
+    contests: list[ObjectiveContest] = Field(default_factory=list)
     callouts: list[Callout] = Field(default_factory=list)
 
 

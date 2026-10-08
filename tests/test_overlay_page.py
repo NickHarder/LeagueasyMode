@@ -312,6 +312,18 @@ async def test_an_epic_monster_that_is_up_shows_in_the_strip(tmp_path: Path) -> 
         await keep_screenshot(page, "monster-up")
 
 
+async def test_a_monster_that_is_up_shows_how_long_it_takes_and_whether_they_contest(
+    tmp_path: Path,
+) -> None:
+    async with open_overlay(tmp_path, snapshot_count=60, speed=1.0, is_baron_taken=False) as page:
+        # Baron is up at 23:15: how long your five take on him, and the chance they come.
+        contest = page.locator('#objective-pills .pill[data-kind="contest"]')
+        await expect(contest).to_have_text(
+            re.compile(r"^Baron ~\d+:\d\d with 5\s*contest ~\d+%( \(\w+\))?$"), timeout=5000
+        )
+        await keep_screenshot(page, "objective-contest")
+
+
 async def test_two_enemies_down_open_a_numbers_window_and_show_in_the_enemy_strip(
     tmp_path: Path,
 ) -> None:

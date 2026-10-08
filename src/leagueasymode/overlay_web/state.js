@@ -299,6 +299,17 @@ export function isFightEstimate(value) {
         typeof value["ally_physical_share"] === "number" &&
         typeof value["enemy_physical_share"] === "number");
 }
+const CONTESTED_OBJECTIVES = new Set(["dragon", "elder_dragon", "baron"]);
+/** Return whether a value is a monster's contest as the engine sends it. */
+export function isObjectiveContest(value) {
+    return (isRecord(value) &&
+        isOneOf(value["objective"], CONTESTED_OBJECTIVES) &&
+        typeof value["kill_seconds"] === "number" &&
+        typeof value["ally_fighters"] === "number" &&
+        typeof value["contest_chance"] === "number" &&
+        (value["likeliest_contester"] === null || typeof value["likeliest_contester"] === "string") &&
+        typeof value["likeliest_chance"] === "number");
+}
 /** Return whether a value is an overlay state as the engine sends it. */
 export function isOverlayState(value) {
     if (!isRecord(value)) {
@@ -322,5 +333,6 @@ export function isOverlayState(value) {
         (value["minimap"] === null || isMinimapLayout(value["minimap"])) &&
         (value["win_chance"] === null || isWinChance(value["win_chance"])) &&
         (value["fight"] === null || isFightEstimate(value["fight"])) &&
+        isArrayOf(value["contests"], isObjectiveContest) &&
         isArrayOf(value["callouts"], isCallout));
 }

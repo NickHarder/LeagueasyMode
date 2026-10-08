@@ -27,6 +27,13 @@ const OBJECTIVE_NAMES = {
     rift_herald: "Herald",
     voidgrubs: "Voidgrubs",
 };
+const CONTESTED_NAMES = {
+    dragon: "Dragon",
+    elder_dragon: "Elder",
+    baron: "Baron",
+};
+// The likeliest enemy to contest is named from this chance.
+const NAMED_CONTESTER_CHANCE = 0.2;
 const BUFF_NAMES = {
     baron: "Baron buff",
     elder: "Elder buff",
@@ -191,6 +198,18 @@ export function numbersPill(window, gameTimeSeconds) {
         isUp: false,
     };
 }
+/** Return the pill of a monster's contest: "Baron ~0:38 with 4", "contest ~60% (Vi)". */
+export function contestPill(contest) {
+    const contester = contest.likeliest_contester;
+    const contesterText = contester !== null && contest.likeliest_chance >= NAMED_CONTESTER_CHANCE ? ` (${contester})` : "";
+    return {
+        label: `${CONTESTED_NAMES[contest.objective]} ~${formatCountdown(contest.kill_seconds)} with ${String(contest.ally_fighters)}`,
+        timeText: `contest ~${String(Math.round(contest.contest_chance * PERCENT))}%${contesterText}`,
+        kind: "contest",
+        side: contest.contest_chance >= EVEN_CHANCE ? "enemy" : "ally",
+        isUp: false,
+    };
+}
 /** Return every pill to show beside the dragon, in a steady order. */
 function stripPills(state, gameTimeSeconds) {
     const candidatePills = [
@@ -198,6 +217,7 @@ function stripPills(state, gameTimeSeconds) {
         ...state.objectives.map((timer) => objectivePill(timer, gameTimeSeconds)),
         ...state.buffs.map((timer) => buffPill(timer, gameTimeSeconds)),
         ...state.inhibitors.map((timer) => inhibitorPill(timer, gameTimeSeconds)),
+        ...state.contests.map(contestPill),
     ];
     return candidatePills.filter((pill) => pill !== null);
 }
