@@ -6,6 +6,10 @@ skill has the format.
 
 ## 2026-10-08
 
+- Phase 4.2, clues to positions: the moments the feed or the scoreboard pins a player's place
+  (an objective's takers at it, a turret's victim at it, a respawn or trip to base in base,
+  creep score in a lane or the jungle), each on the map. Each enemy's row shows the latest. The
+  lookup of a player by the feed's name moved onto the game's snapshot, shared by gold and clues.
 - Phase 4's plan, a draft for the owner: the map, the clues, positions (a particle filter), the
   jungle path, control wards and the minimap layer, with three proposals where the owner decides.
   Built on its best guesses meanwhile, as the owner asked.

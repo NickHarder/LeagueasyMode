@@ -134,6 +134,15 @@ export interface NextItemEstimate {
   readonly affordable_at_game_time_seconds: number | null;
 }
 
+/** A moment a player's place was known, or nearly: what pinned it, when, and where. */
+export interface PositionClue {
+  readonly kind: "fountain" | "objective" | "turret" | "lane" | "jungle";
+  readonly game_time_seconds: number;
+  readonly place: string;
+  readonly point_name: string | null;
+  readonly region: string;
+}
+
 /** One player as the scoreboard shows them: side, role, level, and when they are back. */
 export interface PlayerCard {
   readonly champion_name: string;
@@ -152,6 +161,7 @@ export interface PlayerCard {
   readonly level_estimate: LevelEstimate | null;
   readonly last_back: BackEstimate | null;
   readonly next_item: NextItemEstimate | null;
+  readonly last_clue: PositionClue | null;
 }
 
 /** What each team's items are worth: gold earned and spent, not gold in hand. */
@@ -399,6 +409,20 @@ export function isNextItemEstimate(value: unknown): value is NextItemEstimate {
   );
 }
 
+const CLUE_KINDS: ReadonlySet<string> = new Set(["fountain", "objective", "turret", "lane", "jungle"]);
+
+/** Return whether a value is a clue to a player's place as the engine sends it. */
+export function isPositionClue(value: unknown): value is PositionClue {
+  return (
+    isRecord(value) &&
+    isOneOf(value["kind"], CLUE_KINDS) &&
+    typeof value["game_time_seconds"] === "number" &&
+    typeof value["place"] === "string" &&
+    (value["point_name"] === null || typeof value["point_name"] === "string") &&
+    typeof value["region"] === "string"
+  );
+}
+
 /** Return whether a value is a player's card as the engine sends it. */
 export function isPlayerCard(value: unknown): value is PlayerCard {
   return (
@@ -418,7 +442,8 @@ export function isPlayerCard(value: unknown): value is PlayerCard {
     (value["gold"] === null || isGoldEstimate(value["gold"])) &&
     (value["level_estimate"] === null || isLevelEstimate(value["level_estimate"])) &&
     (value["last_back"] === null || isBackEstimate(value["last_back"])) &&
-    (value["next_item"] === null || isNextItemEstimate(value["next_item"]))
+    (value["next_item"] === null || isNextItemEstimate(value["next_item"])) &&
+    (value["last_clue"] === null || isPositionClue(value["last_clue"]))
   );
 }
 

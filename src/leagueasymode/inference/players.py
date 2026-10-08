@@ -22,6 +22,7 @@ from leagueasymode.overlay_state import (
     NumbersWindow,
     PlayerCard,
     PlayerIntel,
+    PositionClue,
     TeamItemGold,
 )
 from leagueasymode.patch_data import ItemCatalog
@@ -37,6 +38,7 @@ def player_cards(
     gold_estimates: Mapping[PlayerKey, GoldEstimate] | None = None,
     level_estimates: Mapping[PlayerKey, LevelEstimate] | None = None,
     last_backs: Mapping[PlayerKey, BackEstimate] | None = None,
+    position_clues: Mapping[PlayerKey, list[PositionClue]] | None = None,
 ) -> list[PlayerCard]:
     """Return a card for every player, the player's own team first, each team in scoreboard order.
 
@@ -50,6 +52,8 @@ def player_cards(
         gold_estimates: Each player's gold, by key; None while the game's gold is not followed.
         level_estimates: Each player's experience, by key; None while it is not followed.
         last_backs: Each player's last trip to base, by key; None while trips are not followed.
+        position_clues: Each player's clues to where they are, oldest first, by key; None while
+            they are not gathered.
 
     Returns:
         The cards.
@@ -87,6 +91,7 @@ def player_cards(
                 player_records=player_records,
                 gold=gold_estimates.get(player_key(player)) if gold_estimates is not None else None,
             ),
+            last_clue=_last_clue(player, position_clues),
         )
         for index, player in [*allies, *enemies]
     ]
@@ -174,6 +179,22 @@ def _next_item(
         gold=gold,
         game_time_seconds=snapshot.game_data.game_time_seconds,
     )
+
+
+def _last_clue(
+    player: ScoreboardPlayer, position_clues: Mapping[PlayerKey, list[PositionClue]] | None
+) -> PositionClue | None:
+    """Return the latest clue to where a player is.
+
+    Args:
+        player: The player.
+        position_clues: Each player's clues, oldest first; None while they are not gathered.
+
+    Returns:
+        The clue, or None without one.
+    """
+    clues = position_clues.get(player_key(player), []) if position_clues is not None else []
+    return clues[-1] if clues else None
 
 
 def _intel(

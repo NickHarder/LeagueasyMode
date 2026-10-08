@@ -22,6 +22,7 @@ import {
   type OverlayState,
   type PlayerCard,
   type PlayerIntel,
+  type PositionClue,
   type RankedStanding,
   isOverlayState,
 } from "./state.js";
@@ -62,6 +63,8 @@ const LIKELY_NEXT_ITEM = 0.5;
 // From this chance an enemy is taken to be able to afford their next item.
 const LIKELY_TO_AFFORD = 0.75;
 const PERCENT = 100;
+// An enemy's latest clue to their place is shown for this long after it.
+const CLUE_SHOWN_SECONDS = 120;
 // An enemy's last trip to base is shown for this long after they shopped.
 const BACK_SHOWN_SECONDS = 90;
 // An enemy's next power level (6, 11, 16) is shown once it is estimated this close.
@@ -342,6 +345,15 @@ export function formatNextItem(estimate: NextItemEstimate): string {
   return parts.join(" \u00b7 ");
 }
 
+/** Return an enemy's latest clue to their place, "at Dragon 0:40 ago", or null once it is old. */
+export function formatLastClue(clue: PositionClue, gameTimeSeconds: number): string | null {
+  const ageSeconds = gameTimeSeconds - clue.game_time_seconds;
+  if (ageSeconds > CLUE_SHOWN_SECONDS) {
+    return null;
+  }
+  return `${clue.place} ${formatCountdown(ageSeconds)} ago`;
+}
+
 /** Return a header of the enemy strip: a label and the player's team's lead, colored by side. */
 function leadElement(className: string, label: string, leadGold: number, valueText: string): HTMLElement {
   const header = document.createElement("div");
@@ -496,6 +508,15 @@ function enemyRowElement(
     powerLevelElement.className = "enemy-power-level";
     powerLevelElement.textContent = powerLevelText;
     row.append(powerLevelElement);
+  }
+  const lastClueText =
+    card.last_clue === null || card.is_dead ? null : formatLastClue(card.last_clue, gameTimeSeconds);
+  if (lastClueText !== null) {
+    const clueElement = document.createElement("span");
+    clueElement.className = "enemy-seen";
+    clueElement.dataset["kind"] = card.last_clue?.kind ?? "";
+    clueElement.textContent = lastClueText;
+    row.append(clueElement);
   }
   const lastBackText = card.last_back === null ? null : formatLastBack(card.last_back, gameTimeSeconds);
   if (lastBackText !== null) {
