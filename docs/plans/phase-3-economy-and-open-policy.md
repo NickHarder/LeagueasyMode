@@ -3,8 +3,11 @@ type: Plan
 title: "Phase 3: the hidden economy, and what the open policy adds"
 description: The slices of phase 3 of the approved plan, gold, XP, backs and build paths, plus what the owner's 2026-10-08 answer that everything may show adds, in a proposed build order with what each needs and where the owner decides.
 tags: [plan, phase-3, policy]
-status: draft
-generated: { by: claude-code/cloud, at: 2026-10-08T20:30:50Z }
+status: stable
+generated: { by: claude-code/cloud, at: 2026-10-08T20:36:27Z }
+verified:
+  - { by: human:nickharder, at: 2026-10-08T20:36:28Z }
+approved_sha256: 0db8a4dbff02a71338e1c0e9e4e844658b1743535eaac86acde115ee2541cd46
 ---
 
 # Phase 3: the hidden economy, and what the open policy adds
@@ -57,15 +60,19 @@ to measure, though their structure is built and tested now on built data.
 
 ## Where the owner decides
 
-1. **The hotkey scheme for marking cooldowns (3.2).** A proposal: ⌃⌥ and a digit picks an enemy in
-   role order (1 top to 5 support), then F marks their Flash, D their other spell, R their ultimate.
-   The look and keys are yours.
-2. **Suggestions' wording (3.3)**, and whether they are spoken.
-3. **Loading-screen intel's reach (3.1).** It asks the League client for other players' ranked
-   stats and recent games; the client asks Riot. The answers stay on the Mac and are anonymized out
-   of anything committed. Say if any of it should stay off.
-4. **The order.** 3.1 to 3.3 first because they help from the first game; say if gold and XP
-   should come first instead.
+Answered on 2026-10-08, the plan approved with them:
+
+1. **The hotkey scheme for marking cooldowns (3.2):** as proposed, "sounds good". ⌃⌥ and a digit
+   picks an enemy in role order (1 top to 5 support), then F marks their Flash, D their other
+   spell, R their ultimate.
+2. **Suggestions' wording (3.3), and whether they are spoken:** "use your best guess and we can
+   tweak and iterate as needed". Text only to start; the wording is a first draft.
+3. **Loading-screen intel's reach (3.1):** "looking up other players stats is fine, just not with
+   a dev key we might be rate limited pretty hard". So the lookups go through the League client's
+   own session, never a Riot developer key: each player once per game, one request at a time,
+   with answers kept for the next game. The answers stay on the Mac and are anonymized out of
+   anything committed.
+4. **The order:** 3.1 to 3.3 first, as proposed.
 
 ## A risk to the account
 

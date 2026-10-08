@@ -6,6 +6,9 @@ skill has the format.
 
 ## 2026-10-08
 
+- Phase 3's plan approved by the owner, with their answers: the hotkey scheme as proposed,
+  suggestions worded by best guess to iterate on, and other players' stats looked up through the
+  League client's own session rather than a developer key, to keep clear of rate limits.
 - Phase 3 planned in [plans/phase-3-economy-and-open-policy.md](plans/phase-3-economy-and-open-policy.md):
   the hidden economy from the approved plan, plus what the owner's open policy adds (loading-screen
   intel, cooldowns the player marks, suggestions), with the three that help from the first game

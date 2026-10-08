@@ -3,16 +3,17 @@
 If you are picking this work up, human or model: read this file top to bottom first. The `handoff` skill
 refreshes it; it describes the current state.
 
-Last updated: 2026-10-08, on branch `feat/exact-facts`. Pull requests #2, #3 and #4 are merged:
-#2 into `main`, #3 and #4 into the branches they were stacked on, so `feat/exact-facts` holds all
-three. Pull request #5 brings it into `main`.
+Last updated: 2026-10-08, on branch `feat/phase-3-plan`. `main` holds phases 0 to 2 (pull requests
+#2 to #5, merged); the stacked branches are deleted.
 
 ## Where things stand
 
 The plan is [docs/plans/overlay-and-inference.md](docs/plans/overlay-and-inference.md) (approved by
 the owner on 2026-10-08). Phase 0 is done; phase 1, the tracer bullet, is built and waits for the
 test on a Mac; phase 2 ([docs/plans/phase-2-exact-facts.md](docs/plans/phase-2-exact-facts.md)) is
-built but for structures, left out until the first recordings.
+built but for structures, left out until the first recordings. Phase 3
+([docs/plans/phase-3-economy-and-open-policy.md](docs/plans/phase-3-economy-and-open-policy.md)) is
+approved by the owner; 3.1, loading-screen intel, is next.
 
 | Area | State | Proof |
 |---|---|---|
@@ -44,22 +45,20 @@ In `AGENTS.md`, this project's own included: every session reads that file.
 
 ## Open, for the owner
 
-1. **Merge pull request #5** (https://github.com/NickHarder/LeagueasyMode/pull/5): `feat/exact-facts`
-   into `main`, everything already reviewed in #3 and #4. Then the stacked branches
-   (`feat/overlay-and-inference`, `feat/exact-facts`, `feat/combat-stats`) can be deleted.
-2. **Data Dragon from this environment**: the owner said yes on 2026-10-08; the environment's
+1. **Data Dragon from this environment**: the owner said yes on 2026-10-08; the environment's
    network settings still deny `ddragon.leagueoflegends.com`. Once it is allowed, a session checks
    the parsing against the real files.
-3. **The test on a Mac** in [docs/references/macos-app.md](docs/references/macos-app.md): run the
+2. **The test on a Mac** in [docs/references/macos-app.md](docs/references/macos-app.md): run the
    app, play a Practice Tool game in each display mode, and record a game or two. The recordings
    (anonymized) become the test data every estimator needs.
-4. **Compare Riot's root certificate** once with Riot's own `riotgames.pem`: the SHA-256
+3. **Compare Riot's root certificate** once with Riot's own `riotgames.pem`: the SHA-256
    fingerprint is in `src/leagueasymode/riot_tls.py`.
-5. **The kit's gate skills** (`kickoff`, `audit-codebase`, `define-personas`, `plan-architecture`,
+4. **The kit's gate skills** (`kickoff`, `audit-codebase`, `define-personas`, `plan-architecture`,
    `define-key-metrics`) have not been run; the approved plan stands in for the plan and the
    architecture. Say whether to run any of them.
-6. **Documents waiting for approval** (`make docs-status`): both plans, the retrospective, and the
-   references on recordings, the engine and the macOS app, all drafts.
+5. **Documents waiting for approval** (`make docs-status`): the approved plan v2 and phase 2's
+   plan, the retrospective, and the references on recordings, the engine and the macOS app, all
+   drafts. Phase 3's plan is approved.
 
 ## Where everything is
 
