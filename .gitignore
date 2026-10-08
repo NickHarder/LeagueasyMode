@@ -1,17 +1,23 @@
-# Python
+.venv/
+.env
 __pycache__/
-*.py[oc]
-*.egg-info/
+*.pyc
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.coverage
+htmlcov/
+.DS_Store
+# Eval reports from `make evals` (the committed record is evals/baseline.json)
+evals/out/
+# Personal, per-machine agent settings
+.claude/settings.local.json
+# Build output
 build/
 dist/
-wheels/
-
-# Virtual environments
-.venv/
-
-# Tool caches
-.ruff_cache/
-.mypy_cache/
-
-# macOS
-.DS_Store
+*.egg-info/
+node_modules/
+overlay/macos/.build/
+# Raw recordings hold other players' names: only anonymized copies are committed (tests/fixtures/)
+recordings/
+*.lgrec

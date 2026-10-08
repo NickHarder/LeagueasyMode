@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+# The local gate. Enabled by `make bootstrap`, or once per clone with:
+#     git config core.hooksPath .githooks
+# Before every push it runs scripts/gate.sh, the same script `make gate` runs: $0, offline, fast.
+# Anything red stops the push and says why. The gate checks the files as they are in the working
+# tree; the secret scan looks only at the commits this push sends.
+# Emergency bypass: SKIP_GATE=1 git push ...   (say why in the merge request).
+#
+# git gives the remote's name as $1 and one line per pushed ref on stdin:
+#     <local ref> <local sha> <remote ref> <remote sha>
+set -euo pipefail
+
+if [ "${SKIP_GATE:-0}" = "1" ]; then
+  echo "pre-push: gate skipped (SKIP_GATE=1)"
+  exit 0
+fi
+
+remote_name="${1:-origin}"
+zero=0000000000000000000000000000000000000000
+pushed_tips=""
+while read -r _local_ref local_sha _remote_ref _remote_sha; do
+  [ "$local_sha" = "$zero" ] && continue # a branch deletion sends no commits
+  pushed_tips="$pushed_tips $local_sha"
+done
+
+if [ -z "$pushed_tips" ]; then
+  echo "pre-push: nothing but deletions in this push; gate not needed"
+  exit 0
+fi
+
+root=$(git rev-parse --show-toplevel)
+# Every commit reachable from what is being pushed and not already on a branch of this remote.
+GATE_RANGE="${pushed_tips# } --not --remotes=$remote_name"
+export GATE_RANGE
+GATE_CONTEXT=pre-push exec "$root/scripts/gate.sh"

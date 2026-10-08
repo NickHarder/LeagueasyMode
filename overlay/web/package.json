@@ -1,0 +1,13 @@
+{
+  "name": "leagueasymode-overlay-web",
+  "private": true,
+  "description": "The overlay's widgets. `npm run build` compiles them into the Python package (src/leagueasymode/overlay_web/).",
+  "type": "module",
+  "scripts": {
+    "build": "tsc --project tsconfig.json",
+    "check": "tsc --project tsconfig.json --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "7.0.2"
+  }
+}

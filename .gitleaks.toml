@@ -1,0 +1,8 @@
+# Secret scanning (scripts/secrets_scan.sh): gitleaks' default rules, plus this repository's allowlist.
+#
+# The generic-api-key rule also fires on documentation and comments shaped `key: <value>` (and token,
+# secret, auth). Rename such a field (`ref`, `id`) rather than widening the allowlist. An allowlist
+# entry names exact paths and an exact pattern, with the reason.
+
+[extend]
+useDefault = true
