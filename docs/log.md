@@ -6,6 +6,7 @@ skill has the format.
 
 ## 2026-10-08
 
+- This season's timers and phase 2.8 pushed and opened as pull request #4, stacked on #3.
 - Phase 2.8, estimator 2: each player's combat stats, exact for the player on this machine and
   estimated for the others from their champion, level and items. The owner chose where champion
   base stats come from: Riot's Data Dragon, fetched by the engine once a patch and kept on disk.

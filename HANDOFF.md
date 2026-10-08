@@ -3,8 +3,8 @@
 If you are picking this work up, human or model: read this file top to bottom first. The `handoff` skill
 refreshes it; it describes the current state.
 
-Last updated: 2026-10-08, on branch `feat/combat-stats` (local only, not pushed), which stacks
-this season's timers and phase 2.8 on `feat/exact-facts` (pull request #3, green), which stacks on
+Last updated: 2026-10-08, on branch `feat/combat-stats`, pull request #4, which stacks this
+season's timers and phase 2.8 on `feat/exact-facts` (pull request #3, green), which stacks on
 `feat/overlay-and-inference` (pull request #2 into `main`, green).
 
 ## Where things stand
@@ -46,9 +46,9 @@ In `AGENTS.md`, this project's own included: every session reads that file.
 
 1. **Review and merge pull request #2** (https://github.com/NickHarder/LeagueasyMode/pull/2), then
    #3 (https://github.com/NickHarder/LeagueasyMode/pull/3), which merges into #2's branch; GitHub
-   moves #3 onto `main` when #2's branch is deleted on merge, or change its base by hand. Then say
-   whether to push `feat/combat-stats` and open its pull request, stacked on #3.
-2. **One new dependency**, in `feat/combat-stats`: `truststore`, so that HTTPS to Data Dragon trusts
+   moves #3 onto `main` when #2's branch is deleted on merge, or change its base by hand. Then #4
+   (https://github.com/NickHarder/LeagueasyMode/pull/4), stacked on #3 the same way.
+2. **One new dependency**, in pull request #4: `truststore`, so that HTTPS to Data Dragon trusts
    the Mac's own certificates (Python as uv installs it may find none of its own). Say if you would
    rather not have it.
 3. **Data Dragon from this environment**: allowing `ddragon.leagueoflegends.com` in its network
