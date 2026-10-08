@@ -61,6 +61,39 @@ export interface CombatStats {
   readonly move_speed: number;
 }
 
+/** A player's rank in one ranked queue this season. */
+export interface RankedStanding {
+  readonly queue: "solo" | "flex";
+  readonly tier: string;
+  readonly division: string;
+  readonly league_points: number;
+  readonly wins: number;
+  readonly losses: number;
+}
+
+/** What a player's record says before the game: rank, recent form, and the champion and role. */
+export interface PlayerIntel {
+  readonly ranked: RankedStanding | null;
+  readonly recent_game_count: number;
+  readonly recent_win_count: number;
+  readonly streak: number;
+  readonly champion_game_count: number;
+  readonly champion_win_count: number;
+  readonly usual_position: string;
+  readonly is_off_role: boolean;
+}
+
+/** A spell the player marked an enemy as having used, and when it is back: an estimate. */
+export interface CooldownTimer {
+  readonly cooldown_id: string;
+  readonly champion_name: string;
+  readonly spell: "flash" | "summoner" | "ultimate";
+  readonly spell_name: string;
+  readonly label: string;
+  readonly marked_at_game_time_seconds: number;
+  readonly ready_at_game_time_seconds: number;
+}
+
 /** One player as the scoreboard shows them: side, role, level, and when they are back. */
 export interface PlayerCard {
   readonly champion_name: string;
@@ -74,6 +107,7 @@ export interface PlayerCard {
   readonly item_gold: number | null;
   readonly finished_item_names: readonly string[];
   readonly combat_stats: CombatStats | null;
+  readonly intel: PlayerIntel | null;
 }
 
 /** What each team's items are worth: gold earned and spent, not gold in hand. */
@@ -89,7 +123,13 @@ export interface NumbersWindow {
   readonly ends_at_game_time_seconds: number;
 }
 
-export type CalloutKind = "numbers_window" | "level_spike" | "objective_soon" | "item_spike";
+export type CalloutKind =
+  | "numbers_window"
+  | "level_spike"
+  | "objective_soon"
+  | "item_spike"
+  | "cooldown_ready"
+  | "suggestion";
 
 /** A short notice shown for a few seconds when something happens; never an instruction. */
 export interface Callout {
@@ -110,6 +150,7 @@ export interface OverlayState {
   readonly players: readonly PlayerCard[];
   readonly numbers_window: NumbersWindow | null;
   readonly team_item_gold: TeamItemGold | null;
+  readonly cooldowns: readonly CooldownTimer[];
   readonly callouts: readonly Callout[];
 }
 
@@ -126,7 +167,10 @@ const CALLOUT_KINDS: ReadonlySet<string> = new Set([
   "level_spike",
   "objective_soon",
   "item_spike",
+  "cooldown_ready",
+  "suggestion",
 ]);
+const MARKED_SPELLS: ReadonlySet<string> = new Set(["flash", "summoner", "ultimate"]);
 
 /** Return whether a value is a plain object, so that its fields can be read. */
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -221,6 +265,36 @@ export function isCombatStats(value: unknown): value is CombatStats {
   );
 }
 
+const RANKED_QUEUES: ReadonlySet<string> = new Set(["solo", "flex"]);
+
+/** Return whether a value is a player's rank as the engine sends it. */
+export function isRankedStanding(value: unknown): value is RankedStanding {
+  return (
+    isRecord(value) &&
+    isOneOf(value["queue"], RANKED_QUEUES) &&
+    typeof value["tier"] === "string" &&
+    typeof value["division"] === "string" &&
+    typeof value["league_points"] === "number" &&
+    typeof value["wins"] === "number" &&
+    typeof value["losses"] === "number"
+  );
+}
+
+/** Return whether a value is a player's intel as the engine sends it. */
+export function isPlayerIntel(value: unknown): value is PlayerIntel {
+  return (
+    isRecord(value) &&
+    (value["ranked"] === null || isRankedStanding(value["ranked"])) &&
+    typeof value["recent_game_count"] === "number" &&
+    typeof value["recent_win_count"] === "number" &&
+    typeof value["streak"] === "number" &&
+    typeof value["champion_game_count"] === "number" &&
+    typeof value["champion_win_count"] === "number" &&
+    typeof value["usual_position"] === "string" &&
+    typeof value["is_off_role"] === "boolean"
+  );
+}
+
 /** Return whether a value is a player's card as the engine sends it. */
 export function isPlayerCard(value: unknown): value is PlayerCard {
   return (
@@ -235,7 +309,8 @@ export function isPlayerCard(value: unknown): value is PlayerCard {
     isNumberOrNull(value["respawns_at_game_time_seconds"]) &&
     isNumberOrNull(value["item_gold"]) &&
     isArrayOf(value["finished_item_names"], (name: unknown): name is string => typeof name === "string") &&
-    (value["combat_stats"] === null || isCombatStats(value["combat_stats"]))
+    (value["combat_stats"] === null || isCombatStats(value["combat_stats"])) &&
+    (value["intel"] === null || isPlayerIntel(value["intel"]))
   );
 }
 
@@ -269,6 +344,20 @@ export function isCallout(value: unknown): value is Callout {
   );
 }
 
+/** Return whether a value is a marked cooldown as the engine sends it. */
+export function isCooldownTimer(value: unknown): value is CooldownTimer {
+  return (
+    isRecord(value) &&
+    typeof value["cooldown_id"] === "string" &&
+    typeof value["champion_name"] === "string" &&
+    isOneOf(value["spell"], MARKED_SPELLS) &&
+    typeof value["spell_name"] === "string" &&
+    typeof value["label"] === "string" &&
+    typeof value["marked_at_game_time_seconds"] === "number" &&
+    typeof value["ready_at_game_time_seconds"] === "number"
+  );
+}
+
 /** Return whether a value is an overlay state as the engine sends it. */
 export function isOverlayState(value: unknown): value is OverlayState {
   if (!isRecord(value)) {
@@ -285,6 +374,7 @@ export function isOverlayState(value: unknown): value is OverlayState {
     isArrayOf(value["players"], isPlayerCard) &&
     (value["numbers_window"] === null || isNumbersWindow(value["numbers_window"])) &&
     (value["team_item_gold"] === null || isTeamItemGold(value["team_item_gold"])) &&
+    isArrayOf(value["cooldowns"], isCooldownTimer) &&
     isArrayOf(value["callouts"], isCallout)
   );
 }

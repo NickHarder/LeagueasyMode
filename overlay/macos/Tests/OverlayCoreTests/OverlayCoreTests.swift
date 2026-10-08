@@ -104,3 +104,64 @@ final class RepositoryLocatorTests: XCTestCase {
         )
     }
 }
+
+final class MarkSequenceTests: XCTestCase {
+    func testAPickThenASpellMakesAMark() {
+        var sequence = MarkSequence()
+        sequence.pickEnemy(slot: 3, atSeconds: 100)
+        XCTAssertEqual(
+            sequence.markSpell(.flash, atSeconds: 101), CooldownMark(enemySlot: 3, spell: .flash)
+        )
+    }
+
+    func testASpellWithNoPickMarksNothing() {
+        var sequence = MarkSequence()
+        XCTAssertNil(sequence.markSpell(.ultimate, atSeconds: 5))
+    }
+
+    func testAPickWaitsOnlyAFewSeconds() {
+        var sequence = MarkSequence()
+        sequence.pickEnemy(slot: 2, atSeconds: 100)
+        XCTAssertNil(sequence.markSpell(.summoner, atSeconds: 100 + MarkSequence.pickWaitSeconds + 1))
+    }
+
+    func testOnePickMakesOneMark() {
+        var sequence = MarkSequence()
+        sequence.pickEnemy(slot: 1, atSeconds: 10)
+        XCTAssertNotNil(sequence.markSpell(.flash, atSeconds: 11))
+        XCTAssertNil(sequence.markSpell(.ultimate, atSeconds: 11.5))
+    }
+
+    func testALaterPickReplacesAnEarlierOne() {
+        var sequence = MarkSequence()
+        sequence.pickEnemy(slot: 1, atSeconds: 10)
+        sequence.pickEnemy(slot: 4, atSeconds: 10.5)
+        XCTAssertEqual(
+            sequence.markSpell(.ultimate, atSeconds: 11), CooldownMark(enemySlot: 4, spell: .ultimate)
+        )
+    }
+
+    func testAPlaceOutsideOneToFiveIsNoPick() {
+        var sequence = MarkSequence()
+        sequence.pickEnemy(slot: 2, atSeconds: 10)
+        sequence.pickEnemy(slot: 7, atSeconds: 10.5)
+        XCTAssertNil(sequence.markSpell(.flash, atSeconds: 11))
+    }
+}
+
+final class MarkRequestTests: XCTestCase {
+    func testAMarkIsPostedBesideTheOverlayPageWithTheAppsHeader() throws {
+        let overlayURL = try XCTUnwrap(URL(string: "http://127.0.0.1:52011/"))
+        let request = MarkRequest.make(
+            overlayURL: overlayURL, mark: CooldownMark(enemySlot: 2, spell: .ultimate)
+        )
+        XCTAssertEqual(request.url?.absoluteString, "http://127.0.0.1:52011/marks")
+        XCTAssertEqual(request.httpMethod, "POST")
+        XCTAssertEqual(request.value(forHTTPHeaderField: "X-LeagueasyMode-Request"), "mark")
+        XCTAssertEqual(request.value(forHTTPHeaderField: "Content-Type"), "application/json")
+        let body = try XCTUnwrap(request.httpBody)
+        let decoded = try XCTUnwrap(JSONSerialization.jsonObject(with: body) as? [String: Any])
+        XCTAssertEqual(decoded["enemy_slot"] as? Int, 2)
+        XCTAssertEqual(decoded["spell"] as? String, "ultimate")
+    }
+}

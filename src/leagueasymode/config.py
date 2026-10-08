@@ -83,6 +83,9 @@ class Settings(BaseSettings):
     overlay_port: int = 0
     # Whether `leagueasymode run` also records every game it shows.
     record_while_running: bool = True
+    # The pause after each question to the League client about a player, to stay gentle on the
+    # client and on Riot: each player is asked about twice per game, one request at a time.
+    player_lookup_pause_seconds: float = 0.25
     # Whether the engine may fetch a patch's champion and item stats from Riot's Data Dragon, once
     # a patch, the one request it makes beyond this machine; off, only patches on disk are used.
     download_patch_stats: bool = True

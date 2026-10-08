@@ -3,16 +3,18 @@
 If you are picking this work up, human or model: read this file top to bottom first. The `handoff` skill
 refreshes it; it describes the current state.
 
-Last updated: 2026-10-08, on branch `feat/exact-facts`. Pull requests #2, #3 and #4 are merged:
-#2 into `main`, #3 and #4 into the branches they were stacked on, so `feat/exact-facts` holds all
-three. Pull request #5 brings it into `main`.
+Last updated: 2026-10-08, on branch `feat/phase-3-plan`. `main` holds phases 0 to 2 (pull requests
+#2 to #5, merged); the stacked branches are deleted.
 
 ## Where things stand
 
 The plan is [docs/plans/overlay-and-inference.md](docs/plans/overlay-and-inference.md) (approved by
 the owner on 2026-10-08). Phase 0 is done; phase 1, the tracer bullet, is built and waits for the
 test on a Mac; phase 2 ([docs/plans/phase-2-exact-facts.md](docs/plans/phase-2-exact-facts.md)) is
-built but for structures, left out until the first recordings.
+built but for structures, left out until the first recordings. Phase 3
+([docs/plans/phase-3-economy-and-open-policy.md](docs/plans/phase-3-economy-and-open-policy.md)) is
+approved by the owner; 3.1, loading-screen intel, is pull request #7; 3.2, marked cooldowns, #8;
+3.3, suggestions, is built on `feat/suggestions`; 3.4, the scoring harness, is next.
 
 | Area | State | Proof |
 |---|---|---|
@@ -44,22 +46,20 @@ In `AGENTS.md`, this project's own included: every session reads that file.
 
 ## Open, for the owner
 
-1. **Merge pull request #5** (https://github.com/NickHarder/LeagueasyMode/pull/5): `feat/exact-facts`
-   into `main`, everything already reviewed in #3 and #4. Then the stacked branches
-   (`feat/overlay-and-inference`, `feat/exact-facts`, `feat/combat-stats`) can be deleted.
-2. **Data Dragon from this environment**: the owner said yes on 2026-10-08; the environment's
+1. **Data Dragon from this environment**: the owner said yes on 2026-10-08; the environment's
    network settings still deny `ddragon.leagueoflegends.com`. Once it is allowed, a session checks
    the parsing against the real files.
-3. **The test on a Mac** in [docs/references/macos-app.md](docs/references/macos-app.md): run the
+2. **The test on a Mac** in [docs/references/macos-app.md](docs/references/macos-app.md): run the
    app, play a Practice Tool game in each display mode, and record a game or two. The recordings
    (anonymized) become the test data every estimator needs.
-4. **Compare Riot's root certificate** once with Riot's own `riotgames.pem`: the SHA-256
+3. **Compare Riot's root certificate** once with Riot's own `riotgames.pem`: the SHA-256
    fingerprint is in `src/leagueasymode/riot_tls.py`.
-5. **The kit's gate skills** (`kickoff`, `audit-codebase`, `define-personas`, `plan-architecture`,
+4. **The kit's gate skills** (`kickoff`, `audit-codebase`, `define-personas`, `plan-architecture`,
    `define-key-metrics`) have not been run; the approved plan stands in for the plan and the
    architecture. Say whether to run any of them.
-6. **Documents waiting for approval** (`make docs-status`): both plans, the retrospective, and the
-   references on recordings, the engine and the macOS app, all drafts.
+5. **Documents waiting for approval** (`make docs-status`): the approved plan v2 and phase 2's
+   plan, the retrospective, and the references on recordings, the engine and the macOS app, all
+   drafts. Phase 3's plan is approved.
 
 ## Where everything is
 
@@ -91,6 +91,8 @@ In `AGENTS.md`. Also: a raw recording (it holds other players' names); only `ano
   summoner spell timers and instructions to the player. Facts are still tagged exact or estimate,
   so the overlay can say how sure it is.
 - `truststore` as a dependency, for HTTPS to Data Dragon (the owner, 2026-10-08).
+- Pushing and opening pull requests need no asking; deletions on GitHub and force pushes stay off
+  limits (the owner, 2026-10-08; `AGENTS.md`, rule 1).
 
 ## Known limitations
 
@@ -103,6 +105,12 @@ In `AGENTS.md`. Also: a raw recording (it holds other players' names); only `ano
   this patch's, and the "finished item" rule (a full recipe of at least 2000 gold) and the support
   item names are to be checked on a real catalog.
 - The role costs are a hand-set prior, not yet fitted on recorded games.
+- The suggestions' wording is a first draft, and their thresholds (an objective within 0:30, a
+  window of at least 0:20) are hand-set; the owner tunes both.
+- Loading-screen intel reads the client's ranked stats and match history in the shapes other tools
+  describe; no real answer has been seen. If the client does not answer for other players, or
+  answers in another shape, the line under each enemy stays empty until the first recording shows
+  what to read.
 - Combat stats leave out runes, passives, stacks and buffs, so an estimate runs low for a champion
   that has them. Data Dragon's item stats leave out some stats (ability haste, lethality, magic
   penetration), which the overlay does not show anyway. The Data Dragon test files are

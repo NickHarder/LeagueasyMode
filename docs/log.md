@@ -6,6 +6,30 @@ skill has the format.
 
 ## 2026-10-08
 
+- Phase 3.3, suggestions: callouts that name an action when the facts line up (an objective in a
+  numbers window, their jungler dead, a Flash or ultimate just marked, a Baron or Elder buff just
+  taken), worded on a best guess for the owner to tune, text only. The callouts' docstring no
+  longer says the overlay never instructs, since the owner's policy now allows it.
+- Phase 3.2, marked cooldowns: ⌃⌥ and a digit picks an enemy in role order, then ⌃⌥ F, D or R
+  marks their Flash, other summoner spell or ultimate; the engine times it from the patch's
+  cooldowns, the enemy's level and their items' haste, shows it on their row and calls it out when
+  it is back. A patch's Data Dragon files are now `championFull.json`, `item.json` and
+  `summoner.json`. The macOS app's hot keys each check that a press is their own; before, with more
+  than one, any press ran the first handler's action.
+- The owner lifted the ask-before-push rule for this project: pushes and pull requests are free,
+  deletions on GitHub and force pushes are not. Recorded in `AGENTS.md`, rule 1.
+- Phase 3.1, loading-screen intel: each player's rank, recent record, streak, games on their
+  champion and whether they are off-role, from the League client's own lookups, never a developer
+  key. Each player is asked about once, one request at a time; the recorder keeps the answers to
+  confirm their shapes, and shares them with the engine so the client is not asked twice. The
+  replay now serves a recorded path with its query.
+- Phase 3's plan approved by the owner, with their answers: the hotkey scheme as proposed,
+  suggestions worded by best guess to iterate on, and other players' stats looked up through the
+  League client's own session rather than a developer key, to keep clear of rate limits.
+- Phase 3 planned in [plans/phase-3-economy-and-open-policy.md](plans/phase-3-economy-and-open-policy.md):
+  the hidden economy from the approved plan, plus what the owner's open policy adds (loading-screen
+  intel, cooldowns the player marks, suggestions), with the three that help from the first game
+  proposed first.
 - Pull requests #2, #3 and #4 merged; #3 and #4 went into the branches they were stacked on, so
   pull request #5 brings `feat/exact-facts`, which holds all of them, into `main`.
 - The owner's answers: `truststore` stays; Data Dragon may be allowed in this environment's network

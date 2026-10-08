@@ -32,6 +32,8 @@ APP_PORT_PATTERN: Final = re.compile(r"--app-port=(\d+)")
 AUTH_TOKEN_PATTERN: Final = re.compile(r"--remoting-auth-token=([\w-]+)")
 CLIENT_PROCESS_NAME: Final = "LeagueClientUx"
 DEFAULT_REQUEST_TIMEOUT_SECONDS: Final = 5.0
+# The game the client is in: its id and each team's players.
+GAMEFLOW_SESSION_PATH: Final = "/lol-gameflow/v1/session"
 
 logger = logging.getLogger(__name__)
 
@@ -127,6 +129,56 @@ async def find_client_credentials(
     return parse_process_arguments(process_list_text)
 
 
+class SharedAnswers:
+    """The client's answers to some questions, shared by everyone who asks them.
+
+    The engine and the recorder both ask about each player in a game; sharing the answers means
+    the client, and Riot behind it, is asked once. Only the questions under the given path
+    prefixes are shared, and an answer that did not come is not kept, so it is asked again.
+    """
+
+    def __init__(self, shared_path_prefixes: tuple[str, ...]) -> None:
+        """Keep which questions are shared.
+
+        Args:
+            shared_path_prefixes: The paths whose answers are shared start with one of these.
+        """
+        self.shared_path_prefixes: Final = shared_path_prefixes
+        self._answers: Final[dict[str, asyncio.Task[JsonValue | None]]] = {}
+
+    def is_shared(self, path: str) -> bool:
+        """Return whether a question's answer is shared.
+
+        Args:
+            path: The resource's path.
+
+        Returns:
+            Whether it is.
+        """
+        return path.startswith(self.shared_path_prefixes)
+
+    async def answer(
+        self, path: str, ask: Callable[[], Awaitable[JsonValue | None]]
+    ) -> JsonValue | None:
+        """Return the shared answer to a question, asking only when nobody has yet.
+
+        Two who ask at once wait for the same request.
+
+        Args:
+            path: The resource's path.
+            ask: Asks the client, when the answer is not known.
+
+        Returns:
+            The answer, or None when the client gave none.
+        """
+        if path not in self._answers:
+            self._answers[path] = asyncio.ensure_future(ask())
+        answer = await self._answers[path]
+        if answer is None:
+            self._answers.pop(path, None)
+        return answer
+
+
 class LeagueClient:
     """Asks the League client for one resource at a time. An error is no answer."""
 
@@ -136,7 +188,9 @@ class LeagueClient:
         base_url: str,
         password: str,
         tls_context: ssl.SSLContext | None,
+        *,
         request_timeout_seconds: float = DEFAULT_REQUEST_TIMEOUT_SECONDS,
+        shared_answers: SharedAnswers | None = None,
     ) -> None:
         """Keep what every request needs.
 
@@ -147,6 +201,7 @@ class LeagueClient:
             tls_context: The context for HTTPS (`riot_tls.create_riot_tls_context`); None for a
                 stand-in served over plain HTTP.
             request_timeout_seconds: How long one request may take.
+            shared_answers: Answers shared with other clients of the same League client, or None.
         """
         self.session: Final = session
         self.base_url: Final = base_url.rstrip("/")
@@ -154,12 +209,27 @@ class LeagueClient:
         self.authorization_header: Final = f"Basic {encoded_user_and_password.decode('ascii')}"
         self.tls_context: Final = tls_context
         self.request_timeout: Final = aiohttp.ClientTimeout(total=request_timeout_seconds)
+        self.shared_answers: Final = shared_answers
 
     async def get_json(self, path: str) -> JsonValue | None:
         """Return one resource of the client, or None when it cannot be had.
 
         Args:
             path: The resource's path, such as `/lol-gameflow/v1/session`.
+
+        Returns:
+            The resource, or None on any error status, a timeout or an answer that is not JSON.
+        """
+        shared_answers = self.shared_answers
+        if shared_answers is not None and shared_answers.is_shared(path):
+            return await shared_answers.answer(path, lambda: self._ask(path))
+        return await self._ask(path)
+
+    async def _ask(self, path: str) -> JsonValue | None:
+        """Ask the client for one resource.
+
+        Args:
+            path: The resource's path.
 
         Returns:
             The resource, or None on any error status, a timeout or an answer that is not JSON.

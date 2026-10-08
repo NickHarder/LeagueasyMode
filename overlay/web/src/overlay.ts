@@ -10,12 +10,15 @@ import {
   type BuffTimer,
   type Callout,
   type CombatStats,
+  type CooldownTimer,
   type DragonTimer,
   type InhibitorTimer,
   type NumbersWindow,
   type ObjectiveTimer,
   type OverlayState,
   type PlayerCard,
+  type PlayerIntel,
+  type RankedStanding,
   isOverlayState,
 } from "./state.js";
 
@@ -293,8 +296,65 @@ export function formatDefensiveStats(stats: CombatStats): string {
   return [healthText, `${Math.round(stats.armor)} AR`, `${Math.round(stats.magic_resist)} MR`].join(" · ");
 }
 
+const TIER_SHORT_NAMES: Readonly<Record<string, string>> = {
+  IRON: "I",
+  BRONZE: "B",
+  SILVER: "S",
+  GOLD: "G",
+  PLATINUM: "P",
+  EMERALD: "E",
+  DIAMOND: "D",
+  MASTER: "M",
+  GRANDMASTER: "GM",
+  CHALLENGER: "C",
+};
+const DIVISION_NUMBERS: Readonly<Record<string, string>> = { I: "1", II: "2", III: "3", IV: "4" };
+const APEX_TIERS: ReadonlySet<string> = new Set(["MASTER", "GRANDMASTER", "CHALLENGER"]);
+// A streak this long is worth naming.
+const NOTABLE_STREAK = 3;
+// With this many recent games and none on the champion, it is new to them.
+const GAMES_TO_CALL_A_CHAMPION_NEW = 10;
+
+/** Return a rank in short: "P4" for Platinum IV, "M 120" for Master with 120 LP. */
+export function formatRank(ranked: RankedStanding | null): string {
+  if (ranked === null) {
+    return "Unranked";
+  }
+  const tierName = TIER_SHORT_NAMES[ranked.tier] ?? ranked.tier;
+  if (APEX_TIERS.has(ranked.tier)) {
+    return `${tierName} ${String(ranked.league_points)}`;
+  }
+  return `${tierName}${DIVISION_NUMBERS[ranked.division] ?? ""}`;
+}
+
+/** Return a player's record in one line: "P4 · 3–2 W3 · 3 on champ · off-role (MID)". */
+export function formatIntel(intel: PlayerIntel): string {
+  const parts = [formatRank(intel.ranked)];
+  if (intel.recent_game_count > 0) {
+    const lossCount = intel.recent_game_count - intel.recent_win_count;
+    const streakText =
+      Math.abs(intel.streak) >= NOTABLE_STREAK
+        ? ` ${intel.streak > 0 ? "W" : "L"}${String(Math.abs(intel.streak))}`
+        : "";
+    parts.push(`${String(intel.recent_win_count)}\u2013${String(lossCount)}${streakText}`);
+  }
+  if (intel.champion_game_count > 0) {
+    parts.push(`${String(intel.champion_game_count)} on champ`);
+  } else if (intel.recent_game_count >= GAMES_TO_CALL_A_CHAMPION_NEW) {
+    parts.push("new on champ");
+  }
+  if (intel.is_off_role) {
+    parts.push(`off-role (${ROLE_SHORT_NAMES[intel.usual_position] ?? intel.usual_position})`);
+  }
+  return parts.join(" \u00b7 ");
+}
+
 /** Return the row that draws one enemy: champion, level, item gold, the death timer and stats. */
-function enemyRowElement(card: PlayerCard, gameTimeSeconds: number): HTMLElement {
+function enemyRowElement(
+  card: PlayerCard,
+  gameTimeSeconds: number,
+  cooldowns: readonly CooldownTimer[],
+): HTMLElement {
   const row = document.createElement("div");
   row.className = "enemy-row";
   row.dataset["dead"] = card.is_dead ? "true" : "false";
@@ -320,6 +380,25 @@ function enemyRowElement(card: PlayerCard, gameTimeSeconds: number): HTMLElement
     respawnElement.textContent = formatCountdown(respawnsAtSeconds - gameTimeSeconds);
     row.append(respawnElement);
   }
+  const runningCooldowns = cooldowns.filter(
+    (timer) =>
+      timer.champion_name === card.champion_name && timer.ready_at_game_time_seconds > gameTimeSeconds,
+  );
+  if (runningCooldowns.length > 0) {
+    const cooldownsElement = document.createElement("span");
+    cooldownsElement.className = "enemy-cooldowns";
+    cooldownsElement.replaceChildren(
+      ...runningCooldowns.map((timer) => cooldownBadgeElement(timer, gameTimeSeconds)),
+    );
+    row.append(cooldownsElement);
+  }
+  if (card.intel !== null) {
+    const intelElement = document.createElement("span");
+    intelElement.className = "enemy-intel";
+    intelElement.dataset["offRole"] = card.intel.is_off_role ? "true" : "false";
+    intelElement.textContent = formatIntel(card.intel);
+    row.append(intelElement);
+  }
   if (card.combat_stats !== null) {
     const statsElement = document.createElement("span");
     statsElement.className = "enemy-stats";
@@ -328,6 +407,15 @@ function enemyRowElement(card: PlayerCard, gameTimeSeconds: number): HTMLElement
     row.append(statsElement);
   }
   return row;
+}
+
+/** Return the badge of one marked spell: its label and the time until it is back, "F 4:12". */
+function cooldownBadgeElement(timer: CooldownTimer, gameTimeSeconds: number): HTMLElement {
+  const badge = document.createElement("span");
+  badge.className = "cooldown-badge";
+  badge.dataset["spell"] = timer.spell;
+  badge.textContent = `${timer.label} ${formatCountdown(timer.ready_at_game_time_seconds - gameTimeSeconds)}`;
+  return badge;
 }
 
 /** Return a card's place in role order, unknown roles last. */
@@ -351,7 +439,9 @@ function renderEnemyStrip(nowMilliseconds: number): void {
   );
   strip.hidden = enemyCards.length === 0;
   const header = itemLeadElement(received.state);
-  const rows = enemyCards.map((card) => enemyRowElement(card, gameTimeSeconds));
+  const rows = enemyCards.map((card) =>
+    enemyRowElement(card, gameTimeSeconds, received.state.cooldowns),
+  );
   strip.replaceChildren(...(header === null ? rows : [header, ...rows]));
 }
 

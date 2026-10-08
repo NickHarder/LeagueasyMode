@@ -1,7 +1,8 @@
 import asyncio
+import contextlib
 import dataclasses
 import json
-from collections.abc import Callable
+from collections.abc import AsyncIterator, Callable
 from pathlib import Path
 from typing import Final
 
@@ -342,3 +343,77 @@ async def test_each_new_game_loads_the_patch_data_again() -> None:
         )
         await run_engine_until(engine, lambda: len(asked_game_versions) >= 2)
     assert asked_game_versions == ["16.20.1.1", "16.20.1.1"]
+
+
+@contextlib.asynccontextmanager
+async def running_overlay_with_patch_stats() -> AsyncIterator[tuple[str, OverlayEngine]]:
+    answers = [game_with_a_dragon_taken_at(400.0, 600.0 + index * 0.01) for index in range(3000)]
+
+    async def load_patch_stats(_game_version: str | None) -> PatchStats | None:
+        return fixture_patch_stats()
+
+    async with serve(scripted_game(answers)) as game_url, aiohttp.ClientSession() as session:
+        engine = OverlayEngine(
+            GameApiClient(session, game_url, tls_context=None),
+            poll_interval_seconds=0.01,
+            load_patch_stats=load_patch_stats,
+        )
+        stop_requested = asyncio.Event()
+        engine_task = asyncio.create_task(engine.run(stop_requested))
+        for _ in range(200):
+            if engine.patch_stats is not None and engine.current_state.is_game_running:
+                break
+            await asyncio.sleep(0.01)
+        try:
+            async with serve(create_overlay_application(engine)) as overlay_url:
+                yield overlay_url, engine
+        finally:
+            stop_requested.set()
+            await engine_task
+
+
+async def test_a_marked_flash_reaches_the_overlays_state() -> None:
+    async with (
+        running_overlay_with_patch_stats() as (overlay_url, engine),
+        aiohttp.ClientSession() as session,
+    ):
+        async with session.post(
+            overlay_url + "/marks",
+            json={"enemy_slot": 3, "spell": "flash"},
+            headers={"X-LeagueasyMode-Request": "mark"},
+        ) as response:
+            assert response.status == 200
+            marked = await response.json()
+        for _ in range(100):
+            if engine.current_state.cooldowns:
+                break
+            await asyncio.sleep(0.01)
+    assert marked["champion_name"] == "Zed"
+    assert [timer.label for timer in engine.current_state.cooldowns] == ["F"]
+
+
+async def test_a_mark_without_the_apps_header_is_refused() -> None:
+    async with (
+        running_overlay_with_patch_stats() as (overlay_url, engine),
+        aiohttp.ClientSession() as session,
+        session.post(overlay_url + "/marks", json={"enemy_slot": 3, "spell": "flash"}) as response,
+    ):
+        assert response.status == 403
+    assert engine.current_state.cooldowns == []
+
+
+async def test_a_mark_that_names_nothing_is_refused() -> None:
+    async with (
+        running_overlay_with_patch_stats() as (overlay_url, _engine),
+        aiohttp.ClientSession() as session,
+    ):
+        headers = {"X-LeagueasyMode-Request": "mark"}
+        for body in ({"enemy_slot": 9, "spell": "flash"}, {"enemy_slot": 3, "spell": "dance"}, {}):
+            async with session.post(
+                overlay_url + "/marks", json=body, headers=headers
+            ) as refused_response:
+                assert refused_response.status == 400, body
+        async with session.post(
+            overlay_url + "/marks", data=b"not json", headers=headers
+        ) as garbled_response:
+            assert garbled_response.status == 400

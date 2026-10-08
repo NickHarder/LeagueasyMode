@@ -85,6 +85,43 @@ class CombatStats(BaseModel):
     move_speed: float
 
 
+class RankedStanding(BaseModel):
+    """A player's rank in one ranked queue this season."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    queue: Literal["solo", "flex"]
+    # As the client names it: "IRON" to "CHALLENGER"; the division "I" to "IV".
+    tier: str
+    division: str
+    league_points: int
+    wins: int
+    losses: int
+
+
+class PlayerIntel(BaseModel):
+    """What a player's record says before the game: rank, recent form, and the champion and role.
+
+    From the League client's ranked stats and match history for the player. The recent games are
+    those on Summoner's Rift, remakes left out.
+    """
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    # Solo queue's rank, or flex's when solo has none; None when unranked or unknown.
+    ranked: RankedStanding | None
+    recent_game_count: int
+    recent_win_count: int
+    # Wins in a row from the latest game when positive, losses when negative.
+    streak: int
+    champion_game_count: int
+    champion_win_count: int
+    # The position most of their recent games were in, when one clearly is; empty otherwise.
+    usual_position: str
+    # Whether this game's position is not their usual one.
+    is_off_role: bool
+
+
 class PlayerCard(BaseModel):
     """One player as the scoreboard shows them: side, role, level, and when they are back."""
 
@@ -106,6 +143,8 @@ class PlayerCard(BaseModel):
     finished_item_names: list[str] = Field(default_factory=list)
     # None until the patch's stats are known, except for the player on this machine.
     combat_stats: CombatStats | None = None
+    # None until the League client has answered for this player.
+    intel: PlayerIntel | None = None
 
 
 class TeamItemGold(BaseModel):
@@ -127,11 +166,36 @@ class NumbersWindow(BaseModel):
     ends_at_game_time_seconds: float
 
 
-type CalloutKind = Literal["numbers_window", "level_spike", "objective_soon", "item_spike"]
+class CooldownTimer(BaseModel):
+    """A spell the player marked an enemy as having used, and when it is back.
+
+    An estimate: the cooldown is the patch's, at the rank the enemy's level gives, shortened by
+    the haste their items give; runes and other haste are not known, so it may be back sooner.
+    """
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    # Stable for one mark, so that the widget and the callouts can tell marks apart.
+    cooldown_id: str
+    champion_name: str
+    spell: Literal["flash", "summoner", "ultimate"]
+    # The spell's name ("Flash", "Teleport", or "ultimate"), and the widget's short label for it.
+    spell_name: str
+    label: str
+    marked_at_game_time_seconds: float
+    ready_at_game_time_seconds: float
+
+
+type CalloutKind = Literal[
+    "numbers_window", "level_spike", "objective_soon", "item_spike", "cooldown_ready", "suggestion"
+]
 
 
 class Callout(BaseModel):
-    """A short notice shown for a few seconds when something happens; never an instruction."""
+    """A short notice shown for a few seconds when something happens.
+
+    Most state a fact; a suggestion names an action.
+    """
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
@@ -156,6 +220,7 @@ class OverlayState(BaseModel):
     players: list[PlayerCard] = Field(default_factory=list)
     numbers_window: NumbersWindow | None = None
     team_item_gold: TeamItemGold | None = None
+    cooldowns: list[CooldownTimer] = Field(default_factory=list)
     callouts: list[Callout] = Field(default_factory=list)
 
 

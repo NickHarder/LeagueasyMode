@@ -282,6 +282,49 @@
     "PercentAttackSpeedMod": 0.6,
     "PercentMovementSpeedMod": 0.08
    }
+  },
+  "3158": {
+   "name": "Ionian Boots of Lucidity",
+   "plaintext": "",
+   "description": "<mainText><stats><attention>15</attention> Ability Haste<br><attention>10</attention> Summoner Spell Haste<br><attention>45</attention> Move Speed</stats></mainText>",
+   "image": {
+    "full": "3158.png"
+   },
+   "gold": {
+    "base": 600,
+    "purchasable": true,
+    "total": 900,
+    "sell": 630
+   },
+   "tags": [],
+   "maps": {
+    "11": true
+   },
+   "stats": {
+    "FlatMovementSpeedMod": 45
+   }
+  },
+  "3071": {
+   "name": "Black Cleaver",
+   "plaintext": "",
+   "description": "<mainText><stats><attention>40</attention> Attack Damage<br><attention>400</attention> Health<br><attention>20</attention> Ability Haste</stats></mainText>",
+   "image": {
+    "full": "3071.png"
+   },
+   "gold": {
+    "base": 800,
+    "purchasable": true,
+    "total": 3000,
+    "sell": 2100
+   },
+   "tags": [],
+   "maps": {
+    "11": true
+   },
+   "stats": {
+    "FlatPhysicalDamageMod": 40,
+    "FlatHPPoolMod": 400
+   }
   }
  },
  "groups": [],

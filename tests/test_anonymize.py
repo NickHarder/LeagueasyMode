@@ -9,11 +9,15 @@ from pydantic import JsonValue
 from game_payloads import (
     DEFAULT_PLAYERS,
     GAME_ID,
+    PastGame,
     all_game_data,
     champion_kill_event,
     dragon_kill_event,
     game_start_event,
     gameflow_session,
+    match_history,
+    puuid_of,
+    ranked_stats,
 )
 from leagueasymode.recording.anonymize import IdentityLeakError, anonymize_recording
 from leagueasymode.recording.file_format import ClientResource
@@ -160,3 +164,33 @@ def test_a_name_left_in_free_text_stops_the_copy(tmp_path: Path) -> None:
         anonymize_recording(source_path, tmp_path / "anonymized.jsonl")
     assert not (tmp_path / "anonymized.jsonl").exists()
     assert not (tmp_path / "anonymized.jsonl.xz").exists()
+
+
+def test_each_players_looked_up_record_is_anonymized_path_and_all(tmp_path: Path) -> None:
+    zed_puuid = puuid_of(DEFAULT_PLAYERS[7])
+    history_path = f"/lol-match-history/v1/products/lol/{zed_puuid}/matches?begIndex=0&endIndex=20"
+    writer = RecordingWriter(tmp_path / "game.jsonl", keyframe_interval_seconds=60.0)
+    writer.write_started(started_at=STARTED_AT, recorder_version="test", poll_interval_seconds=0.5)
+    writer.write_client_resource(
+        received_at_seconds=0.0, path="/lol-gameflow/v1/session", payload=gameflow_session()
+    )
+    writer.write_snapshot(received_at_seconds=0.5, payload=all_game_data(10.0))
+    writer.write_client_resource(
+        received_at_seconds=0.6,
+        path=f"/lol-ranked/v1/ranked-stats/{zed_puuid}",
+        payload=ranked_stats("GOLD", "I", 75, 20, 18),
+    )
+    writer.write_client_resource(
+        received_at_seconds=0.7,
+        path=history_path,
+        payload=match_history(zed_puuid, [PastGame(238, "MIDDLE", "SOLO", is_win=True)]),
+    )
+    writer.write_ended(received_at_seconds=1.0, reason="game ended")
+    copy_path = anonymize_recording(writer.close(), tmp_path / "copy.jsonl")
+    text = recording_text(copy_path)
+    assert zed_puuid not in text
+    paths = [
+        line.path for line in iter_recording_lines(copy_path) if isinstance(line, ClientResource)
+    ]
+    assert any(path.startswith("/lol-ranked/v1/ranked-stats/anonymous-puuid-") for path in paths)
+    assert any("/matches?begIndex=0&endIndex=20" in path for path in paths)

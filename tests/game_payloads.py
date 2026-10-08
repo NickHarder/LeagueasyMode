@@ -81,6 +81,25 @@ def champion_kill_event(
     }
 
 
+# Data Dragon's id of each summoner spell, by the name the game shows.
+SUMMONER_SPELL_IDS: Final = {
+    "Flash": "SummonerFlash",
+    "Ignite": "SummonerDot",
+    "Teleport": "SummonerTeleport",
+    "Smite": "SummonerSmite",
+    "Heal": "SummonerHeal",
+    "Exhaust": "SummonerExhaust",
+    "Barrier": "SummonerBarrier",
+    "Cleanse": "SummonerBoost",
+    "Ghost": "SummonerHaste",
+}
+
+
+def raw_summoner_spell_name(display_name: str) -> str:
+    spell_id = SUMMONER_SPELL_IDS.get(display_name, display_name)
+    return f"GeneratedTip_SummonerSpell_{spell_id}_DisplayName"
+
+
 def player_payload(seed: PlayerSeed) -> dict[str, JsonValue]:
     return {
         "championName": seed.champion_name,
@@ -140,12 +159,12 @@ def player_payload(seed: PlayerSeed) -> dict[str, JsonValue]:
             "summonerSpellOne": {
                 "displayName": seed.summoner_spells[0],
                 "rawDescription": "",
-                "rawDisplayName": "",
+                "rawDisplayName": raw_summoner_spell_name(seed.summoner_spells[0]),
             },
             "summonerSpellTwo": {
                 "displayName": seed.summoner_spells[1],
                 "rawDescription": "",
-                "rawDisplayName": "",
+                "rawDisplayName": raw_summoner_spell_name(seed.summoner_spells[1]),
             },
         },
         "team": seed.team,
@@ -218,6 +237,34 @@ def all_game_data(
 GAME_ID: Final = 5123456789
 
 
+# The client's champion ids, by the alias the game uses in `rawChampionName`.
+CHAMPION_IDS: Final = {
+    "Garen": 86,
+    "LeeSin": 64,
+    "Ahri": 103,
+    "Jinx": 222,
+    "Thresh": 412,
+    "Darius": 122,
+    "Vi": 254,
+    "Zed": 238,
+    "Caitlyn": 51,
+    "Lux": 99,
+}
+
+
+def puuid_of(seed: PlayerSeed) -> str:
+    return f"puuid-{seed.riot_id_game_name.lower().replace(' ', '-')}-0000"
+
+
+def champion_summary() -> JsonValue:
+    champions: list[JsonValue] = [{"id": -1, "name": "None", "alias": "None"}]
+    champions.extend(
+        {"id": champion_id, "name": alias, "alias": alias}
+        for alias, champion_id in CHAMPION_IDS.items()
+    )
+    return champions
+
+
 def gameflow_session(phase: str = "InProgress") -> JsonValue:
     return {
         "phase": phase,
@@ -227,20 +274,90 @@ def gameflow_session(phase: str = "InProgress") -> JsonValue:
             "teamOne": [
                 {
                     "summonerName": seed.riot_id,
-                    "puuid": f"puuid-{seed.riot_id_game_name.lower().replace(' ', '-')}-0000",
+                    "puuid": puuid_of(seed),
                     "summonerId": 41000000 + index,
-                    "championId": 103,
+                    "championId": CHAMPION_IDS[seed.champion_name],
                 }
                 for index, seed in enumerate(DEFAULT_PLAYERS[:5])
             ],
             "teamTwo": [
                 {
                     "summonerName": seed.riot_id,
-                    "puuid": f"puuid-{seed.riot_id_game_name.lower().replace(' ', '-')}-0000",
+                    "puuid": puuid_of(seed),
                     "summonerId": 42000000 + index,
-                    "championId": 238,
+                    "championId": CHAMPION_IDS[seed.champion_name],
                 }
                 for index, seed in enumerate(DEFAULT_PLAYERS[5:])
+            ],
+        },
+    }
+
+
+def ranked_stats(tier: str, division: str, league_points: int, wins: int, losses: int) -> JsonValue:
+    solo_entry: dict[str, JsonValue] = {
+        "queueType": "RANKED_SOLO_5x5",
+        "tier": tier,
+        "division": division,
+        "leaguePoints": league_points,
+        "wins": wins,
+        "losses": losses,
+        "isProvisional": False,
+    }
+    flex_entry: dict[str, JsonValue] = {
+        "queueType": "RANKED_FLEX_SR",
+        "tier": "",
+        "division": "NA",
+        "leaguePoints": 0,
+        "wins": 0,
+        "losses": 0,
+        "isProvisional": False,
+    }
+    return {
+        "queues": [solo_entry, flex_entry],
+        "queueMap": {"RANKED_SOLO_5x5": solo_entry, "RANKED_FLEX_SR": flex_entry},
+    }
+
+
+@dataclass(frozen=True)
+class PastGame:
+    """One game of a player's history: what they played, where, and whether they won."""
+
+    champion_id: int
+    lane: str
+    role: str
+    is_win: bool
+    map_id: int = 11
+    duration_seconds: int = 1800
+
+
+def match_history(puuid: str, past_games: list[PastGame]) -> JsonValue:
+    return {
+        "accountId": 9000001,
+        "platformId": "NA1",
+        "games": {
+            "gameCount": len(past_games),
+            "games": [
+                {
+                    "gameId": 5000000000 + index,
+                    "gameCreation": 1790000000000 - index * 3600000,
+                    "gameDuration": past_game.duration_seconds,
+                    "gameMode": "CLASSIC",
+                    "mapId": past_game.map_id,
+                    "queueId": 420,
+                    "participantIdentities": [
+                        {"participantId": 1, "player": {"puuid": puuid, "accountId": 9000001}}
+                    ],
+                    "participants": [
+                        {
+                            "participantId": 1,
+                            "championId": past_game.champion_id,
+                            "teamId": 100,
+                            "stats": {"win": past_game.is_win, "kills": 5, "deaths": 3},
+                            "timeline": {"lane": past_game.lane, "role": past_game.role},
+                        }
+                    ],
+                }
+                for index, past_game in enumerate(past_games)
             ],
         },
     }

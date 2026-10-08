@@ -159,6 +159,36 @@ body {
   color: var(--widget-enemy);
 }
 
+.enemy-cooldowns {
+  grid-column: 2 / -1;
+  display: flex;
+  gap: 4px;
+}
+
+.cooldown-badge {
+  padding: 0 4px;
+  border-radius: 4px;
+  background: rgb(255 122 107 / 0.22);
+  color: var(--widget-enemy);
+  font-size: 10px;
+}
+
+.cooldown-badge[data-spell="ultimate"] {
+  background: rgb(240 199 94 / 0.22);
+  color: var(--widget-alive);
+}
+
+.enemy-intel {
+  grid-column: 2 / -1;
+  color: var(--widget-muted);
+  font-size: 10px;
+  font-weight: 500;
+}
+
+.enemy-intel[data-off-role="true"] {
+  color: var(--widget-alive);
+}
+
 .enemy-stats {
   grid-column: 2 / -1;
   color: var(--widget-muted);
@@ -235,6 +265,11 @@ body {
 
 .item-lead[data-lead="enemy"] .item-lead-value {
   color: var(--widget-enemy);
+}
+
+.callout[data-kind="suggestion"] {
+  border-color: var(--widget-alive);
+  color: var(--widget-alive);
 }
 
 .callout[data-kind="item_spike"] {

@@ -32,7 +32,11 @@ cloud, the hook that starts each session (`.claude/settings.json`) has run `make
 ## Working rules
 
 1. **Ask the owner before:** a paid model run (say the dollar estimate; a free replay comes first) ·
-   anything on production · any `git push`, tag or deploy · any new install on the owner's machine.
+   anything on production · a tag or deploy · any new install on the owner's machine.
+   **Pushing and opening pull requests need no asking** in this project: the owner, 2026-10-08,
+   "you are allowed to push and open prs freely ... just no deletions or force pushes". This
+   overrides the standing rules' "ask before a `git push`". Still never delete a branch, a tag, a
+   pull request or anything else on GitHub, and never force-push.
 2. **Commit locally at every checkpoint**, on a `feat/…` branch, with Conventional Commits. Never
    force-push; a red pipeline gets an ordinary commit on top.
 3. **Test first.** Write the test or the eval case, watch it fail, then write the code.

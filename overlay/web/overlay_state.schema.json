@@ -35,7 +35,7 @@
     },
     "Callout": {
       "additionalProperties": false,
-      "description": "A short notice shown for a few seconds when something happens; never an instruction.",
+      "description": "A short notice shown for a few seconds when something happens.\n\nMost state a fact; a suggestion names an action.",
       "properties": {
         "callout_id": {
           "title": "Callout Id",
@@ -67,7 +67,9 @@
         "numbers_window",
         "level_spike",
         "objective_soon",
-        "item_spike"
+        "item_spike",
+        "cooldown_ready",
+        "suggestion"
       ],
       "type": "string"
     },
@@ -123,6 +125,56 @@
         "move_speed"
       ],
       "title": "CombatStats",
+      "type": "object"
+    },
+    "CooldownTimer": {
+      "additionalProperties": false,
+      "description": "A spell the player marked an enemy as having used, and when it is back.\n\nAn estimate: the cooldown is the patch's, at the rank the enemy's level gives, shortened by\nthe haste their items give; runes and other haste are not known, so it may be back sooner.",
+      "properties": {
+        "cooldown_id": {
+          "title": "Cooldown Id",
+          "type": "string"
+        },
+        "champion_name": {
+          "title": "Champion Name",
+          "type": "string"
+        },
+        "spell": {
+          "enum": [
+            "flash",
+            "summoner",
+            "ultimate"
+          ],
+          "title": "Spell",
+          "type": "string"
+        },
+        "spell_name": {
+          "title": "Spell Name",
+          "type": "string"
+        },
+        "label": {
+          "title": "Label",
+          "type": "string"
+        },
+        "marked_at_game_time_seconds": {
+          "title": "Marked At Game Time Seconds",
+          "type": "number"
+        },
+        "ready_at_game_time_seconds": {
+          "title": "Ready At Game Time Seconds",
+          "type": "number"
+        }
+      },
+      "required": [
+        "cooldown_id",
+        "champion_name",
+        "spell",
+        "spell_name",
+        "label",
+        "marked_at_game_time_seconds",
+        "ready_at_game_time_seconds"
+      ],
+      "title": "CooldownTimer",
       "type": "object"
     },
     "DragonTimer": {
@@ -388,6 +440,17 @@
             }
           ],
           "default": null
+        },
+        "intel": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PlayerIntel"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         }
       },
       "required": [
@@ -399,6 +462,106 @@
         "respawns_at_game_time_seconds"
       ],
       "title": "PlayerCard",
+      "type": "object"
+    },
+    "PlayerIntel": {
+      "additionalProperties": false,
+      "description": "What a player's record says before the game: rank, recent form, and the champion and role.\n\nFrom the League client's ranked stats and match history for the player. The recent games are\nthose on Summoner's Rift, remakes left out.",
+      "properties": {
+        "ranked": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RankedStanding"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "recent_game_count": {
+          "title": "Recent Game Count",
+          "type": "integer"
+        },
+        "recent_win_count": {
+          "title": "Recent Win Count",
+          "type": "integer"
+        },
+        "streak": {
+          "title": "Streak",
+          "type": "integer"
+        },
+        "champion_game_count": {
+          "title": "Champion Game Count",
+          "type": "integer"
+        },
+        "champion_win_count": {
+          "title": "Champion Win Count",
+          "type": "integer"
+        },
+        "usual_position": {
+          "title": "Usual Position",
+          "type": "string"
+        },
+        "is_off_role": {
+          "title": "Is Off Role",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "ranked",
+        "recent_game_count",
+        "recent_win_count",
+        "streak",
+        "champion_game_count",
+        "champion_win_count",
+        "usual_position",
+        "is_off_role"
+      ],
+      "title": "PlayerIntel",
+      "type": "object"
+    },
+    "RankedStanding": {
+      "additionalProperties": false,
+      "description": "A player's rank in one ranked queue this season.",
+      "properties": {
+        "queue": {
+          "enum": [
+            "solo",
+            "flex"
+          ],
+          "title": "Queue",
+          "type": "string"
+        },
+        "tier": {
+          "title": "Tier",
+          "type": "string"
+        },
+        "division": {
+          "title": "Division",
+          "type": "string"
+        },
+        "league_points": {
+          "title": "League Points",
+          "type": "integer"
+        },
+        "wins": {
+          "title": "Wins",
+          "type": "integer"
+        },
+        "losses": {
+          "title": "Losses",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "queue",
+        "tier",
+        "division",
+        "league_points",
+        "wins",
+        "losses"
+      ],
+      "title": "RankedStanding",
       "type": "object"
     },
     "TeamItemGold": {
@@ -501,6 +664,13 @@
         }
       ],
       "default": null
+    },
+    "cooldowns": {
+      "items": {
+        "$ref": "#/$defs/CooldownTimer"
+      },
+      "title": "Cooldowns",
+      "type": "array"
     },
     "callouts": {
       "items": {

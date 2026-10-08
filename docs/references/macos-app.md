@@ -4,7 +4,7 @@ title: The macOS overlay app
 description: What the menu bar app does, how to run it from a clone, and the steps for the tracer bullet's test on a Mac over League in each display mode.
 tags: [macos, overlay, tracer-bullet]
 status: draft
-generated: { by: claude-code/cloud, at: 2026-10-08T14:50:00Z }
+generated: { by: claude-code/cloud, at: 2026-10-08T21:15:16Z }
 sources:
   - id: panel
     resource: ../../overlay/macos/Sources/LeagueasyOverlay/OverlayPanel.swift
@@ -16,6 +16,8 @@ sources:
     resource: ../../overlay/macos/Sources/LeagueasyOverlay/WindowLevelChoice.swift
   - id: engine-command
     resource: ../../overlay/macos/Sources/OverlayCore/EngineCommand.swift
+  - id: cooldown-marking
+    resource: ../../overlay/macos/Sources/OverlayCore/CooldownMarking.swift
 ---
 
 # What it is
@@ -30,6 +32,13 @@ prints, and shows that page in a window that covers the screen:[^panel]
 
 It needs no macOS permission: no Screen Recording, no Accessibility, no Input Monitoring. The
 shortcut ⌃⌥⌘L shows and hides the overlay through Carbon's hot keys, which need none.[^hotkey]
+Each hot key checks that a press is its own, since every one hears all of the app's.
+
+**Marking an enemy's spell:** hold ⌃⌥, press 1 to 5 for an enemy in role order (1 top, 2 jungle,
+3 mid, 4 bottom, 5 support), then F for their Flash, D for their other summoner spell or R for
+their ultimate, within three seconds. Every key carries ⌃⌥, so marking never takes a key League
+uses. The app posts the mark to the engine's `/marks`, which starts the timer shown on that
+enemy's row.[^cooldown-marking]
 Quitting the app asks the engine to stop; the engine closes the game it is recording first.
 
 The menu shows whether the engine runs, toggles the overlay and the click-through, and picks the
@@ -68,7 +77,9 @@ The question it answers: does macOS let the overlay draw over League cleanly?
    - whether League keeps the keyboard and mouse (type in chat, cast, click to move through
      the overlay);
    - the frame rate with and without the overlay (Ctrl+F in game);
-   - whether ⌃⌥⌘L hides and shows it.
+   - whether ⌃⌥⌘L hides and shows it;
+   - whether a mark (⌃⌥3 then ⌃⌥F) puts "F 5:00" on the mid laner's row, and whether League
+     ignores the keys.
 4. Quit the app from the menu. The game's recording is in
    `~/Library/Application Support/LeagueasyMode/recordings/`; run
    `uv run leagueasymode anonymize <recording>` on it.
@@ -80,5 +91,6 @@ whether `KillerName` holds a game name or a Riot ID, and whether the client serv
 
 [^panel]: `overlay/macos/Sources/LeagueasyOverlay/OverlayPanel.swift`
 [^hotkey]: `overlay/macos/Sources/LeagueasyOverlay/GlobalHotKey.swift`
+[^cooldown-marking]: `overlay/macos/Sources/OverlayCore/CooldownMarking.swift`
 [^levels]: `overlay/macos/Sources/LeagueasyOverlay/WindowLevelChoice.swift`
 [^engine-command]: `overlay/macos/Sources/OverlayCore/EngineCommand.swift`

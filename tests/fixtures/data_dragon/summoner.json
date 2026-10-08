@@ -1,0 +1,123 @@
+{
+ "type": "summoner",
+ "version": "16.19.1",
+ "data": {
+  "SummonerFlash": {
+   "id": "SummonerFlash",
+   "name": "Flash",
+   "key": "4",
+   "cooldown": [
+    300
+   ],
+   "cooldownBurn": "300",
+   "description": "",
+   "modes": [
+    "CLASSIC"
+   ]
+  },
+  "SummonerDot": {
+   "id": "SummonerDot",
+   "name": "Ignite",
+   "key": "14",
+   "cooldown": [
+    180
+   ],
+   "cooldownBurn": "180",
+   "description": "",
+   "modes": [
+    "CLASSIC"
+   ]
+  },
+  "SummonerTeleport": {
+   "id": "SummonerTeleport",
+   "name": "Teleport",
+   "key": "12",
+   "cooldown": [
+    360
+   ],
+   "cooldownBurn": "360",
+   "description": "",
+   "modes": [
+    "CLASSIC"
+   ]
+  },
+  "SummonerSmite": {
+   "id": "SummonerSmite",
+   "name": "Smite",
+   "key": "11",
+   "cooldown": [
+    15
+   ],
+   "cooldownBurn": "15",
+   "description": "",
+   "modes": [
+    "CLASSIC"
+   ]
+  },
+  "SummonerHeal": {
+   "id": "SummonerHeal",
+   "name": "Heal",
+   "key": "7",
+   "cooldown": [
+    240
+   ],
+   "cooldownBurn": "240",
+   "description": "",
+   "modes": [
+    "CLASSIC"
+   ]
+  },
+  "SummonerExhaust": {
+   "id": "SummonerExhaust",
+   "name": "Exhaust",
+   "key": "3",
+   "cooldown": [
+    240
+   ],
+   "cooldownBurn": "240",
+   "description": "",
+   "modes": [
+    "CLASSIC"
+   ]
+  },
+  "SummonerBarrier": {
+   "id": "SummonerBarrier",
+   "name": "Barrier",
+   "key": "21",
+   "cooldown": [
+    180
+   ],
+   "cooldownBurn": "180",
+   "description": "",
+   "modes": [
+    "CLASSIC"
+   ]
+  },
+  "SummonerBoost": {
+   "id": "SummonerBoost",
+   "name": "Cleanse",
+   "key": "1",
+   "cooldown": [
+    240
+   ],
+   "cooldownBurn": "240",
+   "description": "",
+   "modes": [
+    "CLASSIC"
+   ]
+  },
+  "SummonerHaste": {
+   "id": "SummonerHaste",
+   "name": "Ghost",
+   "key": "6",
+   "cooldown": [
+    240
+   ],
+   "cooldownBurn": "240",
+   "description": "",
+   "modes": [
+    "CLASSIC"
+   ]
+  }
+ }
+}

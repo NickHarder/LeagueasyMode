@@ -3,11 +3,14 @@ import Carbon.HIToolbox
 /// A shortcut that works whichever app is in front, through Carbon's hot keys.
 ///
 /// Carbon hot keys need no Accessibility or Input Monitoring permission, unlike a global event
-/// monitor, because the system delivers only the registered combination to the app.
+/// monitor, because the system delivers only the registered combination to the app. Every hot key
+/// installs a handler for every hot-key press, so each one checks the press is its own and passes
+/// any other on to the next handler.
 final class GlobalHotKey {
     /// "LEAG", which tells this app's hot keys apart from any other's.
     private static let signature = OSType(0x4C45_4147)
 
+    private let identifier: UInt32
     private let action: () -> Void
     private var hotKeyReference: EventHotKeyRef?
     private var handlerReference: EventHandlerRef?
@@ -15,10 +18,12 @@ final class GlobalHotKey {
     /// Registers the shortcut; returns nil when the system refuses it, as when another app has it.
     ///
     /// - Parameters:
+    ///   - identifier: This app's number for the shortcut, different for each one.
     ///   - keyCode: The key, as a virtual key code (`kVK_ANSI_L`).
     ///   - modifiers: The modifier keys, as Carbon flags (`cmdKey | optionKey | controlKey`).
     ///   - action: What to do when the shortcut is pressed; called on the main thread.
-    init?(keyCode: UInt32, modifiers: UInt32, action: @escaping () -> Void) {
+    init?(identifier: UInt32, keyCode: UInt32, modifiers: UInt32, action: @escaping () -> Void) {
+        self.identifier = identifier
         self.action = action
         var pressedEventType = EventTypeSpec(
             eventClass: OSType(kEventClassKeyboard), eventKind: UInt32(kEventHotKeyPressed)
@@ -26,11 +31,29 @@ final class GlobalHotKey {
         let unretainedSelf = Unmanaged.passUnretained(self).toOpaque()
         let installStatus = InstallEventHandler(
             GetApplicationEventTarget(),
-            { _, _, userData -> OSStatus in
-                guard let userData else {
+            { _, event, userData -> OSStatus in
+                guard let event, let userData else {
                     return OSStatus(eventNotHandledErr)
                 }
-                Unmanaged<GlobalHotKey>.fromOpaque(userData).takeUnretainedValue().action()
+                var pressedHotKeyIdentifier = EventHotKeyID()
+                let parameterStatus = GetEventParameter(
+                    event,
+                    EventParamName(kEventParamDirectObject),
+                    EventParamType(typeEventHotKeyID),
+                    nil,
+                    MemoryLayout<EventHotKeyID>.size,
+                    nil,
+                    &pressedHotKeyIdentifier
+                )
+                let hotKey = Unmanaged<GlobalHotKey>.fromOpaque(userData).takeUnretainedValue()
+                guard
+                    parameterStatus == OSStatus(noErr),
+                    pressedHotKeyIdentifier.signature == GlobalHotKey.signature,
+                    pressedHotKeyIdentifier.id == hotKey.identifier
+                else {
+                    return OSStatus(eventNotHandledErr)
+                }
+                hotKey.action()
                 return OSStatus(noErr)
             },
             1,
@@ -41,7 +64,7 @@ final class GlobalHotKey {
         guard installStatus == OSStatus(noErr) else {
             return nil
         }
-        let hotKeyIdentifier = EventHotKeyID(signature: GlobalHotKey.signature, id: 1)
+        let hotKeyIdentifier = EventHotKeyID(signature: GlobalHotKey.signature, id: identifier)
         let registerStatus = RegisterEventHotKey(
             keyCode, modifiers, hotKeyIdentifier, GetApplicationEventTarget(), 0, &hotKeyReference
         )
