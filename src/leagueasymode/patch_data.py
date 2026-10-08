@@ -15,6 +15,8 @@ from leagueasymode.game_state import RiotPayloadModel
 ITEMS_PATH: Final = "/lol-game-data/assets/v1/items.json"
 # The game's version, such as "16.19.712.1234": which patch the client runs.
 GAME_VERSION_PATH: Final = "/lol-patch/v1/game-version"
+# Every champion of the patch: its id and the alias the game uses in `rawChampionName`.
+CHAMPION_SUMMARY_PATH: Final = "/lol-game-data/assets/v1/champion-summary.json"
 BOOTS_CATEGORY: Final = "Boots"
 CONSUMABLE_CATEGORY: Final = "Consumable"
 # A finished item is a full recipe; below this total price, a "finished" item is a component

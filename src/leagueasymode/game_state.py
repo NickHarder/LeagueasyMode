@@ -11,6 +11,8 @@ from typing import Final
 from pydantic import BaseModel, ConfigDict, Field
 
 RIOT_ID_SEPARATOR: Final = "#"
+# The game's raw name of a champion is this prefix and the champion's alias.
+RAW_CHAMPION_NAME_PREFIX: Final = "game_character_displayname_"
 
 
 class RiotPayloadModel(BaseModel):
@@ -99,6 +101,16 @@ class ScoreboardPlayer(RiotPayloadModel):
     items: list[ScoreboardItem] = Field(default_factory=list)
     summoner_spells: SummonerSpells = Field(default_factory=SummonerSpells, alias="summonerSpells")
     scores: Scores = Field(default_factory=Scores)
+
+    def champion_alias(self) -> str:
+        """Return the champion's alias, the game's own name for it in every language.
+
+        Returns:
+            The alias from `rawChampionName` ("MonkeyKing" for Wukong), or the shown name when the
+            raw one is missing.
+        """
+        alias = self.raw_champion_name.removeprefix(RAW_CHAMPION_NAME_PREFIX)
+        return alias or self.champion_name
 
     def is_named(self, name: str) -> bool:
         """Return whether the feed's name for someone is this player.

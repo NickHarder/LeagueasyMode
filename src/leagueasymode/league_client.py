@@ -32,6 +32,8 @@ APP_PORT_PATTERN: Final = re.compile(r"--app-port=(\d+)")
 AUTH_TOKEN_PATTERN: Final = re.compile(r"--remoting-auth-token=([\w-]+)")
 CLIENT_PROCESS_NAME: Final = "LeagueClientUx"
 DEFAULT_REQUEST_TIMEOUT_SECONDS: Final = 5.0
+# The game the client is in: its id and each team's players.
+GAMEFLOW_SESSION_PATH: Final = "/lol-gameflow/v1/session"
 
 logger = logging.getLogger(__name__)
 

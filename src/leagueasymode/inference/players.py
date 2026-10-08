@@ -7,15 +7,24 @@ respawn. The numbers window follows from those alone, since a death to come cann
 from leagueasymode.data_dragon import PatchStats
 from leagueasymode.game_state import GameSnapshot, ScoreboardPlayer
 from leagueasymode.inference.combat_stats import estimated_combat_stats, exact_combat_stats
-from leagueasymode.inference.roles import assign_roles
-from leagueasymode.overlay_state import CombatStats, NumbersWindow, PlayerCard, TeamItemGold
+from leagueasymode.inference.intel import player_intel
+from leagueasymode.inference.roles import RoleGuess, assign_roles
+from leagueasymode.overlay_state import (
+    CombatStats,
+    NumbersWindow,
+    PlayerCard,
+    PlayerIntel,
+    TeamItemGold,
+)
 from leagueasymode.patch_data import ItemCatalog
+from leagueasymode.player_intel import PlayerRecords
 
 
 def player_cards(
     snapshot: GameSnapshot,
     item_catalog: ItemCatalog | None = None,
     patch_stats: PatchStats | None = None,
+    player_records: PlayerRecords | None = None,
 ) -> list[PlayerCard]:
     """Return a card for every player, the player's own team first, each team in scoreboard order.
 
@@ -24,6 +33,8 @@ def player_cards(
         item_catalog: The patch's items, for item gold and finished items; None while unknown.
         patch_stats: The patch's champion and item stats, for the combat stats; None while
             unknown.
+        player_records: Each player's record from the League client, for their intel; None
+            while unknown.
 
     Returns:
         The cards.
@@ -47,6 +58,7 @@ def player_cards(
             item_gold=_item_gold(player, item_catalog),
             finished_item_names=_finished_item_names(player, item_catalog),
             combat_stats=_combat_stats(snapshot, player, patch_stats),
+            intel=_intel(player, role_guesses[index], player_records),
         )
         for index, player in [*allies, *enemies]
     ]
@@ -96,6 +108,32 @@ def _combat_stats(
     if patch_stats is None:
         return None
     return estimated_combat_stats(player, patch_stats)
+
+
+def _intel(
+    player: ScoreboardPlayer, role_guess: RoleGuess, player_records: PlayerRecords | None
+) -> PlayerIntel | None:
+    """Return what a player's record says, matched to them by team and champion.
+
+    Args:
+        player: The player.
+        role_guess: Their role this game; a guess is not used to call them off-role.
+        player_records: Each player's record; None while unknown.
+
+    Returns:
+        The intel, or None when the player has no record.
+    """
+    game_record = (
+        player_records.get((player.team, player.champion_alias().lower()))
+        if player_records is not None
+        else None
+    )
+    if game_record is None:
+        return None
+    is_position_known = role_guess.confidence in {"given", "likely"}
+    return player_intel(
+        game_record.record, game_record.champion_id, role_guess.role if is_position_known else ""
+    )
 
 
 def _item_gold(player: ScoreboardPlayer, item_catalog: ItemCatalog | None) -> int | None:

@@ -388,6 +388,17 @@
             }
           ],
           "default": null
+        },
+        "intel": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PlayerIntel"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         }
       },
       "required": [
@@ -399,6 +410,106 @@
         "respawns_at_game_time_seconds"
       ],
       "title": "PlayerCard",
+      "type": "object"
+    },
+    "PlayerIntel": {
+      "additionalProperties": false,
+      "description": "What a player's record says before the game: rank, recent form, and the champion and role.\n\nFrom the League client's ranked stats and match history for the player. The recent games are\nthose on Summoner's Rift, remakes left out.",
+      "properties": {
+        "ranked": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RankedStanding"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "recent_game_count": {
+          "title": "Recent Game Count",
+          "type": "integer"
+        },
+        "recent_win_count": {
+          "title": "Recent Win Count",
+          "type": "integer"
+        },
+        "streak": {
+          "title": "Streak",
+          "type": "integer"
+        },
+        "champion_game_count": {
+          "title": "Champion Game Count",
+          "type": "integer"
+        },
+        "champion_win_count": {
+          "title": "Champion Win Count",
+          "type": "integer"
+        },
+        "usual_position": {
+          "title": "Usual Position",
+          "type": "string"
+        },
+        "is_off_role": {
+          "title": "Is Off Role",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "ranked",
+        "recent_game_count",
+        "recent_win_count",
+        "streak",
+        "champion_game_count",
+        "champion_win_count",
+        "usual_position",
+        "is_off_role"
+      ],
+      "title": "PlayerIntel",
+      "type": "object"
+    },
+    "RankedStanding": {
+      "additionalProperties": false,
+      "description": "A player's rank in one ranked queue this season.",
+      "properties": {
+        "queue": {
+          "enum": [
+            "solo",
+            "flex"
+          ],
+          "title": "Queue",
+          "type": "string"
+        },
+        "tier": {
+          "title": "Tier",
+          "type": "string"
+        },
+        "division": {
+          "title": "Division",
+          "type": "string"
+        },
+        "league_points": {
+          "title": "League Points",
+          "type": "integer"
+        },
+        "wins": {
+          "title": "Wins",
+          "type": "integer"
+        },
+        "losses": {
+          "title": "Losses",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "queue",
+        "tier",
+        "division",
+        "league_points",
+        "wins",
+        "losses"
+      ],
+      "title": "RankedStanding",
       "type": "object"
     },
     "TeamItemGold": {
