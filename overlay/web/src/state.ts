@@ -46,6 +46,21 @@ export interface InhibitorTimer {
   readonly respawns_at_game_time_seconds: number;
 }
 
+/**
+ * A player's combat stats: exact for the player on this machine, from the game; for the others an
+ * estimate from the champion's base stats, level and items, without runes, passives or buffs.
+ */
+export interface CombatStats {
+  readonly source: "exact" | "estimate";
+  readonly health: number;
+  readonly armor: number;
+  readonly magic_resist: number;
+  readonly attack_damage: number;
+  readonly ability_power: number;
+  readonly attack_speed: number;
+  readonly move_speed: number;
+}
+
 /** One player as the scoreboard shows them: side, role, level, and when they are back. */
 export interface PlayerCard {
   readonly champion_name: string;
@@ -58,6 +73,7 @@ export interface PlayerCard {
   readonly respawns_at_game_time_seconds: number | null;
   readonly item_gold: number | null;
   readonly finished_item_names: readonly string[];
+  readonly combat_stats: CombatStats | null;
 }
 
 /** What each team's items are worth: gold earned and spent, not gold in hand. */
@@ -185,6 +201,26 @@ export function isInhibitorTimer(value: unknown): value is InhibitorTimer {
   );
 }
 
+const COMBAT_STAT_NAMES = [
+  "health",
+  "armor",
+  "magic_resist",
+  "attack_damage",
+  "ability_power",
+  "attack_speed",
+  "move_speed",
+] as const;
+const COMBAT_STAT_SOURCES: ReadonlySet<string> = new Set(["exact", "estimate"]);
+
+/** Return whether a value is a player's combat stats as the engine sends them. */
+export function isCombatStats(value: unknown): value is CombatStats {
+  return (
+    isRecord(value) &&
+    isOneOf(value["source"], COMBAT_STAT_SOURCES) &&
+    COMBAT_STAT_NAMES.every((statName) => typeof value[statName] === "number")
+  );
+}
+
 /** Return whether a value is a player's card as the engine sends it. */
 export function isPlayerCard(value: unknown): value is PlayerCard {
   return (
@@ -198,7 +234,8 @@ export function isPlayerCard(value: unknown): value is PlayerCard {
     typeof value["is_dead"] === "boolean" &&
     isNumberOrNull(value["respawns_at_game_time_seconds"]) &&
     isNumberOrNull(value["item_gold"]) &&
-    isArrayOf(value["finished_item_names"], (name: unknown): name is string => typeof name === "string")
+    isArrayOf(value["finished_item_names"], (name: unknown): name is string => typeof name === "string") &&
+    (value["combat_stats"] === null || isCombatStats(value["combat_stats"]))
   );
 }
 

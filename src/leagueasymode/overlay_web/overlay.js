@@ -36,7 +36,7 @@ const LANE_NAMES = {
     mid: "mid",
     bot: "bot",
 };
-const GOLD_PER_THOUSAND = 1000;
+const ONE_THOUSAND = 1000;
 const ROLE_ORDER = ["TOP", "JUNGLE", "MIDDLE", "BOTTOM", "UTILITY"];
 const ROLE_SHORT_NAMES = {
     TOP: "TOP",
@@ -209,7 +209,11 @@ function renderObjectivePills(nowMilliseconds) {
 }
 /** Return gold in thousands with one decimal: 3400 is "3.4k". */
 export function formatGold(gold) {
-    return `${(gold / GOLD_PER_THOUSAND).toFixed(1)}k`;
+    return formatThousands(gold);
+}
+/** Return a number in thousands with one decimal: "3.4k". */
+export function formatThousands(amount) {
+    return `${(amount / ONE_THOUSAND).toFixed(1)}k`;
 }
 /** Return a team's item-gold lead with its sign: "+1.2k", "−0.8k", or "even". */
 export function formatGoldLead(leadGold) {
@@ -237,7 +241,12 @@ function itemLeadElement(state) {
     header.append(labelElement, valueElement);
     return header;
 }
-/** Return the row that draws one enemy: champion, level, item gold, and the death timer. */
+/** Return the line of an enemy's defensive stats: "1.3k HP · 59 AR · 39 MR". */
+export function formatDefensiveStats(stats) {
+    const healthText = `${formatThousands(stats.health)} HP`;
+    return [healthText, `${Math.round(stats.armor)} AR`, `${Math.round(stats.magic_resist)} MR`].join(" · ");
+}
+/** Return the row that draws one enemy: champion, level, item gold, the death timer and stats. */
 function enemyRowElement(card, gameTimeSeconds) {
     const row = document.createElement("div");
     row.className = "enemy-row";
@@ -263,6 +272,13 @@ function enemyRowElement(card, gameTimeSeconds) {
         respawnElement.className = "enemy-respawn";
         respawnElement.textContent = formatCountdown(respawnsAtSeconds - gameTimeSeconds);
         row.append(respawnElement);
+    }
+    if (card.combat_stats !== null) {
+        const statsElement = document.createElement("span");
+        statsElement.className = "enemy-stats";
+        statsElement.dataset["source"] = card.combat_stats.source;
+        statsElement.textContent = formatDefensiveStats(card.combat_stats);
+        row.append(statsElement);
     }
     return row;
 }

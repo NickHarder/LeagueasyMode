@@ -9,6 +9,7 @@
 import {
   type BuffTimer,
   type Callout,
+  type CombatStats,
   type DragonTimer,
   type InhibitorTimer,
   type NumbersWindow,
@@ -48,7 +49,7 @@ const LANE_NAMES: Readonly<Record<InhibitorTimer["lane"], string>> = {
   mid: "mid",
   bot: "bot",
 };
-const GOLD_PER_THOUSAND = 1000;
+const ONE_THOUSAND = 1000;
 const ROLE_ORDER: readonly string[] = ["TOP", "JUNGLE", "MIDDLE", "BOTTOM", "UTILITY"];
 const ROLE_SHORT_NAMES: Readonly<Record<string, string>> = {
   TOP: "TOP",
@@ -250,7 +251,12 @@ function renderObjectivePills(nowMilliseconds: number): void {
 
 /** Return gold in thousands with one decimal: 3400 is "3.4k". */
 export function formatGold(gold: number): string {
-  return `${(gold / GOLD_PER_THOUSAND).toFixed(1)}k`;
+  return formatThousands(gold);
+}
+
+/** Return a number in thousands with one decimal: "3.4k". */
+export function formatThousands(amount: number): string {
+  return `${(amount / ONE_THOUSAND).toFixed(1)}k`;
 }
 
 /** Return a team's item-gold lead with its sign: "+1.2k", "−0.8k", or "even". */
@@ -281,7 +287,13 @@ function itemLeadElement(state: OverlayState): HTMLElement | null {
   return header;
 }
 
-/** Return the row that draws one enemy: champion, level, item gold, and the death timer. */
+/** Return the line of an enemy's defensive stats: "1.3k HP · 59 AR · 39 MR". */
+export function formatDefensiveStats(stats: CombatStats): string {
+  const healthText = `${formatThousands(stats.health)} HP`;
+  return [healthText, `${Math.round(stats.armor)} AR`, `${Math.round(stats.magic_resist)} MR`].join(" · ");
+}
+
+/** Return the row that draws one enemy: champion, level, item gold, the death timer and stats. */
 function enemyRowElement(card: PlayerCard, gameTimeSeconds: number): HTMLElement {
   const row = document.createElement("div");
   row.className = "enemy-row";
@@ -307,6 +319,13 @@ function enemyRowElement(card: PlayerCard, gameTimeSeconds: number): HTMLElement
     respawnElement.className = "enemy-respawn";
     respawnElement.textContent = formatCountdown(respawnsAtSeconds - gameTimeSeconds);
     row.append(respawnElement);
+  }
+  if (card.combat_stats !== null) {
+    const statsElement = document.createElement("span");
+    statsElement.className = "enemy-stats";
+    statsElement.dataset["source"] = card.combat_stats.source;
+    statsElement.textContent = formatDefensiveStats(card.combat_stats);
+    row.append(statsElement);
   }
   return row;
 }

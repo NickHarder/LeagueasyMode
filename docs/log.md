@@ -6,6 +6,15 @@ skill has the format.
 
 ## 2026-10-08
 
+- Phase 2.8, estimator 2: each player's combat stats, exact for the player on this machine and
+  estimated for the others from their champion, level and items. The owner chose where champion
+  base stats come from: Riot's Data Dragon, fetched by the engine once a patch and kept on disk.
+  It is the overlay's one request beyond the Mac, said so in the README, and can be turned off.
+  The engine now loads the patch's data at every game's start, so a patch day needs no restart.
+- This season's spawn times confirmed by the owner: Voidgrubs 8:00, Herald 15:00, Baron 20:00, no
+  longer marked "~". The Voidgrubs now leave at 14:45 and an untaken Herald at 19:45, 15 seconds
+  before the next monster, as in past seasons; the browser test that showed the Herald up at 23:15
+  now shows Baron up instead.
 - Phase 2 pushed and opened as pull request #3, stacked on #2 so that its diff shows phase 2 alone.
 - Phase 2 stands built but for structures, left out because League's own scoreboard shows tower
   counts and the lane naming is unconfirmed, and combat stats, which wait on the owner's choice of

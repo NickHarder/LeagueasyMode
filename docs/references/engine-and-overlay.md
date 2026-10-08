@@ -4,7 +4,7 @@ title: The engine and the overlay page
 description: How the engine turns the game's answers into the overlay's state, how that state reaches the widgets, how the page is built and tested, and how to run it all against a replay.
 tags: [engine, overlay, architecture]
 status: draft
-generated: { by: claude-code/cloud, at: 2026-10-08T16:10:00Z }
+generated: { by: claude-code/cloud, at: 2026-10-08T16:21:06Z }
 sources:
   - id: engine
     resource: ../../src/leagueasymode/engine.py
@@ -18,6 +18,10 @@ sources:
     resource: ../../src/leagueasymode/patch_data.py
   - id: roles
     resource: ../../src/leagueasymode/inference/roles.py
+  - id: data-dragon
+    resource: ../../src/leagueasymode/data_dragon.py
+  - id: combat-stats
+    resource: ../../src/leagueasymode/inference/combat_stats.py
   - id: overlay-state
     resource: ../../src/leagueasymode/overlay_state.py
   - id: overlay-server
@@ -57,7 +61,7 @@ game API ─▶ GameApiClient ─▶ GameSnapshot ─▶ estimators ─▶ Overl
 | Estimator | Kind | Rules |
 |---|---|---|
 | Dragon and Elder Dragon timer, each side's dragons, the soul | exact: restates the kill feed and the map | first dragon at 5:00, a dragon respawns 5:00 after it dies, the Elder 6:00 after the soul dragon or the last Elder; the soul at 4 dragons[^objectives] |
-| Baron, Rift Herald and Voidgrubs timers | exact, with this season's spawn times provisional | Baron respawns 6:00 after it dies; first spawns (Voidgrubs 8:00, Herald 15:00, Baron 20:00) from the first version's code, marked unverified and shown with "~"; the Voidgrubs leave when the Herald comes, the Herald does not return once taken |
+| Baron, Rift Herald and Voidgrubs timers | exact | first spawns this season (Voidgrubs 8:00, Herald 15:00, Baron 20:00) confirmed by the owner on 2026-10-08; Baron respawns 6:00 after he dies; the Voidgrubs leave at 14:45 and an untaken Herald at 19:45, 15 seconds before the next monster takes the pit, and the Herald does not return once taken. A rule a new season changes goes back to unverified and its times show with "~" until confirmed[^objectives] |
 | Baron and Elder buffs | exact | to the team of the player who took the monster: Baron 3:00, Elder 2:30 |
 | Players and death timers | exact | each player's side, role as the game names it, level, and, while dead, when they respawn (`respawnTimer` added to the clock) |
 | Numbers window | exact | open while more enemies than allies are dead; it closes at the first respawn after which no more enemies than allies are dead; a death to come cannot be known, so it is never counted |
@@ -65,14 +69,15 @@ game API ─▶ GameApiClient ─▶ GameSnapshot ─▶ estimators ─▶ Overl
 | Item gold, finished items, each team's item gold | exact, at the patch's prices | each player's inventory priced at the catalog's total price (the scoreboard's price for an item the catalog lacks); a finished item is built from parts and into nothing, is not boots or a consumable, and costs at least 2000 gold, a floor to check on real data; a team's item gold is gold earned and spent, not gold in hand |
 | Item callouts | exact | "Caitlyn finished Infinity Edge" when a finished item appears in an enemy's inventory between two answers whose items were both known |
 | Roles (estimator 1) | given where the game assigns them; otherwise likely or a guess | each player gets a cost for each role from Smite, a support item, the other summoner spells and, after 3:00, the least CS on the team; each team's open roles go to its open players in the assignment of least total cost, found by trying all of them (120 for five); a player's role is "likely" when every assignment that changes it costs at least 2 more, otherwise a "guess". The costs are a hand-set prior, to be fitted on the roles the post-game timeline records |
+| Combat stats (estimator 2) | exact for the player on this machine; an estimate for the others | the game gives the player on this machine's stats in full (`activePlayer.championStats`). For the others: the champion's base stats from the patch's Data Dragon files, each grown to the level by the game's formula, base + per-level × (level − 1) × (0.7025 + 0.0175 × (level − 1)), plus each item's stats; bonus attack speed adds up before it multiplies the base, up to 2.5; move speed slows above 415 and 490. Runes, passives, stacks and buffs are not counted, so an estimate runs low for a champion that has them; the recordings, which hold the exact stats of the player on this machine all game, are to measure by how much[^combat-stats] |
 | Inhibitors down | exact | back 5:00 after they fall, or when the feed says they respawned; `Barracks_T1_L1` is team 1's top inhibitor (L, C and R taken as top, mid and bottom, to be confirmed) |
 
-The long-standing rules are written as verified; the rest are checked against the first
-recordings. The widgets show the dragon always, and beside it the numbers window while it is
-open, any other monster up or within 90 seconds of spawning, each running buff, and each
-inhibitor down; on the right, each team's item-gold lead, and each enemy in role order with their
-role (in italics when worked out, with "?" when only a guess), champion, level, item gold and death
-timer.
+Every rule is checked again against the first recordings. The widgets show the dragon always,
+and beside it the numbers window while it is open, any other monster up or within 90 seconds of
+spawning, each running buff, and each inhibitor down; on the right, each team's item-gold lead,
+and each enemy in role order with their role (in italics when worked out, with "?" when only a
+guess), champion, level, item gold and death timer, and under each their health, armor and magic
+resist ("1.3k HP · 59 AR · 39 MR").
 
 # Patch data
 
@@ -81,6 +86,19 @@ which the engine asks for when a game starts and keeps; until it has it, the ite
 absent rather than guessed.[^patch-data] Against a replay, the replay serves the client's recorded
 resources too, under their own paths, from the moment of the recording they were received at, so
 `LEAGUEASYMODE_LEAGUE_CLIENT_BASE_URL` points the engine at the replay as its client.
+
+The champions' base stats and the items' stats are in no resource of the League client, so they
+come from Riot's Data Dragon: each patch's `champion.json` and `item.json`, public files that need
+no key and no account. When a game starts, the engine asks the client for the game's version
+(`/lol-patch/v1/game-version`) and reads that patch's files from disk
+(`~/Library/Application Support/LeagueasyMode/patch-data/<version>/`); only a patch not yet there
+is fetched, so the overlay reaches the internet once a patch, and only for those two files and
+Data Dragon's list of versions. A version that is not a patch number never names a file. Without
+the client, Data Dragon's newest patch is used; without Data Dragon, the newest patch on disk
+stands in; `LEAGUEASYMODE_DOWNLOAD_PATCH_STATS=False` keeps the engine to what is on disk. HTTPS to
+Data Dragon trusts the Mac's own certificate store. The engine loads the patch's data again at
+every game's start, so a patch that lands between two games is picked up without a
+restart.[^data-dragon]
 
 # The local server
 
@@ -120,3 +138,5 @@ Chromium against a replay (Chromium from `uv run playwright install chromium`, o
 [^widgets]: `overlay/web/src/overlay.ts`
 [^replay]: `src/leagueasymode/replay.py`
 [^patch-data]: `src/leagueasymode/patch_data.py`
+[^data-dragon]: `src/leagueasymode/data_dragon.py`
+[^combat-stats]: `src/leagueasymode/inference/combat_stats.py`
