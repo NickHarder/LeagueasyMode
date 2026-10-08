@@ -342,7 +342,7 @@ async def load_player_records(
     )
     if not any(players for _, players in teams):
         return {}
-    alias_by_champion_id = _aliases_of(await client.get_json(CHAMPION_SUMMARY_PATH))
+    alias_by_champion_id = champion_aliases(await client.get_json(CHAMPION_SUMMARY_PATH))
     records: PlayerRecords = {}
     for team, players in teams:
         for player in players:
@@ -409,7 +409,7 @@ def _gameflow_session_of(payload: JsonValue | None) -> GameflowSession:
         return GameflowSession()
 
 
-def _aliases_of(payload: JsonValue | None) -> dict[int, str]:
+def champion_aliases(payload: JsonValue | None) -> dict[int, str]:
     """Return each champion's alias by its id, from the client's champion summary.
 
     Args:
