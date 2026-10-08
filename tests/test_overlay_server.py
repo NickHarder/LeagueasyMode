@@ -1,6 +1,7 @@
 import asyncio
 import dataclasses
 import json
+from collections.abc import Callable
 from pathlib import Path
 from typing import Final
 
@@ -9,7 +10,9 @@ import pytest
 from aiohttp import web
 from pydantic import JsonValue
 
+from data_dragon_fixtures import fixture_patch_stats
 from game_payloads import DEFAULT_PLAYERS, all_game_data, dragon_kill_event, game_start_event
+from leagueasymode.data_dragon import PatchStats
 from leagueasymode.engine import OverlayEngine, compute_overlay_state
 from leagueasymode.game_api import GameApiClient
 from leagueasymode.league_client import LeagueClient
@@ -227,3 +230,115 @@ async def test_the_engine_loads_the_item_catalog_from_the_client_when_a_game_sta
         await engine_task
     assert engine.item_catalog is not None
     assert engine.item_catalog.total_price(3031) == 3400
+
+
+def league_client_with_game_version(game_version: str) -> web.Application:
+    client_application = web.Application()
+
+    async def items_route(_request: web.Request) -> web.Response:
+        return web.json_response([{"id": 3031, "name": "Infinity Edge", "priceTotal": 3400}])
+
+    async def game_version_route(_request: web.Request) -> web.Response:
+        return web.json_response(game_version)
+
+    client_application.router.add_get("/lol-game-data/assets/v1/items.json", items_route)
+    client_application.router.add_get("/lol-patch/v1/game-version", game_version_route)
+    return client_application
+
+
+async def run_engine_until(engine: OverlayEngine, is_done: Callable[[], bool]) -> None:
+    stop_requested = asyncio.Event()
+    engine_task = asyncio.create_task(engine.run(stop_requested))
+    for _ in range(200):
+        if is_done():
+            break
+        await asyncio.sleep(0.01)
+    stop_requested.set()
+    await engine_task
+
+
+async def test_the_engine_loads_the_patch_stats_of_the_clients_game_version() -> None:
+    answers = [game_with_a_dragon_taken_at(400.0, 450.0 + index) for index in range(50)]
+    asked_game_versions: list[str | None] = []
+
+    async def load_patch_stats(game_version: str | None) -> PatchStats | None:
+        asked_game_versions.append(game_version)
+        return fixture_patch_stats()
+
+    async with (
+        serve(scripted_game(answers)) as game_url,
+        serve(league_client_with_game_version("16.19.712.1234")) as client_url,
+        aiohttp.ClientSession() as session,
+    ):
+
+        async def connect_to_client() -> LeagueClient | None:
+            return LeagueClient(session, client_url, password="", tls_context=None)
+
+        engine = OverlayEngine(
+            GameApiClient(session, game_url, tls_context=None),
+            poll_interval_seconds=0.01,
+            connect_to_client=connect_to_client,
+            load_patch_stats=load_patch_stats,
+        )
+        await run_engine_until(
+            engine,
+            lambda: (
+                all(card.combat_stats is not None for card in engine.current_state.players)
+                and bool(engine.current_state.players)
+            ),
+        )
+    assert asked_game_versions == ["16.19.712.1234"]
+    assert engine.patch_stats is not None
+    assert all(card.combat_stats is not None for card in engine.current_state.players)
+
+
+async def test_without_the_league_client_the_patch_stats_are_loaded_for_no_version() -> None:
+    answers = [game_with_a_dragon_taken_at(400.0, 450.0 + index) for index in range(50)]
+    asked_game_versions: list[str | None] = []
+
+    async def load_patch_stats(game_version: str | None) -> PatchStats | None:
+        asked_game_versions.append(game_version)
+        return fixture_patch_stats()
+
+    async def no_client() -> LeagueClient | None:
+        return None
+
+    async with serve(scripted_game(answers)) as game_url, aiohttp.ClientSession() as session:
+        engine = OverlayEngine(
+            GameApiClient(session, game_url, tls_context=None),
+            poll_interval_seconds=0.01,
+            connect_to_client=no_client,
+            load_patch_stats=load_patch_stats,
+        )
+        await run_engine_until(engine, lambda: engine.patch_stats is not None)
+    assert asked_game_versions == [None]
+
+
+async def test_each_new_game_loads_the_patch_data_again() -> None:
+    # A game, a pause between games, and a second game: a patch can land in between.
+    first_game = [game_with_a_dragon_taken_at(400.0, 450.0 + index) for index in range(5)]
+    second_game = [game_with_a_dragon_taken_at(400.0, 450.0 + index) for index in range(50)]
+    answers: list[JsonValue] = [*first_game, None, None, None, *second_game]
+    asked_game_versions: list[str | None] = []
+
+    async def load_patch_stats(game_version: str | None) -> PatchStats | None:
+        asked_game_versions.append(game_version)
+        return fixture_patch_stats()
+
+    async with (
+        serve(scripted_game(answers)) as game_url,
+        serve(league_client_with_game_version("16.20.1.1")) as client_url,
+        aiohttp.ClientSession() as session,
+    ):
+
+        async def connect_to_client() -> LeagueClient | None:
+            return LeagueClient(session, client_url, password="", tls_context=None)
+
+        engine = OverlayEngine(
+            GameApiClient(session, game_url, tls_context=None),
+            poll_interval_seconds=0.01,
+            connect_to_client=connect_to_client,
+            load_patch_stats=load_patch_stats,
+        )
+        await run_engine_until(engine, lambda: len(asked_game_versions) >= 2)
+    assert asked_game_versions == ["16.20.1.1", "16.20.1.1"]

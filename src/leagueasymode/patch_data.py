@@ -13,6 +13,8 @@ from pydantic import Field, JsonValue, TypeAdapter, ValidationError
 from leagueasymode.game_state import RiotPayloadModel
 
 ITEMS_PATH: Final = "/lol-game-data/assets/v1/items.json"
+# The game's version, such as "16.19.712.1234": which patch the client runs.
+GAME_VERSION_PATH: Final = "/lol-patch/v1/game-version"
 BOOTS_CATEGORY: Final = "Boots"
 CONSUMABLE_CATEGORY: Final = "Consumable"
 # A finished item is a full recipe; below this total price, a "finished" item is a component
@@ -110,3 +112,15 @@ class ItemCatalog:
             and CONSUMABLE_CATEGORY not in item.categories
             and item.price_total >= FINISHED_ITEM_PRICE_FLOOR
         )
+
+
+def game_version_of(payload: JsonValue) -> str | None:
+    """Return the game's version from the client's answer for `/lol-patch/v1/game-version`.
+
+    Args:
+        payload: The answer, a JSON string.
+
+    Returns:
+        The version, or None when the answer is not a string.
+    """
+    return payload if isinstance(payload, str) and payload else None

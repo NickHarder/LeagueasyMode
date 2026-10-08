@@ -19,7 +19,7 @@ from pydantic import JsonValue
 from leagueasymode import __version__
 from leagueasymode.game_api import GameApiClient
 from leagueasymode.league_client import ClientConnector, LeagueClient
-from leagueasymode.patch_data import ITEMS_PATH
+from leagueasymode.patch_data import GAME_VERSION_PATH, ITEMS_PATH
 from leagueasymode.recording.file_format import PLAIN_SUFFIX
 from leagueasymode.recording.writer import DEFAULT_KEYFRAME_INTERVAL_SECONDS, RecordingWriter
 
@@ -27,7 +27,7 @@ GAMEFLOW_SESSION_PATH: Final = "/lol-gameflow/v1/session"
 CHAMPION_SUMMARY_PATH: Final = "/lol-game-data/assets/v1/champion-summary.json"
 # This patch's game data, as the client serves it. A path the client does not have is skipped.
 STATIC_CLIENT_PATHS: Final = (
-    "/lol-patch/v1/game-version",
+    GAME_VERSION_PATH,
     ITEMS_PATH,
     CHAMPION_SUMMARY_PATH,
     "/lol-game-data/assets/v1/summoner-spells.json",

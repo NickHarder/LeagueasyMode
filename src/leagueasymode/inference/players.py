@@ -4,20 +4,26 @@ Exact: the scoreboard gives every player's level and, while they are dead, the s
 respawn. The numbers window follows from those alone, since a death to come cannot be known.
 """
 
+from leagueasymode.data_dragon import PatchStats
 from leagueasymode.game_state import GameSnapshot, ScoreboardPlayer
+from leagueasymode.inference.combat_stats import estimated_combat_stats, exact_combat_stats
 from leagueasymode.inference.roles import assign_roles
-from leagueasymode.overlay_state import NumbersWindow, PlayerCard, TeamItemGold
+from leagueasymode.overlay_state import CombatStats, NumbersWindow, PlayerCard, TeamItemGold
 from leagueasymode.patch_data import ItemCatalog
 
 
 def player_cards(
-    snapshot: GameSnapshot, item_catalog: ItemCatalog | None = None
+    snapshot: GameSnapshot,
+    item_catalog: ItemCatalog | None = None,
+    patch_stats: PatchStats | None = None,
 ) -> list[PlayerCard]:
     """Return a card for every player, the player's own team first, each team in scoreboard order.
 
     Args:
         snapshot: The game's state.
         item_catalog: The patch's items, for item gold and finished items; None while unknown.
+        patch_stats: The patch's champion and item stats, for the combat stats; None while
+            unknown.
 
     Returns:
         The cards.
@@ -40,6 +46,7 @@ def player_cards(
             respawns_at_game_time_seconds=_respawns_at_seconds(player, game_time_seconds),
             item_gold=_item_gold(player, item_catalog),
             finished_item_names=_finished_item_names(player, item_catalog),
+            combat_stats=_combat_stats(snapshot, player, patch_stats),
         )
         for index, player in [*allies, *enemies]
     ]
@@ -64,6 +71,31 @@ def team_item_gold(cards: list[PlayerCard]) -> TeamItemGold | None:
         ally_item_gold=sum(gold for gold in item_golds_by_side["ally"] if gold is not None),
         enemy_item_gold=sum(gold for gold in item_golds_by_side["enemy"] if gold is not None),
     )
+
+
+def _combat_stats(
+    snapshot: GameSnapshot, player: ScoreboardPlayer, patch_stats: PatchStats | None
+) -> CombatStats | None:
+    """Return a player's combat stats: the game's own for the player on this machine.
+
+    Args:
+        snapshot: The game's state.
+        player: The player.
+        patch_stats: The patch's stats; None while unknown.
+
+    Returns:
+        The stats, or None while they cannot be had.
+    """
+    active_player = snapshot.active_player
+    if (
+        active_player is not None
+        and active_player.champion_stats is not None
+        and snapshot.is_active_player(player)
+    ):
+        return exact_combat_stats(active_player.champion_stats)
+    if patch_stats is None:
+        return None
+    return estimated_combat_stats(player, patch_stats)
 
 
 def _item_gold(player: ScoreboardPlayer, item_catalog: ItemCatalog | None) -> int | None:

@@ -65,6 +65,26 @@ class InhibitorTimer(BaseModel):
     respawns_at_game_time_seconds: float
 
 
+class CombatStats(BaseModel):
+    """A player's combat stats.
+
+    Exact for the player on this machine, whose stats the game gives in full. For the others an
+    estimate: the champion's base stats grown to their level, plus their items' stats, at this
+    patch's numbers; runes, passives, stacks and buffs are not counted.
+    """
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    source: Literal["exact", "estimate"]
+    health: float
+    armor: float
+    magic_resist: float
+    attack_damage: float
+    ability_power: float
+    attack_speed: float
+    move_speed: float
+
+
 class PlayerCard(BaseModel):
     """One player as the scoreboard shows them: side, role, level, and when they are back."""
 
@@ -84,6 +104,8 @@ class PlayerCard(BaseModel):
     # The patch price of everything in the inventory; None until the item catalog is known.
     item_gold: int | None = None
     finished_item_names: list[str] = Field(default_factory=list)
+    # None until the patch's stats are known, except for the player on this machine.
+    combat_stats: CombatStats | None = None
 
 
 class TeamItemGold(BaseModel):
