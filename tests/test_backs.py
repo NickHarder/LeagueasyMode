@@ -11,6 +11,7 @@ from leagueasymode.game_state import GameSnapshot
 from leagueasymode.inference.backs import BackTracker
 from leagueasymode.inference.callouts import CalloutTracker
 from leagueasymode.inference.gold import PlayerKey
+from leagueasymode.inference.rift_map import RIFT_MAP, fountain_of, role_point_of
 from leagueasymode.overlay_state import BackEstimate, OverlayState, PlayerCard
 
 ZED: Final = ("CHAOS", "zed")
@@ -22,6 +23,10 @@ HEALTH_POTION: Final = (2003, "Health Potion", 50)
 # Without the patch's stats, a player moves at 380 a second.
 DEFAULT_MOVE_SPEED: Final = 380.0
 SHOPPING_SECONDS: Final = 5.0
+
+
+def walk_home_to(team: str, role: str) -> float:
+    return RIFT_MAP.distance(fountain_of(team), role_point_of(team, role))
 
 
 class SeedChanges(TypedDict, total=False):
@@ -49,9 +54,9 @@ def test_a_purchase_while_alive_is_a_back() -> None:
     assert observe(tracker, 400.0) == {}
     zed = observe(tracker, 460.0, Zed={"items": (LONG_SWORD,)})[ZED]
     assert zed.shopped_at_game_time_seconds == 460.0
-    # Mid is 7,500 units from the fountain.
+    # The walk along the map from their fountain to their mid outer turret.
     assert zed.returns_at_game_time_seconds == pytest.approx(
-        460.0 + SHOPPING_SECONDS + 7500 / DEFAULT_MOVE_SPEED
+        460.0 + SHOPPING_SECONDS + walk_home_to("CHAOS", "MIDDLE") / DEFAULT_MOVE_SPEED
     )
 
 
@@ -97,12 +102,11 @@ def test_the_way_back_depends_on_where_they_play() -> None:
     tracker = BackTracker()
     observe(tracker, 400.0)
     backs = observe(tracker, 460.0, Caitlyn={"items": (LONG_SWORD,)}, Vi={"items": (LONG_SWORD,)})
-    # Bottom is 10,000 units from the fountain; the jungle 5,500.
     assert backs[CAITLYN].returns_at_game_time_seconds == pytest.approx(
-        460.0 + SHOPPING_SECONDS + 10000 / DEFAULT_MOVE_SPEED
+        460.0 + SHOPPING_SECONDS + walk_home_to("CHAOS", "BOTTOM") / DEFAULT_MOVE_SPEED
     )
     assert backs[VI_JUNGLER].returns_at_game_time_seconds == pytest.approx(
-        460.0 + SHOPPING_SECONDS + 5500 / DEFAULT_MOVE_SPEED
+        460.0 + SHOPPING_SECONDS + walk_home_to("CHAOS", "JUNGLE") / DEFAULT_MOVE_SPEED
     )
 
 
@@ -110,7 +114,9 @@ def test_the_way_back_is_at_their_estimated_move_speed() -> None:
     tracker = BackTracker()
     observe(tracker, 400.0, fixture_patch_stats())
     zed = observe(tracker, 460.0, fixture_patch_stats(), Zed={"items": (LONG_SWORD,)})[ZED]
-    assert zed.returns_at_game_time_seconds == pytest.approx(460.0 + SHOPPING_SECONDS + 7500 / 345)
+    assert zed.returns_at_game_time_seconds == pytest.approx(
+        460.0 + SHOPPING_SECONDS + walk_home_to("CHAOS", "MIDDLE") / 345
+    )
 
 
 def test_a_new_game_starts_the_tracker_over() -> None:

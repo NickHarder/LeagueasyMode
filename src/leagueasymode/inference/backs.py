@@ -3,11 +3,11 @@
 Buying needs the fountain, so a purchase made alive is a trip to base: not one at the game's
 start, nor one while dead or just after respawning, which a death explains. Purchases within 30
 seconds of a trip's first belong to it. The way back is a few seconds of shopping, then the walk
-from the fountain to their lane, or into their jungle, at their move speed: the game's own for
-you, the estimate (`combat_stats.py`) for the others, and 380 without the patch's stats.
+from the fountain to their lane's outer turret, or the middle of their jungle, along the map
+(`rift_map.py`), at their move speed: the game's own for you, the estimate (`combat_stats.py`) for
+the others, and 380 without the patch's stats.
 """
 
-from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Final
 
@@ -20,6 +20,7 @@ from leagueasymode.inference.gold import (
     inventory_worth,
     player_key,
 )
+from leagueasymode.inference.rift_map import RIFT_MAP, fountain_of, role_point_of
 from leagueasymode.inference.roles import assign_roles
 from leagueasymode.overlay_state import BackEstimate
 from leagueasymode.patch_data import ItemCatalog
@@ -37,19 +38,8 @@ class BackRules:
     same_trip_seconds: float = 30.0
     shopping_seconds: float = 5.0
     default_move_speed: float = 380.0
-    # An unknown role is taken as mid.
-    unknown_role_travel_distance: float = 7500.0
 
 
-# Unconfirmed, a first guess: game units from the fountain to each role's place, the lane's outer
-# turret or the middle of the jungle, along the way a player walks.
-TRAVEL_DISTANCE_BY_ROLE: Final[Mapping[str, float]] = {
-    "TOP": 10000.0,
-    "JUNGLE": 5500.0,
-    "MIDDLE": 7500.0,
-    "BOTTOM": 10000.0,
-    "UTILITY": 10000.0,
-}
 BACK_RULES: Final = BackRules()
 
 
@@ -108,9 +98,9 @@ class BackTracker:
             if state.was_dead and not player.is_dead:
                 state.respawned_at_seconds = game_time_seconds
             if self._is_a_new_trip(state, player, worth, game_time_seconds):
-                travel_seconds = self._travel_distance(role_guess.role) / self._move_speed(
-                    snapshot, player, patch_stats
-                )
+                travel_seconds = RIFT_MAP.distance(
+                    fountain_of(player.team), role_point_of(player.team, role_guess.role)
+                ) / self._move_speed(snapshot, player, patch_stats)
                 state.last_back = BackEstimate(
                     shopped_at_game_time_seconds=game_time_seconds,
                     returns_at_game_time_seconds=(
@@ -157,17 +147,6 @@ class BackTracker:
                 > rules.same_trip_seconds
             )
         )
-
-    def _travel_distance(self, role: str) -> float:
-        """Return how far a player in a role walks from the fountain to where they play.
-
-        Args:
-            role: The role, given or worked out; empty when unknown.
-
-        Returns:
-            The distance, in game units.
-        """
-        return TRAVEL_DISTANCE_BY_ROLE.get(role, self.rules.unknown_role_travel_distance)
 
     def _move_speed(
         self, snapshot: GameSnapshot, player: ScoreboardPlayer, patch_stats: PatchStats | None

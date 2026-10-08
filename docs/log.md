@@ -6,6 +6,13 @@ skill has the format.
 
 ## 2026-10-08
 
+- Phase 4's plan, a draft for the owner: the map, the clues, positions (a particle filter), the
+  jungle path, control wards and the minimap layer, with three proposals where the owner decides.
+  Built on its best guesses meanwhile, as the owner asked.
+- Phase 4.1, the map: a hand-built walkable graph of Summoner's Rift, the blue half written down
+  and the red half its turn about the center, with shortest walks between any two points. Backs
+  now take their way home from it, instead of a guessed distance per role. The scoring harness
+  measures how far the timeline's positions lie from its paths.
 - Phase 3.8, the build path (estimator 5): each player's likely next finished item, from the
   components they hold toward it, what they built on the champion in their recent games (the
   match history now keeps each game's items), and their champion's class (Data Dragon's tags);

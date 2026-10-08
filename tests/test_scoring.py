@@ -19,6 +19,7 @@ from game_payloads import (
 from leagueasymode.cli import main
 from leagueasymode.data_dragon import PatchStatsStore
 from leagueasymode.inference.gold import passive_gold
+from leagueasymode.inference.rift_map import MapPoint, RiftMap
 from leagueasymode.league_client import GAMEFLOW_SESSION_PATH
 from leagueasymode.patch_data import CHAMPION_SUMMARY_PATH, GAME_VERSION_PATH, ITEMS_PATH
 from leagueasymode.recorder import GAME_DETAILS_PATH_TEMPLATE, TIMELINE_PATH_TEMPLATE
@@ -29,6 +30,7 @@ from leagueasymode.scoring import (
     score_combat_stats,
     score_experience,
     score_gold,
+    score_map,
     score_next_items,
     score_recording,
     score_roles,
@@ -387,3 +389,28 @@ def test_next_items_are_scored_against_the_next_finished_item_bought(tmp_path: P
     score = score_next_items(read_recorded_game(recording), fixture_patch_stats())
     assert score is not None
     assert score.describe() == "next item: 15/25 correct (60%)"
+
+
+def test_the_map_is_scored_by_how_far_the_timelines_positions_lie_from_its_paths(
+    tmp_path: Path,
+) -> None:
+    # A map of one path along the x axis; one position on it, one 300 units off it.
+    one_path = RiftMap(
+        [MapPoint("west", 0.0, 0.0, "lane"), MapPoint("east", 1000.0, 0.0, "lane")],
+        [("west", "east")],
+    )
+    frames: JsonValue = {
+        "frames": [
+            {
+                "timestamp": 60000,
+                "participantFrames": {
+                    "1": {"participantId": 1, "position": {"x": 500, "y": 0}},
+                    "2": {"participantId": 2, "position": {"x": 500, "y": 300}},
+                },
+            }
+        ]
+    }
+    recording = write_scored_recording(tmp_path, DEFAULT_PLAYERS, timeline=frames)
+    score = score_map(read_recorded_game(recording), one_path)
+    assert score is not None
+    assert score.describe() == "map: 2 positions, 150 units from its paths on average"

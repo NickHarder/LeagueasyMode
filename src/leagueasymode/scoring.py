@@ -19,6 +19,8 @@ compared with what is known to be true:
 - **Build path** (estimator 5): the next item predicted for each player at the end of each
   minute, from their components and class (their match history is not in the harness), against
   the first finished item the timeline shows them buy after it.
+- **The map** (phase 4.1): every player's position each minute on the timeline should lie near a
+  path of the hand-built map; how far it lies on average says how well the map was drawn.
 - **Backs** (estimator 6): the timeline records every purchase. One made alive (not within a
   minute of a death) past 1:30 starts a trip to base, and each purchase more than 30 seconds
   after a trip's first starts another; a trip the back tracker saw within 20 seconds of it is
@@ -29,6 +31,7 @@ a number per game; the thresholds that CI holds them to are set from the first b
 games and never lowered to make a check pass.
 """
 
+import math
 from collections.abc import Callable, Iterator, Mapping
 from dataclasses import dataclass
 from pathlib import Path
@@ -43,6 +46,7 @@ from leagueasymode.inference.build_path import next_item
 from leagueasymode.inference.combat_stats import estimated_combat_stats
 from leagueasymode.inference.experience import ExperienceTracker
 from leagueasymode.inference.gold import GoldTracker, PlayerKey, player_key
+from leagueasymode.inference.rift_map import RIFT_MAP, RiftMap
 from leagueasymode.inference.roles import assign_roles
 from leagueasymode.overlay_state import CombatStats, GoldEstimate, LevelEstimate
 from leagueasymode.patch_data import CHAMPION_SUMMARY_PATH, ITEMS_PATH, ItemCatalog
@@ -78,6 +82,28 @@ SCORED_STATS: Final[tuple[Callable[[CombatStats], float], ...]] = (
 )
 
 
+# How each measure reads, in one line.
+SCORE_DESCRIPTIONS: Final = {
+    "share_correct": "{estimator}: {hit_count}/{sample_count} correct ({percent:.0f}%)",
+    "share_within_band": (
+        "{estimator}: holds the truth {hit_count}/{sample_count} times ({percent:.0f}%)"
+    ),
+    "share_matched": "{estimator}: {hit_count}/{sample_count} matched ({percent:.0f}%)",
+    "mean_absolute_percent_error": (
+        "{estimator}: {sample_count} moments, {value:.1f}% off on average"
+    ),
+    "mean_absolute_error_gold": (
+        "{estimator}: {sample_count} player-minutes, {value:.0f} gold off on average"
+    ),
+    "mean_absolute_error_experience": (
+        "{estimator}: {sample_count} player-minutes, {value:.0f} experience off on average"
+    ),
+    "mean_distance_units": (
+        "{estimator}: {sample_count} positions, {value:.0f} units from its paths on average"
+    ),
+}
+
+
 @dataclass(frozen=True)
 class EstimatorScore:
     """How far one estimator is from the truth on one game."""
@@ -94,6 +120,7 @@ class EstimatorScore:
         "mean_absolute_error_experience",
         "share_within_band",
         "share_matched",
+        "mean_distance_units",
     ]
 
     def describe(self) -> str:
@@ -102,33 +129,13 @@ class EstimatorScore:
         Returns:
             Such as "roles: 9/10 correct (90%)".
         """
-        hit_count = round(self.value * self.sample_count)
-        if self.measure == "share_correct":
-            return (
-                f"{self.estimator}: {hit_count}/{self.sample_count} correct "
-                f"({self.value * PERCENT:.0f}%)"
-            )
-        if self.measure == "share_matched":
-            return (
-                f"{self.estimator}: {hit_count}/{self.sample_count} matched "
-                f"({self.value * PERCENT:.0f}%)"
-            )
-        if self.measure == "share_within_band":
-            return (
-                f"{self.estimator}: holds the truth {hit_count}/{self.sample_count} times "
-                f"({self.value * PERCENT:.0f}%)"
-            )
-        if self.measure == "mean_absolute_error_gold":
-            return (
-                f"{self.estimator}: {self.sample_count} player-minutes, "
-                f"{self.value:.0f} gold off on average"
-            )
-        if self.measure == "mean_absolute_error_experience":
-            return (
-                f"{self.estimator}: {self.sample_count} player-minutes, "
-                f"{self.value:.0f} experience off on average"
-            )
-        return f"{self.estimator}: {self.sample_count} moments, {self.value:.1f}% off on average"
+        return SCORE_DESCRIPTIONS[self.measure].format(
+            estimator=self.estimator,
+            hit_count=round(self.value * self.sample_count),
+            sample_count=self.sample_count,
+            percent=self.value * PERCENT,
+            value=self.value,
+        )
 
 
 @dataclass(frozen=True)
@@ -170,10 +177,18 @@ class GameDetails(RiotPayloadModel):
     participants: list[DetailsParticipant] = Field(default_factory=list)
 
 
+class TimelinePosition(RiotPayloadModel):
+    """A place on the map, in game units."""
+
+    x: int = 0  # ai-kit: ignore-name  the timeline's own name for the coordinate
+    y: int = 0  # ai-kit: ignore-name  as above
+
+
 class TimelineParticipantFrame(RiotPayloadModel):
-    """One participant's gold at one frame of the match timeline."""
+    """One participant's gold, experience and position at one frame of the match timeline."""
 
     participant_id: int = Field(default=0, alias="participantId")
+    position: TimelinePosition | None = None
     current_gold: int = Field(default=0, alias="currentGold")
     total_gold: int = Field(default=0, alias="totalGold")
     experience: int = Field(default=0, alias="xp")
@@ -483,6 +498,55 @@ def score_next_items(game: RecordedGame, patch_stats: PatchStats | None) -> Esti
     )
 
 
+def score_map(game: RecordedGame, rift_map: RiftMap = RIFT_MAP) -> EstimatorScore | None:
+    """Score the map by how far the timeline's positions lie from its paths.
+
+    Args:
+        game: The recorded game.
+        rift_map: The map.
+
+    Returns:
+        The mean distance from each position to the nearest path; None without positions.
+    """
+    timeline = _game_timeline(game)
+    positions = (
+        [
+            (truth.position.x, truth.position.y)
+            for frame in timeline.frames
+            for truth in frame.participant_frames
+            if truth.position is not None
+        ]
+        if timeline is not None
+        else []
+    )
+    if not positions:
+        return None
+    segments = [
+        (rift_map.points[name], rift_map.points[neighbour])
+        for name in rift_map.points
+        for neighbour, _ in rift_map.neighbours(name)
+        if name < neighbour
+    ]
+    return EstimatorScore(
+        estimator="map",
+        sample_count=len(positions),
+        value=sum(
+            min(
+                _distance_to_segment(
+                    x_position,
+                    y_position,
+                    (start.x_position, start.y_position),
+                    (end.x_position, end.y_position),
+                )
+                for start, end in segments
+            )
+            for x_position, y_position in positions
+        )
+        / len(positions),
+        measure="mean_distance_units",
+    )
+
+
 def score_backs(game: RecordedGame) -> list[EstimatorScore]:
     """Score the trips to base seen against the purchases the match timeline records.
 
@@ -555,6 +619,7 @@ def score_game(game: RecordedGame, patch_stats: PatchStats | None) -> list[Estim
         *score_experience(game),
         *(score for score in [score_next_items(game, patch_stats)] if score is not None),
         *score_backs(game),
+        *(score for score in [score_map(game)] if score is not None),
     ]
 
 
@@ -705,6 +770,44 @@ def _next_finished_purchase(
             and item_id not in owned_item_ids
         ),
         None,
+    )
+
+
+def _distance_to_segment(
+    x_position: float,
+    y_position: float,
+    start: tuple[float, float],
+    end: tuple[float, float],
+) -> float:
+    """Return how far a place lies from a straight path.
+
+    Args:
+        x_position: The place's x.
+        y_position: Its y.
+        start: The path's one end.
+        end: Its other end.
+
+    Returns:
+        The distance to the path's nearest point, in game units.
+    """
+    start_x, start_y = start
+    path_x = end[0] - start_x
+    path_y = end[1] - start_y
+    length_squared = path_x**2 + path_y**2
+    along = (
+        min(
+            max(
+                ((x_position - start_x) * path_x + (y_position - start_y) * path_y)
+                / length_squared,
+                0.0,
+            ),
+            1.0,
+        )
+        if length_squared > 0
+        else 0.0
+    )
+    return math.hypot(
+        x_position - (start_x + along * path_x), y_position - (start_y + along * path_y)
     )
 
 
