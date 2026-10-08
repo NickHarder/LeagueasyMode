@@ -4,7 +4,7 @@ title: Recordings
 description: What a recording of a game holds, how it is written and read, what is asked of the League client and when, and how a copy is anonymized before it may enter the repository.
 tags: [recording, data, privacy]
 status: draft
-generated: { by: claude-code/cloud, at: 2026-10-08T20:48:36Z }
+generated: { by: claude-code/cloud, at: 2026-10-08T21:36:01Z }
 sources:
   - id: file-format
     resource: ../../src/leagueasymode/recording/file_format.py
@@ -18,6 +18,8 @@ sources:
     resource: ../../src/leagueasymode/riot_tls.py
   - id: league-client
     resource: ../../src/leagueasymode/league_client.py
+  - id: scoring
+    resource: ../../src/leagueasymode/scoring.py
 ---
 
 # What a recording is for
@@ -26,6 +28,12 @@ Every estimator in [the plan](../plans/overlay-and-inference.md) is built and sc
 recorded games. A recording keeps everything the game's API answered during one game and what the
 League client served around it, so a game can be replayed as if it were running and compared with
 the match timeline, which is the ground truth.
+
+`uv run leagueasymode score <recording>` prints how far each estimator is from the truth on one
+recorded game: the role estimator against the positions the game gave or its details recorded
+(with the positions hidden from it), and the combat stats estimate against the exact stats the game
+gives for the player on this machine, once a minute. The estimators still to come are scored there
+too, against the post-game timeline.[^scoring]
 
 # How to make one
 
@@ -99,3 +107,4 @@ A recording holds other players' names, so only an anonymized copy is committed:
 [^league-client]: `src/leagueasymode/league_client.py`
 [^riot-tls]: `src/leagueasymode/riot_tls.py`
 [^anonymize]: `src/leagueasymode/recording/anonymize.py`
+[^scoring]: `src/leagueasymode/scoring.py`

@@ -6,6 +6,12 @@ skill has the format.
 
 ## 2026-10-08
 
+- Phase 3.4, the scoring harness: `leagueasymode score <recording>` scores the role estimator (its
+  positions hidden, against the game's own or its details') and the combat stats estimate (against
+  the exact stats the game gives for the player on this machine) on a recorded game. The thresholds
+  CI will hold them to wait for the first batch of recordings.
+- The owner asked for the work to go on without waiting for merges: each slice gets its pull
+  request into `main` as it is ready. Recorded in the handoff's settled points.
 - Phase 3.3, suggestions: callouts that name an action when the facts line up (an objective in a
   numbers window, their jungler dead, a Flash or ultimate just marked, a Baron or Elder buff just
   taken), worded on a best guess for the owner to tune, text only. The callouts' docstring no

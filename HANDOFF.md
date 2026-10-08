@@ -13,8 +13,9 @@ the owner on 2026-10-08). Phase 0 is done; phase 1, the tracer bullet, is built 
 test on a Mac; phase 2 ([docs/plans/phase-2-exact-facts.md](docs/plans/phase-2-exact-facts.md)) is
 built but for structures, left out until the first recordings. Phase 3
 ([docs/plans/phase-3-economy-and-open-policy.md](docs/plans/phase-3-economy-and-open-policy.md)) is
-approved by the owner; 3.1, loading-screen intel, is pull request #7; 3.2, marked cooldowns, #8;
-3.3, suggestions, is built on `feat/suggestions`; 3.4, the scoring harness, is next.
+approved by the owner; 3.1 to 3.3 (loading-screen intel, marked cooldowns, suggestions) are merged
+into `main`; 3.4, the scoring harness, is built on `feat/scoring-harness`; 3.5, hidden gold, is
+next.
 
 | Area | State | Proof |
 |---|---|---|
@@ -93,6 +94,10 @@ In `AGENTS.md`. Also: a raw recording (it holds other players' names); only `ano
 - `truststore` as a dependency, for HTTPS to Data Dragon (the owner, 2026-10-08).
 - Pushing and opening pull requests need no asking; deletions on GitHub and force pushes stay off
   limits (the owner, 2026-10-08; `AGENTS.md`, rule 1).
+- Keep building through the plan without waiting for merges: open each slice's pull request into
+  `main` as it is ready, assuming the earlier ones will be merged (the owner, 2026-10-08: "keep
+  building as well and putting in new mrs even if i havent merged"). A slice built on an unmerged
+  one says so in its pull request, and targets `main` all the same.
 
 ## Known limitations
 

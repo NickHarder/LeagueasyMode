@@ -34,12 +34,14 @@ from leagueasymode.league_client import (
     find_client_credentials,
 )
 from leagueasymode.overlay_server import create_overlay_application
+from leagueasymode.patch_data import GAME_VERSION_PATH, game_version_of
 from leagueasymode.player_intel import PLAYER_LOOKUP_PATH_PREFIXES
 from leagueasymode.recorder import RecorderTimings, record_games
 from leagueasymode.recording.anonymize import IdentityLeakError, anonymize_recording
 from leagueasymode.recording.file_format import COMPRESSED_SUFFIX, PLAIN_SUFFIX
 from leagueasymode.replay import DEFAULT_REPLAY_PORT, RecordingReplay, create_replay_application
 from leagueasymode.riot_tls import create_riot_tls_context
+from leagueasymode.scoring import read_recorded_game, score_game
 
 EXIT_SUCCESS: Final = 0
 EXIT_FAILURE: Final = 1
@@ -64,6 +66,8 @@ def main(arguments: Sequence[str] | None = None) -> int:
     parsed = parser.parse_args(arguments)
     settings = Settings()
     logging.basicConfig(level=settings.log_level, format="%(asctime)s %(levelname)s %(message)s")
+    if parsed.command == "score":
+        return _score(Path(parsed.recording), settings)
     if parsed.command == "anonymize":
         return _anonymize(Path(parsed.recording), Path(parsed.output) if parsed.output else None)
     if parsed.command == "record":
@@ -266,6 +270,40 @@ def _patch_stats_loader(session: aiohttp.ClientSession, settings: Settings) -> P
     return load
 
 
+def _score(recording_path: Path, settings: Settings) -> int:
+    """Print how far each estimator is from the truth on a recorded game.
+
+    Args:
+        recording_path: The recording.
+        settings: Where the patch's stats are kept, and whether they may be downloaded.
+
+    Returns:
+        The exit code.
+    """
+    game = read_recorded_game(recording_path)
+    game_version = game_version_of(game.client_resources.get(GAME_VERSION_PATH))
+    patch_stats = asyncio.run(_load_patch_stats_once(settings, game_version))
+    for score in score_game(game, patch_stats):
+        print(score.describe())  # noqa: T201 - the command's output
+    if patch_stats is None:
+        print("combat stats (yours): no stats for this game's patch")  # noqa: T201 - as above
+    return EXIT_SUCCESS
+
+
+async def _load_patch_stats_once(settings: Settings, game_version: str | None) -> PatchStats | None:
+    """Load the stats of a game's patch, as the engine would.
+
+    Args:
+        settings: Where patches are kept, and whether they may be downloaded.
+        game_version: The game's version, or None when unknown.
+
+    Returns:
+        The stats, or None when they cannot be had.
+    """
+    async with aiohttp.ClientSession() as session:
+        return await _patch_stats_loader(session, settings)(game_version)
+
+
 async def _serve_replay(replay: RecordingReplay, port: int, stop_requested: asyncio.Event) -> None:
     """Serve a replay as a stand-in for the game's API until stopped.
 
@@ -380,6 +418,10 @@ def _build_parser() -> argparse.ArgumentParser:
         default=DEFAULT_REPLAY_PORT,
         help=f"the port on 127.0.0.1 (default: {DEFAULT_REPLAY_PORT})",
     )
+    score_command = commands.add_parser(
+        "score", help="score each estimator against what a recorded game shows to be true"
+    )
+    score_command.add_argument("recording", help="the recording (.jsonl.xz)")
     anonymize_command = commands.add_parser(
         "anonymize", help="write a copy of a recording with every player's name and id replaced"
     )
