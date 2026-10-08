@@ -3,7 +3,7 @@
 If you are picking this work up, human or model: read this file top to bottom first. The `handoff` skill
 refreshes it; it describes the current state.
 
-Last updated: 2026-10-08, on branch `feat/build-path`. `main` holds phases 0 to 2 and phase 3.1
+Last updated: 2026-10-08, on branch `feat/rift-map`. `main` holds phases 0 to 2 and phase 3.1
 to 3.3 (pull requests #2 to #9, merged); the merged branches are deleted.
 
 ## Where things stand
@@ -17,15 +17,16 @@ approved by the owner; 3.1 to 3.3 (loading-screen intel, marked cooldowns, sugge
 into `main`; 3.4, the scoring harness, is pull request #10 (`feat/scoring-harness`); 3.5, hidden
 gold, is pull request #11 (`feat/hidden-gold`, which carries 3.4 too); 3.6, hidden experience, is
 pull request #12 (`feat/hidden-experience`, which carries both); 3.7, backs, is pull request #13
-(`feat/backs`); 3.8, the build path, is built on `feat/build-path`, which carries all of them.
-Phase 3 is then built; phase 4 (positions, the jungle path, dead camps) is next, and starts with
-its own plan for the owner. Each slice goes up as its own pull request into `main` without
-waiting for the one before to merge.
+(`feat/backs`); 3.8, the build path, is pull request #14 (`feat/build-path`): phase 3 is built.
+Phase 4 has a draft plan ([docs/plans/phase-4-positions.md](docs/plans/phase-4-positions.md)),
+built on its best guesses until the owner says otherwise; 4.1, the map, is built on
+`feat/rift-map`, which carries everything before it; 4.2, the clues, is next. Each slice goes up
+as its own pull request into `main` without waiting for the one before to merge.
 
 | Area | State | Proof |
 |---|---|---|
 | Scaffold | ai-kit v0.11.1, Python layer, GitHub CI | `.copier-answers.yml` |
-| Gate | Green: lint, 596 tests (and 14 in Chromium), secrets | `make gate` |
+| Gate | Green: lint, 604 tests (and 14 in Chromium), secrets | `make gate` |
 | Recorder | Records games, the client's patch data and the post-game timeline; anonymized copies | `uv run leagueasymode record`; `tests/test_recorder.py`, `tests/test_anonymize.py` |
 | Replay | A recording served as a stand-in game API | `uv run leagueasymode replay <recording>`; `tests/test_replay.py` |
 | Engine and overlay page | The dragon and Elder timer, from the game's answer to the page | `uv run leagueasymode run`; `tests/test_tracer_bullet.py` |
@@ -71,7 +72,10 @@ In `AGENTS.md`, this project's own included: every session reads that file.
    adds "6 in ~0:35" on an enemy's row within 1:30 of 6, 11 or 16, and the callout "Zed hits 6
    in ~0:15"; backs (3.7) add "went back 7:42 · returns ~0:24" and, for their jungler only, the
    callout "Vi went back: in the jungle again in ~0:20". The same applies to both.
-6. **Documents waiting for approval** (`make docs-status`): the approved plan v2 and phase 2's
+6. **Phase 4's plan** ([docs/plans/phase-4-positions.md](docs/plans/phase-4-positions.md)), a
+   draft: its order, and its three proposals (the minimap layer drawn over League's own minimap,
+   dead camp timers shown, one "missing" callout at a time).
+7. **Documents waiting for approval** (`make docs-status`): the approved plan v2 and phase 2's
    plan, the retrospective, and the references on recordings, the engine and the macOS app, all
    drafts. Phase 3's plan is approved.
 
