@@ -4,7 +4,7 @@ title: The engine and the overlay page
 description: How the engine turns the game's answers into the overlay's state, how that state reaches the widgets, how the page is built and tested, and how to run it all against a replay.
 tags: [engine, overlay, architecture]
 status: draft
-generated: { by: claude-code/cloud, at: 2026-10-08T15:05:00Z }
+generated: { by: claude-code/cloud, at: 2026-10-08T15:20:00Z }
 sources:
   - id: engine
     resource: ../../src/leagueasymode/engine.py
@@ -12,6 +12,8 @@ sources:
     resource: ../../src/leagueasymode/game_state.py
   - id: objectives
     resource: ../../src/leagueasymode/inference/objectives.py
+  - id: players
+    resource: ../../src/leagueasymode/inference/players.py
   - id: overlay-state
     resource: ../../src/leagueasymode/overlay_state.py
   - id: overlay-server
@@ -52,11 +54,14 @@ game API ─▶ GameApiClient ─▶ GameSnapshot ─▶ estimators ─▶ Overl
 | Dragon and Elder Dragon timer, each side's dragons, the soul | exact: restates the kill feed and the map | first dragon at 5:00, a dragon respawns 5:00 after it dies, the Elder 6:00 after the soul dragon or the last Elder; the soul at 4 dragons[^objectives] |
 | Baron, Rift Herald and Voidgrubs timers | exact, with this season's spawn times provisional | Baron respawns 6:00 after it dies; first spawns (Voidgrubs 8:00, Herald 15:00, Baron 20:00) from the first version's code, marked unverified and shown with "~"; the Voidgrubs leave when the Herald comes, the Herald does not return once taken |
 | Baron and Elder buffs | exact | to the team of the player who took the monster: Baron 3:00, Elder 2:30 |
+| Players and death timers | exact | each player's side, role as the game names it, level, and, while dead, when they respawn (`respawnTimer` added to the clock) |
+| Numbers window | exact | open while more enemies than allies are dead; it closes at the first respawn after which no more enemies than allies are dead; a death to come cannot be known, so it is never counted |
 | Inhibitors down | exact | back 5:00 after they fall, or when the feed says they respawned; `Barracks_T1_L1` is team 1's top inhibitor (L, C and R taken as top, mid and bottom, to be confirmed) |
 
 The long-standing rules are written as verified; the rest are checked against the first
-recordings. The widgets show the dragon always, and beside it any other monster up or within 90
-seconds of spawning, each running buff, and each inhibitor down.
+recordings. The widgets show the dragon always, and beside it the numbers window while it is
+open, any other monster up or within 90 seconds of spawning, each running buff, and each
+inhibitor down; on the right, each enemy's champion, level and death timer.
 
 # The local server
 

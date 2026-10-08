@@ -6,6 +6,9 @@ skill has the format.
 
 ## 2026-10-08
 
+- Phase 2.2: each player's card (side, role, level, respawn) and the numbers window, shown as a
+  pill at the head of the strip and an enemy strip on the right. The strip is now centered across
+  the whole width, where before it was held to half the screen and wrapped its pills.
 - Phase 2.1, the objective strip: Baron, Herald and Voidgrubs timers, each team's Baron and Elder
   buff, and inhibitors down, beside the dragon. This season's spawn times are provisional and
   marked so. Also fixed: shutting the server down waited up to 15 seconds for each page still

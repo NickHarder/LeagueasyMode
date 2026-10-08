@@ -14,6 +14,7 @@ from leagueasymode.inference.objectives import (
     inhibitor_timers,
     objective_timers,
 )
+from leagueasymode.inference.players import numbers_window, player_cards
 from leagueasymode.overlay_state import OverlayState
 
 NOT_RUNNING: Final = OverlayState(is_game_running=False)
@@ -44,6 +45,8 @@ def compute_overlay_state(payload: JsonValue | None) -> OverlayState:
         objectives=objective_timers(snapshot),
         buffs=buff_timers(snapshot),
         inhibitors=inhibitor_timers(snapshot),
+        players=player_cards(snapshot),
+        numbers_window=numbers_window(snapshot),
     )
 
 

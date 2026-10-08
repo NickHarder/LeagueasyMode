@@ -46,6 +46,23 @@ export interface InhibitorTimer {
   readonly respawns_at_game_time_seconds: number;
 }
 
+/** One player as the scoreboard shows them: side, role, level, and when they are back. */
+export interface PlayerCard {
+  readonly champion_name: string;
+  readonly side: Side;
+  readonly position: string;
+  readonly level: number;
+  readonly is_dead: boolean;
+  readonly respawns_at_game_time_seconds: number | null;
+}
+
+/** More of the enemy team is dead than of the player's, until the respawn that evens it. */
+export interface NumbersWindow {
+  readonly ally_dead_count: number;
+  readonly enemy_dead_count: number;
+  readonly ends_at_game_time_seconds: number;
+}
+
 /** Everything the overlay shows at one moment. */
 export interface OverlayState {
   readonly is_game_running: boolean;
@@ -54,6 +71,8 @@ export interface OverlayState {
   readonly objectives: readonly ObjectiveTimer[];
   readonly buffs: readonly BuffTimer[];
   readonly inhibitors: readonly InhibitorTimer[];
+  readonly players: readonly PlayerCard[];
+  readonly numbers_window: NumbersWindow | null;
 }
 
 const DRAGON_OBJECTIVES: ReadonlySet<string> = new Set(["dragon", "elder_dragon"]);
@@ -137,6 +156,29 @@ export function isInhibitorTimer(value: unknown): value is InhibitorTimer {
   );
 }
 
+/** Return whether a value is a player's card as the engine sends it. */
+export function isPlayerCard(value: unknown): value is PlayerCard {
+  return (
+    isRecord(value) &&
+    typeof value["champion_name"] === "string" &&
+    isOneOf(value["side"], SIDES) &&
+    typeof value["position"] === "string" &&
+    typeof value["level"] === "number" &&
+    typeof value["is_dead"] === "boolean" &&
+    isNumberOrNull(value["respawns_at_game_time_seconds"])
+  );
+}
+
+/** Return whether a value is a numbers window as the engine sends it. */
+export function isNumbersWindow(value: unknown): value is NumbersWindow {
+  return (
+    isRecord(value) &&
+    typeof value["ally_dead_count"] === "number" &&
+    typeof value["enemy_dead_count"] === "number" &&
+    typeof value["ends_at_game_time_seconds"] === "number"
+  );
+}
+
 /** Return whether a value is an overlay state as the engine sends it. */
 export function isOverlayState(value: unknown): value is OverlayState {
   if (!isRecord(value)) {
@@ -149,6 +191,8 @@ export function isOverlayState(value: unknown): value is OverlayState {
     (dragon === null || isDragonTimer(dragon)) &&
     isArrayOf(value["objectives"], isObjectiveTimer) &&
     isArrayOf(value["buffs"], isBuffTimer) &&
-    isArrayOf(value["inhibitors"], isInhibitorTimer)
+    isArrayOf(value["inhibitors"], isInhibitorTimer) &&
+    isArrayOf(value["players"], isPlayerCard) &&
+    (value["numbers_window"] === null || isNumbersWindow(value["numbers_window"]))
   );
 }

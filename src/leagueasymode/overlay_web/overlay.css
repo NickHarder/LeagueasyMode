@@ -1,6 +1,7 @@
 /* The overlay draws over the game: the page itself is transparent, and only widgets show. */
 :root {
   --widget-ally: #6fb4ff;
+  --widget-advantage: #7ee08a;
   --widget-enemy: #ff7a6b;
   --widget-text: #f3efe4;
   --widget-muted: #b9b3a3;
@@ -18,14 +19,18 @@ body {
   cursor: default;
 }
 
+/* Centered across the whole width: a strip centered from its left edge would be held to half the
+   screen and wrap its pills. */
 .strip {
   position: fixed;
   top: 8px;
-  left: 50%;
-  transform: translateX(-50%);
+  left: 0;
+  right: 0;
   display: flex;
+  justify-content: center;
   align-items: center;
   gap: 6px;
+  white-space: nowrap;
 }
 
 .widget {
@@ -109,4 +114,52 @@ body {
 
 .pill[data-state="alive"] .pill-time {
   color: var(--widget-alive);
+}
+
+.pill[data-kind="numbers"] {
+  border-color: var(--widget-advantage);
+  color: var(--widget-advantage);
+}
+
+.enemy-strip {
+  position: fixed;
+  top: 64px;
+  right: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 6px 8px;
+  border: 1px solid var(--widget-border);
+  border-radius: 10px;
+  background: var(--widget-surface);
+  color: var(--widget-text);
+  font: 600 12px/1.2 -apple-system, "SF Pro Text", system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 1px 2px rgb(0 0 0 / 0.6);
+}
+
+.enemy-strip[hidden] {
+  display: none;
+}
+
+.enemy-row {
+  display: grid;
+  grid-template-columns: 1fr 2ch 4ch;
+  gap: 6px;
+  align-items: baseline;
+}
+
+.enemy-level {
+  text-align: right;
+  color: var(--widget-muted);
+}
+
+.enemy-respawn {
+  text-align: right;
+  color: var(--widget-enemy);
+}
+
+.enemy-row[data-dead="true"] .enemy-name {
+  opacity: 0.55;
+  text-decoration: line-through;
 }

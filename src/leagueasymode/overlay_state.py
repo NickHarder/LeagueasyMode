@@ -65,6 +65,31 @@ class InhibitorTimer(BaseModel):
     respawns_at_game_time_seconds: float
 
 
+class PlayerCard(BaseModel):
+    """One player as the scoreboard shows them: side, role, level, and when they are back."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    champion_name: str
+    side: Literal["ally", "enemy"]
+    # As the game names it ("TOP", "JUNGLE", "MIDDLE", "BOTTOM", "UTILITY"); empty when the queue
+    # assigns none.
+    position: str
+    level: int
+    is_dead: bool
+    respawns_at_game_time_seconds: float | None
+
+
+class NumbersWindow(BaseModel):
+    """More of the enemy team is dead than of the player's, until the respawn that evens it."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    ally_dead_count: int
+    enemy_dead_count: int
+    ends_at_game_time_seconds: float
+
+
 class OverlayState(BaseModel):
     """Everything the overlay shows at one moment."""
 
@@ -76,6 +101,8 @@ class OverlayState(BaseModel):
     objectives: list[ObjectiveTimer] = Field(default_factory=list)
     buffs: list[BuffTimer] = Field(default_factory=list)
     inhibitors: list[InhibitorTimer] = Field(default_factory=list)
+    players: list[PlayerCard] = Field(default_factory=list)
+    numbers_window: NumbersWindow | None = None
 
 
 if __name__ == "__main__":

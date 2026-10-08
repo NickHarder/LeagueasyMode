@@ -161,3 +161,9 @@ async def test_the_server_stops_promptly_while_a_page_still_listens() -> None:
             await asyncio.wait_for(runner.cleanup(), timeout=10)
             stop_seconds = asyncio.get_running_loop().time() - started_at
     assert stop_seconds < 2.0
+
+
+def test_the_state_carries_the_players_and_the_numbers_window() -> None:
+    state = compute_overlay_state(game_with_a_dragon_taken_at(400.0, 450.0))
+    assert len(state.players) == 10
+    assert state.numbers_window is None

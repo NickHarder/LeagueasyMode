@@ -146,9 +146,25 @@ export function inhibitorPill(timer, gameTimeSeconds) {
         isUp: false,
     };
 }
+/** Return the pill for a numbers window, or null once it has closed. */
+export function numbersPill(window, gameTimeSeconds) {
+    const remainingSeconds = window.ends_at_game_time_seconds - gameTimeSeconds;
+    if (remainingSeconds <= 0) {
+        return null;
+    }
+    const enemyText = window.enemy_dead_count === 1 ? "enemy" : "enemies";
+    return {
+        label: `${window.enemy_dead_count} ${enemyText} down (${window.ally_dead_count} of yours)`,
+        timeText: formatCountdown(remainingSeconds),
+        kind: "numbers",
+        side: "ally",
+        isUp: false,
+    };
+}
 /** Return every pill to show beside the dragon, in a steady order. */
 function stripPills(state, gameTimeSeconds) {
     const candidatePills = [
+        state.numbers_window === null ? null : numbersPill(state.numbers_window, gameTimeSeconds),
         ...state.objectives.map((timer) => objectivePill(timer, gameTimeSeconds)),
         ...state.buffs.map((timer) => buffPill(timer, gameTimeSeconds)),
         ...state.inhibitors.map((timer) => inhibitorPill(timer, gameTimeSeconds)),
@@ -182,11 +198,47 @@ function renderObjectivePills(nowMilliseconds) {
     }
     pillRow.replaceChildren(...stripPills(received.state, gameTimeSeconds).map(pillElement));
 }
+/** Return the row that draws one enemy: champion, level, and the death timer while dead. */
+function enemyRowElement(card, gameTimeSeconds) {
+    const row = document.createElement("div");
+    row.className = "enemy-row";
+    row.dataset["dead"] = card.is_dead ? "true" : "false";
+    const nameElement = document.createElement("span");
+    nameElement.className = "enemy-name";
+    nameElement.textContent = card.champion_name;
+    const levelElement = document.createElement("span");
+    levelElement.className = "enemy-level";
+    levelElement.textContent = String(card.level);
+    row.append(nameElement, levelElement);
+    const respawnsAtSeconds = card.respawns_at_game_time_seconds;
+    if (card.is_dead && respawnsAtSeconds !== null) {
+        const respawnElement = document.createElement("span");
+        respawnElement.className = "enemy-respawn";
+        respawnElement.textContent = formatCountdown(respawnsAtSeconds - gameTimeSeconds);
+        row.append(respawnElement);
+    }
+    return row;
+}
+/** Draw the enemy strip: each enemy's champion, level and death timer. */
+function renderEnemyStrip(nowMilliseconds) {
+    const strip = requireElement("enemy-strip");
+    const received = latestReceivedState;
+    const gameTimeSeconds = received === null ? null : currentGameTimeSeconds(received, nowMilliseconds);
+    if (received === null || !received.state.is_game_running || gameTimeSeconds === null) {
+        strip.hidden = true;
+        strip.replaceChildren();
+        return;
+    }
+    const enemyCards = received.state.players.filter((card) => card.side === "enemy");
+    strip.hidden = enemyCards.length === 0;
+    strip.replaceChildren(...enemyCards.map((card) => enemyRowElement(card, gameTimeSeconds)));
+}
 /** Draw every widget. */
 function render() {
     const nowMilliseconds = performance.now();
     renderDragonWidget(nowMilliseconds);
     renderObjectivePills(nowMilliseconds);
+    renderEnemyStrip(nowMilliseconds);
 }
 /** Listen to the engine; the browser reconnects by itself when the stream drops. */
 function listenToEngine() {

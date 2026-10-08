@@ -139,6 +139,31 @@
       "title": "InhibitorTimer",
       "type": "object"
     },
+    "NumbersWindow": {
+      "additionalProperties": false,
+      "description": "More of the enemy team is dead than of the player's, until the respawn that evens it.",
+      "properties": {
+        "ally_dead_count": {
+          "title": "Ally Dead Count",
+          "type": "integer"
+        },
+        "enemy_dead_count": {
+          "title": "Enemy Dead Count",
+          "type": "integer"
+        },
+        "ends_at_game_time_seconds": {
+          "title": "Ends At Game Time Seconds",
+          "type": "number"
+        }
+      },
+      "required": [
+        "ally_dead_count",
+        "enemy_dead_count",
+        "ends_at_game_time_seconds"
+      ],
+      "title": "NumbersWindow",
+      "type": "object"
+    },
     "ObjectiveTimer": {
       "additionalProperties": false,
       "description": "The next spawn of an epic monster other than the dragons.\n\n`is_rule_verified` is false while its spawn rule is not yet confirmed for this season, so the\nwidget can mark the timer as provisional.",
@@ -185,6 +210,57 @@
         "is_rule_verified"
       ],
       "title": "ObjectiveTimer",
+      "type": "object"
+    },
+    "PlayerCard": {
+      "additionalProperties": false,
+      "description": "One player as the scoreboard shows them: side, role, level, and when they are back.",
+      "properties": {
+        "champion_name": {
+          "title": "Champion Name",
+          "type": "string"
+        },
+        "side": {
+          "enum": [
+            "ally",
+            "enemy"
+          ],
+          "title": "Side",
+          "type": "string"
+        },
+        "position": {
+          "title": "Position",
+          "type": "string"
+        },
+        "level": {
+          "title": "Level",
+          "type": "integer"
+        },
+        "is_dead": {
+          "title": "Is Dead",
+          "type": "boolean"
+        },
+        "respawns_at_game_time_seconds": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Respawns At Game Time Seconds"
+        }
+      },
+      "required": [
+        "champion_name",
+        "side",
+        "position",
+        "level",
+        "is_dead",
+        "respawns_at_game_time_seconds"
+      ],
+      "title": "PlayerCard",
       "type": "object"
     }
   },
@@ -238,6 +314,24 @@
       },
       "title": "Inhibitors",
       "type": "array"
+    },
+    "players": {
+      "items": {
+        "$ref": "#/$defs/PlayerCard"
+      },
+      "title": "Players",
+      "type": "array"
+    },
+    "numbers_window": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/NumbersWindow"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
     }
   },
   "required": [
