@@ -118,6 +118,12 @@ export interface LevelEstimate {
   readonly power_level_band_seconds: number | null;
 }
 
+/** A player's last trip to base: when they shopped, and when they are back where they play. */
+export interface BackEstimate {
+  readonly shopped_at_game_time_seconds: number;
+  readonly returns_at_game_time_seconds: number;
+}
+
 /** One player as the scoreboard shows them: side, role, level, and when they are back. */
 export interface PlayerCard {
   readonly champion_name: string;
@@ -134,6 +140,7 @@ export interface PlayerCard {
   readonly intel: PlayerIntel | null;
   readonly gold: GoldEstimate | null;
   readonly level_estimate: LevelEstimate | null;
+  readonly last_back: BackEstimate | null;
 }
 
 /** What each team's items are worth: gold earned and spent, not gold in hand. */
@@ -163,6 +170,7 @@ export type CalloutKind =
   | "objective_soon"
   | "item_spike"
   | "cooldown_ready"
+  | "went_back"
   | "suggestion";
 
 /** A short notice shown for a few seconds when something happens; never an instruction. */
@@ -204,6 +212,7 @@ const CALLOUT_KINDS: ReadonlySet<string> = new Set([
   "objective_soon",
   "item_spike",
   "cooldown_ready",
+  "went_back",
   "suggestion",
 ]);
 const MARKED_SPELLS: ReadonlySet<string> = new Set(["flash", "summoner", "ultimate"]);
@@ -355,6 +364,15 @@ export function isLevelEstimate(value: unknown): value is LevelEstimate {
   );
 }
 
+/** Return whether a value is a player's last trip to base as the engine sends it. */
+export function isBackEstimate(value: unknown): value is BackEstimate {
+  return (
+    isRecord(value) &&
+    typeof value["shopped_at_game_time_seconds"] === "number" &&
+    typeof value["returns_at_game_time_seconds"] === "number"
+  );
+}
+
 /** Return whether a value is a player's card as the engine sends it. */
 export function isPlayerCard(value: unknown): value is PlayerCard {
   return (
@@ -372,7 +390,8 @@ export function isPlayerCard(value: unknown): value is PlayerCard {
     (value["combat_stats"] === null || isCombatStats(value["combat_stats"])) &&
     (value["intel"] === null || isPlayerIntel(value["intel"])) &&
     (value["gold"] === null || isGoldEstimate(value["gold"])) &&
-    (value["level_estimate"] === null || isLevelEstimate(value["level_estimate"]))
+    (value["level_estimate"] === null || isLevelEstimate(value["level_estimate"])) &&
+    (value["last_back"] === null || isBackEstimate(value["last_back"]))
   );
 }
 

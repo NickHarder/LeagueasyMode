@@ -162,6 +162,20 @@ class LevelEstimate(BaseModel):
     power_level_band_seconds: float | None
 
 
+class BackEstimate(BaseModel):
+    """A player's last trip to base: when they shopped, and when they are back where they play.
+
+    Inferred (`inference/backs.py`): buying needs the fountain, so a purchase made alive is a trip
+    to base; the way back is an estimate, the walk from the fountain at their move speed.
+    """
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    shopped_at_game_time_seconds: float
+    # When they are back in their lane, or in their jungle.
+    returns_at_game_time_seconds: float
+
+
 class PlayerCard(BaseModel):
     """One player as the scoreboard shows them: side, role, level, and when they are back."""
 
@@ -189,6 +203,8 @@ class PlayerCard(BaseModel):
     gold: GoldEstimate | None = None
     # None while the engine does not follow the players' experience.
     level_estimate: LevelEstimate | None = None
+    # None until they are seen going back.
+    last_back: BackEstimate | None = None
 
 
 class TeamItemGold(BaseModel):
@@ -248,6 +264,7 @@ type CalloutKind = Literal[
     "objective_soon",
     "item_spike",
     "cooldown_ready",
+    "went_back",
     "suggestion",
 ]
 

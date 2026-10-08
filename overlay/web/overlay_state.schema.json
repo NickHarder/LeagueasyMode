@@ -1,5 +1,25 @@
 {
   "$defs": {
+    "BackEstimate": {
+      "additionalProperties": false,
+      "description": "A player's last trip to base: when they shopped, and when they are back where they play.\n\nInferred (`inference/backs.py`): buying needs the fountain, so a purchase made alive is a trip\nto base; the way back is an estimate, the walk from the fountain at their move speed.",
+      "properties": {
+        "shopped_at_game_time_seconds": {
+          "title": "Shopped At Game Time Seconds",
+          "type": "number"
+        },
+        "returns_at_game_time_seconds": {
+          "title": "Returns At Game Time Seconds",
+          "type": "number"
+        }
+      },
+      "required": [
+        "shopped_at_game_time_seconds",
+        "returns_at_game_time_seconds"
+      ],
+      "title": "BackEstimate",
+      "type": "object"
+    },
     "BuffTimer": {
       "additionalProperties": false,
       "description": "A team's Baron or Elder buff, and when it runs out.",
@@ -70,6 +90,7 @@
         "objective_soon",
         "item_spike",
         "cooldown_ready",
+        "went_back",
         "suggestion"
       ],
       "type": "string"
@@ -570,6 +591,17 @@
           "anyOf": [
             {
               "$ref": "#/$defs/LevelEstimate"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "last_back": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/BackEstimate"
             },
             {
               "type": "null"

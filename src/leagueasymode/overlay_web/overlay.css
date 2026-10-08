@@ -203,6 +203,13 @@ body {
   font-weight: 600;
 }
 
+.enemy-back {
+  grid-column: 2 / -1;
+  color: var(--widget-advantage);
+  font-size: 10px;
+  font-weight: 500;
+}
+
 .enemy-unspent {
   grid-column: 2 / -1;
   color: var(--widget-alive);
@@ -237,7 +244,8 @@ body {
   animation: callout-in 180ms ease-out;
 }
 
-.callout[data-kind="numbers_window"] {
+.callout[data-kind="numbers_window"],
+.callout[data-kind="went_back"] {
   border-color: var(--widget-advantage);
 }
 

@@ -67,6 +67,7 @@ class CalloutTracker:
         candidate_callouts = [
             *self._level_spikes(state, game_time_seconds),
             *_levels_soon(state, game_time_seconds),
+            *self._jungler_backs(state, game_time_seconds),
             *self._numbers_window(state, game_time_seconds),
             *self._objectives_soon(state, game_time_seconds),
             *self._item_spikes(state, game_time_seconds),
@@ -123,6 +124,37 @@ class CalloutTracker:
             if card.side == "enemy"
             for spike_level in LEVEL_SPIKES
             if _has_just_reached(previous_levels, card, spike_level)
+        ]
+
+    def _jungler_backs(self, state: OverlayState, game_time_seconds: float) -> list[Callout]:
+        """Return a callout when the enemy jungler, whom the map rarely shows, has gone back.
+
+        A trip made before the overlay first sees the game is not called out.
+
+        Args:
+            state: The new state.
+            game_time_seconds: Its game time.
+
+        Returns:
+            The callouts.
+        """
+        if self._previous_state is None:
+            return []
+        previous_backs = {
+            card.champion_name: card.last_back for card in self._previous_state.players
+        }
+        return [
+            _callout(
+                f"back:{card.champion_name}:{last_back.shopped_at_game_time_seconds:.0f}",
+                "went_back",
+                f"{card.champion_name} went back: in the jungle again in "
+                f"~{_clock_text(last_back.returns_at_game_time_seconds - game_time_seconds)}",
+                game_time_seconds,
+            )
+            for card in state.players
+            if card.side == "enemy" and card.role == "JUNGLE"
+            for last_back in [card.last_back]
+            if last_back is not None and previous_backs.get(card.champion_name) != last_back
         ]
 
     def _item_spikes(self, state: OverlayState, game_time_seconds: float) -> list[Callout]:

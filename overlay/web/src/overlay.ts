@@ -7,6 +7,7 @@
  */
 
 import {
+  type BackEstimate,
   type BuffTimer,
   type Callout,
   type CombatStats,
@@ -55,6 +56,8 @@ const LANE_NAMES: Readonly<Record<InhibitorTimer["lane"], string>> = {
   bot: "bot",
 };
 const ONE_THOUSAND = 1000;
+// An enemy's last trip to base is shown for this long after they shopped.
+const BACK_SHOWN_SECONDS = 90;
 // An enemy's next power level (6, 11, 16) is shown once it is estimated this close.
 const POWER_LEVEL_SHOWN_SECONDS = 90;
 // A band narrower than this rounds to nothing at one decimal of a thousand, so it is left out.
@@ -305,6 +308,21 @@ export function formatPowerLevelSoon(estimate: LevelEstimate, gameTimeSeconds: n
     : `${String(estimate.next_power_level)} in ~${formatCountdown(remainingSeconds)}`;
 }
 
+/**
+ * Return an enemy's last trip to base, "went back 7:42 · returns ~0:24", or null once it is 90
+ * seconds old.
+ */
+export function formatLastBack(back: BackEstimate, gameTimeSeconds: number): string | null {
+  if (gameTimeSeconds - back.shopped_at_game_time_seconds > BACK_SHOWN_SECONDS) {
+    return null;
+  }
+  const shoppedText = `went back ${formatCountdown(back.shopped_at_game_time_seconds)}`;
+  const returnsInSeconds = back.returns_at_game_time_seconds - gameTimeSeconds;
+  return returnsInSeconds > 0
+    ? `${shoppedText} \u00b7 returns ~${formatCountdown(returnsInSeconds)}`
+    : shoppedText;
+}
+
 /** Return a header of the enemy strip: a label and the player's team's lead, colored by side. */
 function leadElement(className: string, label: string, leadGold: number, valueText: string): HTMLElement {
   const header = document.createElement("div");
@@ -459,6 +477,13 @@ function enemyRowElement(
     powerLevelElement.className = "enemy-power-level";
     powerLevelElement.textContent = powerLevelText;
     row.append(powerLevelElement);
+  }
+  const lastBackText = card.last_back === null ? null : formatLastBack(card.last_back, gameTimeSeconds);
+  if (lastBackText !== null) {
+    const backElement = document.createElement("span");
+    backElement.className = "enemy-back";
+    backElement.textContent = lastBackText;
+    row.append(backElement);
   }
   if (card.gold !== null) {
     const unspentElement = document.createElement("span");
