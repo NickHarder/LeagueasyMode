@@ -4,7 +4,7 @@ title: Recordings
 description: What a recording of a game holds, how it is written and read, what is asked of the League client and when, and how a copy is anonymized before it may enter the repository.
 tags: [recording, data, privacy]
 status: draft
-generated: { by: claude-code/cloud, at: 2026-10-08T22:57:15Z }
+generated: { by: claude-code/cloud, at: 2026-10-08T23:04:20Z }
 sources:
   - id: file-format
     resource: ../../src/leagueasymode/recording/file_format.py
@@ -40,7 +40,8 @@ the next finished item the timeline shows them buy, and the trips to base seen a
 timeline's purchases made alive, both ways; each player's likely regions at the start of each
 minute against the region nearest their timeline position (how often the likeliest was right, and
 the chance on the true one); each jungler's decoded camp, by how far the timeline puts them from
-it at a minute that came within 30 seconds of it; and the map, by how far the timeline's position
+it at a minute that came within 30 seconds of it; the control wards seen placed against the
+timeline's, both ways (it records when, not where); and the map, by how far the timeline's position
 of each player each minute lies from its paths.[^scoring]
 
 # How to make one

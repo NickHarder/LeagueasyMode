@@ -1085,6 +1085,50 @@
       ],
       "title": "TeamItemGold",
       "type": "object"
+    },
+    "WardEstimate": {
+      "additionalProperties": false,
+      "description": "Where a player's control ward likely is: placed when their count dropped, where they were.\n\nAn estimate (`inference/wards.py`): the moment is known from the inventory, the place is the\nposition estimate's likeliest region then. Each player has one control ward down at a time.",
+      "properties": {
+        "champion_name": {
+          "title": "Champion Name",
+          "type": "string"
+        },
+        "side": {
+          "enum": [
+            "ally",
+            "enemy"
+          ],
+          "title": "Side",
+          "type": "string"
+        },
+        "placed_at_game_time_seconds": {
+          "title": "Placed At Game Time Seconds",
+          "type": "number"
+        },
+        "region": {
+          "title": "Region",
+          "type": "string"
+        },
+        "label": {
+          "title": "Label",
+          "type": "string"
+        },
+        "chance": {
+          "title": "Chance",
+          "type": "number"
+        }
+      },
+      "required": [
+        "champion_name",
+        "side",
+        "placed_at_game_time_seconds",
+        "region",
+        "label",
+        "chance"
+      ],
+      "title": "WardEstimate",
+      "type": "object"
     }
   },
   "additionalProperties": false,
@@ -1197,6 +1241,13 @@
         "$ref": "#/$defs/CampTimer"
       },
       "title": "Camp Timers",
+      "type": "array"
+    },
+    "control_wards": {
+      "items": {
+        "$ref": "#/$defs/WardEstimate"
+      },
+      "title": "Control Wards",
       "type": "array"
     },
     "callouts": {

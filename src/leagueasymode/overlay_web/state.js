@@ -262,6 +262,16 @@ export function isJunglePath(value) {
         (value["next_camp"] === null || typeof value["next_camp"] === "string") &&
         isNumberOrNull(value["next_camp_at_game_time_seconds"]));
 }
+/** Return whether a value is a control ward's estimate as the engine sends it. */
+export function isWardEstimate(value) {
+    return (isRecord(value) &&
+        typeof value["champion_name"] === "string" &&
+        isOneOf(value["side"], SIDES) &&
+        typeof value["placed_at_game_time_seconds"] === "number" &&
+        typeof value["region"] === "string" &&
+        typeof value["label"] === "string" &&
+        typeof value["chance"] === "number");
+}
 /** Return whether a value is an overlay state as the engine sends it. */
 export function isOverlayState(value) {
     if (!isRecord(value)) {
@@ -281,5 +291,6 @@ export function isOverlayState(value) {
         isArrayOf(value["cooldowns"], isCooldownTimer) &&
         isArrayOf(value["jungle_paths"], isJunglePath) &&
         isArrayOf(value["camp_timers"], isCampTimer) &&
+        isArrayOf(value["control_wards"], isWardEstimate) &&
         isArrayOf(value["callouts"], isCallout));
 }

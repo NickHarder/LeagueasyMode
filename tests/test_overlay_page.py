@@ -63,6 +63,7 @@ def scoreboard_at(
     zed_reaches_six_at_seconds: float | None = None,
     zed_buys_at_seconds: float | None = None,
     vi_farms_at_seconds: tuple[float, ...] = (),
+    vi_wards_at_seconds: float | None = None,
 ) -> tuple[PlayerSeed, ...]:
     def level_of(seed: PlayerSeed) -> int:
         if seed.champion_name != "Zed" or zed_reaches_six_at_seconds is None:
@@ -80,6 +81,9 @@ def scoreboard_at(
             and zed_buys_at_seconds is not None
             and game_time_seconds >= zed_buys_at_seconds
         )
+        if seed.champion_name == "Vi" and vi_wards_at_seconds is not None:
+            holds_ward = game_time_seconds < vi_wards_at_seconds
+            return ((2055, "Control Ward", 75),) if holds_ward else ()
         return (
             ((1036, "Long Sword", 350),)
             if has_bought
@@ -111,6 +115,7 @@ def write_recording(
     is_baron_taken: bool = True,
     zed_buys_at_seconds: float | None = None,
     vi_farms_at_seconds: tuple[float, ...] = (),
+    vi_wards_at_seconds: float | None = None,
 ) -> Path:
     writer = RecordingWriter(directory / "game.jsonl", keyframe_interval_seconds=60.0)
     writer.write_started(
@@ -149,6 +154,7 @@ def write_recording(
             zed_reaches_six_at_seconds,
             zed_buys_at_seconds,
             vi_farms_at_seconds,
+            vi_wards_at_seconds,
         )
         writer.write_snapshot(
             received_at_seconds=index * 0.5,
@@ -203,6 +209,7 @@ async def open_overlay(
     is_baron_taken: bool = True,
     zed_buys_at_seconds: float | None = None,
     vi_farms_at_seconds: tuple[float, ...] = (),
+    vi_wards_at_seconds: float | None = None,
 ) -> AsyncIterator[Page]:
     replay = RecordingReplay(
         write_recording(
@@ -213,6 +220,7 @@ async def open_overlay(
             is_baron_taken,
             zed_buys_at_seconds,
             vi_farms_at_seconds,
+            vi_wards_at_seconds,
         ),
         speed=speed,
     )
@@ -402,6 +410,16 @@ async def test_the_enemy_junglers_path_and_the_camps_down_show(tmp_path: Path) -
             re.compile(r"^Camps: .+ \d:\d\d")
         )
         await keep_screenshot(page, "jungle-path")
+
+
+async def test_an_enemy_control_ward_shows_where_it_likely_is(tmp_path: Path) -> None:
+    async with open_overlay(
+        tmp_path, snapshot_count=60, speed=1.0, vi_wards_at_seconds=1410.0
+    ) as page:
+        await expect(page.locator("#enemy-strip .ward-list")).to_have_text(
+            re.compile(r"^Wards: Vi likely .+ \d+% \u00b7 0:\d\d ago$"), timeout=20000
+        )
+        await keep_screenshot(page, "control-wards")
 
 
 async def test_the_enemy_strip_shows_item_gold_and_the_lead(tmp_path: Path) -> None:

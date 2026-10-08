@@ -16,7 +16,7 @@ from leagueasymode.inference.clues import ClueTracker
 from leagueasymode.inference.combat_stats import move_speed_of
 from leagueasymode.inference.cooldowns import MarkedSpell, marked_cooldown, running_cooldowns
 from leagueasymode.inference.experience import ExperienceTracker
-from leagueasymode.inference.gold import GoldTracker, player_key, team_gold
+from leagueasymode.inference.gold import GoldTracker, PlayerKey, player_key, team_gold
 from leagueasymode.inference.jungle_path import JunglePathTracker
 from leagueasymode.inference.objectives import (
     buff_timers,
@@ -25,8 +25,9 @@ from leagueasymode.inference.objectives import (
     objective_timers,
 )
 from leagueasymode.inference.players import numbers_window, player_cards, team_item_gold
+from leagueasymode.inference.wards import WardTracker
 from leagueasymode.league_client import ClientConnector, LeagueClient
-from leagueasymode.overlay_state import CooldownTimer, OverlayState
+from leagueasymode.overlay_state import CooldownTimer, OverlayState, PlayerCard, PositionEstimate
 from leagueasymode.patch_data import GAME_VERSION_PATH, ITEMS_PATH, ItemCatalog, game_version_of
 from leagueasymode.player_intel import (
     DEFAULT_PAUSE_SECONDS,
@@ -55,6 +56,7 @@ def compute_overlay_state(
     back_tracker: BackTracker | None = None,
     clue_tracker: ClueTracker | None = None,
     jungle_tracker: JunglePathTracker | None = None,
+    ward_tracker: WardTracker | None = None,
 ) -> OverlayState:
     """Return what the overlay shows for one answer of the game's API.
 
@@ -72,6 +74,7 @@ def compute_overlay_state(
         back_tracker: The same for each player's trips to base; None to show none.
         clue_tracker: The same for the clues to where each player is; None to show none.
         jungle_tracker: The same for the junglers' clears; None to show none.
+        ward_tracker: The same for the control wards; None to show none.
 
     Returns:
         The overlay's state; no game running when there is no answer or it cannot be read.
@@ -132,7 +135,35 @@ def compute_overlay_state(
         cooldowns=running_cooldowns(cooldown_timers or [], snapshot.game_data.game_time_seconds),
         jungle_paths=jungle_paths,
         camp_timers=camp_timers,
+        control_wards=(
+            ward_tracker.update(snapshot, _locations_by_key(snapshot, cards))
+            if ward_tracker is not None
+            else []
+        ),
     )
+
+
+def _locations_by_key(
+    snapshot: GameSnapshot, cards: list[PlayerCard]
+) -> dict[PlayerKey, PositionEstimate]:
+    """Return where each living player likely is, by key, from their cards.
+
+    Args:
+        snapshot: The game's state.
+        cards: Every player's card.
+
+    Returns:
+        The positions; a player without one is left out.
+    """
+    ally_team = snapshot.ally_team()
+    location_by_card = {(card.side, card.champion_name): card.location for card in cards}
+    locations = {
+        player_key(player): location_by_card.get(
+            ("ally" if player.team == ally_team else "enemy", player.champion_name)
+        )
+        for player in snapshot.players
+    }
+    return {key: location for key, location in locations.items() if location is not None}
 
 
 class OverlayEngine:
@@ -183,6 +214,7 @@ class OverlayEngine:
         self._back_tracker: Final = BackTracker()
         self._clue_tracker: Final = ClueTracker()
         self._jungle_tracker: Final = JunglePathTracker()
+        self._ward_tracker: Final = WardTracker()
         self._current_state = NOT_RUNNING
         self._callouts: Final = CalloutTracker()
         self._subscribers: Final[set[asyncio.Queue[OverlayState]]] = set()
@@ -262,6 +294,7 @@ class OverlayEngine:
                 back_tracker=self._back_tracker,
                 clue_tracker=self._clue_tracker,
                 jungle_tracker=self._jungle_tracker,
+                ward_tracker=self._ward_tracker,
             )
             self._last_payload = payload if answer_state.is_game_running else None
             if answer_state.is_game_running and not self._current_state.is_game_running:

@@ -241,6 +241,16 @@ export interface JunglePath {
   readonly next_camp_at_game_time_seconds: number | null;
 }
 
+/** Where a player's control ward likely is: placed when their count dropped, where they were. */
+export interface WardEstimate {
+  readonly champion_name: string;
+  readonly side: Side;
+  readonly placed_at_game_time_seconds: number;
+  readonly region: string;
+  readonly label: string;
+  readonly chance: number;
+}
+
 /** Everything the overlay shows at one moment. */
 export interface OverlayState {
   readonly is_game_running: boolean;
@@ -256,6 +266,7 @@ export interface OverlayState {
   readonly cooldowns: readonly CooldownTimer[];
   readonly jungle_paths: readonly JunglePath[];
   readonly camp_timers: readonly CampTimer[];
+  readonly control_wards: readonly WardEstimate[];
   readonly callouts: readonly Callout[];
 }
 
@@ -591,6 +602,19 @@ export function isJunglePath(value: unknown): value is JunglePath {
   );
 }
 
+/** Return whether a value is a control ward's estimate as the engine sends it. */
+export function isWardEstimate(value: unknown): value is WardEstimate {
+  return (
+    isRecord(value) &&
+    typeof value["champion_name"] === "string" &&
+    isOneOf(value["side"], SIDES) &&
+    typeof value["placed_at_game_time_seconds"] === "number" &&
+    typeof value["region"] === "string" &&
+    typeof value["label"] === "string" &&
+    typeof value["chance"] === "number"
+  );
+}
+
 /** Return whether a value is an overlay state as the engine sends it. */
 export function isOverlayState(value: unknown): value is OverlayState {
   if (!isRecord(value)) {
@@ -611,6 +635,7 @@ export function isOverlayState(value: unknown): value is OverlayState {
     isArrayOf(value["cooldowns"], isCooldownTimer) &&
     isArrayOf(value["jungle_paths"], isJunglePath) &&
     isArrayOf(value["camp_timers"], isCampTimer) &&
+    isArrayOf(value["control_wards"], isWardEstimate) &&
     isArrayOf(value["callouts"], isCallout)
   );
 }

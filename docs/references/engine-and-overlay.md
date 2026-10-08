@@ -4,7 +4,7 @@ title: The engine and the overlay page
 description: How the engine turns the game's answers into the overlay's state, how that state reaches the widgets, how the page is built and tested, and how to run it all against a replay.
 tags: [engine, overlay, architecture]
 status: draft
-generated: { by: claude-code/cloud, at: 2026-10-08T22:57:15Z }
+generated: { by: claude-code/cloud, at: 2026-10-08T23:04:20Z }
 sources:
   - id: engine
     resource: ../../src/leagueasymode/engine.py
@@ -46,6 +46,8 @@ sources:
     resource: ../../src/leagueasymode/inference/positions.py
   - id: jungle-path
     resource: ../../src/leagueasymode/inference/jungle_path.py
+  - id: wards
+    resource: ../../src/leagueasymode/inference/wards.py
   - id: overlay-state
     resource: ../../src/leagueasymode/overlay_state.py
   - id: overlay-server
@@ -105,12 +107,14 @@ game API ─▶ GameApiClient ─▶ GameSnapshot ─▶ estimators ─▶ Overl
 | Clues to positions (phase 4.2) | inferred | the moments a player's place is pinned: the killer and assisters of a turret or inhibitor at it, of Dragon at its pit, of Baron, the Herald or the Voidgrubs (`HordeKill`, to confirm) at Baron's; a champion a turret kills at that turret; a respawn, or a trip to base's shopping, in base; creep score rising, a laner in their lane (at its outer turret, for the map) or a jungler in a jungle (theirs or, invading, the other's: the score cannot tell). A kill between champions names no place and is no clue here. Each enemy's row shows the latest for two minutes, unless they are dead ("at Dragon 0:40 ago")[^clues] |
 | Positions (estimator 7, phase 4.3) | estimate | a chance for each of the map's points (a histogram filter, the exact form of the particle filter the plan names). From a player's latest clue (a point, or a lane's or a jungle's points), they can be at any point they could have walked to since at their move speed for 80% of the time; each is weighed by how much a player of their role is found in its region (a laner's lane 1.0, the river beside it 0.3, their own jungle behind it 0.15 to 0.2; a jungler's own jungle 1.0, the river 0.5, the other jungle 0.3; anything else 0.05, the bases less), a first guess to fit on the timeline's positions. Without a clue they start in their fountain at 0:00. Out of it: the three likeliest regions in words from your side ("their top jungle"), the chance they are away from where they play, the time unseen, and the soonest they could be in the middle of each lane (the walk at full speed less the time since). An enemy unseen 0:10 shows "likely bot lane 60% · unseen 0:25". The callout "Zed missing 0:25: can reach mid in ~0:12" names the enemy unseen 0:20 or more, likely (50%) away, who could reach your lane soonest within 0:20; one at a time, at most once every 0:30. Each card now says whether it is you (`is_you`)[^positions] |
 | Jungle path (estimator 8, phase 4.4) | estimate | each jungler's (the player in the jungle role) creep score rises in bursts, rises within 6 seconds being one camp finished at the last. Which camp each burst was is decoded from what fits: a camp is up at its first spawn (1:30; the scuttle crabs 3:30) and its respawn after its last clear (buffs 5:00, other camps 2:15, the scuttles 2:30), all unconfirmed this season; between two camps the jungler walks the map at their move speed and takes the camp's clear time (8 to 12 seconds, a first guess). The likeliest path wastes the least time between camps (a unit of log chance for each 20 seconds) and stays in their own jungle (a camp of the other's is 0.3 as likely); a burst nothing could have finished costs 5 units more. The respawn rule needs the whole path, so the decoding keeps the 40 best paths with their history (a beam search, Viterbi with memory); a burst under way waits until it is over. Out of it: the last three camps, the next camp (the one of their own they could start soonest) and when, and each camp cleared that is not back yet. The enemy jungler's row shows "path their red → their krugs · next their raptors ~0:15", and the strip "Camps: their krugs 1:10 · their red 3:40" (the four soonest back). One burst alone cannot tell a camp from another that fits as well, such as the two buffs at 1:42; the next bursts settle it[^jungle-path] |
+| Control wards (estimator 9, phase 4.5) | estimate | a player's count of control wards dropping while alive is a placement, at that moment; where is the position estimate's likeliest region then, with its chance. One control ward per player is down at a time, so a new one replaces their last; a ward's destruction is never seen, so each shows until its owner places another, or for five minutes. The strip shows the enemies' latest three: "Wards: Vi likely top river 60% · 2:10 ago"[^wards] |
 | Inhibitors down | exact | back 5:00 after they fall, or when the feed says they respawned; `Barracks_T1_L1` is team 1's top inhibitor (L, C and R taken as top, mid and bottom, to be confirmed) |
 
 Every rule is checked again against the first recordings. The widgets show the dragon always,
 and beside it the numbers window while it is open, any other monster up or within 90 seconds of
 spawning, each running buff, and each inhibitor down; on the right, each team's item-gold lead
-and estimated gold lead ("Gold −1.8k ±0.6k"), the camps down with their respawns, and each enemy
+and estimated gold lead ("Gold −1.8k ±0.6k"), the camps down with their respawns, the enemies' control wards likely
+down, and each enemy
 in role order with their role (in
 italics when worked out, with "?" when only a guess), champion, level, item gold and death timer,
 and under each the spells marked ("F 4:12", "R 1:05"), their record ("P4 · 3–2 W3 · 3 on champ ·
@@ -212,3 +216,4 @@ Chromium against a replay (Chromium from `uv run playwright install chromium`, o
 [^clues]: `src/leagueasymode/inference/clues.py`
 [^positions]: `src/leagueasymode/inference/positions.py`
 [^jungle-path]: `src/leagueasymode/inference/jungle_path.py`
+[^wards]: `src/leagueasymode/inference/wards.py`
