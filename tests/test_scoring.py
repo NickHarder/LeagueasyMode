@@ -25,6 +25,7 @@ from leagueasymode.recorder import GAME_DETAILS_PATH_TEMPLATE, TIMELINE_PATH_TEM
 from leagueasymode.recording.writer import RecordingWriter
 from leagueasymode.scoring import (
     read_recorded_game,
+    score_backs,
     score_combat_stats,
     score_experience,
     score_gold,
@@ -85,7 +86,9 @@ def game_details(positions_by_champion: dict[str, str]) -> JsonValue:
     }
 
 
-def game_timeline(gold_off_by: int = 0) -> JsonValue:
+def game_timeline(
+    gold_off_by: int = 0, events_by_minute: dict[int, list[JsonValue]] | None = None
+) -> JsonValue:
     """A timeline in which every player has earned the starting and passive gold, and spent none."""
     return {
         "frameInterval": 60000,
@@ -104,7 +107,7 @@ def game_timeline(gold_off_by: int = 0) -> JsonValue:
                     }
                     for index in range(len(DEFAULT_PLAYERS))
                 },
-                "events": [],
+                "events": (events_by_minute or {}).get(minute, []),
             }
             for minute in range(16)
         ],
@@ -116,6 +119,7 @@ def write_scored_recording(
     players: tuple[PlayerSeed, ...],
     positions_by_champion: dict[str, str] | None = None,
     timeline: JsonValue | None = None,
+    zed_buys_at_minute: int | None = None,
 ) -> Path:
     writer = RecordingWriter(directory / "game.jsonl", keyframe_interval_seconds=60.0)
     writer.write_started(
@@ -133,9 +137,18 @@ def write_scored_recording(
         received_at_seconds=0.0, path=GAME_VERSION_PATH, payload="16.19.712.1234"
     )
     for minute in range(16):
+        has_zed_bought = zed_buys_at_minute is not None and minute >= zed_buys_at_minute
         writer.write_snapshot(
             received_at_seconds=minute * 60.0,
-            payload=all_game_data(minute * 60.0, players=players),
+            payload=all_game_data(
+                minute * 60.0,
+                players=tuple(
+                    dataclasses.replace(seed, items=((1036, "Long Sword", 350),))
+                    if has_zed_bought and seed.champion_name == "Zed"
+                    else seed
+                    for seed in players
+                ),
+            ),
         )
     details_positions = positions_by_champion or {
         seed.champion_name: seed.position for seed in DEFAULT_PLAYERS
@@ -269,3 +282,38 @@ def test_experience_is_scored_for_every_player_against_the_timeline(tmp_path: Pa
     assert experience.value == pytest.approx((at_two_minutes + from_three_minutes) / 150, abs=0.1)
     assert experience.describe().startswith("experience: 150 player-minutes, 257 experience off")
     assert band.estimator == "experience band"
+
+
+def purchase(participant_id: int, game_time_seconds: float) -> JsonValue:
+    return {
+        "type": "ITEM_PURCHASED",
+        "timestamp": round(game_time_seconds * 1000),
+        "participantId": participant_id,
+        "itemId": 1036,
+    }
+
+
+def test_backs_are_scored_against_the_timelines_purchases(tmp_path: Path) -> None:
+    # Zed (participant 8) shops at 8:00 alive, which the tracker sees. Caitlyn (9) shops at 10:00,
+    # which the built scoreboard never shows, and at 12:30 after dying at 12:00, which is the
+    # death's shopping. Vi (7) buys two things within 30 seconds: one trip.
+    kill_on_caitlyn: JsonValue = {
+        "type": "CHAMPION_KILL",
+        "timestamp": 720000,
+        "victimId": 9,
+        "killerId": 1,
+    }
+    events_by_minute: dict[int, list[JsonValue]] = {
+        8: [purchase(8, 480.5)],
+        10: [purchase(9, 600.0), purchase(7, 610.0), purchase(7, 625.0)],
+        12: [kill_on_caitlyn, purchase(9, 750.0)],
+    }
+    recording = write_scored_recording(
+        tmp_path,
+        DEFAULT_PLAYERS,
+        timeline=game_timeline(events_by_minute=events_by_minute),
+        zed_buys_at_minute=8,
+    )
+    of_the_timeline, of_those_seen = score_backs(read_recorded_game(recording))
+    assert of_the_timeline.describe() == "backs (of the timeline's): 1/3 matched (33%)"
+    assert of_those_seen.describe() == "backs (of those seen): 1/1 matched (100%)"

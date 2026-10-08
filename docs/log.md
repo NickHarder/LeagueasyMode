@@ -6,6 +6,11 @@ skill has the format.
 
 ## 2026-10-08
 
+- Phase 3.7, backs (estimator 6): a purchase made alive is a trip to base, since buying needs the
+  fountain (not the start's, a death's, or one just after respawning). Each enemy's row says when
+  they went back and when they return, a walk from the fountain at their move speed; the enemy
+  jungler's trips are called out, since the map rarely shows them. Scored against the timeline's
+  purchases both ways.
 - Phase 3.6, hidden experience (estimator 4): every player's experience, how far they are to
   their next level and when they reach 6, 11 and 16. Each level-up seen pins it; between them it
   grows at the player's own measured rate while they are alive, a prior by role until a level-up

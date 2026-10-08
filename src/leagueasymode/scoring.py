@@ -16,6 +16,10 @@ compared with what is known to be true:
   every player but you; the band is scored by how often it holds the truth.
 - **Experience** (estimator 4): the same, against the timeline's experience, for every player:
   nobody's is exact.
+- **Backs** (estimator 6): the timeline records every purchase. One made alive (not within a
+  minute of a death) past 1:30 starts a trip to base, and each purchase more than 30 seconds
+  after a trip's first starts another; a trip the back tracker saw within 20 seconds of it is
+  matched. Scored both ways: the timeline's trips seen, and the trips seen that it has.
 
 The timeline's positions score the estimators still to come in the same way. Each score is
 a number per game; the thresholds that CI holds them to are set from the first batch of recorded
@@ -31,6 +35,7 @@ from pydantic import Field, JsonValue, ValidationError, field_validator
 
 from leagueasymode.data_dragon import PatchStats
 from leagueasymode.game_state import GameSnapshot, RiotPayloadModel
+from leagueasymode.inference.backs import BackTracker
 from leagueasymode.inference.combat_stats import estimated_combat_stats
 from leagueasymode.inference.experience import ExperienceTracker
 from leagueasymode.inference.gold import GoldTracker, PlayerKey
@@ -46,6 +51,15 @@ TIMELINE_PATH_PREFIX: Final = "/lol-match-history/v1/game-timelines/"
 MILLISECONDS_PER_SECOND: Final = 1000.0
 # An estimate stands for a minute's timeline frame when it is this close after the frame's time.
 FRAME_ALIGNMENT_SECONDS: Final = 2.0
+ITEM_PURCHASED_EVENT: Final = "ITEM_PURCHASED"
+CHAMPION_KILL_EVENT: Final = "CHAMPION_KILL"
+# Purchases before this are the game's start; within this long after a death, the death's.
+TRIPS_START_AT_SECONDS: Final = 90.0
+DEATH_SHOPPING_SECONDS: Final = 60.0
+# A purchase this long after a trip's first starts another trip.
+SAME_TRIP_SECONDS: Final = 30.0
+# A trip seen this close to one the timeline shows is the same trip.
+TRIP_MATCH_SECONDS: Final = 20.0
 SECONDS_PER_MINUTE: Final = 60
 TEAM_BY_ID: Final = {100: "ORDER", 200: "CHAOS"}
 PERCENT: Final = 100.0
@@ -75,6 +89,7 @@ class EstimatorScore:
         "mean_absolute_error_gold",
         "mean_absolute_error_experience",
         "share_within_band",
+        "share_matched",
     ]
 
     def describe(self) -> str:
@@ -87,6 +102,11 @@ class EstimatorScore:
         if self.measure == "share_correct":
             return (
                 f"{self.estimator}: {hit_count}/{self.sample_count} correct "
+                f"({self.value * PERCENT:.0f}%)"
+            )
+        if self.measure == "share_matched":
+            return (
+                f"{self.estimator}: {hit_count}/{self.sample_count} matched "
                 f"({self.value * PERCENT:.0f}%)"
             )
         if self.measure == "share_within_band":
@@ -119,6 +139,8 @@ class RecordedGame:
     minute_gold_estimates: Mapping[int, Mapping[PlayerKey, GoldEstimate]]
     # The experience tracker's, the same way.
     minute_level_estimates: Mapping[int, Mapping[PlayerKey, LevelEstimate]]
+    # When the back tracker saw each player shop on a trip to base, in game seconds.
+    trips_seen: Mapping[PlayerKey, tuple[float, ...]]
 
 
 class DetailsTimeline(RiotPayloadModel):
@@ -153,6 +175,17 @@ class TimelineParticipantFrame(RiotPayloadModel):
     experience: int = Field(default=0, alias="xp")
 
 
+class TimelineEvent(RiotPayloadModel):
+    """One event of the match timeline: a purchase or a kill, among others."""
+
+    event_type: str = Field(default="", alias="type")
+    timestamp_milliseconds: int = Field(default=0, alias="timestamp")
+    # The buyer of a purchase.
+    participant_id: int = Field(default=0, alias="participantId")
+    # The champion a kill killed.
+    victim_id: int = Field(default=0, alias="victimId")
+
+
 class TimelineFrame(RiotPayloadModel):
     """One frame of the match timeline: every participant, about once a minute."""
 
@@ -160,6 +193,7 @@ class TimelineFrame(RiotPayloadModel):
     participant_frames: list[TimelineParticipantFrame] = Field(
         default_factory=list, alias="participantFrames"
     )
+    events: list[TimelineEvent] = Field(default_factory=list)
 
     @field_validator("participant_frames", mode="before")
     @classmethod
@@ -200,6 +234,8 @@ def read_recorded_game(recording_path: Path) -> RecordedGame:
     item_catalog = ItemCatalog.from_client_items(items_payload) if items_payload else None
     gold_tracker = GoldTracker()
     experience_tracker = ExperienceTracker()
+    back_tracker = BackTracker()
+    trips_by_player: dict[PlayerKey, list[float]] = {}
     snapshot_by_minute: dict[int, GameSnapshot] = {}
     gold_estimates_by_minute: dict[int, Mapping[PlayerKey, GoldEstimate]] = {}
     level_estimates_by_minute: dict[int, Mapping[PlayerKey, LevelEstimate]] = {}
@@ -213,6 +249,10 @@ def read_recorded_game(recording_path: Path) -> RecordedGame:
         snapshot_by_minute[game_minute] = snapshot
         gold_estimates = gold_tracker.update(snapshot, item_catalog)
         level_estimates = experience_tracker.update(snapshot)
+        for key, last_back in back_tracker.update(snapshot, item_catalog).items():
+            player_trips = trips_by_player.setdefault(key, [])
+            if last_back.shopped_at_game_time_seconds not in player_trips:
+                player_trips.append(last_back.shopped_at_game_time_seconds)
         is_minute_start = game_time_seconds - game_minute * SECONDS_PER_MINUTE <= (
             FRAME_ALIGNMENT_SECONDS
         )
@@ -224,6 +264,7 @@ def read_recorded_game(recording_path: Path) -> RecordedGame:
         client_resources=client_resources,
         minute_gold_estimates=gold_estimates_by_minute,
         minute_level_estimates=level_estimates_by_minute,
+        trips_seen={key: tuple(trips) for key, trips in trips_by_player.items()},
     )
 
 
@@ -409,6 +450,45 @@ def score_experience(game: RecordedGame) -> list[EstimatorScore]:
     ]
 
 
+def score_backs(game: RecordedGame) -> list[EstimatorScore]:
+    """Score the trips to base seen against the purchases the match timeline records.
+
+    Args:
+        game: The recorded game.
+
+    Returns:
+        The share of the timeline's trips seen, and of the trips seen that it has; nothing
+        without a timeline, the game's details, or a trip to score.
+    """
+    timeline = _game_timeline(game)
+    if timeline is None:
+        return []
+    timeline_trips = {
+        key: _timeline_trips(timeline, participant.participant_id)
+        for key, participant in _details_participants(game)
+    }
+    true_trips = [(key, trip) for key, trips in timeline_trips.items() for trip in trips]
+    trips_seen = [(key, trip) for key, trips in game.trips_seen.items() for trip in trips]
+    if not true_trips or not trips_seen:
+        return []
+    return [
+        EstimatorScore(
+            estimator="backs (of the timeline's)",
+            sample_count=len(true_trips),
+            value=sum(1 for key, trip in true_trips if _is_near(trip, game.trips_seen.get(key, ())))
+            / len(true_trips),
+            measure="share_matched",
+        ),
+        EstimatorScore(
+            estimator="backs (of those seen)",
+            sample_count=len(trips_seen),
+            value=sum(1 for key, trip in trips_seen if _is_near(trip, timeline_trips.get(key, ())))
+            / len(trips_seen),
+            measure="share_matched",
+        ),
+    ]
+
+
 def score_recording(recording_path: Path, patch_stats: PatchStats | None) -> list[EstimatorScore]:
     """Score every estimator the recording can score.
 
@@ -440,6 +520,7 @@ def score_game(game: RecordedGame, patch_stats: PatchStats | None) -> list[Estim
         ),
         *score_gold(game),
         *score_experience(game),
+        *score_backs(game),
     ]
 
 
@@ -476,6 +557,58 @@ def _timeline_pairs[Estimate](
             estimate = estimates.get(key) if key is not None else None
             if estimate is not None:
                 yield estimate, truth
+
+
+def _timeline_trips(timeline: GameTimeline, participant_id: int) -> tuple[float, ...]:
+    """Return when a participant shopped on each trip to base, by the timeline's purchases.
+
+    Args:
+        timeline: The match timeline.
+        participant_id: The participant.
+
+    Returns:
+        Each trip's first purchase, in game seconds.
+    """
+    events = [event for frame in timeline.frames for event in frame.events]
+    death_seconds = [
+        event.timestamp_milliseconds / MILLISECONDS_PER_SECOND
+        for event in events
+        if event.event_type == CHAMPION_KILL_EVENT and event.victim_id == participant_id
+    ]
+    purchase_seconds = sorted(
+        event.timestamp_milliseconds / MILLISECONDS_PER_SECOND
+        for event in events
+        if event.event_type == ITEM_PURCHASED_EVENT and event.participant_id == participant_id
+    )
+    trip_seconds: list[float] = []
+    for bought_at_seconds in purchase_seconds:
+        is_death_shopping = any(
+            0 <= bought_at_seconds - died_at_seconds <= DEATH_SHOPPING_SECONDS
+            for died_at_seconds in death_seconds
+        )
+        is_same_trip = bool(trip_seconds) and (
+            bought_at_seconds - trip_seconds[-1] <= SAME_TRIP_SECONDS
+        )
+        if (
+            bought_at_seconds >= TRIPS_START_AT_SECONDS
+            and not is_death_shopping
+            and not is_same_trip
+        ):
+            trip_seconds.append(bought_at_seconds)
+    return tuple(trip_seconds)
+
+
+def _is_near(trip_seconds: float, other_trips_seconds: tuple[float, ...]) -> bool:
+    """Return whether a trip has one of other trips close to it.
+
+    Args:
+        trip_seconds: When the trip's shopping began.
+        other_trips_seconds: The other trips'.
+
+    Returns:
+        Whether one is within 20 seconds of it.
+    """
+    return any(abs(trip_seconds - other) <= TRIP_MATCH_SECONDS for other in other_trips_seconds)
 
 
 def _game_timeline(game: RecordedGame) -> GameTimeline | None:

@@ -4,7 +4,7 @@ title: The engine and the overlay page
 description: How the engine turns the game's answers into the overlay's state, how that state reaches the widgets, how the page is built and tested, and how to run it all against a replay.
 tags: [engine, overlay, architecture]
 status: draft
-generated: { by: claude-code/cloud, at: 2026-10-08T22:09:34Z }
+generated: { by: claude-code/cloud, at: 2026-10-08T22:16:25Z }
 sources:
   - id: engine
     resource: ../../src/leagueasymode/engine.py
@@ -34,6 +34,8 @@ sources:
     resource: ../../src/leagueasymode/inference/gold.py
   - id: experience
     resource: ../../src/leagueasymode/inference/experience.py
+  - id: backs
+    resource: ../../src/leagueasymode/inference/backs.py
   - id: overlay-state
     resource: ../../src/leagueasymode/overlay_state.py
   - id: overlay-server
@@ -87,6 +89,7 @@ game API ─▶ GameApiClient ─▶ GameSnapshot ─▶ estimators ─▶ Overl
 | Suggestions (phase 3.3) | a rule over the facts above; first-draft wording | callouts that name an action, made once when their facts line up, never from the first state seen: an objective up or spawning within 0:30 while more enemies than allies are dead for at least 0:20 ("Baron up, 2 enemies down for 0:40: take it"); their jungler dead for at least 0:20 ("take Dragon" when one is up or within a minute, else "invade or push"); a Flash or ultimate just marked ("punish it", "fight now"); a Baron or Elder buff just taken, by who holds it ("group and push", "group and defend", "force a fight", "avoid fights"). Text only[^suggestions] |
 | Hidden gold (estimator 3, phase 3.5) | exact for the player on this machine (`activePlayer.currentGold`); an estimate with a band for the others | an income model: 500 to start; passive gold of 2.1 a second from 1:30, 2.3 from 15:00, 2.6 from 25:00 (patch 26.16); each creep at the rate of when it died, about 18.5 gold a lane creep before 15:00, 20.1 to 25:00 and 23.9 after (melee 19, ranged 14, cannons by wave), 22 a point of a jungler's (one with Smite) creep score, unconfirmed; a kill 300 gold up to level 6 and 10 more a level to 420, plus a bounty of a third of the victim's kill and assist gold since their last death less 100 (up to 700, unconfirmed), and half the base shared by the assisters (patch 25.9); turrets 50/25/25 to each of the destroying team and 250/425/375 shared by the champions the feed credits (outer, inner, inhibitor), an inhibitor 50 shared, Baron 300 each, all unconfirmed; the support item's quest at 0.75 gold a second within its stage (World Atlas below 400, Runic Compass below 1200), pinned when it reaches the next. A filter corrects it: total gold is a normal estimate carried forward by that income and widened by how unsure each kind is (12% of creep gold, 25% of kill gold, 30% of objective and quest gold, and 0.15 gold a second unseen, turret plates among it); it is never below what the inventory cost plus what was drunk, placed or lost on a sale (30%); a shopping trip of at least 300 gold, over once nothing is bought for 5 seconds, is a measurement of the inventory's cost plus 300 ± 175 left in hand, weighed against the model as a Kalman filter weighs one. Gold per creep is tuned for your kind (lane or jungle) by the gold your own creeps must have paid, weighed 1 per 1000 of it against the model's 1, between 0.75 and 1.33. The band holds the truth about 4 times in 5 (1.28 standard deviations); each team's total is the sum, its band the bands in quadrature. A clock that runs back starts a new game[^gold] |
 | Hidden experience (estimator 4, phase 3.6) | an estimate for every player, yours included: the game gives levels, not experience | a level takes 280 experience at 2 and 100 more at each level after (18,360 by 18). A level-up seen pins a player's experience at what the level takes; between level-ups it grows at their own rate while they are alive, never leaving the level the scoreboard gives. Each level-up seen after another measures a rate (the experience between them over the time alive between them), weighed 0.6 against the rate before. Until one is seen, a prior by role from 1:30: 8.5 a second for a solo laner, 6 for a duo laner, 8 for a jungler, a first guess. A player first seen above level 1 is at the prior's estimate when it falls inside their level, else halfway through it, with the spread of a value anywhere in the level. The band adds 30% of the prior's growth (20% of a measured rate's); a power level's time (6, 11, 16) starts when a dead player respawns. Kill experience and time in base are in the measured rate, on average. A callout "Zed hits 6 in ~0:15" comes when an enemy is estimated within 0:20 of 6, 11 or 16 and that time is sure to within 0:20[^experience] |
+| Backs (estimator 6, phase 3.7) | inferred; the way back an estimate | buying needs the fountain, so a purchase made alive is a trip to base: not one before 1:30, nor one while dead or within 0:30 of respawning, and purchases within 0:30 of a trip's first belong to it. The way back is 5 seconds of shopping, then the walk from the fountain at the player's move speed (the game's own for you, the combat stats estimate for the others, 380 without the patch's stats) to where they play: 10,000 game units to top or bottom, 7,500 to mid, 5,500 into the jungle, a first guess. A callout says when the enemy jungler, whom the map rarely shows, has gone back ("Vi went back: in the jungle again in ~0:20"), not for a trip made before the overlay starts[^backs] |
 | Inhibitors down | exact | back 5:00 after they fall, or when the feed says they respawned; `Barracks_T1_L1` is team 1's top inhibitor (L, C and R taken as top, mid and bottom, to be confirmed) |
 
 Every rule is checked again against the first recordings. The widgets show the dragon always,
@@ -96,8 +99,9 @@ and estimated gold lead ("Gold −1.8k ±0.6k"), and each enemy in role order wi
 italics when worked out, with "?" when only a guess), champion, level, item gold and death timer,
 and under each the spells marked ("F 4:12", "R 1:05"), their record ("P4 · 3–2 W3 · 3 on champ ·
 off-role (MID)"), their health, armor and magic resist ("1.3k HP · 59 AR · 39 MR"), when they
-reach their next power level once it is within 1:30 ("6 in ~0:35"), and the gold they hold ("1.4k
-±0.3k unspent"; a band under 50 gold is left out).
+reach their next power level once it is within 1:30 ("6 in ~0:35"), their last trip to base for
+1:30 after it ("went back 7:42 · returns ~0:24"), and the gold they hold ("1.4k ±0.3k unspent"; a
+band under 50 gold is left out).
 
 # Patch data
 
@@ -183,3 +187,4 @@ Chromium against a replay (Chromium from `uv run playwright install chromium`, o
 [^suggestions]: `src/leagueasymode/inference/suggestions.py`
 [^gold]: `src/leagueasymode/inference/gold.py`
 [^experience]: `src/leagueasymode/inference/experience.py`
+[^backs]: `src/leagueasymode/inference/backs.py`

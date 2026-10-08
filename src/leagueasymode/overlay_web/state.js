@@ -19,6 +19,7 @@ const CALLOUT_KINDS = new Set([
     "objective_soon",
     "item_spike",
     "cooldown_ready",
+    "went_back",
     "suggestion",
 ]);
 const MARKED_SPELLS = new Set(["flash", "summoner", "ultimate"]);
@@ -136,6 +137,12 @@ export function isLevelEstimate(value) {
         isNumberOrNull(value["power_level_at_game_time_seconds"]) &&
         isNumberOrNull(value["power_level_band_seconds"]));
 }
+/** Return whether a value is a player's last trip to base as the engine sends it. */
+export function isBackEstimate(value) {
+    return (isRecord(value) &&
+        typeof value["shopped_at_game_time_seconds"] === "number" &&
+        typeof value["returns_at_game_time_seconds"] === "number");
+}
 /** Return whether a value is a player's card as the engine sends it. */
 export function isPlayerCard(value) {
     return (isRecord(value) &&
@@ -152,7 +159,8 @@ export function isPlayerCard(value) {
         (value["combat_stats"] === null || isCombatStats(value["combat_stats"])) &&
         (value["intel"] === null || isPlayerIntel(value["intel"])) &&
         (value["gold"] === null || isGoldEstimate(value["gold"])) &&
-        (value["level_estimate"] === null || isLevelEstimate(value["level_estimate"])));
+        (value["level_estimate"] === null || isLevelEstimate(value["level_estimate"])) &&
+        (value["last_back"] === null || isBackEstimate(value["last_back"])));
 }
 /** Return whether a value is each team's item gold as the engine sends it. */
 export function isTeamItemGold(value) {

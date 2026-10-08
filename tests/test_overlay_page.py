@@ -61,24 +61,35 @@ def scoreboard_at(
     game_time_seconds: float,
     respawn_at_by_champion: dict[str, float],
     zed_reaches_six_at_seconds: float | None = None,
+    zed_buys_at_seconds: float | None = None,
 ) -> tuple[PlayerSeed, ...]:
     def level_of(seed: PlayerSeed) -> int:
         if seed.champion_name != "Zed" or zed_reaches_six_at_seconds is None:
             return 9
         return 6 if game_time_seconds >= zed_reaches_six_at_seconds else 5
 
+    def items_of(seed: PlayerSeed) -> tuple[tuple[int, str, int], ...]:
+        has_bought = (
+            seed.champion_name == "Zed"
+            and zed_buys_at_seconds is not None
+            and game_time_seconds >= zed_buys_at_seconds
+        )
+        return (
+            ((1036, "Long Sword", 350),)
+            if has_bought
+            else ITEMS_BY_CHAMPION.get(seed.champion_name, ())
+        )
+
     return tuple(
         dataclasses.replace(
             seed,
-            items=ITEMS_BY_CHAMPION.get(seed.champion_name, ()),
+            items=items_of(seed),
             level=level_of(seed),
             is_dead=True,
             respawn_timer_seconds=respawn_at_by_champion[seed.champion_name] - game_time_seconds,
         )
         if respawn_at_by_champion.get(seed.champion_name, 0.0) > game_time_seconds
-        else dataclasses.replace(
-            seed, level=level_of(seed), items=ITEMS_BY_CHAMPION.get(seed.champion_name, ())
-        )
+        else dataclasses.replace(seed, level=level_of(seed), items=items_of(seed))
         for seed in DEFAULT_PLAYERS
     )
 
@@ -89,6 +100,7 @@ def write_recording(
     respawn_at_by_champion: dict[str, float] | None = None,
     zed_reaches_six_at_seconds: float | None = None,
     is_baron_taken: bool = True,
+    zed_buys_at_seconds: float | None = None,
 ) -> Path:
     writer = RecordingWriter(directory / "game.jsonl", keyframe_interval_seconds=60.0)
     writer.write_started(
@@ -122,7 +134,10 @@ def write_recording(
         if is_baron_taken:
             events.append(baron_kill_event(4, 1380.0, ENEMY_JUNGLER))
         players = scoreboard_at(
-            game_time_seconds, respawn_at_by_champion or {}, zed_reaches_six_at_seconds
+            game_time_seconds,
+            respawn_at_by_champion or {},
+            zed_reaches_six_at_seconds,
+            zed_buys_at_seconds,
         )
         writer.write_snapshot(
             received_at_seconds=index * 0.5,
@@ -175,6 +190,7 @@ async def open_overlay(
     respawn_at_by_champion: dict[str, float] | None = None,
     zed_reaches_six_at_seconds: float | None = None,
     is_baron_taken: bool = True,
+    zed_buys_at_seconds: float | None = None,
 ) -> AsyncIterator[Page]:
     replay = RecordingReplay(
         write_recording(
@@ -183,6 +199,7 @@ async def open_overlay(
             respawn_at_by_champion,
             zed_reaches_six_at_seconds,
             is_baron_taken,
+            zed_buys_at_seconds,
         ),
         speed=speed,
     )
@@ -318,6 +335,19 @@ async def test_an_enemy_close_to_six_shows_when_they_reach_it(tmp_path: Path) ->
         await keep_screenshot(page, "power-level")
         # Once Zed is 6, the next power level, 11, is too far off to show.
         await expect(zed_power_level).to_have_count(0, timeout=40000)
+
+
+async def test_an_enemy_who_buys_alive_has_gone_back(tmp_path: Path) -> None:
+    async with open_overlay(
+        tmp_path, snapshot_count=60, speed=1.0, zed_buys_at_seconds=1405.0
+    ) as page:
+        zed_back = page.locator("#enemy-strip .enemy-row", has_text="Zed").locator(".enemy-back")
+        # Zed buys a Long Sword at 23:25 alive: back in mid 5 seconds of shopping and 7,500 units
+        # at the stand-in patch's 345 later.
+        await expect(zed_back).to_have_text(
+            re.compile(r"^went back 23:25 \u00b7 returns ~0:[12]\d$"), timeout=15000
+        )
+        await keep_screenshot(page, "went-back")
 
 
 async def test_the_enemy_strip_shows_item_gold_and_the_lead(tmp_path: Path) -> None:
