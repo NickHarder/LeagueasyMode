@@ -6,6 +6,8 @@ skill has the format.
 
 ## 2026-10-08
 
+- Phase 2's slices planned in [plans/phase-2-exact-facts.md](plans/phase-2-exact-facts.md), on
+  `feat/exact-facts`, stacked on pull request #2 while it waits for review.
 - Pushed and opened as pull request #2. CI's first run is green on all 10 jobs: the Swift app
   compiled on macOS 15 and its 9 unit tests passed, and the overlay page rendered in Chromium. The
   build's strict-concurrency warnings are noted in `HANDOFF.md` for the move to Swift 6.
