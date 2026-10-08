@@ -6,6 +6,11 @@ skill has the format.
 
 ## 2026-10-08
 
+- Added the recorder (`leagueasymode record`) and anonymized copies (`leagueasymode anonymize`),
+  described in [references/recordings.md](references/recordings.md). One change from the plan,
+  which said "a standard-library-only recorder": the recorder is the engine's own client code,
+  run with `uv run`, because uv sets up its dependencies in the same one command and the recorder
+  and the engine then share one tested client of the game's API instead of two.
 - Rebuilt from ai-kit v0.11.1 with the Python layer (no evals, demo or MCP layers). The first
   version's Flask HUD, rules and champion files are removed: the approved plan
   ([plans/overlay-and-inference.md](plans/overlay-and-inference.md)) starts the engine over and keeps
