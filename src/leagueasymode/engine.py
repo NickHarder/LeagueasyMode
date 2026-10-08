@@ -8,7 +8,12 @@ from pydantic import JsonValue, ValidationError
 
 from leagueasymode.game_api import GameApiClient
 from leagueasymode.game_state import GameSnapshot
-from leagueasymode.inference.objectives import dragon_timer
+from leagueasymode.inference.objectives import (
+    buff_timers,
+    dragon_timer,
+    inhibitor_timers,
+    objective_timers,
+)
 from leagueasymode.overlay_state import OverlayState
 
 NOT_RUNNING: Final = OverlayState(is_game_running=False)
@@ -36,6 +41,9 @@ def compute_overlay_state(payload: JsonValue | None) -> OverlayState:
         is_game_running=True,
         game_time_seconds=snapshot.game_data.game_time_seconds,
         dragon=dragon_timer(snapshot),
+        objectives=objective_timers(snapshot),
+        buffs=buff_timers(snapshot),
+        inhibitors=inhibitor_timers(snapshot),
     )
 
 

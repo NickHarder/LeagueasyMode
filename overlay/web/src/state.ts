@@ -20,16 +20,49 @@ export interface DragonTimer {
   readonly soul_holder: Side | null;
 }
 
+export type EpicObjective = "baron" | "rift_herald" | "voidgrubs";
+export type ObjectiveStatus = "not_spawned" | "respawning" | "alive" | "gone";
+export type Lane = "top" | "mid" | "bot";
+
+/** The next spawn of an epic monster other than the dragons. */
+export interface ObjectiveTimer {
+  readonly objective: EpicObjective;
+  readonly status: ObjectiveStatus;
+  readonly spawns_at_game_time_seconds: number | null;
+  readonly is_rule_verified: boolean;
+}
+
+/** A team's Baron or Elder buff, and when it runs out. */
+export interface BuffTimer {
+  readonly buff: "baron" | "elder";
+  readonly holder: Side;
+  readonly ends_at_game_time_seconds: number;
+}
+
+/** A destroyed inhibitor, and when it comes back. */
+export interface InhibitorTimer {
+  readonly side: Side;
+  readonly lane: Lane;
+  readonly respawns_at_game_time_seconds: number;
+}
+
 /** Everything the overlay shows at one moment. */
 export interface OverlayState {
   readonly is_game_running: boolean;
   readonly game_time_seconds: number | null;
   readonly dragon: DragonTimer | null;
+  readonly objectives: readonly ObjectiveTimer[];
+  readonly buffs: readonly BuffTimer[];
+  readonly inhibitors: readonly InhibitorTimer[];
 }
 
 const DRAGON_OBJECTIVES: ReadonlySet<string> = new Set(["dragon", "elder_dragon"]);
 const DRAGON_STATUSES: ReadonlySet<string> = new Set(["not_spawned", "respawning", "alive"]);
 const SIDES: ReadonlySet<string> = new Set(["ally", "enemy"]);
+const EPIC_OBJECTIVES: ReadonlySet<string> = new Set(["baron", "rift_herald", "voidgrubs"]);
+const OBJECTIVE_STATUSES: ReadonlySet<string> = new Set(["not_spawned", "respawning", "alive", "gone"]);
+const BUFFS: ReadonlySet<string> = new Set(["baron", "elder"]);
+const LANES: ReadonlySet<string> = new Set(["top", "mid", "bot"]);
 
 /** Return whether a value is a plain object, so that its fields can be read. */
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -63,6 +96,47 @@ export function isDragonTimer(value: unknown): value is DragonTimer {
   );
 }
 
+/** Return whether a value is a string from a known set. */
+function isOneOf(value: unknown, allowed: ReadonlySet<string>): value is string {
+  return typeof value === "string" && allowed.has(value);
+}
+
+/** Return whether a value is an array whose every item passes a check. */
+function isArrayOf<Item>(value: unknown, isItem: (item: unknown) => item is Item): value is readonly Item[] {
+  return Array.isArray(value) && value.every((item: unknown) => isItem(item));
+}
+
+/** Return whether a value is an epic monster's timer as the engine sends it. */
+export function isObjectiveTimer(value: unknown): value is ObjectiveTimer {
+  return (
+    isRecord(value) &&
+    isOneOf(value["objective"], EPIC_OBJECTIVES) &&
+    isOneOf(value["status"], OBJECTIVE_STATUSES) &&
+    isNumberOrNull(value["spawns_at_game_time_seconds"]) &&
+    typeof value["is_rule_verified"] === "boolean"
+  );
+}
+
+/** Return whether a value is a buff's timer as the engine sends it. */
+export function isBuffTimer(value: unknown): value is BuffTimer {
+  return (
+    isRecord(value) &&
+    isOneOf(value["buff"], BUFFS) &&
+    isOneOf(value["holder"], SIDES) &&
+    typeof value["ends_at_game_time_seconds"] === "number"
+  );
+}
+
+/** Return whether a value is an inhibitor's timer as the engine sends it. */
+export function isInhibitorTimer(value: unknown): value is InhibitorTimer {
+  return (
+    isRecord(value) &&
+    isOneOf(value["side"], SIDES) &&
+    isOneOf(value["lane"], LANES) &&
+    typeof value["respawns_at_game_time_seconds"] === "number"
+  );
+}
+
 /** Return whether a value is an overlay state as the engine sends it. */
 export function isOverlayState(value: unknown): value is OverlayState {
   if (!isRecord(value)) {
@@ -72,6 +146,9 @@ export function isOverlayState(value: unknown): value is OverlayState {
   return (
     typeof value["is_game_running"] === "boolean" &&
     isNumberOrNull(value["game_time_seconds"]) &&
-    (dragon === null || isDragonTimer(dragon))
+    (dragon === null || isDragonTimer(dragon)) &&
+    isArrayOf(value["objectives"], isObjectiveTimer) &&
+    isArrayOf(value["buffs"], isBuffTimer) &&
+    isArrayOf(value["inhibitors"], isInhibitorTimer)
   );
 }

@@ -1,5 +1,38 @@
 {
   "$defs": {
+    "BuffTimer": {
+      "additionalProperties": false,
+      "description": "A team's Baron or Elder buff, and when it runs out.",
+      "properties": {
+        "buff": {
+          "enum": [
+            "baron",
+            "elder"
+          ],
+          "title": "Buff",
+          "type": "string"
+        },
+        "holder": {
+          "enum": [
+            "ally",
+            "enemy"
+          ],
+          "title": "Holder",
+          "type": "string"
+        },
+        "ends_at_game_time_seconds": {
+          "title": "Ends At Game Time Seconds",
+          "type": "number"
+        }
+      },
+      "required": [
+        "buff",
+        "holder",
+        "ends_at_game_time_seconds"
+      ],
+      "title": "BuffTimer",
+      "type": "object"
+    },
     "DragonTimer": {
       "additionalProperties": false,
       "description": "The next dragon or Elder Dragon: when it spawns, and the race for the soul.\n\nEvery value restates the kill feed and the map; nothing here is estimated.",
@@ -71,6 +104,88 @@
       ],
       "title": "DragonTimer",
       "type": "object"
+    },
+    "InhibitorTimer": {
+      "additionalProperties": false,
+      "description": "A destroyed inhibitor, and when it comes back.",
+      "properties": {
+        "side": {
+          "enum": [
+            "ally",
+            "enemy"
+          ],
+          "title": "Side",
+          "type": "string"
+        },
+        "lane": {
+          "enum": [
+            "top",
+            "mid",
+            "bot"
+          ],
+          "title": "Lane",
+          "type": "string"
+        },
+        "respawns_at_game_time_seconds": {
+          "title": "Respawns At Game Time Seconds",
+          "type": "number"
+        }
+      },
+      "required": [
+        "side",
+        "lane",
+        "respawns_at_game_time_seconds"
+      ],
+      "title": "InhibitorTimer",
+      "type": "object"
+    },
+    "ObjectiveTimer": {
+      "additionalProperties": false,
+      "description": "The next spawn of an epic monster other than the dragons.\n\n`is_rule_verified` is false while its spawn rule is not yet confirmed for this season, so the\nwidget can mark the timer as provisional.",
+      "properties": {
+        "objective": {
+          "enum": [
+            "baron",
+            "rift_herald",
+            "voidgrubs"
+          ],
+          "title": "Objective",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "not_spawned",
+            "respawning",
+            "alive",
+            "gone"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "spawns_at_game_time_seconds": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Spawns At Game Time Seconds"
+        },
+        "is_rule_verified": {
+          "title": "Is Rule Verified",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "objective",
+        "status",
+        "spawns_at_game_time_seconds",
+        "is_rule_verified"
+      ],
+      "title": "ObjectiveTimer",
+      "type": "object"
     }
   },
   "additionalProperties": false,
@@ -102,6 +217,27 @@
         }
       ],
       "default": null
+    },
+    "objectives": {
+      "items": {
+        "$ref": "#/$defs/ObjectiveTimer"
+      },
+      "title": "Objectives",
+      "type": "array"
+    },
+    "buffs": {
+      "items": {
+        "$ref": "#/$defs/BuffTimer"
+      },
+      "title": "Buffs",
+      "type": "array"
+    },
+    "inhibitors": {
+      "items": {
+        "$ref": "#/$defs/InhibitorTimer"
+      },
+      "title": "Inhibitors",
+      "type": "array"
     }
   },
   "required": [

@@ -136,3 +136,28 @@ async def test_a_request_for_another_host_is_refused() -> None:
                 overlay_url + "/state", headers={"Host": "localhost"}
             ) as allowed_response:
                 assert allowed_response.status == 200
+
+
+def test_the_state_carries_every_objective_buff_and_inhibitor() -> None:
+    state = compute_overlay_state(game_with_a_dragon_taken_at(400.0, 450.0))
+    assert [timer.objective for timer in state.objectives] == ["voidgrubs", "rift_herald", "baron"]
+    assert state.buffs == []
+    assert state.inhibitors == []
+
+
+async def test_the_server_stops_promptly_while_a_page_still_listens() -> None:
+    async with aiohttp.ClientSession() as session:
+        engine = OverlayEngine(
+            GameApiClient(session, unused_local_url(), tls_context=None), poll_interval_seconds=1
+        )
+        runner = web.AppRunner(create_overlay_application(engine))
+        await runner.setup()
+        site = web.TCPSite(runner, "127.0.0.1", 0)
+        await site.start()
+        host, port = runner.addresses[0][:2]
+        async with session.get(f"http://{host}:{port}/events") as events_response:
+            await events_response.content.readuntil(b"\n\n")
+            started_at = asyncio.get_running_loop().time()
+            await asyncio.wait_for(runner.cleanup(), timeout=10)
+            stop_seconds = asyncio.get_running_loop().time() - started_at
+    assert stop_seconds < 2.0

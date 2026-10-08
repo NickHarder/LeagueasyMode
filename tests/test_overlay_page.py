@@ -6,6 +6,7 @@ Set OVERLAY_SCREENSHOT_DIRECTORY to keep a screenshot of each state.
 """
 
 import asyncio
+import contextlib
 import datetime
 import os
 import re
@@ -17,7 +18,14 @@ import pytest
 from playwright.async_api import Page, async_playwright, expect
 from pydantic import JsonValue
 
-from game_payloads import DEFAULT_PLAYERS, all_game_data, dragon_kill_event, game_start_event
+from game_payloads import (
+    DEFAULT_PLAYERS,
+    all_game_data,
+    baron_kill_event,
+    dragon_kill_event,
+    game_start_event,
+    inhibitor_killed_event,
+)
 from leagueasymode.cli import run_overlay
 from leagueasymode.config import Settings
 from leagueasymode.recording.writer import RecordingWriter
@@ -44,6 +52,10 @@ def write_recording(directory: Path, snapshot_count: int) -> Path:
             dragon_kill_event(1, 400.0, ENEMY_JUNGLER, "Fire"),
             dragon_kill_event(2, 800.0, DEFAULT_PLAYERS[1].riot_id_game_name, "Water"),
             dragon_kill_event(3, 1390.0, ENEMY_JUNGLER, "Fire"),
+            baron_kill_event(4, 1380.0, ENEMY_JUNGLER),
+            inhibitor_killed_event(
+                5, 1385.0, "Barracks_T2_L1", DEFAULT_PLAYERS[0].riot_id_game_name
+            ),
         ]
         writer.write_snapshot(
             received_at_seconds=index * 0.5,
@@ -53,6 +65,7 @@ def write_recording(directory: Path, snapshot_count: int) -> Path:
     return writer.close()
 
 
+@contextlib.asynccontextmanager
 async def open_overlay(tmp_path: Path, snapshot_count: int, speed: float) -> AsyncIterator[Page]:
     replay = RecordingReplay(write_recording(tmp_path, snapshot_count), speed=speed)
     overlay_urls: list[str] = []
@@ -92,7 +105,7 @@ async def keep_screenshot(page: Page, name: str) -> None:
 
 
 async def test_the_dragon_widget_counts_down_to_the_next_dragon(tmp_path: Path) -> None:
-    async for page in open_overlay(tmp_path, snapshot_count=60, speed=1.0):
+    async with open_overlay(tmp_path, snapshot_count=60, speed=1.0) as page:
         widget = page.locator("#dragon-widget")
         await expect(widget).to_be_visible(timeout=5000)
         await expect(page.locator("#dragon-label")).to_have_text("Dragon")
@@ -106,6 +119,22 @@ async def test_the_dragon_widget_counts_down_to_the_next_dragon(tmp_path: Path) 
 
 async def test_the_widget_hides_when_the_game_is_over(tmp_path: Path) -> None:
     # 20 seconds of game at 8x: shown first, then gone about 3 seconds in.
-    async for page in open_overlay(tmp_path, snapshot_count=40, speed=8.0):
+    async with open_overlay(tmp_path, snapshot_count=40, speed=8.0) as page:
         await expect(page.locator("#dragon-widget")).to_be_visible(timeout=2000)
         await expect(page.locator("#dragon-widget")).to_be_hidden(timeout=10000)
+
+
+async def test_the_strip_shows_the_herald_the_enemy_buff_and_the_fallen_inhibitor(
+    tmp_path: Path,
+) -> None:
+    async with open_overlay(tmp_path, snapshot_count=60, speed=1.0) as page:
+        pills = page.locator("#objective-pills .pill")
+        # Baron was taken at 23:00 and respawns at 29:00, too far off to show; the Voidgrubs
+        # left when the Herald came. At 23:15: the Herald is up, the enemy's Baron buff has
+        # 2:45 left, and the enemy's top inhibitor, down since 23:05, has 4:50.
+        await expect(pills).to_have_count(3, timeout=5000)
+        await expect(pills.nth(0)).to_have_text(re.compile(r"^Herald\s*up$"))
+        await expect(pills.nth(1)).to_have_text(re.compile(r"^Enemy baron buff\s*2:[34]\d$"))
+        await expect(pills.nth(2)).to_have_text(re.compile(r"^Enemy top inhib\s*4:[45]\d$"))
+        await expect(pills.nth(1)).to_have_attribute("data-side", "enemy")
+        await keep_screenshot(page, "objective-strip")

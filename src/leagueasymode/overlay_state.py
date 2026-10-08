@@ -10,7 +10,7 @@ import json
 import sys
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class DragonTimer(BaseModel):
@@ -30,6 +30,41 @@ class DragonTimer(BaseModel):
     soul_holder: Literal["ally", "enemy"] | None
 
 
+class ObjectiveTimer(BaseModel):
+    """The next spawn of an epic monster other than the dragons.
+
+    `is_rule_verified` is false while its spawn rule is not yet confirmed for this season, so the
+    widget can mark the timer as provisional.
+    """
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    objective: Literal["baron", "rift_herald", "voidgrubs"]
+    status: Literal["not_spawned", "respawning", "alive", "gone"]
+    spawns_at_game_time_seconds: float | None
+    is_rule_verified: bool
+
+
+class BuffTimer(BaseModel):
+    """A team's Baron or Elder buff, and when it runs out."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    buff: Literal["baron", "elder"]
+    holder: Literal["ally", "enemy"]
+    ends_at_game_time_seconds: float
+
+
+class InhibitorTimer(BaseModel):
+    """A destroyed inhibitor, and when it comes back."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    side: Literal["ally", "enemy"]
+    lane: Literal["top", "mid", "bot"]
+    respawns_at_game_time_seconds: float
+
+
 class OverlayState(BaseModel):
     """Everything the overlay shows at one moment."""
 
@@ -38,6 +73,9 @@ class OverlayState(BaseModel):
     is_game_running: bool
     game_time_seconds: float | None = None
     dragon: DragonTimer | None = None
+    objectives: list[ObjectiveTimer] = Field(default_factory=list)
+    buffs: list[BuffTimer] = Field(default_factory=list)
+    inhibitors: list[InhibitorTimer] = Field(default_factory=list)
 
 
 if __name__ == "__main__":

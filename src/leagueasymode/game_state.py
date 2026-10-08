@@ -30,6 +30,9 @@ class GameEvent(RiotPayloadModel):
     assister_names: list[str] = Field(default_factory=list, alias="Assisters")
     dragon_type: str | None = Field(default=None, alias="DragonType")
     is_stolen: bool = Field(default=False, alias="Stolen")
+    turret_killed_name: str | None = Field(default=None, alias="TurretKilled")
+    inhibitor_killed_name: str | None = Field(default=None, alias="InhibKilled")
+    inhibitor_respawned_name: str | None = Field(default=None, alias="InhibRespawned")
 
 
 class EventList(RiotPayloadModel):

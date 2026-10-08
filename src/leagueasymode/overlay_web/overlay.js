@@ -5,7 +5,7 @@
  * time the last one arrived, so it ticks smoothly; it is never moved on by more than a couple of
  * seconds, so a paused or stalled game does not run its timers down.
  */
-import { isOverlayState } from "./state.js";
+import { isOverlayState, } from "./state.js";
 const EVENTS_PATH = "/events";
 const RENDER_INTERVAL_MILLISECONDS = 250;
 const LONGEST_EXTRAPOLATION_SECONDS = 2;
@@ -20,6 +20,24 @@ const SOUL_COLORS = {
     Chemtech: "#9bd13f",
 };
 const NEUTRAL_DRAGON_COLOR = "#d8b65a";
+// An epic monster shows once it is this close to spawning, or up.
+const UPCOMING_OBJECTIVE_SECONDS = 90;
+const OBJECTIVE_NAMES = {
+    baron: "Baron",
+    rift_herald: "Herald",
+    voidgrubs: "Voidgrubs",
+};
+const BUFF_NAMES = {
+    baron: "Baron buff",
+    elder: "Elder buff",
+};
+const LANE_NAMES = {
+    top: "top",
+    mid: "mid",
+    bot: "bot",
+};
+// A timer whose rule is not yet confirmed for this season is shown with this mark.
+const PROVISIONAL_MARK = "~";
 let latestReceivedState = null;
 /** Return the game's clock now, moved on from the last state by at most a couple of seconds. */
 function currentGameTimeSeconds(received, nowMilliseconds) {
@@ -78,9 +96,97 @@ function renderDragonWidget(nowMilliseconds) {
     requireElement("dragon-icon").style.backgroundColor =
         (dragon.soul_type !== null ? SOUL_COLORS[dragon.soul_type] : undefined) ?? NEUTRAL_DRAGON_COLOR;
 }
+/** Return the pill for an epic monster, or null when it is gone or not yet close. */
+export function objectivePill(timer, gameTimeSeconds) {
+    const spawnsAtSeconds = timer.spawns_at_game_time_seconds;
+    if (timer.status === "gone" || spawnsAtSeconds === null) {
+        return null;
+    }
+    const remainingSeconds = spawnsAtSeconds - gameTimeSeconds;
+    if (remainingSeconds > UPCOMING_OBJECTIVE_SECONDS) {
+        return null;
+    }
+    const isUp = remainingSeconds <= 0;
+    const provisionalMark = timer.is_rule_verified ? "" : PROVISIONAL_MARK;
+    return {
+        label: OBJECTIVE_NAMES[timer.objective],
+        timeText: isUp ? "up" : `${provisionalMark}${formatCountdown(remainingSeconds)}`,
+        kind: "objective",
+        side: "neutral",
+        isUp,
+    };
+}
+/** Return the pill for a running buff, or null once it has run out. */
+export function buffPill(timer, gameTimeSeconds) {
+    const remainingSeconds = timer.ends_at_game_time_seconds - gameTimeSeconds;
+    if (remainingSeconds <= 0) {
+        return null;
+    }
+    const holderText = timer.holder === "ally" ? "Your" : "Enemy";
+    return {
+        label: `${holderText} ${BUFF_NAMES[timer.buff].toLowerCase()}`,
+        timeText: formatCountdown(remainingSeconds),
+        kind: "buff",
+        side: timer.holder,
+        isUp: false,
+    };
+}
+/** Return the pill for a destroyed inhibitor, or null once it is back. */
+export function inhibitorPill(timer, gameTimeSeconds) {
+    const remainingSeconds = timer.respawns_at_game_time_seconds - gameTimeSeconds;
+    if (remainingSeconds <= 0) {
+        return null;
+    }
+    const sideText = timer.side === "ally" ? "Your" : "Enemy";
+    return {
+        label: `${sideText} ${LANE_NAMES[timer.lane]} inhib`,
+        timeText: formatCountdown(remainingSeconds),
+        kind: "inhibitor",
+        side: timer.side,
+        isUp: false,
+    };
+}
+/** Return every pill to show beside the dragon, in a steady order. */
+function stripPills(state, gameTimeSeconds) {
+    const candidatePills = [
+        ...state.objectives.map((timer) => objectivePill(timer, gameTimeSeconds)),
+        ...state.buffs.map((timer) => buffPill(timer, gameTimeSeconds)),
+        ...state.inhibitors.map((timer) => inhibitorPill(timer, gameTimeSeconds)),
+    ];
+    return candidatePills.filter((pill) => pill !== null);
+}
+/** Return the element that draws one pill. */
+function pillElement(pill) {
+    const element = document.createElement("span");
+    element.className = "pill";
+    element.dataset["kind"] = pill.kind;
+    element.dataset["side"] = pill.side;
+    element.dataset["state"] = pill.isUp ? "alive" : "waiting";
+    const labelElement = document.createElement("span");
+    labelElement.className = "pill-label";
+    labelElement.textContent = pill.label;
+    const timeElement = document.createElement("span");
+    timeElement.className = "pill-time";
+    timeElement.textContent = pill.timeText;
+    element.append(labelElement, timeElement);
+    return element;
+}
+/** Draw the pills beside the dragon: other monsters, buffs and inhibitors. */
+function renderObjectivePills(nowMilliseconds) {
+    const pillRow = requireElement("objective-pills");
+    const received = latestReceivedState;
+    const gameTimeSeconds = received === null ? null : currentGameTimeSeconds(received, nowMilliseconds);
+    if (received === null || !received.state.is_game_running || gameTimeSeconds === null) {
+        pillRow.replaceChildren();
+        return;
+    }
+    pillRow.replaceChildren(...stripPills(received.state, gameTimeSeconds).map(pillElement));
+}
 /** Draw every widget. */
 function render() {
-    renderDragonWidget(performance.now());
+    const nowMilliseconds = performance.now();
+    renderDragonWidget(nowMilliseconds);
+    renderObjectivePills(nowMilliseconds);
 }
 /** Listen to the engine; the browser reconnects by itself when the stream drops. */
 function listenToEngine() {

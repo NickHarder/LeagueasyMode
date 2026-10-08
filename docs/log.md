@@ -6,6 +6,10 @@ skill has the format.
 
 ## 2026-10-08
 
+- Phase 2.1, the objective strip: Baron, Herald and Voidgrubs timers, each team's Baron and Elder
+  buff, and inhibitors down, beside the dragon. This season's spawn times are provisional and
+  marked so. Also fixed: shutting the server down waited up to 15 seconds for each page still
+  listening; the streams now end at once.
 - Phase 2's slices planned in [plans/phase-2-exact-facts.md](plans/phase-2-exact-facts.md), on
   `feat/exact-facts`, stacked on pull request #2 while it waits for review.
 - Pushed and opened as pull request #2. CI's first run is green on all 10 jobs: the Swift app

@@ -1,5 +1,7 @@
 /* The overlay draws over the game: the page itself is transparent, and only widgets show. */
 :root {
+  --widget-ally: #6fb4ff;
+  --widget-enemy: #ff7a6b;
   --widget-text: #f3efe4;
   --widget-muted: #b9b3a3;
   --widget-surface: rgb(10 12 18 / 0.72);
@@ -16,11 +18,17 @@ body {
   cursor: default;
 }
 
-.widget {
+.strip {
   position: fixed;
   top: 8px;
   left: 50%;
   transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.widget {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -70,4 +78,35 @@ body {
   font-size: 11px;
   font-weight: 500;
   color: var(--widget-muted);
+}
+
+.pill-row {
+  display: flex;
+  gap: 6px;
+}
+
+.pill {
+  display: flex;
+  gap: 6px;
+  align-items: baseline;
+  padding: 5px 10px;
+  border: 1px solid var(--widget-border);
+  border-radius: 10px;
+  background: var(--widget-surface);
+  color: var(--widget-text);
+  font: 600 13px/1.15 -apple-system, "SF Pro Text", system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 1px 2px rgb(0 0 0 / 0.6);
+}
+
+.pill[data-side="ally"] {
+  border-color: var(--widget-ally);
+}
+
+.pill[data-side="enemy"] {
+  border-color: var(--widget-enemy);
+}
+
+.pill[data-state="alive"] .pill-time {
+  color: var(--widget-alive);
 }

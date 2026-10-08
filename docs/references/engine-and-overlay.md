@@ -4,7 +4,7 @@ title: The engine and the overlay page
 description: How the engine turns the game's answers into the overlay's state, how that state reaches the widgets, how the page is built and tested, and how to run it all against a replay.
 tags: [engine, overlay, architecture]
 status: draft
-generated: { by: claude-code/cloud, at: 2026-10-08T14:20:00Z }
+generated: { by: claude-code/cloud, at: 2026-10-08T15:05:00Z }
 sources:
   - id: engine
     resource: ../../src/leagueasymode/engine.py
@@ -50,8 +50,13 @@ game API ─▶ GameApiClient ─▶ GameSnapshot ─▶ estimators ─▶ Overl
 | Estimator | Kind | Rules |
 |---|---|---|
 | Dragon and Elder Dragon timer, each side's dragons, the soul | exact: restates the kill feed and the map | first dragon at 5:00, a dragon respawns 5:00 after it dies, the Elder 6:00 after the soul dragon or the last Elder; the soul at 4 dragons[^objectives] |
+| Baron, Rift Herald and Voidgrubs timers | exact, with this season's spawn times provisional | Baron respawns 6:00 after it dies; first spawns (Voidgrubs 8:00, Herald 15:00, Baron 20:00) from the first version's code, marked unverified and shown with "~"; the Voidgrubs leave when the Herald comes, the Herald does not return once taken |
+| Baron and Elder buffs | exact | to the team of the player who took the monster: Baron 3:00, Elder 2:30 |
+| Inhibitors down | exact | back 5:00 after they fall, or when the feed says they respawned; `Barracks_T1_L1` is team 1's top inhibitor (L, C and R taken as top, mid and bottom, to be confirmed) |
 
-The rules are the long-standing ones; each is to be checked against the first recordings.
+The long-standing rules are written as verified; the rest are checked against the first
+recordings. The widgets show the dragon always, and beside it any other monster up or within 90
+seconds of spawning, each running buff, and each inhibitor down.
 
 # The local server
 
@@ -59,7 +64,8 @@ It listens on 127.0.0.1 only, on a free port, and refuses any request whose `Hos
 `127.0.0.1` or `localhost`, so that a web page elsewhere cannot reach it by pointing a domain at
 127.0.0.1. It serves the page (`/`), its script and style, the state as JSON (`/state`) and as
 server-sent events (`/events`): the current state at once, then each new one, and a keep-alive
-comment every 15 seconds.[^overlay-server]
+comment every 15 seconds. When the server shuts down, open streams end at once, so quitting does
+not wait on a page that is still listening.[^overlay-server]
 
 # The widgets
 
