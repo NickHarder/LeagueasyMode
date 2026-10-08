@@ -71,6 +71,60 @@
       ],
       "type": "string"
     },
+    "CombatStats": {
+      "additionalProperties": false,
+      "description": "A player's combat stats.\n\nExact for the player on this machine, whose stats the game gives in full. For the others an\nestimate: the champion's base stats grown to their level, plus their items' stats, at this\npatch's numbers; runes, passives, stacks and buffs are not counted.",
+      "properties": {
+        "source": {
+          "enum": [
+            "exact",
+            "estimate"
+          ],
+          "title": "Source",
+          "type": "string"
+        },
+        "health": {
+          "title": "Health",
+          "type": "number"
+        },
+        "armor": {
+          "title": "Armor",
+          "type": "number"
+        },
+        "magic_resist": {
+          "title": "Magic Resist",
+          "type": "number"
+        },
+        "attack_damage": {
+          "title": "Attack Damage",
+          "type": "number"
+        },
+        "ability_power": {
+          "title": "Ability Power",
+          "type": "number"
+        },
+        "attack_speed": {
+          "title": "Attack Speed",
+          "type": "number"
+        },
+        "move_speed": {
+          "title": "Move Speed",
+          "type": "number"
+        }
+      },
+      "required": [
+        "source",
+        "health",
+        "armor",
+        "magic_resist",
+        "attack_damage",
+        "ability_power",
+        "attack_speed",
+        "move_speed"
+      ],
+      "title": "CombatStats",
+      "type": "object"
+    },
     "DragonTimer": {
       "additionalProperties": false,
       "description": "The next dragon or Elder Dragon: when it spawns, and the race for the soul.\n\nEvery value restates the kill feed and the map; nothing here is estimated.",
@@ -323,6 +377,17 @@
           },
           "title": "Finished Item Names",
           "type": "array"
+        },
+        "combat_stats": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CombatStats"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         }
       },
       "required": [

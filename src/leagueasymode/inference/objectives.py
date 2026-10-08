@@ -1,9 +1,10 @@
 """Objective timers, from the kill feed: epic monsters, the buffs they give, and inhibitors.
 
 These restate what the game announces (a monster's death, an inhibitor falling, the rift changing
-for the soul) with the spawn rules applied; nothing is estimated. Long-standing rules are written
-as verified; this season's spawn times that no recording has confirmed yet are marked otherwise, and
-each is checked against the owner's recorded games as they come in.
+for the soul) with the spawn rules applied; nothing is estimated. A rule is written as verified once
+it is long-standing or the owner has confirmed it for this season; a rule that changes with a new
+season goes back to unverified, and the overlay marks its times as provisional, until it is
+confirmed again.
 """
 
 import re
@@ -160,24 +161,26 @@ class ObjectiveRule:
     source: str
 
 
+# The 2026 season's rules. Each leaves 15 seconds before the next monster takes its pit, as in
+# past seasons; a community guide of patch 26.15 gives the same 14:45 and 19:45.
 OBJECTIVE_RULES: Final = (
     ObjectiveRule(
         objective="voidgrubs",
         first_spawn_seconds=480.0,
         respawn_seconds=None,
-        leaves_at_seconds=900.0,
+        leaves_at_seconds=885.0,
         kill_event_name=None,
-        is_verified=False,
-        source="the first version's code (8:00); they leave when the Herald comes",
+        is_verified=True,
+        source="8:00, confirmed by the owner on 2026-10-08; they leave at 14:45",
     ),
     ObjectiveRule(
         objective="rift_herald",
         first_spawn_seconds=900.0,
         respawn_seconds=None,
-        leaves_at_seconds=None,
+        leaves_at_seconds=1185.0,
         kill_event_name="HeraldKill",
-        is_verified=False,
-        source="the first version's code (15:00)",
+        is_verified=True,
+        source="15:00, confirmed by the owner on 2026-10-08; she leaves at 19:45",
     ),
     ObjectiveRule(
         objective="baron",
@@ -185,8 +188,8 @@ OBJECTIVE_RULES: Final = (
         respawn_seconds=360.0,
         leaves_at_seconds=None,
         kill_event_name=BARON_KILL_EVENT,
-        is_verified=False,
-        source="spawn from the first version's code (20:00); respawn the long-standing 6:00",
+        is_verified=True,
+        source="20:00, confirmed by the owner on 2026-10-08; respawn the long-standing 6:00",
     ),
 )
 

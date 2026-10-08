@@ -159,6 +159,13 @@ body {
   color: var(--widget-enemy);
 }
 
+.enemy-stats {
+  grid-column: 2 / -1;
+  color: var(--widget-muted);
+  font-size: 10px;
+  font-weight: 500;
+}
+
 .enemy-row[data-dead="true"] .enemy-name {
   opacity: 0.55;
   text-decoration: line-through;

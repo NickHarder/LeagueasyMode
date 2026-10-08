@@ -1,0 +1,458 @@
+{
+ "type": "champion",
+ "format": "standAloneComplex",
+ "version": "16.19.1",
+ "data": {
+  "Garen": {
+   "version": "16.19.1",
+   "id": "Garen",
+   "key": "1",
+   "name": "Garen",
+   "title": "",
+   "blurb": "",
+   "info": {
+    "attack": 5,
+    "defense": 5,
+    "magic": 5,
+    "difficulty": 5
+   },
+   "image": {
+    "full": "Garen.png"
+   },
+   "tags": [],
+   "partype": "Mana",
+   "stats": {
+    "hp": 690,
+    "hpperlevel": 98,
+    "mp": 300,
+    "mpperlevel": 40,
+    "movespeed": 340,
+    "armor": 38,
+    "armorperlevel": 4.2,
+    "spellblock": 32,
+    "spellblockperlevel": 1.55,
+    "attackrange": 175,
+    "hpregen": 8,
+    "hpregenperlevel": 0.75,
+    "mpregen": 8,
+    "mpregenperlevel": 0.8,
+    "crit": 0,
+    "critperlevel": 0,
+    "attackdamage": 69,
+    "attackdamageperlevel": 4.5,
+    "attackspeedperlevel": 3.65,
+    "attackspeed": 0.625
+   }
+  },
+  "LeeSin": {
+   "version": "16.19.1",
+   "id": "LeeSin",
+   "key": "2",
+   "name": "Lee Sin",
+   "title": "",
+   "blurb": "",
+   "info": {
+    "attack": 5,
+    "defense": 5,
+    "magic": 5,
+    "difficulty": 5
+   },
+   "image": {
+    "full": "LeeSin.png"
+   },
+   "tags": [],
+   "partype": "Mana",
+   "stats": {
+    "hp": 645,
+    "hpperlevel": 108,
+    "mp": 300,
+    "mpperlevel": 40,
+    "movespeed": 345,
+    "armor": 36,
+    "armorperlevel": 4.9,
+    "spellblock": 32,
+    "spellblockperlevel": 2.05,
+    "attackrange": 125,
+    "hpregen": 8,
+    "hpregenperlevel": 0.75,
+    "mpregen": 8,
+    "mpregenperlevel": 0.8,
+    "crit": 0,
+    "critperlevel": 0,
+    "attackdamage": 69,
+    "attackdamageperlevel": 3.7,
+    "attackspeedperlevel": 3.0,
+    "attackspeed": 0.651
+   }
+  },
+  "Ahri": {
+   "version": "16.19.1",
+   "id": "Ahri",
+   "key": "3",
+   "name": "Ahri",
+   "title": "",
+   "blurb": "",
+   "info": {
+    "attack": 5,
+    "defense": 5,
+    "magic": 5,
+    "difficulty": 5
+   },
+   "image": {
+    "full": "Ahri.png"
+   },
+   "tags": [],
+   "partype": "Mana",
+   "stats": {
+    "hp": 590,
+    "hpperlevel": 104,
+    "mp": 300,
+    "mpperlevel": 40,
+    "movespeed": 330,
+    "armor": 21,
+    "armorperlevel": 4.2,
+    "spellblock": 30,
+    "spellblockperlevel": 1.3,
+    "attackrange": 550,
+    "hpregen": 8,
+    "hpregenperlevel": 0.75,
+    "mpregen": 8,
+    "mpregenperlevel": 0.8,
+    "crit": 0,
+    "critperlevel": 0,
+    "attackdamage": 53,
+    "attackdamageperlevel": 3.0,
+    "attackspeedperlevel": 2.2,
+    "attackspeed": 0.668
+   }
+  },
+  "Jinx": {
+   "version": "16.19.1",
+   "id": "Jinx",
+   "key": "4",
+   "name": "Jinx",
+   "title": "",
+   "blurb": "",
+   "info": {
+    "attack": 5,
+    "defense": 5,
+    "magic": 5,
+    "difficulty": 5
+   },
+   "image": {
+    "full": "Jinx.png"
+   },
+   "tags": [],
+   "partype": "Mana",
+   "stats": {
+    "hp": 630,
+    "hpperlevel": 105,
+    "mp": 300,
+    "mpperlevel": 40,
+    "movespeed": 325,
+    "armor": 26,
+    "armorperlevel": 4.7,
+    "spellblock": 30,
+    "spellblockperlevel": 1.3,
+    "attackrange": 525,
+    "hpregen": 8,
+    "hpregenperlevel": 0.75,
+    "mpregen": 8,
+    "mpregenperlevel": 0.8,
+    "crit": 0,
+    "critperlevel": 0,
+    "attackdamage": 59,
+    "attackdamageperlevel": 3.4,
+    "attackspeedperlevel": 1.4,
+    "attackspeed": 0.625
+   }
+  },
+  "Thresh": {
+   "version": "16.19.1",
+   "id": "Thresh",
+   "key": "5",
+   "name": "Thresh",
+   "title": "",
+   "blurb": "",
+   "info": {
+    "attack": 5,
+    "defense": 5,
+    "magic": 5,
+    "difficulty": 5
+   },
+   "image": {
+    "full": "Thresh.png"
+   },
+   "tags": [],
+   "partype": "Mana",
+   "stats": {
+    "hp": 620,
+    "hpperlevel": 120,
+    "mp": 300,
+    "mpperlevel": 40,
+    "movespeed": 330,
+    "armor": 28,
+    "armorperlevel": 0.0,
+    "spellblock": 30,
+    "spellblockperlevel": 1.55,
+    "attackrange": 450,
+    "hpregen": 8,
+    "hpregenperlevel": 0.75,
+    "mpregen": 8,
+    "mpregenperlevel": 0.8,
+    "crit": 0,
+    "critperlevel": 0,
+    "attackdamage": 56,
+    "attackdamageperlevel": 2.2,
+    "attackspeedperlevel": 3.5,
+    "attackspeed": 0.625
+   }
+  },
+  "Darius": {
+   "version": "16.19.1",
+   "id": "Darius",
+   "key": "6",
+   "name": "Darius",
+   "title": "",
+   "blurb": "",
+   "info": {
+    "attack": 5,
+    "defense": 5,
+    "magic": 5,
+    "difficulty": 5
+   },
+   "image": {
+    "full": "Darius.png"
+   },
+   "tags": [],
+   "partype": "Mana",
+   "stats": {
+    "hp": 652,
+    "hpperlevel": 114,
+    "mp": 300,
+    "mpperlevel": 40,
+    "movespeed": 340,
+    "armor": 37,
+    "armorperlevel": 5.2,
+    "spellblock": 32,
+    "spellblockperlevel": 2.05,
+    "attackrange": 175,
+    "hpregen": 8,
+    "hpregenperlevel": 0.75,
+    "mpregen": 8,
+    "mpregenperlevel": 0.8,
+    "crit": 0,
+    "critperlevel": 0,
+    "attackdamage": 64,
+    "attackdamageperlevel": 5.0,
+    "attackspeedperlevel": 1.0,
+    "attackspeed": 0.625
+   }
+  },
+  "Vi": {
+   "version": "16.19.1",
+   "id": "Vi",
+   "key": "7",
+   "name": "Vi",
+   "title": "",
+   "blurb": "",
+   "info": {
+    "attack": 5,
+    "defense": 5,
+    "magic": 5,
+    "difficulty": 5
+   },
+   "image": {
+    "full": "Vi.png"
+   },
+   "tags": [],
+   "partype": "Mana",
+   "stats": {
+    "hp": 655,
+    "hpperlevel": 99,
+    "mp": 300,
+    "mpperlevel": 40,
+    "movespeed": 340,
+    "armor": 30,
+    "armorperlevel": 4.5,
+    "spellblock": 32,
+    "spellblockperlevel": 2.05,
+    "attackrange": 125,
+    "hpregen": 8,
+    "hpregenperlevel": 0.75,
+    "mpregen": 8,
+    "mpregenperlevel": 0.8,
+    "crit": 0,
+    "critperlevel": 0,
+    "attackdamage": 63,
+    "attackdamageperlevel": 3.5,
+    "attackspeedperlevel": 2.0,
+    "attackspeed": 0.644
+   }
+  },
+  "Zed": {
+   "version": "16.19.1",
+   "id": "Zed",
+   "key": "8",
+   "name": "Zed",
+   "title": "",
+   "blurb": "",
+   "info": {
+    "attack": 5,
+    "defense": 5,
+    "magic": 5,
+    "difficulty": 5
+   },
+   "image": {
+    "full": "Zed.png"
+   },
+   "tags": [],
+   "partype": "Mana",
+   "stats": {
+    "hp": 654,
+    "hpperlevel": 99,
+    "mp": 300,
+    "mpperlevel": 40,
+    "movespeed": 345,
+    "armor": 32,
+    "armorperlevel": 4.7,
+    "spellblock": 29,
+    "spellblockperlevel": 2.05,
+    "attackrange": 125,
+    "hpregen": 8,
+    "hpregenperlevel": 0.75,
+    "mpregen": 8,
+    "mpregenperlevel": 0.8,
+    "crit": 0,
+    "critperlevel": 0,
+    "attackdamage": 63,
+    "attackdamageperlevel": 3.4,
+    "attackspeedperlevel": 3.3,
+    "attackspeed": 0.651
+   }
+  },
+  "Caitlyn": {
+   "version": "16.19.1",
+   "id": "Caitlyn",
+   "key": "9",
+   "name": "Caitlyn",
+   "title": "",
+   "blurb": "",
+   "info": {
+    "attack": 5,
+    "defense": 5,
+    "magic": 5,
+    "difficulty": 5
+   },
+   "image": {
+    "full": "Caitlyn.png"
+   },
+   "tags": [],
+   "partype": "Mana",
+   "stats": {
+    "hp": 580,
+    "hpperlevel": 107,
+    "mp": 300,
+    "mpperlevel": 40,
+    "movespeed": 325,
+    "armor": 27,
+    "armorperlevel": 4.7,
+    "spellblock": 30,
+    "spellblockperlevel": 1.3,
+    "attackrange": 650,
+    "hpregen": 8,
+    "hpregenperlevel": 0.75,
+    "mpregen": 8,
+    "mpregenperlevel": 0.8,
+    "crit": 0,
+    "critperlevel": 0,
+    "attackdamage": 60,
+    "attackdamageperlevel": 3.8,
+    "attackspeedperlevel": 4.0,
+    "attackspeed": 0.681
+   }
+  },
+  "Lux": {
+   "version": "16.19.1",
+   "id": "Lux",
+   "key": "10",
+   "name": "Lux",
+   "title": "",
+   "blurb": "",
+   "info": {
+    "attack": 5,
+    "defense": 5,
+    "magic": 5,
+    "difficulty": 5
+   },
+   "image": {
+    "full": "Lux.png"
+   },
+   "tags": [],
+   "partype": "Mana",
+   "stats": {
+    "hp": 580,
+    "hpperlevel": 99,
+    "mp": 300,
+    "mpperlevel": 40,
+    "movespeed": 330,
+    "armor": 21,
+    "armorperlevel": 5.2,
+    "spellblock": 30,
+    "spellblockperlevel": 1.3,
+    "attackrange": 550,
+    "hpregen": 8,
+    "hpregenperlevel": 0.75,
+    "mpregen": 8,
+    "mpregenperlevel": 0.8,
+    "crit": 0,
+    "critperlevel": 0,
+    "attackdamage": 54,
+    "attackdamageperlevel": 3.3,
+    "attackspeedperlevel": 1.0,
+    "attackspeed": 0.669
+   }
+  },
+  "MonkeyKing": {
+   "version": "16.19.1",
+   "id": "MonkeyKing",
+   "key": "11",
+   "name": "Wukong",
+   "title": "",
+   "blurb": "",
+   "info": {
+    "attack": 5,
+    "defense": 5,
+    "magic": 5,
+    "difficulty": 5
+   },
+   "image": {
+    "full": "MonkeyKing.png"
+   },
+   "tags": [],
+   "partype": "Mana",
+   "stats": {
+    "hp": 610,
+    "hpperlevel": 99,
+    "mp": 300,
+    "mpperlevel": 40,
+    "movespeed": 340,
+    "armor": 31,
+    "armorperlevel": 4.7,
+    "spellblock": 28,
+    "spellblockperlevel": 2.05,
+    "attackrange": 175,
+    "hpregen": 8,
+    "hpregenperlevel": 0.75,
+    "mpregen": 8,
+    "mpregenperlevel": 0.8,
+    "crit": 0,
+    "critperlevel": 0,
+    "attackdamage": 66,
+    "attackdamageperlevel": 3.5,
+    "attackspeedperlevel": 3.0,
+    "attackspeed": 0.69
+   }
+  }
+ }
+}

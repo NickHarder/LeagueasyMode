@@ -12,8 +12,19 @@ from typing import Final
 import aiohttp
 from aiohttp import web
 
-from leagueasymode.config import Settings, default_recordings_directory
-from leagueasymode.engine import OverlayEngine
+from leagueasymode.config import (
+    Settings,
+    default_patch_data_directory,
+    default_recordings_directory,
+)
+from leagueasymode.data_dragon import (
+    DataDragonClient,
+    PatchStats,
+    PatchStatsStore,
+    create_system_tls_context,
+    load_patch_stats,
+)
+from leagueasymode.engine import OverlayEngine, PatchStatsLoader
 from leagueasymode.game_api import GameApiClient
 from leagueasymode.league_client import (
     DEFAULT_LOCKFILE_PATHS,
@@ -88,6 +99,7 @@ async def run_overlay(
             _game_api(session, settings),
             settings.poll_interval_seconds,
             _client_connector(session, settings),
+            _patch_stats_loader(session, settings),
         )
         runner = web.AppRunner(create_overlay_application(engine))
         await runner.setup()
@@ -200,6 +212,34 @@ def _client_connector(session: aiohttp.ClientSession, settings: Settings) -> Cli
         )
 
     return connect_to_client
+
+
+def _patch_stats_loader(session: aiohttp.ClientSession, settings: Settings) -> PatchStatsLoader:
+    """Return what loads a patch's stats: from disk, or from Data Dragon when downloads are on.
+
+    Args:
+        session: The HTTP session.
+        settings: Whether to download, from where, and where patches are kept.
+
+    Returns:
+        A function returning the stats of the game's patch, given the game's version.
+    """
+    store = PatchStatsStore(settings.patch_data_directory or default_patch_data_directory())
+    base_url = settings.data_dragon_base_url
+    client = (
+        DataDragonClient(
+            session,
+            base_url,
+            tls_context=create_system_tls_context() if base_url.startswith("https") else None,
+        )
+        if settings.download_patch_stats
+        else None
+    )
+
+    async def load(game_version: str | None) -> PatchStats | None:
+        return await load_patch_stats(client, store, game_version)
+
+    return load
 
 
 async def _serve_replay(replay: RecordingReplay, port: int, stop_requested: asyncio.Event) -> None:

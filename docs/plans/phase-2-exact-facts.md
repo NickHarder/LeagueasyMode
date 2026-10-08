@@ -4,7 +4,7 @@ title: "Phase 2: patch data and exact facts"
 description: The slices of phase 2 of the approved plan, in build order, with what each shows, what it needs and the points where the owner decides.
 tags: [plan, phase-2]
 status: draft
-generated: { by: claude-code/cloud, at: 2026-10-08T16:15:00Z }
+generated: { by: claude-code/cloud, at: 2026-10-08T16:21:06Z }
 ---
 
 # Phase 2: patch data and exact facts
@@ -43,23 +43,26 @@ app moves to the Swift 6 language mode.
 | 2.1 | Objective strip | Built: `inference/objectives.py`, the strip's pills |
 | 2.2 | Enemy strip and numbers window | Built: `inference/players.py`, the enemy strip |
 | 2.3 | Callouts | Built: `inference/callouts.py` (levels, numbers window, objectives soon); voice later |
-| 2.4 | Patch data | Built for items: `patch_data.py`; the champion summary waits for 2.8 |
+| 2.4 | Patch data | Built: the item catalog from the client (`patch_data.py`); champion and item stats from Data Dragon (`data_dragon.py`) |
 | 2.5 | Item spikes and gold lead | Built: item gold, finished items, team item gold, item callouts |
 | 2.6 | Structures | Not built: League's own scoreboard shows each team's tower count, and a lane-by-lane view rests on turret names no recording has confirmed; revisit with the first recordings |
 | 2.7 | Roles | Built: `inference/roles.py` |
-| 2.8 | Combat stats | Waits on decision 1 |
+| 2.8 | Combat stats | Built: `inference/combat_stats.py`; health, armor and magic resist under each enemy |
 
 ## Where the owner decides
 
-1. **Champion base stats (needed by 2.8).** The League client's game data has none: its champion
-   files hold abilities, roles and art, not health or armor. The choices:
+1. **Champion base stats (needed by 2.8).** Answered on 2026-10-08: "pull the info from an API and
+   then store it and refresh on patches / updates". The engine fetches each patch's files from Data
+   Dragon itself, once a patch, and keeps them on disk; no CI job. The League client's game data
+   has none: its champion files hold abilities, roles and art, not health or armor. The choices
+   were:
    - a table generated each patch from Riot's public Data Dragon by a CI job, committed, and read
      locally at run time (recommended: the overlay still talks only to League's local APIs);
    - learned from recordings, which knows only the champions the owner plays;
    - no combat stats, and phase 5's fight model goes without them.
-2. **This season's objective timers (2.1).** Spawn times have changed season by season. The table
-   starts from long-standing values (dragon 5:00, Baron buff 3:00, Elder buff 2:30, inhibitor
-   respawn 5:00) and, for the rest, from the first version's code (Voidgrubs 8:00, Herald 15:00,
-   Baron 20:00), each marked unverified until a recording or the owner confirms it.
+2. **This season's objective timers (2.1).** Answered on 2026-10-08: "Those times seem right".
+   Spawn times have changed season by season. The table starts from long-standing values (dragon
+   5:00, Baron buff 3:00, Elder buff 2:30, inhibitor respawn 5:00) and, for the rest, from the
+   first version's code (Voidgrubs 8:00, Herald 15:00, Baron 20:00), which the owner confirmed.
 3. **The widgets' look and places**, as each lands.
 4. **Pushing this branch**, which stacks on pull request #2.

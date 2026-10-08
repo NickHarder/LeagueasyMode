@@ -34,8 +34,8 @@ def test_baron_waits_for_its_first_spawn() -> None:
     baron = timer_of(snapshot_at(600.0), "baron")
     assert baron.status == "not_spawned"
     assert baron.spawns_at_game_time_seconds == 1200.0
-    # From the first version's code, not yet seen in a recording of this season.
-    assert baron.is_rule_verified is False
+    # Confirmed by the owner for this season, so shown without the provisional mark.
+    assert baron.is_rule_verified is True
 
 
 def test_a_taken_baron_respawns_six_minutes_later() -> None:
@@ -52,10 +52,21 @@ def test_the_herald_spawns_once_and_is_gone_once_taken() -> None:
     assert taken.spawns_at_game_time_seconds is None
 
 
-def test_voidgrubs_are_gone_once_the_herald_spawns() -> None:
+def test_voidgrubs_leave_at_fourteen_forty_five_before_the_herald_comes() -> None:
     assert timer_of(snapshot_at(300.0), "voidgrubs").spawns_at_game_time_seconds == 480.0
     assert timer_of(snapshot_at(500.0), "voidgrubs").status == "alive"
-    assert timer_of(snapshot_at(905.0), "voidgrubs").status == "gone"
+    assert timer_of(snapshot_at(884.0), "voidgrubs").status == "alive"
+    assert timer_of(snapshot_at(885.0), "voidgrubs").status == "gone"
+
+
+def test_an_untaken_herald_leaves_at_nineteen_forty_five_before_baron_comes() -> None:
+    assert timer_of(snapshot_at(1184.0), "rift_herald").status == "alive"
+    assert timer_of(snapshot_at(1185.0), "rift_herald").status == "gone"
+
+
+def test_every_spawn_rule_is_confirmed_for_this_season() -> None:
+    timers = objective_timers(snapshot_at(600.0))
+    assert [timer.is_rule_verified for timer in timers] == [True, True, True]
 
 
 def test_the_baron_buff_lasts_three_minutes_for_the_team_that_took_it() -> None:

@@ -75,6 +75,22 @@ export function isInhibitorTimer(value) {
         isOneOf(value["lane"], LANES) &&
         typeof value["respawns_at_game_time_seconds"] === "number");
 }
+const COMBAT_STAT_NAMES = [
+    "health",
+    "armor",
+    "magic_resist",
+    "attack_damage",
+    "ability_power",
+    "attack_speed",
+    "move_speed",
+];
+const COMBAT_STAT_SOURCES = new Set(["exact", "estimate"]);
+/** Return whether a value is a player's combat stats as the engine sends them. */
+export function isCombatStats(value) {
+    return (isRecord(value) &&
+        isOneOf(value["source"], COMBAT_STAT_SOURCES) &&
+        COMBAT_STAT_NAMES.every((statName) => typeof value[statName] === "number"));
+}
 /** Return whether a value is a player's card as the engine sends it. */
 export function isPlayerCard(value) {
     return (isRecord(value) &&
@@ -87,7 +103,8 @@ export function isPlayerCard(value) {
         typeof value["is_dead"] === "boolean" &&
         isNumberOrNull(value["respawns_at_game_time_seconds"]) &&
         isNumberOrNull(value["item_gold"]) &&
-        isArrayOf(value["finished_item_names"], (name) => typeof name === "string"));
+        isArrayOf(value["finished_item_names"], (name) => typeof name === "string") &&
+        (value["combat_stats"] === null || isCombatStats(value["combat_stats"])));
 }
 /** Return whether a value is each team's item gold as the engine sends it. */
 export function isTeamItemGold(value) {
