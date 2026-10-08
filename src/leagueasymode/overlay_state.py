@@ -75,6 +75,9 @@ class PlayerCard(BaseModel):
     # As the game names it ("TOP", "JUNGLE", "MIDDLE", "BOTTOM", "UTILITY"); empty when the queue
     # assigns none.
     position: str
+    # The position when the game gives it, otherwise estimator 1's guess, and how sure that is.
+    role: str = ""
+    role_confidence: Literal["given", "likely", "guess", "unknown"] = "unknown"
     level: int
     is_dead: bool
     respawns_at_game_time_seconds: float | None

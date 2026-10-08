@@ -248,4 +248,8 @@ async def test_the_enemy_strip_shows_item_gold_and_the_lead(tmp_path: Path) -> N
             ".enemy-gold"
         )
         await expect(caitlyn_gold).to_have_text("3.4k")
+        # In role order, with the roles the game gave.
+        await expect(page.locator("#enemy-strip .enemy-role")).to_have_text(
+            ["TOP", "JGL", "MID", "BOT", "SUP"]
+        )
         await keep_screenshot(page, "item-gold")

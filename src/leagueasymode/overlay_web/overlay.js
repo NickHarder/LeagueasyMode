@@ -37,6 +37,14 @@ const LANE_NAMES = {
     bot: "bot",
 };
 const GOLD_PER_THOUSAND = 1000;
+const ROLE_ORDER = ["TOP", "JUNGLE", "MIDDLE", "BOTTOM", "UTILITY"];
+const ROLE_SHORT_NAMES = {
+    TOP: "TOP",
+    JUNGLE: "JGL",
+    MIDDLE: "MID",
+    BOTTOM: "BOT",
+    UTILITY: "SUP",
+};
 // A timer whose rule is not yet confirmed for this season is shown with this mark.
 const PROVISIONAL_MARK = "~";
 let latestReceivedState = null;
@@ -234,6 +242,11 @@ function enemyRowElement(card, gameTimeSeconds) {
     const row = document.createElement("div");
     row.className = "enemy-row";
     row.dataset["dead"] = card.is_dead ? "true" : "false";
+    const roleElement = document.createElement("span");
+    roleElement.className = "enemy-role";
+    roleElement.dataset["confidence"] = card.role_confidence;
+    const roleName = ROLE_SHORT_NAMES[card.role] ?? "";
+    roleElement.textContent = card.role_confidence === "guess" && roleName !== "" ? `${roleName}?` : roleName;
     const nameElement = document.createElement("span");
     nameElement.className = "enemy-name";
     nameElement.textContent = card.champion_name;
@@ -243,7 +256,7 @@ function enemyRowElement(card, gameTimeSeconds) {
     const goldElement = document.createElement("span");
     goldElement.className = "enemy-gold";
     goldElement.textContent = card.item_gold === null ? "" : formatGold(card.item_gold);
-    row.append(nameElement, levelElement, goldElement);
+    row.append(roleElement, nameElement, levelElement, goldElement);
     const respawnsAtSeconds = card.respawns_at_game_time_seconds;
     if (card.is_dead && respawnsAtSeconds !== null) {
         const respawnElement = document.createElement("span");
@@ -252,6 +265,11 @@ function enemyRowElement(card, gameTimeSeconds) {
         row.append(respawnElement);
     }
     return row;
+}
+/** Return a card's place in role order, unknown roles last. */
+function roleRank(card) {
+    const rank = ROLE_ORDER.indexOf(card.role);
+    return rank === -1 ? ROLE_ORDER.length : rank;
 }
 /** Draw the enemy strip: each enemy's champion, level and death timer. */
 function renderEnemyStrip(nowMilliseconds) {
@@ -263,7 +281,7 @@ function renderEnemyStrip(nowMilliseconds) {
         strip.replaceChildren();
         return;
     }
-    const enemyCards = received.state.players.filter((card) => card.side === "enemy");
+    const enemyCards = [...received.state.players.filter((card) => card.side === "enemy")].sort((first, second) => roleRank(first) - roleRank(second));
     strip.hidden = enemyCards.length === 0;
     const header = itemLeadElement(received.state);
     const rows = enemyCards.map((card) => enemyRowElement(card, gameTimeSeconds));

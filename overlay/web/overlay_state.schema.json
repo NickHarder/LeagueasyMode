@@ -270,6 +270,22 @@
           "title": "Position",
           "type": "string"
         },
+        "role": {
+          "default": "",
+          "title": "Role",
+          "type": "string"
+        },
+        "role_confidence": {
+          "default": "unknown",
+          "enum": [
+            "given",
+            "likely",
+            "guess",
+            "unknown"
+          ],
+          "title": "Role Confidence",
+          "type": "string"
+        },
         "level": {
           "title": "Level",
           "type": "integer"

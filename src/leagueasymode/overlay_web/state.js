@@ -11,6 +11,7 @@ const EPIC_OBJECTIVES = new Set(["baron", "rift_herald", "voidgrubs"]);
 const OBJECTIVE_STATUSES = new Set(["not_spawned", "respawning", "alive", "gone"]);
 const BUFFS = new Set(["baron", "elder"]);
 const LANES = new Set(["top", "mid", "bot"]);
+const ROLE_CONFIDENCES = new Set(["given", "likely", "guess", "unknown"]);
 const CALLOUT_KINDS = new Set([
     "numbers_window",
     "level_spike",
@@ -80,6 +81,8 @@ export function isPlayerCard(value) {
         typeof value["champion_name"] === "string" &&
         isOneOf(value["side"], SIDES) &&
         typeof value["position"] === "string" &&
+        typeof value["role"] === "string" &&
+        isOneOf(value["role_confidence"], ROLE_CONFIDENCES) &&
         typeof value["level"] === "number" &&
         typeof value["is_dead"] === "boolean" &&
         isNumberOrNull(value["respawns_at_game_time_seconds"]) &&

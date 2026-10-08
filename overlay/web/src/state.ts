@@ -51,6 +51,8 @@ export interface PlayerCard {
   readonly champion_name: string;
   readonly side: Side;
   readonly position: string;
+  readonly role: string;
+  readonly role_confidence: "given" | "likely" | "guess" | "unknown";
   readonly level: number;
   readonly is_dead: boolean;
   readonly respawns_at_game_time_seconds: number | null;
@@ -102,6 +104,7 @@ const EPIC_OBJECTIVES: ReadonlySet<string> = new Set(["baron", "rift_herald", "v
 const OBJECTIVE_STATUSES: ReadonlySet<string> = new Set(["not_spawned", "respawning", "alive", "gone"]);
 const BUFFS: ReadonlySet<string> = new Set(["baron", "elder"]);
 const LANES: ReadonlySet<string> = new Set(["top", "mid", "bot"]);
+const ROLE_CONFIDENCES: ReadonlySet<string> = new Set(["given", "likely", "guess", "unknown"]);
 const CALLOUT_KINDS: ReadonlySet<string> = new Set([
   "numbers_window",
   "level_spike",
@@ -189,6 +192,8 @@ export function isPlayerCard(value: unknown): value is PlayerCard {
     typeof value["champion_name"] === "string" &&
     isOneOf(value["side"], SIDES) &&
     typeof value["position"] === "string" &&
+    typeof value["role"] === "string" &&
+    isOneOf(value["role_confidence"], ROLE_CONFIDENCES) &&
     typeof value["level"] === "number" &&
     typeof value["is_dead"] === "boolean" &&
     isNumberOrNull(value["respawns_at_game_time_seconds"]) &&

@@ -144,7 +144,7 @@ body {
 
 .enemy-row {
   display: grid;
-  grid-template-columns: 1fr 2ch 4.5ch 4ch;
+  grid-template-columns: 3.5ch 1fr 2ch 4.5ch 4ch;
   gap: 6px;
   align-items: baseline;
 }
@@ -232,4 +232,15 @@ body {
 
 .callout[data-kind="item_spike"] {
   border-color: var(--widget-enemy);
+}
+
+.enemy-role {
+  color: var(--widget-muted);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+}
+
+.enemy-role[data-confidence="likely"],
+.enemy-role[data-confidence="guess"] {
+  font-style: italic;
 }

@@ -6,6 +6,10 @@ skill has the format.
 
 ## 2026-10-08
 
+- Phase 2.7, estimator 1: each player's role where the queue gives none, by the assignment of
+  least cost over Smite, the support item, summoner spells and CS rank, with a per-player
+  confidence. A team-wide margin first made the only Smite user a "guess" when top and mid could
+  swap; each player now has their own margin.
 - Phases 2.4 and 2.5: the patch's item catalog, from the League client or from a replay that now
   serves the recorded client resources too; each player's item gold and finished items, each
   team's item gold, and a callout when an enemy finishes an item. Items already owned when the

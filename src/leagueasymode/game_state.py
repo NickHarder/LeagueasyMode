@@ -51,6 +51,37 @@ class ScoreboardItem(RiotPayloadModel):
     price: int = 0
 
 
+class SummonerSpell(RiotPayloadModel):
+    """One summoner spell, by the name the game shows (its cooldown is never sent)."""
+
+    display_name: str = Field(default="", alias="displayName")
+
+
+class SummonerSpells(RiotPayloadModel):
+    """A player's two summoner spells."""
+
+    first: SummonerSpell = Field(default_factory=SummonerSpell, alias="summonerSpellOne")
+    second: SummonerSpell = Field(default_factory=SummonerSpell, alias="summonerSpellTwo")
+
+    def names(self) -> list[str]:
+        """Return both spells' names.
+
+        Returns:
+            The names, empty ones left out.
+        """
+        return [spell.display_name for spell in (self.first, self.second) if spell.display_name]
+
+
+class Scores(RiotPayloadModel):
+    """A player's line on the scoreboard."""
+
+    kills: int = 0
+    deaths: int = 0
+    assists: int = 0
+    creep_score: int = Field(default=0, alias="creepScore")
+    ward_score: float = Field(default=0.0, alias="wardScore")
+
+
 class ScoreboardPlayer(RiotPayloadModel):
     """One of the ten players, as the scoreboard shows them."""
 
@@ -64,6 +95,8 @@ class ScoreboardPlayer(RiotPayloadModel):
     riot_id: str = Field(default="", alias="riotId")
     riot_id_game_name: str = Field(default="", alias="riotIdGameName")
     items: list[ScoreboardItem] = Field(default_factory=list)
+    summoner_spells: SummonerSpells = Field(default_factory=SummonerSpells, alias="summonerSpells")
+    scores: Scores = Field(default_factory=Scores)
 
     def is_named(self, name: str) -> bool:
         """Return whether the feed's name for someone is this player.

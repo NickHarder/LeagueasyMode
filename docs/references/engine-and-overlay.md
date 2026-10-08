@@ -4,7 +4,7 @@ title: The engine and the overlay page
 description: How the engine turns the game's answers into the overlay's state, how that state reaches the widgets, how the page is built and tested, and how to run it all against a replay.
 tags: [engine, overlay, architecture]
 status: draft
-generated: { by: claude-code/cloud, at: 2026-10-08T15:55:00Z }
+generated: { by: claude-code/cloud, at: 2026-10-08T16:10:00Z }
 sources:
   - id: engine
     resource: ../../src/leagueasymode/engine.py
@@ -16,6 +16,8 @@ sources:
     resource: ../../src/leagueasymode/inference/players.py
   - id: patch-data
     resource: ../../src/leagueasymode/patch_data.py
+  - id: roles
+    resource: ../../src/leagueasymode/inference/roles.py
   - id: overlay-state
     resource: ../../src/leagueasymode/overlay_state.py
   - id: overlay-server
@@ -62,13 +64,15 @@ game API ─▶ GameApiClient ─▶ GameSnapshot ─▶ estimators ─▶ Overl
 | Callouts | exact: each states a fact at the moment it becomes true | "Zed is level 6" when an enemy crosses 6, 11 or 16 between two answers (not for levels already reached when the overlay starts); "2 enemies down for 0:24" when a numbers window opens or widens; "Baron in 1:00" (with "~" when the spawn time is provisional) when an objective comes within a minute; each once per game, shown for six game seconds; a clock that runs back more than five seconds starts a new game |
 | Item gold, finished items, each team's item gold | exact, at the patch's prices | each player's inventory priced at the catalog's total price (the scoreboard's price for an item the catalog lacks); a finished item is built from parts and into nothing, is not boots or a consumable, and costs at least 2000 gold, a floor to check on real data; a team's item gold is gold earned and spent, not gold in hand |
 | Item callouts | exact | "Caitlyn finished Infinity Edge" when a finished item appears in an enemy's inventory between two answers whose items were both known |
+| Roles (estimator 1) | given where the game assigns them; otherwise likely or a guess | each player gets a cost for each role from Smite, a support item, the other summoner spells and, after 3:00, the least CS on the team; each team's open roles go to its open players in the assignment of least total cost, found by trying all of them (120 for five); a player's role is "likely" when every assignment that changes it costs at least 2 more, otherwise a "guess". The costs are a hand-set prior, to be fitted on the roles the post-game timeline records |
 | Inhibitors down | exact | back 5:00 after they fall, or when the feed says they respawned; `Barracks_T1_L1` is team 1's top inhibitor (L, C and R taken as top, mid and bottom, to be confirmed) |
 
 The long-standing rules are written as verified; the rest are checked against the first
 recordings. The widgets show the dragon always, and beside it the numbers window while it is
 open, any other monster up or within 90 seconds of spawning, each running buff, and each
-inhibitor down; on the right, each team's item-gold lead, and each enemy's champion, level, item
-gold and death timer.
+inhibitor down; on the right, each team's item-gold lead, and each enemy in role order with their
+role (in italics when worked out, with "?" when only a guess), champion, level, item gold and death
+timer.
 
 # Patch data
 

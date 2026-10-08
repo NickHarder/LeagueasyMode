@@ -5,6 +5,7 @@ respawn. The numbers window follows from those alone, since a death to come cann
 """
 
 from leagueasymode.game_state import GameSnapshot, ScoreboardPlayer
+from leagueasymode.inference.roles import assign_roles
 from leagueasymode.overlay_state import NumbersWindow, PlayerCard, TeamItemGold
 from leagueasymode.patch_data import ItemCatalog
 
@@ -23,20 +24,24 @@ def player_cards(
     """
     ally_team = snapshot.ally_team()
     game_time_seconds = snapshot.game_data.game_time_seconds
-    allies = [player for player in snapshot.players if player.team == ally_team]
-    enemies = [player for player in snapshot.players if player.team != ally_team]
+    role_guesses = assign_roles(snapshot)
+    indexed_players = list(enumerate(snapshot.players))
+    allies = [(index, player) for index, player in indexed_players if player.team == ally_team]
+    enemies = [(index, player) for index, player in indexed_players if player.team != ally_team]
     return [
         PlayerCard(
             champion_name=player.champion_name,
             side="ally" if player.team == ally_team else "enemy",
             position=player.position,
+            role=role_guesses[index].role,
+            role_confidence=role_guesses[index].confidence,
             level=player.level,
             is_dead=player.is_dead,
             respawns_at_game_time_seconds=_respawns_at_seconds(player, game_time_seconds),
             item_gold=_item_gold(player, item_catalog),
             finished_item_names=_finished_item_names(player, item_catalog),
         )
-        for player in [*allies, *enemies]
+        for index, player in [*allies, *enemies]
     ]
 
 
