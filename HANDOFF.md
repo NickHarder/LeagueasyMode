@@ -3,8 +3,8 @@
 If you are picking this work up, human or model: read this file top to bottom first. The `handoff` skill
 refreshes it; it describes the current state.
 
-Last updated: 2026-10-08, on branch `feat/overlay-and-inference`, at the commit that adds the macOS
-app (the one after `8c1d2ea`). Nothing is pushed: the repository on GitHub is still archived.
+Last updated: 2026-10-08, on branch `feat/overlay-and-inference`, after CI's first run on
+`a5be0eb`. The branch is pushed and open as pull request #2 into `main`, green on all 10 jobs.
 
 ## Where things stand
 
@@ -20,8 +20,8 @@ the test on a Mac.
 | Replay | A recording served as a stand-in game API | `uv run leagueasymode replay <recording>`; `tests/test_replay.py` |
 | Engine and overlay page | The dragon and Elder timer, from the game's answer to the page | `uv run leagueasymode run`; `tests/test_tracer_bullet.py` |
 | Widgets in a browser | Rendered in Chromium against a replay | `uv run pytest -m browser` (needs Chromium); `tests/test_overlay_page.py` |
-| macOS app | Written, **never compiled**: no Swift here | `overlay/macos/`; CI job `macos-overlay` |
-| CI | Jobs added for the widgets and the macOS app; **never run** | `.github/workflows/ci.yml` |
+| macOS app | Builds on macOS 15 and passes its 9 unit tests in CI; **never run over League** | `overlay/macos/`; CI job `macos-overlay` |
+| CI | All 10 jobs green on pull request #2, the widgets' and the macOS app's included | `.github/workflows/ci.yml`; PR #2's checks |
 | Real game data | **None yet**: every test uses built payloads in the API's documented shape | `tests/game_payloads.py` |
 
 ## How to check your work
@@ -40,9 +40,8 @@ In `AGENTS.md`, this project's own included: every session reads that file.
 
 ## Open, for the owner
 
-1. **Unarchive the repository** on GitHub (Settings → General → Danger Zone), then say whether to
-   push `feat/overlay-and-inference` and open a pull request. The first CI run is the first time
-   the Swift app compiles; expect a fix or two there.
+1. **Review and merge pull request #2** (https://github.com/NickHarder/LeagueasyMode/pull/2) when
+   you are ready; it is green and has no conflict.
 2. **The test on a Mac** in [docs/references/macos-app.md](docs/references/macos-app.md): run the
    app, play a Practice Tool game in each display mode, and record a game or two. The recordings
    (anonymized) become the test data every estimator needs.
@@ -86,8 +85,9 @@ In `AGENTS.md`. Also: a raw recording (it holds other players' names); only `ano
 - The dragon rules (5:00 first spawn, 5:00 respawn, Elder 6:00 after the soul) are long-standing
   values, not yet checked against a recording of this season.
 - The overlay covers the main screen only, and the widgets cannot be moved yet.
-- The Swift app is in the Swift 5 language mode with strict concurrency as warnings; it moves to
-  Swift 6 once CI has compiled it.
+- The Swift app is in the Swift 5 language mode with strict concurrency as warnings, and CI's build
+  shows some (a `@Sendable` closure capturing the engine process, among others); they are to be
+  cleared before it moves to the Swift 6 language mode.
 
 ## History
 

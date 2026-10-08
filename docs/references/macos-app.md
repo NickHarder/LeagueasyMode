@@ -4,7 +4,7 @@ title: The macOS overlay app
 description: What the menu bar app does, how to run it from a clone, and the steps for the tracer bullet's test on a Mac over League in each display mode.
 tags: [macos, overlay, tracer-bullet]
 status: draft
-generated: { by: claude-code/cloud, at: 2026-10-08T14:40:00Z }
+generated: { by: claude-code/cloud, at: 2026-10-08T14:50:00Z }
 sources:
   - id: panel
     resource: ../../overlay/macos/Sources/LeagueasyOverlay/OverlayPanel.swift
@@ -39,8 +39,8 @@ captures the display draws at).
 
 `OverlayCore` holds what the app decides without AppKit (the engine's command and search path,[^engine-command]
 reading its output, finding the clone) and has unit tests; CI builds the app and runs them on a
-macOS runner. The app is written for Swift 5 with strict concurrency checking as warnings; it moves
-to the Swift 6 language mode once CI has compiled it, because nothing here can compile Swift.
+macOS runner. The app is written for Swift 5 with strict concurrency checking as warnings. CI's
+build shows some, which are to be cleared before it moves to the Swift 6 language mode.
 
 # Run it from a clone
 

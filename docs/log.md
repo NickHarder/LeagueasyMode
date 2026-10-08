@@ -6,6 +6,9 @@ skill has the format.
 
 ## 2026-10-08
 
+- Pushed and opened as pull request #2. CI's first run is green on all 10 jobs: the Swift app
+  compiled on macOS 15 and its 9 unit tests passed, and the overlay page rendered in Chromium. The
+  build's strict-concurrency warnings are noted in `HANDOFF.md` for the move to Swift 6.
 - The tracer bullet's macOS side: a menu bar app in Swift (`overlay/macos/`) that starts the engine
   and shows the overlay page in a transparent, click-through window that never takes focus, with a
   ⌃⌥⌘L shortcut and a choice of window level for trying each League display mode. It is written but
