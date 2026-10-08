@@ -223,6 +223,24 @@ export interface Callout {
   readonly shown_until_game_time_seconds: number;
 }
 
+/** A jungle camp a jungler likely cleared, and when it is back: an estimate. */
+export interface CampTimer {
+  readonly camp: string;
+  readonly label: string;
+  readonly cleared_by: Side;
+  readonly respawns_at_game_time_seconds: number;
+}
+
+/** A jungler's likely clear: the camps lately, and their likely next camp. */
+export interface JunglePath {
+  readonly champion_name: string;
+  readonly side: Side;
+  readonly recent_camps: readonly string[];
+  readonly last_cleared_at_game_time_seconds: number | null;
+  readonly next_camp: string | null;
+  readonly next_camp_at_game_time_seconds: number | null;
+}
+
 /** Everything the overlay shows at one moment. */
 export interface OverlayState {
   readonly is_game_running: boolean;
@@ -236,6 +254,8 @@ export interface OverlayState {
   readonly team_item_gold: TeamItemGold | null;
   readonly team_gold: TeamGold | null;
   readonly cooldowns: readonly CooldownTimer[];
+  readonly jungle_paths: readonly JunglePath[];
+  readonly camp_timers: readonly CampTimer[];
   readonly callouts: readonly Callout[];
 }
 
@@ -547,6 +567,30 @@ export function isCooldownTimer(value: unknown): value is CooldownTimer {
   );
 }
 
+/** Return whether a value is a camp's timer as the engine sends it. */
+export function isCampTimer(value: unknown): value is CampTimer {
+  return (
+    isRecord(value) &&
+    typeof value["camp"] === "string" &&
+    typeof value["label"] === "string" &&
+    isOneOf(value["cleared_by"], SIDES) &&
+    typeof value["respawns_at_game_time_seconds"] === "number"
+  );
+}
+
+/** Return whether a value is a jungler's path as the engine sends it. */
+export function isJunglePath(value: unknown): value is JunglePath {
+  return (
+    isRecord(value) &&
+    typeof value["champion_name"] === "string" &&
+    isOneOf(value["side"], SIDES) &&
+    isArrayOf(value["recent_camps"], (camp: unknown): camp is string => typeof camp === "string") &&
+    isNumberOrNull(value["last_cleared_at_game_time_seconds"]) &&
+    (value["next_camp"] === null || typeof value["next_camp"] === "string") &&
+    isNumberOrNull(value["next_camp_at_game_time_seconds"])
+  );
+}
+
 /** Return whether a value is an overlay state as the engine sends it. */
 export function isOverlayState(value: unknown): value is OverlayState {
   if (!isRecord(value)) {
@@ -565,6 +609,8 @@ export function isOverlayState(value: unknown): value is OverlayState {
     (value["team_item_gold"] === null || isTeamItemGold(value["team_item_gold"])) &&
     (value["team_gold"] === null || isTeamGold(value["team_gold"])) &&
     isArrayOf(value["cooldowns"], isCooldownTimer) &&
+    isArrayOf(value["jungle_paths"], isJunglePath) &&
+    isArrayOf(value["camp_timers"], isCampTimer) &&
     isArrayOf(value["callouts"], isCallout)
   );
 }

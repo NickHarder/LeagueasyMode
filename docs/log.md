@@ -6,6 +6,13 @@ skill has the format.
 
 ## 2026-10-08
 
+- Phase 4.4, the jungle path (estimator 8): each jungler's creep score bursts decoded into the
+  camps that fit them (camp spawns and respawns, travel along the map, clear times), the likeliest
+  path wasting the least time and staying in their own jungle. The respawn rule needs the whole
+  path, so the decoding is a beam search rather than plain Viterbi. The enemy jungler's row shows
+  their path and next camp; the strip shows the camps down and when each is back (dead camp
+  timers, as the open policy allows). Scored by how far the timeline puts the jungler from each
+  decoded camp.
 - Phase 4.3, positions (estimator 7): where each player likely is, a chance for each of the
   map's points spread from their latest clue at their move speed and weighed by their role's
   habits. The plan named a particle filter; over 81 points the exact histogram filter does the

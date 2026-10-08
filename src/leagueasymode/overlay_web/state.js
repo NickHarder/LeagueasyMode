@@ -244,6 +244,24 @@ export function isCooldownTimer(value) {
         typeof value["marked_at_game_time_seconds"] === "number" &&
         typeof value["ready_at_game_time_seconds"] === "number");
 }
+/** Return whether a value is a camp's timer as the engine sends it. */
+export function isCampTimer(value) {
+    return (isRecord(value) &&
+        typeof value["camp"] === "string" &&
+        typeof value["label"] === "string" &&
+        isOneOf(value["cleared_by"], SIDES) &&
+        typeof value["respawns_at_game_time_seconds"] === "number");
+}
+/** Return whether a value is a jungler's path as the engine sends it. */
+export function isJunglePath(value) {
+    return (isRecord(value) &&
+        typeof value["champion_name"] === "string" &&
+        isOneOf(value["side"], SIDES) &&
+        isArrayOf(value["recent_camps"], (camp) => typeof camp === "string") &&
+        isNumberOrNull(value["last_cleared_at_game_time_seconds"]) &&
+        (value["next_camp"] === null || typeof value["next_camp"] === "string") &&
+        isNumberOrNull(value["next_camp_at_game_time_seconds"]));
+}
 /** Return whether a value is an overlay state as the engine sends it. */
 export function isOverlayState(value) {
     if (!isRecord(value)) {
@@ -261,5 +279,7 @@ export function isOverlayState(value) {
         (value["team_item_gold"] === null || isTeamItemGold(value["team_item_gold"])) &&
         (value["team_gold"] === null || isTeamGold(value["team_gold"])) &&
         isArrayOf(value["cooldowns"], isCooldownTimer) &&
+        isArrayOf(value["jungle_paths"], isJunglePath) &&
+        isArrayOf(value["camp_timers"], isCampTimer) &&
         isArrayOf(value["callouts"], isCallout));
 }

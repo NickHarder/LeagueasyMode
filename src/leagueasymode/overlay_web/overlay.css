@@ -203,6 +203,22 @@ body {
   font-weight: 600;
 }
 
+.enemy-jungle-path {
+  grid-column: 2 / -1;
+  color: var(--widget-muted);
+  font-size: 10px;
+  font-weight: 500;
+}
+
+.camp-timers {
+  color: var(--widget-muted);
+  font-size: 10px;
+  font-weight: 500;
+  padding-bottom: 3px;
+  margin-bottom: 2px;
+  border-bottom: 1px solid var(--widget-border);
+}
+
 .enemy-location {
   grid-column: 2 / -1;
   color: var(--widget-alive);

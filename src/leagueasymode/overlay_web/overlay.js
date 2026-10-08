@@ -42,6 +42,8 @@ const LIKELY_NEXT_ITEM = 0.5;
 // From this chance an enemy is taken to be able to afford their next item.
 const LIKELY_TO_AFFORD = 0.75;
 const PERCENT = 100;
+// At most this many camps are shown under the strip's header.
+const SHOWN_CAMP_COUNT = 4;
 // An enemy's likely place is shown once they have been unseen this long.
 const LOCATION_SHOWN_AFTER_SECONDS = 10;
 // An enemy's latest clue to their place is shown for this long after it.
@@ -307,6 +309,29 @@ export function formatLocation(location) {
     const chanceText = `${String(Math.round(likeliest.chance * PERCENT))}%`;
     return `likely ${likeliest.label} ${chanceText} \u00b7 unseen ${formatCountdown(unseenSeconds)}`;
 }
+/** Return a jungler's likely path, "path their red → their krugs · next their raptors ~0:15". */
+export function formatJunglePath(path, gameTimeSeconds) {
+    if (path.recent_camps.length === 0) {
+        return null;
+    }
+    const parts = [`path ${path.recent_camps.join(" \u2192 ")}`];
+    const nextAtSeconds = path.next_camp_at_game_time_seconds;
+    if (path.next_camp !== null && nextAtSeconds !== null) {
+        parts.push(`next ${path.next_camp} ~${formatCountdown(nextAtSeconds - gameTimeSeconds)}`);
+    }
+    return parts.join(" \u00b7 ");
+}
+/** Return the camps down and when each is back: "Camps: their krugs 1:10 · their red 3:40". */
+export function formatCampTimers(timers, gameTimeSeconds) {
+    const upcoming = timers.filter((timer) => timer.respawns_at_game_time_seconds > gameTimeSeconds);
+    if (upcoming.length === 0) {
+        return null;
+    }
+    const shown = upcoming
+        .slice(0, SHOWN_CAMP_COUNT)
+        .map((timer) => `${timer.label} ${formatCountdown(timer.respawns_at_game_time_seconds - gameTimeSeconds)}`);
+    return `Camps: ${shown.join(" \u00b7 ")}`;
+}
 /** Return a header of the enemy strip: a label and the player's team's lead, colored by side. */
 function leadElement(className, label, leadGold, valueText) {
     const header = document.createElement("div");
@@ -392,7 +417,7 @@ export function formatIntel(intel) {
     return parts.join(" \u00b7 ");
 }
 /** Return the row that draws one enemy: champion, level, item gold, the death timer and stats. */
-function enemyRowElement(card, gameTimeSeconds, cooldowns) {
+function enemyRowElement(card, gameTimeSeconds, cooldowns, junglePaths) {
     const row = document.createElement("div");
     row.className = "enemy-row";
     row.dataset["dead"] = card.is_dead ? "true" : "false";
@@ -445,6 +470,14 @@ function enemyRowElement(card, gameTimeSeconds, cooldowns) {
         powerLevelElement.className = "enemy-power-level";
         powerLevelElement.textContent = powerLevelText;
         row.append(powerLevelElement);
+    }
+    const junglePath = junglePaths.find((path) => path.champion_name === card.champion_name);
+    const junglePathText = junglePath === undefined ? null : formatJunglePath(junglePath, gameTimeSeconds);
+    if (junglePathText !== null) {
+        const pathElement = document.createElement("span");
+        pathElement.className = "enemy-jungle-path";
+        pathElement.textContent = junglePathText;
+        row.append(pathElement);
     }
     const locationText = card.location === null ? null : formatLocation(card.location);
     if (locationText !== null) {
@@ -510,8 +543,16 @@ function renderEnemyStrip(nowMilliseconds) {
     }
     const enemyCards = [...received.state.players.filter((card) => card.side === "enemy")].sort((first, second) => roleRank(first) - roleRank(second));
     strip.hidden = enemyCards.length === 0;
-    const rows = enemyCards.map((card) => enemyRowElement(card, gameTimeSeconds, received.state.cooldowns));
-    strip.replaceChildren(...leadElements(received.state), ...rows);
+    const rows = enemyCards.map((card) => enemyRowElement(card, gameTimeSeconds, received.state.cooldowns, received.state.jungle_paths));
+    const campTimersText = formatCampTimers(received.state.camp_timers, gameTimeSeconds);
+    const campElements = [];
+    if (campTimersText !== null) {
+        const campElement = document.createElement("div");
+        campElement.className = "camp-timers";
+        campElement.textContent = campTimersText;
+        campElements.push(campElement);
+    }
+    strip.replaceChildren(...leadElements(received.state), ...campElements, ...rows);
 }
 /** Return the element that draws one callout. */
 function calloutElement(callout) {

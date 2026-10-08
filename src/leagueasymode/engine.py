@@ -13,9 +13,11 @@ from leagueasymode.game_state import GameSnapshot
 from leagueasymode.inference.backs import BackTracker
 from leagueasymode.inference.callouts import CalloutTracker
 from leagueasymode.inference.clues import ClueTracker
+from leagueasymode.inference.combat_stats import move_speed_of
 from leagueasymode.inference.cooldowns import MarkedSpell, marked_cooldown, running_cooldowns
 from leagueasymode.inference.experience import ExperienceTracker
-from leagueasymode.inference.gold import GoldTracker, team_gold
+from leagueasymode.inference.gold import GoldTracker, player_key, team_gold
+from leagueasymode.inference.jungle_path import JunglePathTracker
 from leagueasymode.inference.objectives import (
     buff_timers,
     dragon_timer,
@@ -52,6 +54,7 @@ def compute_overlay_state(
     experience_tracker: ExperienceTracker | None = None,
     back_tracker: BackTracker | None = None,
     clue_tracker: ClueTracker | None = None,
+    jungle_tracker: JunglePathTracker | None = None,
 ) -> OverlayState:
     """Return what the overlay shows for one answer of the game's API.
 
@@ -68,6 +71,7 @@ def compute_overlay_state(
         experience_tracker: The same for each player's experience; None to show none.
         back_tracker: The same for each player's trips to base; None to show none.
         clue_tracker: The same for the clues to where each player is; None to show none.
+        jungle_tracker: The same for the junglers' clears; None to show none.
 
     Returns:
         The overlay's state; no game running when there is no answer or it cannot be read.
@@ -93,6 +97,17 @@ def compute_overlay_state(
     position_clues = (
         clue_tracker.update(snapshot, last_backs or {}) if clue_tracker is not None else None
     )
+    jungle_paths, camp_timers = (
+        jungle_tracker.update(
+            snapshot,
+            {
+                player_key(player): move_speed_of(snapshot, player, patch_stats)
+                for player in snapshot.players
+            },
+        )
+        if jungle_tracker is not None
+        else ([], [])
+    )
     cards = player_cards(
         snapshot,
         item_catalog,
@@ -115,6 +130,8 @@ def compute_overlay_state(
         team_item_gold=team_item_gold(cards),
         team_gold=team_gold(cards),
         cooldowns=running_cooldowns(cooldown_timers or [], snapshot.game_data.game_time_seconds),
+        jungle_paths=jungle_paths,
+        camp_timers=camp_timers,
     )
 
 
@@ -165,6 +182,7 @@ class OverlayEngine:
         self._experience_tracker: Final = ExperienceTracker()
         self._back_tracker: Final = BackTracker()
         self._clue_tracker: Final = ClueTracker()
+        self._jungle_tracker: Final = JunglePathTracker()
         self._current_state = NOT_RUNNING
         self._callouts: Final = CalloutTracker()
         self._subscribers: Final[set[asyncio.Queue[OverlayState]]] = set()
@@ -243,6 +261,7 @@ class OverlayEngine:
                 experience_tracker=self._experience_tracker,
                 back_tracker=self._back_tracker,
                 clue_tracker=self._clue_tracker,
+                jungle_tracker=self._jungle_tracker,
             )
             self._last_payload = payload if answer_state.is_game_running else None
             if answer_state.is_game_running and not self._current_state.is_game_running:

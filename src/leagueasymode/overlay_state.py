@@ -352,6 +352,36 @@ type CalloutKind = Literal[
 ]
 
 
+class CampTimer(BaseModel):
+    """A jungle camp a jungler likely cleared, and when it is back.
+
+    An estimate (`inference/jungle_path.py`): which camps were cleared, and when, comes from the
+    jungler's likely path.
+    """
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    # The map's point (`inference/rift_map.py`), and in words from your side: "their raptors".
+    camp: str
+    label: str
+    cleared_by: Literal["ally", "enemy"]
+    respawns_at_game_time_seconds: float
+
+
+class JunglePath(BaseModel):
+    """A jungler's likely clear: the camps lately, which side they are on, and the next camp."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    champion_name: str
+    side: Literal["ally", "enemy"]
+    # The last few camps in words, oldest first.
+    recent_camps: list[str]
+    last_cleared_at_game_time_seconds: float | None
+    next_camp: str | None
+    next_camp_at_game_time_seconds: float | None
+
+
 class Callout(BaseModel):
     """A short notice shown for a few seconds when something happens.
 
@@ -383,6 +413,8 @@ class OverlayState(BaseModel):
     team_item_gold: TeamItemGold | None = None
     team_gold: TeamGold | None = None
     cooldowns: list[CooldownTimer] = Field(default_factory=list)
+    jungle_paths: list[JunglePath] = Field(default_factory=list)
+    camp_timers: list[CampTimer] = Field(default_factory=list)
     callouts: list[Callout] = Field(default_factory=list)
 
 
