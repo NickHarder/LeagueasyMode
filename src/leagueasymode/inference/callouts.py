@@ -1,7 +1,8 @@
 """Callouts: short notices when something happens, worked out from one state to the next.
 
 A callout states a fact at the moment it becomes true ("Zed is level 6", "Baron in 1:00", "2
-enemies down for 0:24") and is shown for a few seconds; a suggestion (`suggestions.py`) names an
+enemies down for 0:24"), or an estimate sure enough to act on ("Zed hits 6 in ~0:15"), and is shown
+for a few seconds; a suggestion (`suggestions.py`) names an
 action when facts line up, as the owner's policy allows. Each callout is made once per game; a state
 whose clock runs backwards starts a new game.
 """
@@ -14,6 +15,10 @@ from leagueasymode.overlay_state import Callout, CalloutKind, OverlayState, Play
 
 CALLOUT_SHOWN_SECONDS: Final = 6.0
 LEVEL_SPIKES: Final = (6, 11, 16)
+# An enemy estimated to reach 6, 11 or 16 within this long is called out, when the estimate's
+# time is sure to within the second figure.
+LEVEL_SOON_SECONDS: Final = 20.0
+LEVEL_SOON_MAX_BAND_SECONDS: Final = 20.0
 OBJECTIVE_SOON_SECONDS: Final = 60.0
 # A clock this far behind the last one is a new game, not a replayed second.
 NEW_GAME_CLOCK_DROP_SECONDS: Final = 5.0
@@ -61,6 +66,7 @@ class CalloutTracker:
             self._forget_the_game()
         candidate_callouts = [
             *self._level_spikes(state, game_time_seconds),
+            *_levels_soon(state, game_time_seconds),
             *self._numbers_window(state, game_time_seconds),
             *self._objectives_soon(state, game_time_seconds),
             *self._item_spikes(state, game_time_seconds),
@@ -262,6 +268,55 @@ def _spawn_times(state: OverlayState) -> list[tuple[str, float, bool, bool]]:
         if timer.spawns_at_game_time_seconds is not None
     ]
     return [*dragon_entries, *objective_entries]
+
+
+def _levels_soon(state: OverlayState, game_time_seconds: float) -> list[Callout]:
+    """Return a callout for each enemy about to reach 6, 11 or 16, by their experience's estimate.
+
+    Args:
+        state: The new state.
+        game_time_seconds: Its game time.
+
+    Returns:
+        The callouts: those within 20 seconds, whose time is sure to within 20 seconds.
+    """
+    return [
+        callout
+        for callout in (
+            _level_soon(card, game_time_seconds) for card in state.players if card.side == "enemy"
+        )
+        if callout is not None
+    ]
+
+
+def _level_soon(card: PlayerCard, game_time_seconds: float) -> Callout | None:
+    """Return the callout for an enemy about to reach their next power level, if they are.
+
+    Args:
+        card: The enemy.
+        game_time_seconds: The game's clock.
+
+    Returns:
+        The callout, or None when the level is not near or its time is not sure enough.
+    """
+    estimate = card.level_estimate
+    if (
+        estimate is None
+        or estimate.next_power_level is None
+        or estimate.power_level_at_game_time_seconds is None
+        or estimate.power_level_band_seconds is None
+        or estimate.power_level_band_seconds > LEVEL_SOON_MAX_BAND_SECONDS
+    ):
+        return None
+    seconds_to_go = estimate.power_level_at_game_time_seconds - game_time_seconds
+    if not 0 < seconds_to_go <= LEVEL_SOON_SECONDS:
+        return None
+    return _callout(
+        f"level-soon:{card.champion_name}:{estimate.next_power_level}",
+        "level_soon",
+        f"{card.champion_name} hits {estimate.next_power_level} in ~{_clock_text(seconds_to_go)}",
+        game_time_seconds,
+    )
 
 
 def _has_just_reached(previous_levels: dict[str, int], card: PlayerCard, spike_level: int) -> bool:

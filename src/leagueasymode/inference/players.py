@@ -15,6 +15,7 @@ from leagueasymode.inference.roles import RoleGuess, assign_roles
 from leagueasymode.overlay_state import (
     CombatStats,
     GoldEstimate,
+    LevelEstimate,
     NumbersWindow,
     PlayerCard,
     PlayerIntel,
@@ -27,9 +28,11 @@ from leagueasymode.player_intel import PlayerRecords
 def player_cards(
     snapshot: GameSnapshot,
     item_catalog: ItemCatalog | None = None,
+    *,
     patch_stats: PatchStats | None = None,
     player_records: PlayerRecords | None = None,
     gold_estimates: Mapping[PlayerKey, GoldEstimate] | None = None,
+    level_estimates: Mapping[PlayerKey, LevelEstimate] | None = None,
 ) -> list[PlayerCard]:
     """Return a card for every player, the player's own team first, each team in scoreboard order.
 
@@ -41,6 +44,7 @@ def player_cards(
         player_records: Each player's record from the League client, for their intel; None
             while unknown.
         gold_estimates: Each player's gold, by key; None while the game's gold is not followed.
+        level_estimates: Each player's experience, by key; None while it is not followed.
 
     Returns:
         The cards.
@@ -66,6 +70,9 @@ def player_cards(
             combat_stats=_combat_stats(snapshot, player, patch_stats),
             intel=_intel(player, role_guesses[index], player_records),
             gold=gold_estimates.get(player_key(player)) if gold_estimates is not None else None,
+            level_estimate=(
+                level_estimates.get(player_key(player)) if level_estimates is not None else None
+            ),
         )
         for index, player in [*allies, *enemies]
     ]

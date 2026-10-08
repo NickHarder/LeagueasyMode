@@ -2,6 +2,7 @@ from leagueasymode.inference.callouts import CALLOUT_SHOWN_SECONDS, CalloutTrack
 from leagueasymode.overlay_state import (
     CooldownTimer,
     DragonTimer,
+    LevelEstimate,
     NumbersWindow,
     ObjectiveTimer,
     OverlayState,
@@ -175,3 +176,37 @@ def test_a_marked_ultimate_coming_back_is_called_out_by_name() -> None:
     )
     tracker.update(state_at(899.5).model_copy(update={"cooldowns": [ultimate]}))
     assert [callout.text for callout in tracker.update(state_at(900.0))] == ["Zed's ultimate is up"]
+
+
+def enemy_close_to_six(
+    game_time_seconds: float, seconds_to_six: float, band_seconds: float
+) -> PlayerCard:
+    return enemy("Zed", 5).model_copy(
+        update={
+            "level_estimate": LevelEstimate(
+                experience=2300,
+                band_experience=round(band_seconds * 9),
+                progress_to_next_level=580 / 680,
+                next_power_level=6,
+                power_level_at_game_time_seconds=game_time_seconds + seconds_to_six,
+                power_level_band_seconds=band_seconds,
+            )
+        }
+    )
+
+
+def test_an_enemy_close_to_a_power_level_is_called_out_once() -> None:
+    tracker = CalloutTracker()
+    assert tracker.update(state_at(300.0, [enemy_close_to_six(300.0, 30.0, 10.0)])) == []
+    soon = tracker.update(state_at(310.0, [enemy_close_to_six(310.0, 15.0, 10.0)]))
+    assert [(callout.kind, callout.text) for callout in soon] == [
+        ("level_soon", "Zed hits 6 in ~0:15")
+    ]
+    again = tracker.update(state_at(312.0, [enemy_close_to_six(312.0, 13.0, 10.0)]))
+    assert [callout.callout_id for callout in again] == [soon[0].callout_id]
+
+
+def test_an_unsure_estimate_of_a_power_level_is_not_called_out() -> None:
+    tracker = CalloutTracker()
+    tracker.update(state_at(300.0, [enemy_close_to_six(300.0, 30.0, 40.0)]))
+    assert tracker.update(state_at(310.0, [enemy_close_to_six(310.0, 15.0, 40.0)])) == []

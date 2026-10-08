@@ -6,6 +6,11 @@ skill has the format.
 
 ## 2026-10-08
 
+- Phase 3.6, hidden experience (estimator 4): every player's experience, how far they are to
+  their next level and when they reach 6, 11 and 16. Each level-up seen pins it; between them it
+  grows at the player's own measured rate while they are alive, a prior by role until a level-up
+  is seen. An enemy within 1:30 of a power level shows it on their row, and one sure to be within
+  0:20 is called out. Scored against the timeline's experience for every player.
 - Phase 3.5, hidden gold (estimator 3): each player's earned and unspent gold, exact for you and
   estimated with a band for the others. An income model with this season's numbers (patch 26.16's
   passive and minion gold, 25.9's bounties by level; the unconfirmed ones marked) is corrected by

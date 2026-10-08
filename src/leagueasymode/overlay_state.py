@@ -140,6 +140,28 @@ class GoldEstimate(BaseModel):
     band_gold: int
 
 
+class LevelEstimate(BaseModel):
+    """How far a player is to their next level, and when they reach the next of 6, 11 and 16.
+
+    An estimate for every player, yours included: the scoreboard gives levels, not experience.
+    Each level-up seen pins a player's experience; between them it grows at their own rate
+    (`inference/experience.py`), with a band that holds the truth about 4 times in 5.
+    """
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    # Earned this game.
+    experience: int
+    band_experience: int
+    # From 0 to 1; None from level 18.
+    progress_to_next_level: float | None
+    # 6, 11 or 16, the next level that ranks up an ultimate; None past 16.
+    next_power_level: int | None
+    power_level_at_game_time_seconds: float | None
+    # Half the band of that time, in seconds.
+    power_level_band_seconds: float | None
+
+
 class PlayerCard(BaseModel):
     """One player as the scoreboard shows them: side, role, level, and when they are back."""
 
@@ -165,6 +187,8 @@ class PlayerCard(BaseModel):
     intel: PlayerIntel | None = None
     # None while the engine does not follow the game's gold.
     gold: GoldEstimate | None = None
+    # None while the engine does not follow the players' experience.
+    level_estimate: LevelEstimate | None = None
 
 
 class TeamItemGold(BaseModel):
@@ -218,7 +242,13 @@ class CooldownTimer(BaseModel):
 
 
 type CalloutKind = Literal[
-    "numbers_window", "level_spike", "objective_soon", "item_spike", "cooldown_ready", "suggestion"
+    "numbers_window",
+    "level_spike",
+    "level_soon",
+    "objective_soon",
+    "item_spike",
+    "cooldown_ready",
+    "suggestion",
 ]
 
 

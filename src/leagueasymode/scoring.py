@@ -14,8 +14,10 @@ compared with what is known to be true:
   each minute. The gold tracker runs through the recording as it ran live, your own exact gold
   tuning it, and its estimate at the start of each minute is compared with the timeline's for
   every player but you; the band is scored by how often it holds the truth.
+- **Experience** (estimator 4): the same, against the timeline's experience, for every player:
+  nobody's is exact.
 
-The timeline's XP and positions score the estimators still to come in the same way. Each score is
+The timeline's positions score the estimators still to come in the same way. Each score is
 a number per game; the thresholds that CI holds them to are set from the first batch of recorded
 games and never lowered to make a check pass.
 """
@@ -30,9 +32,10 @@ from pydantic import Field, JsonValue, ValidationError, field_validator
 from leagueasymode.data_dragon import PatchStats
 from leagueasymode.game_state import GameSnapshot, RiotPayloadModel
 from leagueasymode.inference.combat_stats import estimated_combat_stats
+from leagueasymode.inference.experience import ExperienceTracker
 from leagueasymode.inference.gold import GoldTracker, PlayerKey
 from leagueasymode.inference.roles import assign_roles
-from leagueasymode.overlay_state import CombatStats, GoldEstimate
+from leagueasymode.overlay_state import CombatStats, GoldEstimate, LevelEstimate
 from leagueasymode.patch_data import CHAMPION_SUMMARY_PATH, ITEMS_PATH, ItemCatalog
 from leagueasymode.player_intel import champion_aliases, history_position
 from leagueasymode.recording.file_format import ClientResource
@@ -64,12 +67,13 @@ class EstimatorScore:
     estimator: str
     sample_count: int
     # A share from 0 to 1 for "share_correct" and "share_within_band"; a percentage for
-    # "mean_absolute_percent_error"; gold for "mean_absolute_error_gold".
+    # "mean_absolute_percent_error"; gold or experience for the mean absolute errors.
     value: float
     measure: Literal[
         "share_correct",
         "mean_absolute_percent_error",
         "mean_absolute_error_gold",
+        "mean_absolute_error_experience",
         "share_within_band",
     ]
 
@@ -95,6 +99,11 @@ class EstimatorScore:
                 f"{self.estimator}: {self.sample_count} player-minutes, "
                 f"{self.value:.0f} gold off on average"
             )
+        if self.measure == "mean_absolute_error_experience":
+            return (
+                f"{self.estimator}: {self.sample_count} player-minutes, "
+                f"{self.value:.0f} experience off on average"
+            )
         return f"{self.estimator}: {self.sample_count} moments, {self.value:.1f}% off on average"
 
 
@@ -108,6 +117,8 @@ class RecordedGame:
     client_resources: Mapping[str, JsonValue]
     # The gold tracker's estimates at the first answer of each minute of game time, by minute.
     minute_gold_estimates: Mapping[int, Mapping[PlayerKey, GoldEstimate]]
+    # The experience tracker's, the same way.
+    minute_level_estimates: Mapping[int, Mapping[PlayerKey, LevelEstimate]]
 
 
 class DetailsTimeline(RiotPayloadModel):
@@ -139,6 +150,7 @@ class TimelineParticipantFrame(RiotPayloadModel):
     participant_id: int = Field(default=0, alias="participantId")
     current_gold: int = Field(default=0, alias="currentGold")
     total_gold: int = Field(default=0, alias="totalGold")
+    experience: int = Field(default=0, alias="xp")
 
 
 class TimelineFrame(RiotPayloadModel):
@@ -170,14 +182,14 @@ class GameTimeline(RiotPayloadModel):
 
 
 def read_recorded_game(recording_path: Path) -> RecordedGame:
-    """Read what the harness needs from a recording, running the gold tracker through it.
+    """Read what the harness needs from a recording, running the trackers through it.
 
     Args:
         recording_path: The recording.
 
     Returns:
-        The game's snapshot at the end of each minute, the client's answers, and the gold
-        tracker's estimates at the start of each minute.
+        The game's snapshot at the end of each minute, the client's answers, and the gold and
+        experience trackers' estimates at the start of each minute.
     """
     client_resources = {
         record.path: record.payload
@@ -187,8 +199,10 @@ def read_recorded_game(recording_path: Path) -> RecordedGame:
     items_payload = client_resources.get(ITEMS_PATH)
     item_catalog = ItemCatalog.from_client_items(items_payload) if items_payload else None
     gold_tracker = GoldTracker()
+    experience_tracker = ExperienceTracker()
     snapshot_by_minute: dict[int, GameSnapshot] = {}
     gold_estimates_by_minute: dict[int, Mapping[PlayerKey, GoldEstimate]] = {}
+    level_estimates_by_minute: dict[int, Mapping[PlayerKey, LevelEstimate]] = {}
     for frame in iter_game_frames(recording_path):
         try:
             snapshot = GameSnapshot.model_validate(frame.payload)
@@ -198,15 +212,18 @@ def read_recorded_game(recording_path: Path) -> RecordedGame:
         game_minute = int(game_time_seconds // SECONDS_PER_MINUTE)
         snapshot_by_minute[game_minute] = snapshot
         gold_estimates = gold_tracker.update(snapshot, item_catalog)
+        level_estimates = experience_tracker.update(snapshot)
         is_minute_start = game_time_seconds - game_minute * SECONDS_PER_MINUTE <= (
             FRAME_ALIGNMENT_SECONDS
         )
         if is_minute_start and game_minute not in gold_estimates_by_minute:
             gold_estimates_by_minute[game_minute] = gold_estimates
+            level_estimates_by_minute[game_minute] = level_estimates
     return RecordedGame(
         minute_snapshots=tuple(snapshot_by_minute[minute] for minute in sorted(snapshot_by_minute)),
         client_resources=client_resources,
         minute_gold_estimates=gold_estimates_by_minute,
+        minute_level_estimates=level_estimates_by_minute,
     )
 
 
@@ -313,7 +330,11 @@ def score_gold(game: RecordedGame) -> list[EstimatorScore]:
         How far the earned and the unspent gold are off on average, and how often the band holds
         the earned gold; nothing without a timeline, the game's details, or an estimate to score.
     """
-    scored_pairs = list(_gold_pairs(game))
+    scored_pairs = [
+        (estimate, truth)
+        for estimate, truth in _timeline_pairs(game, game.minute_gold_estimates)
+        if estimate.source == "estimate"
+    ]
     if not scored_pairs:
         return []
     pair_count = len(scored_pairs)
@@ -343,6 +364,44 @@ def score_gold(game: RecordedGame) -> list[EstimatorScore]:
                 1
                 for estimate, truth in scored_pairs
                 if abs(estimate.total_gold - truth.total_gold) <= estimate.band_gold
+            )
+            / pair_count,
+            measure="share_within_band",
+        ),
+    ]
+
+
+def score_experience(game: RecordedGame) -> list[EstimatorScore]:
+    """Score the experience estimates of every player against the match timeline.
+
+    Args:
+        game: The recorded game.
+
+    Returns:
+        How far the experience is off on average, and how often the band holds it; nothing
+        without a timeline, the game's details, or an estimate to score.
+    """
+    scored_pairs = list(_timeline_pairs(game, game.minute_level_estimates))
+    if not scored_pairs:
+        return []
+    pair_count = len(scored_pairs)
+    return [
+        EstimatorScore(
+            estimator="experience",
+            sample_count=pair_count,
+            value=sum(
+                abs(estimate.experience - truth.experience) for estimate, truth in scored_pairs
+            )
+            / pair_count,
+            measure="mean_absolute_error_experience",
+        ),
+        EstimatorScore(
+            estimator="experience band",
+            sample_count=pair_count,
+            value=sum(
+                1
+                for estimate, truth in scored_pairs
+                if abs(estimate.experience - truth.experience) <= estimate.band_experience
             )
             / pair_count,
             measure="share_within_band",
@@ -380,17 +439,21 @@ def score_game(game: RecordedGame, patch_stats: PatchStats | None) -> list[Estim
             if score is not None
         ),
         *score_gold(game),
+        *score_experience(game),
     ]
 
 
-def _gold_pairs(game: RecordedGame) -> Iterator[tuple[GoldEstimate, TimelineParticipantFrame]]:
-    """Yield each estimate of a player's gold with the timeline's truth for the same minute.
+def _timeline_pairs[Estimate](
+    game: RecordedGame, estimates_by_minute: Mapping[int, Mapping[PlayerKey, Estimate]]
+) -> Iterator[tuple[Estimate, TimelineParticipantFrame]]:
+    """Yield each estimate of a player with the timeline's truth for the same minute.
 
     Args:
         game: The recorded game.
+        estimates_by_minute: A tracker's estimates at the start of each minute.
 
     Yields:
-        The pairs, your own exact gold left out.
+        The pairs.
     """
     key_by_participant_id = {
         participant.participant_id: key for key, participant in _details_participants(game)
@@ -407,11 +470,11 @@ def _gold_pairs(game: RecordedGame) -> Iterator[tuple[GoldEstimate, TimelinePart
         # At 0:00 everyone holds the starting gold, which scores nothing.
         if game_minute == 0 or not is_aligned:
             continue
-        estimates = game.minute_gold_estimates.get(game_minute, {})
+        estimates = estimates_by_minute.get(game_minute, {})
         for truth in frame.participant_frames:
             key = key_by_participant_id.get(truth.participant_id)
             estimate = estimates.get(key) if key is not None else None
-            if estimate is not None and estimate.source == "estimate":
+            if estimate is not None:
                 yield estimate, truth
 
 

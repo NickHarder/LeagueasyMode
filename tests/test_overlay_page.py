@@ -305,6 +305,21 @@ async def test_an_enemy_reaching_level_six_is_called_out(tmp_path: Path) -> None
         await expect(callout).to_have_count(0, timeout=10000)
 
 
+async def test_an_enemy_close_to_six_shows_when_they_reach_it(tmp_path: Path) -> None:
+    async with open_overlay(
+        tmp_path, snapshot_count=60, speed=1.0, zed_reaches_six_at_seconds=1420.0
+    ) as page:
+        zed_power_level = page.locator("#enemy-strip .enemy-row", has_text="Zed").locator(
+            ".enemy-power-level"
+        )
+        # First seen at level 5 at 23:15, behind the prior: halfway through it, 340 experience
+        # from 6 at a solo laner's 8.5 a second.
+        await expect(zed_power_level).to_have_text(re.compile(r"^6 in ~0:[1-4]\d$"), timeout=5000)
+        await keep_screenshot(page, "power-level")
+        # Once Zed is 6, the next power level, 11, is too far off to show.
+        await expect(zed_power_level).to_have_count(0, timeout=40000)
+
+
 async def test_the_enemy_strip_shows_item_gold_and_the_lead(tmp_path: Path) -> None:
     async with open_overlay(tmp_path, snapshot_count=60, speed=1.0) as page:
         lead = page.locator("#enemy-strip .item-lead.items")

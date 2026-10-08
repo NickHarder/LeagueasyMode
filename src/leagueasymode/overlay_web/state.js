@@ -15,6 +15,7 @@ const ROLE_CONFIDENCES = new Set(["given", "likely", "guess", "unknown"]);
 const CALLOUT_KINDS = new Set([
     "numbers_window",
     "level_spike",
+    "level_soon",
     "objective_soon",
     "item_spike",
     "cooldown_ready",
@@ -125,6 +126,16 @@ export function isGoldEstimate(value) {
         typeof value["unspent_gold"] === "number" &&
         typeof value["band_gold"] === "number");
 }
+/** Return whether a value is a player's experience as the engine sends it. */
+export function isLevelEstimate(value) {
+    return (isRecord(value) &&
+        typeof value["experience"] === "number" &&
+        typeof value["band_experience"] === "number" &&
+        isNumberOrNull(value["progress_to_next_level"]) &&
+        isNumberOrNull(value["next_power_level"]) &&
+        isNumberOrNull(value["power_level_at_game_time_seconds"]) &&
+        isNumberOrNull(value["power_level_band_seconds"]));
+}
 /** Return whether a value is a player's card as the engine sends it. */
 export function isPlayerCard(value) {
     return (isRecord(value) &&
@@ -140,7 +151,8 @@ export function isPlayerCard(value) {
         isArrayOf(value["finished_item_names"], (name) => typeof name === "string") &&
         (value["combat_stats"] === null || isCombatStats(value["combat_stats"])) &&
         (value["intel"] === null || isPlayerIntel(value["intel"])) &&
-        (value["gold"] === null || isGoldEstimate(value["gold"])));
+        (value["gold"] === null || isGoldEstimate(value["gold"])) &&
+        (value["level_estimate"] === null || isLevelEstimate(value["level_estimate"])));
 }
 /** Return whether a value is each team's item gold as the engine sends it. */
 export function isTeamItemGold(value) {

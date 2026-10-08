@@ -105,6 +105,19 @@ export interface GoldEstimate {
   readonly band_gold: number;
 }
 
+/**
+ * How far a player is to their next level, and when they reach the next of 6, 11 and 16: an
+ * estimate for every player, with a band that holds the truth about 4 times in 5.
+ */
+export interface LevelEstimate {
+  readonly experience: number;
+  readonly band_experience: number;
+  readonly progress_to_next_level: number | null;
+  readonly next_power_level: number | null;
+  readonly power_level_at_game_time_seconds: number | null;
+  readonly power_level_band_seconds: number | null;
+}
+
 /** One player as the scoreboard shows them: side, role, level, and when they are back. */
 export interface PlayerCard {
   readonly champion_name: string;
@@ -120,6 +133,7 @@ export interface PlayerCard {
   readonly combat_stats: CombatStats | null;
   readonly intel: PlayerIntel | null;
   readonly gold: GoldEstimate | null;
+  readonly level_estimate: LevelEstimate | null;
 }
 
 /** What each team's items are worth: gold earned and spent, not gold in hand. */
@@ -145,6 +159,7 @@ export interface NumbersWindow {
 export type CalloutKind =
   | "numbers_window"
   | "level_spike"
+  | "level_soon"
   | "objective_soon"
   | "item_spike"
   | "cooldown_ready"
@@ -185,6 +200,7 @@ const ROLE_CONFIDENCES: ReadonlySet<string> = new Set(["given", "likely", "guess
 const CALLOUT_KINDS: ReadonlySet<string> = new Set([
   "numbers_window",
   "level_spike",
+  "level_soon",
   "objective_soon",
   "item_spike",
   "cooldown_ready",
@@ -326,6 +342,19 @@ export function isGoldEstimate(value: unknown): value is GoldEstimate {
   );
 }
 
+/** Return whether a value is a player's experience as the engine sends it. */
+export function isLevelEstimate(value: unknown): value is LevelEstimate {
+  return (
+    isRecord(value) &&
+    typeof value["experience"] === "number" &&
+    typeof value["band_experience"] === "number" &&
+    isNumberOrNull(value["progress_to_next_level"]) &&
+    isNumberOrNull(value["next_power_level"]) &&
+    isNumberOrNull(value["power_level_at_game_time_seconds"]) &&
+    isNumberOrNull(value["power_level_band_seconds"])
+  );
+}
+
 /** Return whether a value is a player's card as the engine sends it. */
 export function isPlayerCard(value: unknown): value is PlayerCard {
   return (
@@ -342,7 +371,8 @@ export function isPlayerCard(value: unknown): value is PlayerCard {
     isArrayOf(value["finished_item_names"], (name: unknown): name is string => typeof name === "string") &&
     (value["combat_stats"] === null || isCombatStats(value["combat_stats"])) &&
     (value["intel"] === null || isPlayerIntel(value["intel"])) &&
-    (value["gold"] === null || isGoldEstimate(value["gold"]))
+    (value["gold"] === null || isGoldEstimate(value["gold"])) &&
+    (value["level_estimate"] === null || isLevelEstimate(value["level_estimate"]))
   );
 }
 
