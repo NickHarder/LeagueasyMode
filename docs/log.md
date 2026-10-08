@@ -6,6 +6,11 @@ skill has the format.
 
 ## 2026-10-08
 
+- The tracer bullet's macOS side: a menu bar app in Swift (`overlay/macos/`) that starts the engine
+  and shows the overlay page in a transparent, click-through window that never takes focus, with a
+  ⌃⌥⌘L shortcut and a choice of window level for trying each League display mode. It is written but
+  not yet compiled anywhere: this environment has no Swift, so CI's new macOS job is its first
+  build. [references/macos-app.md](references/macos-app.md) has the steps for the test on a Mac.
 - The tracer bullet's engine side: the dragon and Elder timer, from the game's answer through the
   engine and the local server to the overlay page, tested end to end against a replay and in
   Chromium. `leagueasymode run` and `leagueasymode replay` added;
