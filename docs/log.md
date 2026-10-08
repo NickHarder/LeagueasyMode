@@ -6,6 +6,12 @@ skill has the format.
 
 ## 2026-10-08
 
+- Pull requests #2, #3 and #4 merged; #3 and #4 went into the branches they were stacked on, so
+  pull request #5 brings `feat/exact-facts`, which holds all of them, into `main`.
+- The owner's answers: `truststore` stays; Data Dragon may be allowed in this environment's network
+  settings; and the plan's decision 4, what may show during a game, is "everything": anything that
+  can be calculated, estimated, derived, inferred or interpolated, where it is useful. Enemy
+  ultimate and summoner spell timers and instructions to the player are no longer ruled out.
 - This season's timers and phase 2.8 pushed and opened as pull request #4, stacked on #3.
 - Phase 2.8, estimator 2: each player's combat stats, exact for the player on this machine and
   estimated for the others from their champion, level and items. The owner chose where champion

@@ -3,9 +3,9 @@
 If you are picking this work up, human or model: read this file top to bottom first. The `handoff` skill
 refreshes it; it describes the current state.
 
-Last updated: 2026-10-08, on branch `feat/combat-stats`, pull request #4, which stacks this
-season's timers and phase 2.8 on `feat/exact-facts` (pull request #3, green), which stacks on
-`feat/overlay-and-inference` (pull request #2 into `main`, green).
+Last updated: 2026-10-08, on branch `feat/exact-facts`. Pull requests #2, #3 and #4 are merged:
+#2 into `main`, #3 and #4 into the branches they were stacked on, so `feat/exact-facts` holds all
+three. Pull request #5 brings it into `main`.
 
 ## Where things stand
 
@@ -44,28 +44,21 @@ In `AGENTS.md`, this project's own included: every session reads that file.
 
 ## Open, for the owner
 
-1. **Review and merge pull request #2** (https://github.com/NickHarder/LeagueasyMode/pull/2), then
-   #3 (https://github.com/NickHarder/LeagueasyMode/pull/3), which merges into #2's branch; GitHub
-   moves #3 onto `main` when #2's branch is deleted on merge, or change its base by hand. Then #4
-   (https://github.com/NickHarder/LeagueasyMode/pull/4), stacked on #3 the same way.
-2. **One new dependency**, in pull request #4: `truststore`, so that HTTPS to Data Dragon trusts
-   the Mac's own certificates (Python as uv installs it may find none of its own). Say if you would
-   rather not have it.
-3. **Data Dragon from this environment**: allowing `ddragon.leagueoflegends.com` in its network
-   settings would let a session check the parsing against the real files, not only hand-written
-   ones.
-4. **The test on a Mac** in [docs/references/macos-app.md](docs/references/macos-app.md): run the
+1. **Merge pull request #5** (https://github.com/NickHarder/LeagueasyMode/pull/5): `feat/exact-facts`
+   into `main`, everything already reviewed in #3 and #4. Then the stacked branches
+   (`feat/overlay-and-inference`, `feat/exact-facts`, `feat/combat-stats`) can be deleted.
+2. **Data Dragon from this environment**: the owner said yes on 2026-10-08; the environment's
+   network settings still deny `ddragon.leagueoflegends.com`. Once it is allowed, a session checks
+   the parsing against the real files.
+3. **The test on a Mac** in [docs/references/macos-app.md](docs/references/macos-app.md): run the
    app, play a Practice Tool game in each display mode, and record a game or two. The recordings
    (anonymized) become the test data every estimator needs.
-5. **Riot's policy**: which estimates may show during a game (plan, decision 4). Riot's pages are
-   blocked from this environment unless `developer.riotgames.com` and
-   `support-leagueoflegends.riotgames.com` are allowed in its network settings.
-6. **Compare Riot's root certificate** once with Riot's own `riotgames.pem`: the SHA-256
+4. **Compare Riot's root certificate** once with Riot's own `riotgames.pem`: the SHA-256
    fingerprint is in `src/leagueasymode/riot_tls.py`.
-7. **The kit's gate skills** (`kickoff`, `audit-codebase`, `define-personas`, `plan-architecture`,
+5. **The kit's gate skills** (`kickoff`, `audit-codebase`, `define-personas`, `plan-architecture`,
    `define-key-metrics`) have not been run; the approved plan stands in for the plan and the
    architecture. Say whether to run any of them.
-8. **Documents waiting for approval** (`make docs-status`): both plans, the retrospective, and the
+6. **Documents waiting for approval** (`make docs-status`): both plans, the retrospective, and the
    references on recordings, the engine and the macOS app, all drafts.
 
 ## Where everything is
@@ -92,7 +85,12 @@ In `AGENTS.md`. Also: a raw recording (it holds other players' names); only `ano
 - This season's spawn times: Voidgrubs 8:00, Herald 15:00, Baron 20:00 (the owner, 2026-10-08).
 - Python engine, Swift shell, TypeScript widgets: the plan's recommended stack, approved with it.
 - The client's post-game timeline as ground truth for scoring estimators: the plan, approved.
-- No enemy ultimate or summoner spell timers, and no instructions to the player: the plan's policy.
+- What may show during a game (the plan's decision 4): everything. The owner, 2026-10-08:
+  "everything is allowed. anything we can calculate / estimate / derive / infer / interpolate we
+  should if it would be useful". This replaces the plan's policy, which left out enemy ultimate and
+  summoner spell timers and instructions to the player. Facts are still tagged exact or estimate,
+  so the overlay can say how sure it is.
+- `truststore` as a dependency, for HTTPS to Data Dragon (the owner, 2026-10-08).
 
 ## Known limitations
 
