@@ -118,5 +118,5 @@ async def test_each_players_combat_stats_reach_the_overlay_from_the_patchs_data(
     # The player on this machine has the game's own stats; the nine others are estimated.
     assert sorted(sources) == ["estimate"] * 9 + ["exact"]
     # The recorded game ran patch 16.18, which was fetched and kept.
-    assert "/cdn/16.18.1/data/en_US/champion.json" in requested_paths
+    assert "/cdn/16.18.1/data/en_US/championFull.json" in requested_paths
     assert (patch_data_directory / "16.18.1" / "item.json").is_file()

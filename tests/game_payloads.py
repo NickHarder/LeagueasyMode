@@ -81,6 +81,25 @@ def champion_kill_event(
     }
 
 
+# Data Dragon's id of each summoner spell, by the name the game shows.
+SUMMONER_SPELL_IDS: Final = {
+    "Flash": "SummonerFlash",
+    "Ignite": "SummonerDot",
+    "Teleport": "SummonerTeleport",
+    "Smite": "SummonerSmite",
+    "Heal": "SummonerHeal",
+    "Exhaust": "SummonerExhaust",
+    "Barrier": "SummonerBarrier",
+    "Cleanse": "SummonerBoost",
+    "Ghost": "SummonerHaste",
+}
+
+
+def raw_summoner_spell_name(display_name: str) -> str:
+    spell_id = SUMMONER_SPELL_IDS.get(display_name, display_name)
+    return f"GeneratedTip_SummonerSpell_{spell_id}_DisplayName"
+
+
 def player_payload(seed: PlayerSeed) -> dict[str, JsonValue]:
     return {
         "championName": seed.champion_name,
@@ -140,12 +159,12 @@ def player_payload(seed: PlayerSeed) -> dict[str, JsonValue]:
             "summonerSpellOne": {
                 "displayName": seed.summoner_spells[0],
                 "rawDescription": "",
-                "rawDisplayName": "",
+                "rawDisplayName": raw_summoner_spell_name(seed.summoner_spells[0]),
             },
             "summonerSpellTwo": {
                 "displayName": seed.summoner_spells[1],
                 "rawDescription": "",
-                "rawDisplayName": "",
+                "rawDisplayName": raw_summoner_spell_name(seed.summoner_spells[1]),
             },
         },
         "team": seed.team,

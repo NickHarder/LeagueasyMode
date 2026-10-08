@@ -11,6 +11,7 @@ from leagueasymode.data_dragon import PatchStats
 from leagueasymode.game_api import GameApiClient
 from leagueasymode.game_state import GameSnapshot
 from leagueasymode.inference.callouts import CalloutTracker
+from leagueasymode.inference.cooldowns import MarkedSpell, marked_cooldown, running_cooldowns
 from leagueasymode.inference.objectives import (
     buff_timers,
     dragon_timer,
@@ -19,7 +20,7 @@ from leagueasymode.inference.objectives import (
 )
 from leagueasymode.inference.players import numbers_window, player_cards, team_item_gold
 from leagueasymode.league_client import ClientConnector, LeagueClient
-from leagueasymode.overlay_state import OverlayState
+from leagueasymode.overlay_state import CooldownTimer, OverlayState
 from leagueasymode.patch_data import GAME_VERSION_PATH, ITEMS_PATH, ItemCatalog, game_version_of
 from leagueasymode.player_intel import (
     DEFAULT_PAUSE_SECONDS,
@@ -41,6 +42,7 @@ def compute_overlay_state(
     item_catalog: ItemCatalog | None = None,
     patch_stats: PatchStats | None = None,
     player_records: PlayerRecords | None = None,
+    cooldown_timers: list[CooldownTimer] | None = None,
 ) -> OverlayState:
     """Return what the overlay shows for one answer of the game's API.
 
@@ -51,6 +53,7 @@ def compute_overlay_state(
             unknown.
         player_records: Each player's record from the League client, for their intel; None
             while unknown.
+        cooldown_timers: The spells marked this game; those not back yet are shown.
 
     Returns:
         The overlay's state; no game running when there is no answer or it cannot be read.
@@ -73,6 +76,7 @@ def compute_overlay_state(
         players=cards,
         numbers_window=numbers_window(snapshot),
         team_item_gold=team_item_gold(cards),
+        cooldowns=running_cooldowns(cooldown_timers or [], snapshot.game_data.game_time_seconds),
     )
 
 
@@ -115,6 +119,9 @@ class OverlayEngine:
         # Every player looked up so far, by PUUID, so that none is asked about twice.
         self._record_cache: Final[dict[str, PlayerRecord]] = {}
         self._game_data_task: asyncio.Task[None] | None = None
+        # The last answer of the game, which a mark is read against.
+        self._last_payload: JsonValue | None = None
+        self._cooldown_timers: list[CooldownTimer] = []
         self._current_state = NOT_RUNNING
         self._callouts: Final = CalloutTracker()
         self._subscribers: Final[set[asyncio.Queue[OverlayState]]] = set()
@@ -133,6 +140,29 @@ class OverlayEngine:
     def patch_stats(self) -> PatchStats | None:
         """The patch's champion and item stats, once loaded."""
         return self._patch_stats
+
+    def mark_cooldown(self, enemy_slot: int, spell: MarkedSpell) -> CooldownTimer | None:
+        """Start the timer of a spell the player marks an enemy as having just used.
+
+        Args:
+            enemy_slot: The enemy's place in role order, 1 for top to 5 for support.
+            spell: "flash", "summoner" for their other summoner spell, or "ultimate".
+
+        Returns:
+            The timer, or None when no game runs, there is no such enemy, or the patch's
+            cooldowns are not known yet.
+        """
+        if self._last_payload is None:
+            return None
+        try:
+            snapshot = GameSnapshot.model_validate(self._last_payload)
+        except ValidationError:
+            return None
+        timer = marked_cooldown(snapshot, enemy_slot, spell, self._patch_stats)
+        if timer is not None:
+            self._cooldown_timers = [*self._cooldown_timers, timer]
+            logger.info("marked %s's %s", timer.champion_name, timer.spell_name)
+        return timer
 
     def subscribe(self) -> asyncio.Queue[OverlayState]:
         """Return a queue that receives each new state; a slow reader gets the latest only.
@@ -159,12 +189,15 @@ class OverlayEngine:
             stop_requested: Set to stop.
         """
         while not stop_requested.is_set():
+            payload = await self.game_api.fetch_all_game_data()
             answer_state = compute_overlay_state(
-                await self.game_api.fetch_all_game_data(),
+                payload,
                 self._item_catalog,
                 self._patch_stats,
                 self._player_records,
+                self._cooldown_timers,
             )
+            self._last_payload = payload if answer_state.is_game_running else None
             if answer_state.is_game_running and not self._current_state.is_game_running:
                 self._start_loading_the_games_data()
             new_state = answer_state.model_copy(
@@ -185,6 +218,7 @@ class OverlayEngine:
         this game's; the patch's data keeps its last value until the new one arrives.
         """
         self._player_records = None
+        self._cooldown_timers = []
         is_loading = self._game_data_task is not None and not self._game_data_task.done()
         if is_loading:
             return

@@ -1,6 +1,6 @@
 {
  "type": "champion",
- "format": "standAloneComplex",
+ "format": "full",
  "version": "16.19.1",
  "data": {
   "Garen": {
@@ -42,7 +42,64 @@
     "attackdamageperlevel": 4.5,
     "attackspeedperlevel": 3.65,
     "attackspeed": 0.625
-   }
+   },
+   "spells": [
+    {
+     "id": "GarenQ",
+     "name": "Garen Q",
+     "maxrank": 5,
+     "cooldown": [
+      10,
+      9,
+      8,
+      7,
+      6
+     ],
+     "cooldownBurn": ""
+    },
+    {
+     "id": "GarenW",
+     "name": "Garen W",
+     "maxrank": 5,
+     "cooldown": [
+      10,
+      9,
+      8,
+      7,
+      6
+     ],
+     "cooldownBurn": ""
+    },
+    {
+     "id": "GarenE",
+     "name": "Garen E",
+     "maxrank": 5,
+     "cooldown": [
+      10,
+      9,
+      8,
+      7,
+      6
+     ],
+     "cooldownBurn": ""
+    },
+    {
+     "id": "GarenR",
+     "name": "Garen R",
+     "maxrank": 3,
+     "cooldown": [
+      120,
+      100,
+      80
+     ],
+     "cooldownBurn": ""
+    }
+   ],
+   "passive": {
+    "name": "",
+    "description": ""
+   },
+   "lore": ""
   },
   "LeeSin": {
    "version": "16.19.1",
@@ -83,7 +140,64 @@
     "attackdamageperlevel": 3.7,
     "attackspeedperlevel": 3.0,
     "attackspeed": 0.651
-   }
+   },
+   "spells": [
+    {
+     "id": "LeeSinQ",
+     "name": "LeeSin Q",
+     "maxrank": 5,
+     "cooldown": [
+      10,
+      9,
+      8,
+      7,
+      6
+     ],
+     "cooldownBurn": ""
+    },
+    {
+     "id": "LeeSinW",
+     "name": "LeeSin W",
+     "maxrank": 5,
+     "cooldown": [
+      10,
+      9,
+      8,
+      7,
+      6
+     ],
+     "cooldownBurn": ""
+    },
+    {
+     "id": "LeeSinE",
+     "name": "LeeSin E",
+     "maxrank": 5,
+     "cooldown": [
+      10,
+      9,
+      8,
+      7,
+      6
+     ],
+     "cooldownBurn": ""
+    },
+    {
+     "id": "LeeSinR",
+     "name": "LeeSin R",
+     "maxrank": 3,
+     "cooldown": [
+      110,
+      85,
+      60
+     ],
+     "cooldownBurn": ""
+    }
+   ],
+   "passive": {
+    "name": "",
+    "description": ""
+   },
+   "lore": ""
   },
   "Ahri": {
    "version": "16.19.1",
@@ -124,7 +238,64 @@
     "attackdamageperlevel": 3.0,
     "attackspeedperlevel": 2.2,
     "attackspeed": 0.668
-   }
+   },
+   "spells": [
+    {
+     "id": "AhriQ",
+     "name": "Ahri Q",
+     "maxrank": 5,
+     "cooldown": [
+      10,
+      9,
+      8,
+      7,
+      6
+     ],
+     "cooldownBurn": ""
+    },
+    {
+     "id": "AhriW",
+     "name": "Ahri W",
+     "maxrank": 5,
+     "cooldown": [
+      10,
+      9,
+      8,
+      7,
+      6
+     ],
+     "cooldownBurn": ""
+    },
+    {
+     "id": "AhriE",
+     "name": "Ahri E",
+     "maxrank": 5,
+     "cooldown": [
+      10,
+      9,
+      8,
+      7,
+      6
+     ],
+     "cooldownBurn": ""
+    },
+    {
+     "id": "AhriR",
+     "name": "Ahri R",
+     "maxrank": 3,
+     "cooldown": [
+      130,
+      105,
+      80
+     ],
+     "cooldownBurn": ""
+    }
+   ],
+   "passive": {
+    "name": "",
+    "description": ""
+   },
+   "lore": ""
   },
   "Jinx": {
    "version": "16.19.1",
@@ -165,7 +336,64 @@
     "attackdamageperlevel": 3.4,
     "attackspeedperlevel": 1.4,
     "attackspeed": 0.625
-   }
+   },
+   "spells": [
+    {
+     "id": "JinxQ",
+     "name": "Jinx Q",
+     "maxrank": 5,
+     "cooldown": [
+      10,
+      9,
+      8,
+      7,
+      6
+     ],
+     "cooldownBurn": ""
+    },
+    {
+     "id": "JinxW",
+     "name": "Jinx W",
+     "maxrank": 5,
+     "cooldown": [
+      10,
+      9,
+      8,
+      7,
+      6
+     ],
+     "cooldownBurn": ""
+    },
+    {
+     "id": "JinxE",
+     "name": "Jinx E",
+     "maxrank": 5,
+     "cooldown": [
+      10,
+      9,
+      8,
+      7,
+      6
+     ],
+     "cooldownBurn": ""
+    },
+    {
+     "id": "JinxR",
+     "name": "Jinx R",
+     "maxrank": 3,
+     "cooldown": [
+      90,
+      75,
+      60
+     ],
+     "cooldownBurn": ""
+    }
+   ],
+   "passive": {
+    "name": "",
+    "description": ""
+   },
+   "lore": ""
   },
   "Thresh": {
    "version": "16.19.1",
@@ -206,7 +434,64 @@
     "attackdamageperlevel": 2.2,
     "attackspeedperlevel": 3.5,
     "attackspeed": 0.625
-   }
+   },
+   "spells": [
+    {
+     "id": "ThreshQ",
+     "name": "Thresh Q",
+     "maxrank": 5,
+     "cooldown": [
+      10,
+      9,
+      8,
+      7,
+      6
+     ],
+     "cooldownBurn": ""
+    },
+    {
+     "id": "ThreshW",
+     "name": "Thresh W",
+     "maxrank": 5,
+     "cooldown": [
+      10,
+      9,
+      8,
+      7,
+      6
+     ],
+     "cooldownBurn": ""
+    },
+    {
+     "id": "ThreshE",
+     "name": "Thresh E",
+     "maxrank": 5,
+     "cooldown": [
+      10,
+      9,
+      8,
+      7,
+      6
+     ],
+     "cooldownBurn": ""
+    },
+    {
+     "id": "ThreshR",
+     "name": "Thresh R",
+     "maxrank": 3,
+     "cooldown": [
+      140,
+      120,
+      100
+     ],
+     "cooldownBurn": ""
+    }
+   ],
+   "passive": {
+    "name": "",
+    "description": ""
+   },
+   "lore": ""
   },
   "Darius": {
    "version": "16.19.1",
@@ -247,7 +532,64 @@
     "attackdamageperlevel": 5.0,
     "attackspeedperlevel": 1.0,
     "attackspeed": 0.625
-   }
+   },
+   "spells": [
+    {
+     "id": "DariusQ",
+     "name": "Darius Q",
+     "maxrank": 5,
+     "cooldown": [
+      10,
+      9,
+      8,
+      7,
+      6
+     ],
+     "cooldownBurn": ""
+    },
+    {
+     "id": "DariusW",
+     "name": "Darius W",
+     "maxrank": 5,
+     "cooldown": [
+      10,
+      9,
+      8,
+      7,
+      6
+     ],
+     "cooldownBurn": ""
+    },
+    {
+     "id": "DariusE",
+     "name": "Darius E",
+     "maxrank": 5,
+     "cooldown": [
+      10,
+      9,
+      8,
+      7,
+      6
+     ],
+     "cooldownBurn": ""
+    },
+    {
+     "id": "DariusR",
+     "name": "Darius R",
+     "maxrank": 3,
+     "cooldown": [
+      120,
+      100,
+      0
+     ],
+     "cooldownBurn": ""
+    }
+   ],
+   "passive": {
+    "name": "",
+    "description": ""
+   },
+   "lore": ""
   },
   "Vi": {
    "version": "16.19.1",
@@ -288,7 +630,64 @@
     "attackdamageperlevel": 3.5,
     "attackspeedperlevel": 2.0,
     "attackspeed": 0.644
-   }
+   },
+   "spells": [
+    {
+     "id": "ViQ",
+     "name": "Vi Q",
+     "maxrank": 5,
+     "cooldown": [
+      10,
+      9,
+      8,
+      7,
+      6
+     ],
+     "cooldownBurn": ""
+    },
+    {
+     "id": "ViW",
+     "name": "Vi W",
+     "maxrank": 5,
+     "cooldown": [
+      10,
+      9,
+      8,
+      7,
+      6
+     ],
+     "cooldownBurn": ""
+    },
+    {
+     "id": "ViE",
+     "name": "Vi E",
+     "maxrank": 5,
+     "cooldown": [
+      10,
+      9,
+      8,
+      7,
+      6
+     ],
+     "cooldownBurn": ""
+    },
+    {
+     "id": "ViR",
+     "name": "Vi R",
+     "maxrank": 3,
+     "cooldown": [
+      140,
+      115,
+      90
+     ],
+     "cooldownBurn": ""
+    }
+   ],
+   "passive": {
+    "name": "",
+    "description": ""
+   },
+   "lore": ""
   },
   "Zed": {
    "version": "16.19.1",
@@ -329,7 +728,64 @@
     "attackdamageperlevel": 3.4,
     "attackspeedperlevel": 3.3,
     "attackspeed": 0.651
-   }
+   },
+   "spells": [
+    {
+     "id": "ZedQ",
+     "name": "Zed Q",
+     "maxrank": 5,
+     "cooldown": [
+      10,
+      9,
+      8,
+      7,
+      6
+     ],
+     "cooldownBurn": ""
+    },
+    {
+     "id": "ZedW",
+     "name": "Zed W",
+     "maxrank": 5,
+     "cooldown": [
+      10,
+      9,
+      8,
+      7,
+      6
+     ],
+     "cooldownBurn": ""
+    },
+    {
+     "id": "ZedE",
+     "name": "Zed E",
+     "maxrank": 5,
+     "cooldown": [
+      10,
+      9,
+      8,
+      7,
+      6
+     ],
+     "cooldownBurn": ""
+    },
+    {
+     "id": "ZedR",
+     "name": "Zed R",
+     "maxrank": 3,
+     "cooldown": [
+      120,
+      100,
+      80
+     ],
+     "cooldownBurn": ""
+    }
+   ],
+   "passive": {
+    "name": "",
+    "description": ""
+   },
+   "lore": ""
   },
   "Caitlyn": {
    "version": "16.19.1",
@@ -370,7 +826,64 @@
     "attackdamageperlevel": 3.8,
     "attackspeedperlevel": 4.0,
     "attackspeed": 0.681
-   }
+   },
+   "spells": [
+    {
+     "id": "CaitlynQ",
+     "name": "Caitlyn Q",
+     "maxrank": 5,
+     "cooldown": [
+      10,
+      9,
+      8,
+      7,
+      6
+     ],
+     "cooldownBurn": ""
+    },
+    {
+     "id": "CaitlynW",
+     "name": "Caitlyn W",
+     "maxrank": 5,
+     "cooldown": [
+      10,
+      9,
+      8,
+      7,
+      6
+     ],
+     "cooldownBurn": ""
+    },
+    {
+     "id": "CaitlynE",
+     "name": "Caitlyn E",
+     "maxrank": 5,
+     "cooldown": [
+      10,
+      9,
+      8,
+      7,
+      6
+     ],
+     "cooldownBurn": ""
+    },
+    {
+     "id": "CaitlynR",
+     "name": "Caitlyn R",
+     "maxrank": 3,
+     "cooldown": [
+      90,
+      90,
+      90
+     ],
+     "cooldownBurn": ""
+    }
+   ],
+   "passive": {
+    "name": "",
+    "description": ""
+   },
+   "lore": ""
   },
   "Lux": {
    "version": "16.19.1",
@@ -411,7 +924,64 @@
     "attackdamageperlevel": 3.3,
     "attackspeedperlevel": 1.0,
     "attackspeed": 0.669
-   }
+   },
+   "spells": [
+    {
+     "id": "LuxQ",
+     "name": "Lux Q",
+     "maxrank": 5,
+     "cooldown": [
+      10,
+      9,
+      8,
+      7,
+      6
+     ],
+     "cooldownBurn": ""
+    },
+    {
+     "id": "LuxW",
+     "name": "Lux W",
+     "maxrank": 5,
+     "cooldown": [
+      10,
+      9,
+      8,
+      7,
+      6
+     ],
+     "cooldownBurn": ""
+    },
+    {
+     "id": "LuxE",
+     "name": "Lux E",
+     "maxrank": 5,
+     "cooldown": [
+      10,
+      9,
+      8,
+      7,
+      6
+     ],
+     "cooldownBurn": ""
+    },
+    {
+     "id": "LuxR",
+     "name": "Lux R",
+     "maxrank": 3,
+     "cooldown": [
+      60,
+      50,
+      40
+     ],
+     "cooldownBurn": ""
+    }
+   ],
+   "passive": {
+    "name": "",
+    "description": ""
+   },
+   "lore": ""
   },
   "MonkeyKing": {
    "version": "16.19.1",
@@ -452,7 +1022,64 @@
     "attackdamageperlevel": 3.5,
     "attackspeedperlevel": 3.0,
     "attackspeed": 0.69
-   }
+   },
+   "spells": [
+    {
+     "id": "MonkeyKingQ",
+     "name": "MonkeyKing Q",
+     "maxrank": 5,
+     "cooldown": [
+      10,
+      9,
+      8,
+      7,
+      6
+     ],
+     "cooldownBurn": ""
+    },
+    {
+     "id": "MonkeyKingW",
+     "name": "MonkeyKing W",
+     "maxrank": 5,
+     "cooldown": [
+      10,
+      9,
+      8,
+      7,
+      6
+     ],
+     "cooldownBurn": ""
+    },
+    {
+     "id": "MonkeyKingE",
+     "name": "MonkeyKing E",
+     "maxrank": 5,
+     "cooldown": [
+      10,
+      9,
+      8,
+      7,
+      6
+     ],
+     "cooldownBurn": ""
+    },
+    {
+     "id": "MonkeyKingR",
+     "name": "MonkeyKing R",
+     "maxrank": 3,
+     "cooldown": [
+      130,
+      110,
+      90
+     ],
+     "cooldownBurn": ""
+    }
+   ],
+   "passive": {
+    "name": "",
+    "description": ""
+   },
+   "lore": ""
   }
  }
 }

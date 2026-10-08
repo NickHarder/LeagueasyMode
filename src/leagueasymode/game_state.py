@@ -6,11 +6,15 @@ refusing one would stop the overlay in the middle of a game on the day a patch l
 lost by it, since the recorder keeps every answer whole.
 """
 
+import re
 from typing import Final
 
 from pydantic import BaseModel, ConfigDict, Field
 
 RIOT_ID_SEPARATOR: Final = "#"
+RAW_SUMMONER_SPELL_PATTERN: Final = re.compile(
+    r"^GeneratedTip_SummonerSpell_(?P<spell_id>\w+?)_DisplayName$"
+)
 # The game's raw name of a champion is this prefix and the champion's alias.
 RAW_CHAMPION_NAME_PREFIX: Final = "game_character_displayname_"
 
@@ -57,6 +61,17 @@ class SummonerSpell(RiotPayloadModel):
     """One summoner spell, by the name the game shows (its cooldown is never sent)."""
 
     display_name: str = Field(default="", alias="displayName")
+    # "GeneratedTip_SummonerSpell_SummonerFlash_DisplayName": the same in every language.
+    raw_display_name: str = Field(default="", alias="rawDisplayName")
+
+    def spell_id(self) -> str:
+        """Return the spell's id, as Data Dragon names it ("SummonerFlash").
+
+        Returns:
+            The id, or empty when the raw name does not hold one.
+        """
+        id_match = RAW_SUMMONER_SPELL_PATTERN.match(self.raw_display_name)
+        return id_match.group("spell_id") if id_match else ""
 
 
 class SummonerSpells(RiotPayloadModel):

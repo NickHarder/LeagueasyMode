@@ -63,6 +63,7 @@ class CalloutTracker:
             *self._numbers_window(state, game_time_seconds),
             *self._objectives_soon(state, game_time_seconds),
             *self._item_spikes(state, game_time_seconds),
+            *self._cooldowns_ready(state, game_time_seconds),
         ]
         new_callouts = [
             callout
@@ -148,6 +149,31 @@ class CalloutTracker:
             for item_name in set(card.finished_item_names)
             if card.finished_item_names.count(item_name)
             > previous_items[card.champion_name].count(item_name)
+        ]
+
+    def _cooldowns_ready(self, state: OverlayState, game_time_seconds: float) -> list[Callout]:
+        """Return a callout for each marked spell that has come back since the last state.
+
+        Args:
+            state: The new state.
+            game_time_seconds: Its game time.
+
+        Returns:
+            The callouts.
+        """
+        if self._previous_state is None:
+            return []
+        running_ids = {timer.cooldown_id for timer in state.cooldowns}
+        return [
+            _callout(
+                f"cooldown:{timer.cooldown_id}",
+                "cooldown_ready",
+                f"{timer.champion_name}'s {timer.spell_name} is up",
+                game_time_seconds,
+            )
+            for timer in self._previous_state.cooldowns
+            if timer.cooldown_id not in running_ids
+            and game_time_seconds >= timer.ready_at_game_time_seconds
         ]
 
     def _numbers_window(self, state: OverlayState, game_time_seconds: float) -> list[Callout]:

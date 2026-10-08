@@ -166,7 +166,29 @@ class NumbersWindow(BaseModel):
     ends_at_game_time_seconds: float
 
 
-type CalloutKind = Literal["numbers_window", "level_spike", "objective_soon", "item_spike"]
+class CooldownTimer(BaseModel):
+    """A spell the player marked an enemy as having used, and when it is back.
+
+    An estimate: the cooldown is the patch's, at the rank the enemy's level gives, shortened by
+    the haste their items give; runes and other haste are not known, so it may be back sooner.
+    """
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    # Stable for one mark, so that the widget and the callouts can tell marks apart.
+    cooldown_id: str
+    champion_name: str
+    spell: Literal["flash", "summoner", "ultimate"]
+    # The spell's name ("Flash", "Teleport", or "ultimate"), and the widget's short label for it.
+    spell_name: str
+    label: str
+    marked_at_game_time_seconds: float
+    ready_at_game_time_seconds: float
+
+
+type CalloutKind = Literal[
+    "numbers_window", "level_spike", "objective_soon", "item_spike", "cooldown_ready"
+]
 
 
 class Callout(BaseModel):
@@ -195,6 +217,7 @@ class OverlayState(BaseModel):
     players: list[PlayerCard] = Field(default_factory=list)
     numbers_window: NumbersWindow | None = None
     team_item_gold: TeamItemGold | None = None
+    cooldowns: list[CooldownTimer] = Field(default_factory=list)
     callouts: list[Callout] = Field(default_factory=list)
 
 

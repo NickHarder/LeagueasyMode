@@ -8,14 +8,30 @@ refused, so that a web page elsewhere cannot reach it by pointing its own domain
 import asyncio
 from collections.abc import Awaitable, Callable
 from importlib import resources
-from typing import Final
+from typing import Final, Literal
 
 from aiohttp import web
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from leagueasymode.engine import OverlayEngine
 from leagueasymode.overlay_state import OverlayState
 
 ALLOWED_HOST_NAMES: Final = frozenset({"127.0.0.1", "localhost"})
+# The header the macOS app sends with a mark.
+MARK_REQUEST_HEADER: Final = "X-LeagueasyMode-Request"
+MARK_REQUEST_VALUE: Final = "mark"
+ENEMY_SLOT_COUNT: Final = 5
+
+
+class MarkRequest(BaseModel):
+    """A mark from the macOS app: an enemy by their place in role order, and the spell they used."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    enemy_slot: int = Field(ge=1, le=ENEMY_SLOT_COUNT)
+    spell: Literal["flash", "summoner", "ultimate"]
+
+
 # Set when the server shuts down, so that open streams end at once instead of at their next
 # keep-alive, which would hold the shutdown up for as long as that.
 SHUTTING_DOWN_KEY: Final = web.AppKey("shutting_down", asyncio.Event)
@@ -55,8 +71,26 @@ def create_overlay_application(engine: OverlayEngine) -> web.Application:
     async def events(request: web.Request) -> web.StreamResponse:
         return await _stream_states(request, engine, shutting_down)
 
+    async def mark(request: web.Request) -> web.Response:
+        # A page elsewhere cannot send this header without a preflight this server never
+        # answers, so only the macOS app, or another program on this machine, can mark.
+        if request.headers.get(MARK_REQUEST_HEADER) != MARK_REQUEST_VALUE:
+            return web.json_response({"message": "marks come from the app"}, status=403)
+        try:
+            mark_request = MarkRequest.model_validate_json(await request.read())
+        except ValidationError:
+            return web.json_response({"message": "not a mark"}, status=400)
+        timer = engine.mark_cooldown(mark_request.enemy_slot, mark_request.spell)
+        if timer is None:
+            return web.json_response(
+                {"message": "no game, no such enemy, or no cooldowns for this patch yet"},
+                status=409,
+            )
+        return web.json_response(text=timer.model_dump_json())
+
     application.router.add_get("/state", state)
     application.router.add_get("/events", events)
+    application.router.add_post("/marks", mark)
     for route_path, (file_name, content_type) in WEB_ASSETS.items():
         application.router.add_get(route_path, _asset_handler(file_name, content_type))
     return application

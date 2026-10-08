@@ -1,5 +1,6 @@
 from leagueasymode.inference.callouts import CALLOUT_SHOWN_SECONDS, CalloutTracker
 from leagueasymode.overlay_state import (
+    CooldownTimer,
     DragonTimer,
     NumbersWindow,
     ObjectiveTimer,
@@ -143,3 +144,34 @@ def test_items_owned_when_the_catalog_arrives_are_not_called_out() -> None:
     )
     tracker.update(state_at(900.0, [before_catalog]))
     assert tracker.update(state_at(901.0, [after_catalog])) == []
+
+
+def zed_flash_timer() -> CooldownTimer:
+    return CooldownTimer(
+        cooldown_id="Zed-flash-600.0",
+        champion_name="Zed",
+        spell="flash",
+        spell_name="Flash",
+        label="F",
+        marked_at_game_time_seconds=600.0,
+        ready_at_game_time_seconds=900.0,
+    )
+
+
+def test_a_marked_spell_coming_back_is_called_out_once() -> None:
+    tracker = CalloutTracker()
+    running = state_at(899.5).model_copy(update={"cooldowns": [zed_flash_timer()]})
+    assert tracker.update(running) == []
+    back = tracker.update(state_at(900.0))
+    assert [callout.text for callout in back] == ["Zed's Flash is up"]
+    assert back[0].kind == "cooldown_ready"
+    assert [callout.text for callout in tracker.update(state_at(900.5))] == ["Zed's Flash is up"]
+
+
+def test_a_marked_ultimate_coming_back_is_called_out_by_name() -> None:
+    tracker = CalloutTracker()
+    ultimate = zed_flash_timer().model_copy(
+        update={"cooldown_id": "Zed-ultimate-600.0", "spell": "ultimate", "spell_name": "ultimate"}
+    )
+    tracker.update(state_at(899.5).model_copy(update={"cooldowns": [ultimate]}))
+    assert [callout.text for callout in tracker.update(state_at(900.0))] == ["Zed's ultimate is up"]
