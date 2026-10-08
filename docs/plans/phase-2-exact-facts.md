@@ -4,7 +4,7 @@ title: "Phase 2: patch data and exact facts"
 description: The slices of phase 2 of the approved plan, in build order, with what each shows, what it needs and the points where the owner decides.
 tags: [plan, phase-2]
 status: draft
-generated: { by: claude-code/cloud, at: 2026-10-08T14:50:00Z }
+generated: { by: claude-code/cloud, at: 2026-10-08T16:15:00Z }
 ---
 
 # Phase 2: patch data and exact facts
@@ -35,6 +35,19 @@ recording's client resources beside the game API, so `run` against a replay sees
 
 Housekeeping that rides along: the Swift build's strict-concurrency warnings are cleared, then the
 app moves to the Swift 6 language mode.
+
+## Where it stands
+
+| # | Slice | State |
+|---|---|---|
+| 2.1 | Objective strip | Built: `inference/objectives.py`, the strip's pills |
+| 2.2 | Enemy strip and numbers window | Built: `inference/players.py`, the enemy strip |
+| 2.3 | Callouts | Built: `inference/callouts.py` (levels, numbers window, objectives soon); voice later |
+| 2.4 | Patch data | Built for items: `patch_data.py`; the champion summary waits for 2.8 |
+| 2.5 | Item spikes and gold lead | Built: item gold, finished items, team item gold, item callouts |
+| 2.6 | Structures | Not built: League's own scoreboard shows each team's tower count, and a lane-by-lane view rests on turret names no recording has confirmed; revisit with the first recordings |
+| 2.7 | Roles | Built: `inference/roles.py` |
+| 2.8 | Combat stats | Waits on decision 1 |
 
 ## Where the owner decides
 

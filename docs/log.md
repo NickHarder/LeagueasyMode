@@ -6,6 +6,9 @@ skill has the format.
 
 ## 2026-10-08
 
+- Phase 2 stands built but for structures, left out because League's own scoreboard shows tower
+  counts and the lane naming is unconfirmed, and combat stats, which wait on the owner's choice of
+  a source for champion base stats. The handoff and the phase 2 plan say where each slice is.
 - Phase 2.7, estimator 1: each player's role where the queue gives none, by the assignment of
   least cost over Smite, the support item, summoner spells and CS rank, with a per-player
   confidence. A team-wide margin first made the only Smite user a "guess" when top and mid could
