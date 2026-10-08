@@ -19,6 +19,8 @@ LEVEL_SPIKES: Final = (6, 11, 16)
 # time is sure to within the second figure.
 LEVEL_SOON_SECONDS: Final = 20.0
 LEVEL_SOON_MAX_BAND_SECONDS: Final = 20.0
+# An enemy whose chance to afford their next item reaches this is called out.
+ITEM_SOON_CHANCE: Final = 0.75
 OBJECTIVE_SOON_SECONDS: Final = 60.0
 # A clock this far behind the last one is a new game, not a replayed second.
 NEW_GAME_CLOCK_DROP_SECONDS: Final = 5.0
@@ -68,6 +70,7 @@ class CalloutTracker:
             *self._level_spikes(state, game_time_seconds),
             *_levels_soon(state, game_time_seconds),
             *self._jungler_backs(state, game_time_seconds),
+            *self._items_soon(state, game_time_seconds),
             *self._numbers_window(state, game_time_seconds),
             *self._objectives_soon(state, game_time_seconds),
             *self._item_spikes(state, game_time_seconds),
@@ -155,6 +158,41 @@ class CalloutTracker:
             if card.side == "enemy" and card.role == "JUNGLE"
             for last_back in [card.last_back]
             if last_back is not None and previous_backs.get(card.champion_name) != last_back
+        ]
+
+    def _items_soon(self, state: OverlayState, game_time_seconds: float) -> list[Callout]:
+        """Return a callout for each enemy who has just become likely to afford their next item.
+
+        Their next trip to base then brings it: a fight is better taken before.
+
+        Args:
+            state: The new state.
+            game_time_seconds: Its game time.
+
+        Returns:
+            The callouts.
+        """
+        if self._previous_state is None:
+            return []
+        previous_chances = {
+            card.champion_name: (card.next_item.item_id, card.next_item.chance_to_afford)
+            for card in self._previous_state.players
+            if card.next_item is not None
+        }
+        return [
+            _callout(
+                f"item-soon:{card.champion_name}:{estimate.item_id}",
+                "item_soon",
+                f"{card.champion_name} can likely buy {estimate.item_name}",
+                game_time_seconds,
+            )
+            for card in state.players
+            if card.side == "enemy"
+            for estimate in [card.next_item]
+            if estimate is not None
+            and estimate.chance_to_afford is not None
+            and estimate.chance_to_afford >= ITEM_SOON_CHANCE
+            and not _was_likely(previous_chances.get(card.champion_name), estimate.item_id)
         ]
 
     def _item_spikes(self, state: OverlayState, game_time_seconds: float) -> list[Callout]:
@@ -348,6 +386,26 @@ def _level_soon(card: PlayerCard, game_time_seconds: float) -> Callout | None:
         "level_soon",
         f"{card.champion_name} hits {estimate.next_power_level} in ~{_clock_text(seconds_to_go)}",
         game_time_seconds,
+    )
+
+
+def _was_likely(previous: tuple[int, float | None] | None, item_id: int) -> bool:
+    """Return whether an enemy was already likely to afford the same item in the last state.
+
+    Args:
+        previous: Their next item's id and chance to afford it in the last state; None without one.
+        item_id: Their next item's id now.
+
+    Returns:
+        Whether it was the same item, as likely.
+    """
+    if previous is None:
+        return False
+    previous_item_id, previous_chance = previous
+    return (
+        previous_item_id == item_id
+        and previous_chance is not None
+        and previous_chance >= ITEM_SOON_CHANCE
     )
 
 

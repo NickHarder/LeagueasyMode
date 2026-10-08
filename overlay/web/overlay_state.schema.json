@@ -89,6 +89,7 @@
         "level_soon",
         "objective_soon",
         "item_spike",
+        "item_soon",
         "cooldown_ready",
         "went_back",
         "suggestion"
@@ -407,6 +408,60 @@
       "title": "LevelEstimate",
       "type": "object"
     },
+    "NextItemEstimate": {
+      "additionalProperties": false,
+      "description": "A player's likely next finished item, what it still costs them, and when they can buy it.\n\nAn estimate (`inference/build_path.py`), from the components they hold, their champion's\nclass and what they built on it lately.",
+      "properties": {
+        "item_id": {
+          "title": "Item Id",
+          "type": "integer"
+        },
+        "item_name": {
+          "title": "Item Name",
+          "type": "string"
+        },
+        "likelihood": {
+          "title": "Likelihood",
+          "type": "number"
+        },
+        "remaining_gold": {
+          "title": "Remaining Gold",
+          "type": "integer"
+        },
+        "chance_to_afford": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Chance To Afford"
+        },
+        "affordable_at_game_time_seconds": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Affordable At Game Time Seconds"
+        }
+      },
+      "required": [
+        "item_id",
+        "item_name",
+        "likelihood",
+        "remaining_gold",
+        "chance_to_afford",
+        "affordable_at_game_time_seconds"
+      ],
+      "title": "NextItemEstimate",
+      "type": "object"
+    },
     "NumbersWindow": {
       "additionalProperties": false,
       "description": "More of the enemy team is dead than of the player's, until the respawn that evens it.",
@@ -602,6 +657,17 @@
           "anyOf": [
             {
               "$ref": "#/$defs/BackEstimate"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "next_item": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/NextItemEstimate"
             },
             {
               "type": "null"

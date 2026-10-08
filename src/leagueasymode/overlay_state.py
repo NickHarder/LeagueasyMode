@@ -176,6 +176,27 @@ class BackEstimate(BaseModel):
     returns_at_game_time_seconds: float
 
 
+class NextItemEstimate(BaseModel):
+    """A player's likely next finished item, what it still costs them, and when they can buy it.
+
+    An estimate (`inference/build_path.py`), from the components they hold, their champion's
+    class and what they built on it lately.
+    """
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    item_id: int
+    item_name: str
+    # Its share of the chance among every finished item they might buy next, from 0 to 1.
+    likelihood: float
+    # Its price less the components they hold toward it.
+    remaining_gold: int
+    # The chance they hold that much now, and when they will at their income so far; None while
+    # their gold is not followed.
+    chance_to_afford: float | None
+    affordable_at_game_time_seconds: float | None
+
+
 class PlayerCard(BaseModel):
     """One player as the scoreboard shows them: side, role, level, and when they are back."""
 
@@ -205,6 +226,8 @@ class PlayerCard(BaseModel):
     level_estimate: LevelEstimate | None = None
     # None until they are seen going back.
     last_back: BackEstimate | None = None
+    # None while the patch's items are unknown, or no finished item is left for them.
+    next_item: NextItemEstimate | None = None
 
 
 class TeamItemGold(BaseModel):
@@ -263,6 +286,7 @@ type CalloutKind = Literal[
     "level_soon",
     "objective_soon",
     "item_spike",
+    "item_soon",
     "cooldown_ready",
     "went_back",
     "suggestion",

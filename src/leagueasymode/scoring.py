@@ -16,6 +16,9 @@ compared with what is known to be true:
   every player but you; the band is scored by how often it holds the truth.
 - **Experience** (estimator 4): the same, against the timeline's experience, for every player:
   nobody's is exact.
+- **Build path** (estimator 5): the next item predicted for each player at the end of each
+  minute, from their components and class (their match history is not in the harness), against
+  the first finished item the timeline shows them buy after it.
 - **Backs** (estimator 6): the timeline records every purchase. One made alive (not within a
   minute of a death) past 1:30 starts a trip to base, and each purchase more than 30 seconds
   after a trip's first starts another; a trip the back tracker saw within 20 seconds of it is
@@ -36,9 +39,10 @@ from pydantic import Field, JsonValue, ValidationError, field_validator
 from leagueasymode.data_dragon import PatchStats
 from leagueasymode.game_state import GameSnapshot, RiotPayloadModel
 from leagueasymode.inference.backs import BackTracker
+from leagueasymode.inference.build_path import next_item
 from leagueasymode.inference.combat_stats import estimated_combat_stats
 from leagueasymode.inference.experience import ExperienceTracker
-from leagueasymode.inference.gold import GoldTracker, PlayerKey
+from leagueasymode.inference.gold import GoldTracker, PlayerKey, player_key
 from leagueasymode.inference.roles import assign_roles
 from leagueasymode.overlay_state import CombatStats, GoldEstimate, LevelEstimate
 from leagueasymode.patch_data import CHAMPION_SUMMARY_PATH, ITEMS_PATH, ItemCatalog
@@ -180,8 +184,9 @@ class TimelineEvent(RiotPayloadModel):
 
     event_type: str = Field(default="", alias="type")
     timestamp_milliseconds: int = Field(default=0, alias="timestamp")
-    # The buyer of a purchase.
+    # The buyer of a purchase, and what they bought.
     participant_id: int = Field(default=0, alias="participantId")
+    item_id: int = Field(default=0, alias="itemId")
     # The champion a kill killed.
     victim_id: int = Field(default=0, alias="victimId")
 
@@ -450,6 +455,34 @@ def score_experience(game: RecordedGame) -> list[EstimatorScore]:
     ]
 
 
+def score_next_items(game: RecordedGame, patch_stats: PatchStats | None) -> EstimatorScore | None:
+    """Score the next item predicted for each player against the next one they bought.
+
+    Args:
+        game: The recorded game.
+        patch_stats: The patch's stats, for the champions' classes; None when they cannot be had.
+
+    Returns:
+        The share of predictions that named the next finished item bought; None without a
+        timeline, the game's details, the item catalog, or a purchase to score.
+    """
+    timeline = _game_timeline(game)
+    items_payload = game.client_resources.get(ITEMS_PATH)
+    item_catalog = ItemCatalog.from_client_items(items_payload) if items_payload else None
+    if timeline is None or item_catalog is None:
+        return None
+    scored_pairs = list(_next_item_pairs(game, timeline, item_catalog, patch_stats))
+    if not scored_pairs:
+        return None
+    return EstimatorScore(
+        estimator="next item",
+        sample_count=len(scored_pairs),
+        value=sum(1 for predicted, bought in scored_pairs if predicted == bought)
+        / len(scored_pairs),
+        measure="share_correct",
+    )
+
+
 def score_backs(game: RecordedGame) -> list[EstimatorScore]:
     """Score the trips to base seen against the purchases the match timeline records.
 
@@ -520,6 +553,7 @@ def score_game(game: RecordedGame, patch_stats: PatchStats | None) -> list[Estim
         ),
         *score_gold(game),
         *score_experience(game),
+        *(score for score in [score_next_items(game, patch_stats)] if score is not None),
         *score_backs(game),
     ]
 
@@ -596,6 +630,82 @@ def _timeline_trips(timeline: GameTimeline, participant_id: int) -> tuple[float,
         ):
             trip_seconds.append(bought_at_seconds)
     return tuple(trip_seconds)
+
+
+def _next_item_pairs(
+    game: RecordedGame,
+    timeline: GameTimeline,
+    item_catalog: ItemCatalog,
+    patch_stats: PatchStats | None,
+) -> Iterator[tuple[int, int]]:
+    """Yield each player's predicted next item at each minute's end, with the one they bought.
+
+    Args:
+        game: The recorded game.
+        timeline: Its match timeline.
+        item_catalog: The patch's items.
+        patch_stats: The patch's stats; None when they cannot be had.
+
+    Yields:
+        The predicted item's id and the bought one's, where both are known.
+    """
+    participant_id_by_key = {
+        key: participant.participant_id for key, participant in _details_participants(game)
+    }
+    events = [event for frame in timeline.frames for event in frame.events]
+    for snapshot in game.minute_snapshots:
+        game_time_seconds = snapshot.game_data.game_time_seconds
+        for player in snapshot.players:
+            predicted = next_item(
+                player, item_catalog, patch_stats, game_time_seconds=game_time_seconds
+            )
+            bought_item_id = _next_finished_purchase(
+                events,
+                participant_id_by_key.get(player_key(player), 0),
+                game_time_seconds,
+                {item.item_id for item in player.items},
+                item_catalog,
+            )
+            if predicted is not None and bought_item_id is not None:
+                yield predicted.item_id, bought_item_id
+
+
+def _next_finished_purchase(
+    events: list[TimelineEvent],
+    participant_id: int,
+    after_seconds: float,
+    owned_item_ids: set[int],
+    item_catalog: ItemCatalog,
+) -> int | None:
+    """Return the first finished item a participant bought after a moment, not owned then.
+
+    Args:
+        events: The timeline's events.
+        participant_id: The participant; 0 when unknown.
+        after_seconds: The moment.
+        owned_item_ids: What they owned then.
+        item_catalog: The patch's items.
+
+    Returns:
+        The item's id, or None when they bought none after it.
+    """
+    purchases = sorted(
+        (event.timestamp_milliseconds / MILLISECONDS_PER_SECOND, event.item_id)
+        for event in events
+        if event.event_type == ITEM_PURCHASED_EVENT
+        and participant_id
+        and event.participant_id == participant_id
+    )
+    return next(
+        (
+            item_id
+            for bought_at_seconds, item_id in purchases
+            if bought_at_seconds > after_seconds
+            and item_catalog.is_finished(item_id)
+            and item_id not in owned_item_ids
+        ),
+        None,
+    )
 
 
 def _is_near(trip_seconds: float, other_trips_seconds: tuple[float, ...]) -> bool:

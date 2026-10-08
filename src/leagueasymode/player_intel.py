@@ -83,9 +83,25 @@ class RankedStats(RiotPayloadModel):
 
 
 class HistoryStats(RiotPayloadModel):
-    """A participant's end-of-game stats."""
+    """A participant's end-of-game stats: the result and the inventory."""
 
     win: bool = False
+    item0: int = 0
+    item1: int = 0
+    item2: int = 0
+    item3: int = 0
+    item4: int = 0
+    item5: int = 0
+    item6: int = 0
+
+    def item_ids(self) -> tuple[int, ...]:
+        """Return the items held at the game's end.
+
+        Returns:
+            Their ids, empty slots left out.
+        """
+        slots = (self.item0, self.item1, self.item2, self.item3, self.item4, self.item5, self.item6)
+        return tuple(item_id for item_id in slots if item_id)
 
 
 class HistoryTimeline(RiotPayloadModel):
@@ -203,11 +219,13 @@ CHAMPION_SUMMARY_ADAPTER: Final = TypeAdapter[list[ChampionSummaryEntry]](
 
 @dataclass(frozen=True)
 class RecentGame:
-    """One of a player's recent games: what they played, where, and whether they won."""
+    """One of a player's recent games: what they played, where, what they built, and the result."""
 
     champion_id: int
     position: str
     is_win: bool
+    # The items they held at its end.
+    item_ids: tuple[int, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -289,6 +307,7 @@ def recent_games_of(payload: JsonValue | None, puuid: str) -> list[RecentGame]:
             champion_id=line.champion_id,
             position=history_position(line.timeline.lane, line.timeline.role, line.team_position),
             is_win=line.stats.win,
+            item_ids=line.stats.item_ids(),
         )
         for _, line in newest_first
     ]

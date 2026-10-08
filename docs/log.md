@@ -6,6 +6,12 @@ skill has the format.
 
 ## 2026-10-08
 
+- Phase 3.8, the build path (estimator 5): each player's likely next finished item, from the
+  components they hold toward it, what they built on the champion in their recent games (the
+  match history now keeps each game's items), and their champion's class (Data Dragon's tags);
+  what is left to pay, the chance they hold it now, and when they will. An enemy who becomes
+  likely to afford it is called out. Scored against the next finished item the timeline shows them
+  buy. Phase 3 is built.
 - Phase 3.7, backs (estimator 6): a purchase made alive is a trip to base, since buying needs the
   fountain (not the start's, a death's, or one just after respawning). Each enemy's row says when
   they went back and when they return, a walk from the fountain at their move speed; the enemy

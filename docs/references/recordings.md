@@ -4,7 +4,7 @@ title: Recordings
 description: What a recording of a game holds, how it is written and read, what is asked of the League client and when, and how a copy is anonymized before it may enter the repository.
 tags: [recording, data, privacy]
 status: draft
-generated: { by: claude-code/cloud, at: 2026-10-08T22:16:25Z }
+generated: { by: claude-code/cloud, at: 2026-10-08T22:24:20Z }
 sources:
   - id: file-format
     resource: ../../src/leagueasymode/recording/file_format.py
@@ -35,9 +35,10 @@ recorded game: the role estimator against the positions the game gave or its det
 gives for the player on this machine, once a minute, and the gold estimates of every other player
 against the match timeline's earned and unspent gold at the start of each minute, and every
 player's experience against the timeline's, each with how often its band holds the truth (it
-should, about 4 times in 5), and the trips to base seen against the timeline's purchases made
-alive, both ways. The estimators still to come are scored there too, against the timeline's
-positions.[^scoring]
+should, about 4 times in 5), each player's predicted next item at the end of each minute against
+the next finished item the timeline shows them buy, and the trips to base seen against the
+timeline's purchases made alive, both ways. The estimators still to come are scored there too,
+against the timeline's positions.[^scoring]
 
 # How to make one
 

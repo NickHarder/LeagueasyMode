@@ -124,6 +124,16 @@ export interface BackEstimate {
   readonly returns_at_game_time_seconds: number;
 }
 
+/** A player's likely next finished item, what it still costs them, and when they can buy it. */
+export interface NextItemEstimate {
+  readonly item_id: number;
+  readonly item_name: string;
+  readonly likelihood: number;
+  readonly remaining_gold: number;
+  readonly chance_to_afford: number | null;
+  readonly affordable_at_game_time_seconds: number | null;
+}
+
 /** One player as the scoreboard shows them: side, role, level, and when they are back. */
 export interface PlayerCard {
   readonly champion_name: string;
@@ -141,6 +151,7 @@ export interface PlayerCard {
   readonly gold: GoldEstimate | null;
   readonly level_estimate: LevelEstimate | null;
   readonly last_back: BackEstimate | null;
+  readonly next_item: NextItemEstimate | null;
 }
 
 /** What each team's items are worth: gold earned and spent, not gold in hand. */
@@ -169,6 +180,7 @@ export type CalloutKind =
   | "level_soon"
   | "objective_soon"
   | "item_spike"
+  | "item_soon"
   | "cooldown_ready"
   | "went_back"
   | "suggestion";
@@ -211,6 +223,7 @@ const CALLOUT_KINDS: ReadonlySet<string> = new Set([
   "level_soon",
   "objective_soon",
   "item_spike",
+  "item_soon",
   "cooldown_ready",
   "went_back",
   "suggestion",
@@ -373,6 +386,19 @@ export function isBackEstimate(value: unknown): value is BackEstimate {
   );
 }
 
+/** Return whether a value is a player's next item as the engine sends it. */
+export function isNextItemEstimate(value: unknown): value is NextItemEstimate {
+  return (
+    isRecord(value) &&
+    typeof value["item_id"] === "number" &&
+    typeof value["item_name"] === "string" &&
+    typeof value["likelihood"] === "number" &&
+    typeof value["remaining_gold"] === "number" &&
+    isNumberOrNull(value["chance_to_afford"]) &&
+    isNumberOrNull(value["affordable_at_game_time_seconds"])
+  );
+}
+
 /** Return whether a value is a player's card as the engine sends it. */
 export function isPlayerCard(value: unknown): value is PlayerCard {
   return (
@@ -391,7 +417,8 @@ export function isPlayerCard(value: unknown): value is PlayerCard {
     (value["intel"] === null || isPlayerIntel(value["intel"])) &&
     (value["gold"] === null || isGoldEstimate(value["gold"])) &&
     (value["level_estimate"] === null || isLevelEstimate(value["level_estimate"])) &&
-    (value["last_back"] === null || isBackEstimate(value["last_back"]))
+    (value["last_back"] === null || isBackEstimate(value["last_back"])) &&
+    (value["next_item"] === null || isNextItemEstimate(value["next_item"]))
   );
 }
 
