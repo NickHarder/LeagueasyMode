@@ -6,6 +6,10 @@ skill has the format.
 
 ## 2026-10-08
 
+- The tracer bullet's engine side: the dragon and Elder timer, from the game's answer through the
+  engine and the local server to the overlay page, tested end to end against a replay and in
+  Chromium. `leagueasymode run` and `leagueasymode replay` added;
+  [references/engine-and-overlay.md](references/engine-and-overlay.md) describes them.
 - Added the recorder (`leagueasymode record`) and anonymized copies (`leagueasymode anonymize`),
   described in [references/recordings.md](references/recordings.md). One change from the plan,
   which said "a standard-library-only recorder": the recorder is the engine's own client code,

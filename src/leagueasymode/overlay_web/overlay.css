@@ -1,0 +1,73 @@
+/* The overlay draws over the game: the page itself is transparent, and only widgets show. */
+:root {
+  --widget-text: #f3efe4;
+  --widget-muted: #b9b3a3;
+  --widget-surface: rgb(10 12 18 / 0.72);
+  --widget-border: rgb(255 255 255 / 0.14);
+  --widget-alive: #f0c75e;
+}
+
+html,
+body {
+  margin: 0;
+  background: transparent;
+  overflow: hidden;
+  user-select: none;
+  cursor: default;
+}
+
+.widget {
+  position: fixed;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 12px 5px 8px;
+  border: 1px solid var(--widget-border);
+  border-radius: 10px;
+  background: var(--widget-surface);
+  color: var(--widget-text);
+  font: 600 14px/1.15 -apple-system, "SF Pro Text", system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 1px 2px rgb(0 0 0 / 0.6);
+}
+
+.widget[hidden] {
+  display: none;
+}
+
+.widget-icon {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  transform: rotate(45deg);
+  box-shadow: 0 0 6px currentcolor;
+}
+
+.widget-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.widget-headline {
+  display: flex;
+  gap: 6px;
+  align-items: baseline;
+}
+
+.widget-time {
+  min-width: 3ch;
+}
+
+.widget[data-state="alive"] .widget-time {
+  color: var(--widget-alive);
+}
+
+.widget-detail {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--widget-muted);
+}

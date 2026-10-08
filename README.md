@@ -28,7 +28,11 @@ name replaced, which is the only kind that goes into this repository.
 ```bash
 make bootstrap    # once per clone
 make gate         # everything a push must pass
-uv run leagueasymode replay <recording> --speed 10    # a recorded game, served as a fake game API
+uv run leagueasymode replay <recording> --speed 10    # a recorded game, served as a stand-in game API
+LEAGUEASYMODE_GAME_API_BASE_URL=http://127.0.0.1:2998 uv run leagueasymode run   # the overlay, against it
 ```
+
+How the engine, the overlay page and its widgets fit together is in
+[docs/references/engine-and-overlay.md](docs/references/engine-and-overlay.md).
 
 `AGENTS.md` has the working rules, and `docs/index.md` what the project knows.

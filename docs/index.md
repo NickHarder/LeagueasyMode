@@ -10,7 +10,7 @@ okf_version: "0.2"
 
 * [history](history/index.md) - 1 concept: Retrospective.
 * [plans](plans/index.md) - 1 concept: Plan.
-* [references](references/index.md) - 2 concepts: Reference.
+* [references](references/index.md) - 3 concepts: Reference.
 * [rules](rules/index.md) - 1 concept: Rule.
 
 # History

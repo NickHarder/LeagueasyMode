@@ -20,6 +20,9 @@ dev = [
   "pytest>=8.3",
   "pytest-asyncio>=0.24",
   "trustme>=1.2",
+  # The overlay page in a real browser (`pytest -m browser`). Only the library: Chromium itself is
+  # installed separately (`uv run playwright install chromium`), and only where those tests run.
+  "playwright>=1.55",
 ]
 
 [build-system]
@@ -87,3 +90,6 @@ warn_required_dynamic_aliases = true
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+# The browser tests need Chromium, which the gate does not install; CI's widgets job runs them.
+addopts = "-m 'not browser'"
+markers = ["browser: renders the overlay page in Chromium (uv run pytest -m browser)"]

@@ -1,0 +1,112 @@
+{
+  "$defs": {
+    "DragonTimer": {
+      "additionalProperties": false,
+      "description": "The next dragon or Elder Dragon: when it spawns, and the race for the soul.\n\nEvery value restates the kill feed and the map; nothing here is estimated.",
+      "properties": {
+        "objective": {
+          "enum": [
+            "dragon",
+            "elder_dragon"
+          ],
+          "title": "Objective",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "not_spawned",
+            "respawning",
+            "alive"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "spawns_at_game_time_seconds": {
+          "title": "Spawns At Game Time Seconds",
+          "type": "number"
+        },
+        "ally_dragon_count": {
+          "title": "Ally Dragon Count",
+          "type": "integer"
+        },
+        "enemy_dragon_count": {
+          "title": "Enemy Dragon Count",
+          "type": "integer"
+        },
+        "soul_type": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Soul Type"
+        },
+        "soul_holder": {
+          "anyOf": [
+            {
+              "enum": [
+                "ally",
+                "enemy"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Soul Holder"
+        }
+      },
+      "required": [
+        "objective",
+        "status",
+        "spawns_at_game_time_seconds",
+        "ally_dragon_count",
+        "enemy_dragon_count",
+        "soul_type",
+        "soul_holder"
+      ],
+      "title": "DragonTimer",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Everything the overlay shows at one moment.",
+  "properties": {
+    "is_game_running": {
+      "title": "Is Game Running",
+      "type": "boolean"
+    },
+    "game_time_seconds": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Game Time Seconds"
+    },
+    "dragon": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/DragonTimer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    }
+  },
+  "required": [
+    "is_game_running"
+  ],
+  "title": "OverlayState",
+  "type": "object"
+}
