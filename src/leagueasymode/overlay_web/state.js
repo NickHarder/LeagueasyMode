@@ -14,6 +14,7 @@ export const PREFERENCE_NAMES = [
     "show_enemy_estimates",
     "show_callouts",
     "show_suggestions",
+    "speak_callouts",
 ];
 /** The widgets the player can move; the minimap layer stays over League's minimap. */
 export const MOVABLE_WIDGETS = ["objective_strip", "callouts", "enemy_strip", "you_panel"];

@@ -542,6 +542,8 @@ class OverlayPreferences(BaseModel):
     show_callouts: bool = True
     # Callouts that name an action, such as "take it".
     show_suggestions: bool = True
+    # Each new callout shown is read aloud in macOS's voice; off unless the player turns it on.
+    speak_callouts: bool = False
 
 
 # The widgets the player can move; the minimap layer stays over League's minimap.

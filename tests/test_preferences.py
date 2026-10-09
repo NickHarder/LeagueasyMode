@@ -32,6 +32,10 @@ def test_without_a_file_everything_shows(tmp_path: Path) -> None:
     assert preferences.show_win_chance
 
 
+def test_callouts_are_spoken_only_once_the_player_turns_it_on() -> None:
+    assert not OverlayPreferences().speak_callouts
+
+
 def test_preferences_are_kept_and_read_back(tmp_path: Path) -> None:
     preferences_path = tmp_path / "app" / "preferences.json"
     chosen = OverlayPreferences(show_win_chance=False, show_suggestions=False)

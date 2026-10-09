@@ -35,6 +35,7 @@ import {
   isOverlayState,
 } from "./state.js";
 import { applyLayout, startLayoutEditing } from "./layout.js";
+import { speak } from "./speech.js";
 
 const EVENTS_PATH = "/events";
 const RENDER_INTERVAL_MILLISECONDS = 250;
@@ -855,6 +856,10 @@ function renderCallouts(nowMilliseconds: number): void {
   for (const callout of shownCallouts) {
     if (!presentIds.has(callout.callout_id)) {
       list.append(calloutElement(callout));
+      // Spoken as it first shows; kept on screen, it is not spoken again.
+      if (received?.state.preferences.speak_callouts === true) {
+        speak(callout.text);
+      }
     }
   }
 }

@@ -574,3 +574,19 @@ final class LayoutEditingTests: XCTestCase {
         XCTAssertEqual(LayoutEditing.resetScript, "window.leagueasymodeResetLayout?.();")
     }
 }
+
+final class SpokenCalloutTests: XCTestCase {
+    func testACalloutIsSpokenAsTheTextThePageSent() {
+        XCTAssertEqual(SpokenCallout.text(fromMessageBody: "  Zed is level 6\n"), "Zed is level 6")
+    }
+
+    func testAnythingButAShortLineOfTextIsNotSpoken() {
+        XCTAssertNil(SpokenCallout.text(fromMessageBody: 6))
+        XCTAssertNil(SpokenCallout.text(fromMessageBody: "   "))
+        XCTAssertNil(SpokenCallout.text(fromMessageBody: String(repeating: "a", count: 201)))
+    }
+
+    func testThePageAndTheAppAgreeOnTheMessagesName() {
+        XCTAssertEqual(SpokenCallout.messageName, "leagueasymodeSpeak")
+    }
+}

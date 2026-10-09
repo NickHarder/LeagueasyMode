@@ -213,6 +213,7 @@ async def open_overlay(
     vi_farms_at_seconds: tuple[float, ...] = (),
     vi_wards_at_seconds: float | None = None,
     preferences: OverlayPreferences | None = None,
+    init_script: str | None = None,
 ) -> AsyncIterator[Page]:
     if preferences is not None:
         save_preferences(tmp_path / "preferences.json", preferences)
@@ -260,6 +261,8 @@ async def open_overlay(
                 executable_path=os.environ.get("PLAYWRIGHT_CHROMIUM_EXECUTABLE")
             )
             page = await browser.new_page(viewport={"width": 1280, "height": 200})
+            if init_script is not None:
+                await page.add_init_script(init_script)
             await page.goto(overlay_urls[0])
             try:
                 yield page
@@ -361,6 +364,51 @@ async def test_an_enemy_reaching_level_six_is_called_out(tmp_path: Path) -> None
         await keep_screenshot(page, "callout")
         # Shown for six seconds of game time, then gone.
         await expect(callout).to_have_count(0, timeout=10000)
+
+
+# Stands in for the macOS app's voice: what the page hands it is kept to be read back.
+APP_VOICE_STAND_IN: Final = """
+window.spokenCallouts = [];
+window.webkit = {messageHandlers: {leagueasymodeSpeak: {
+    postMessage: (text) => window.spokenCallouts.push(text),
+}}};
+"""
+
+
+async def test_a_new_callout_is_spoken_once_when_the_player_turned_speech_on(
+    tmp_path: Path,
+) -> None:
+    async with open_overlay(
+        tmp_path,
+        snapshot_count=60,
+        speed=1.0,
+        zed_reaches_six_at_seconds=1397.0,
+        preferences=OverlayPreferences(speak_callouts=True),
+        init_script=APP_VOICE_STAND_IN,
+    ) as page:
+        callout = page.locator('#callouts .callout[data-kind="level_spike"]')
+        await expect(callout).to_have_text("Zed is level 6", timeout=5000)
+        # Drawn again four times a second while it shows, and spoken once.
+        await expect(callout).to_have_count(0, timeout=10000)
+        spoken = await page.evaluate("window.spokenCallouts")
+    assert isinstance(spoken, list)
+    assert spoken.count("Zed is level 6") == 1
+    # Every callout shown is spoken once, the item ones at the start too.
+    assert len(spoken) == len(set(spoken))
+
+
+async def test_callouts_are_not_spoken_unless_the_player_turned_speech_on(tmp_path: Path) -> None:
+    async with open_overlay(
+        tmp_path,
+        snapshot_count=60,
+        speed=1.0,
+        zed_reaches_six_at_seconds=1397.0,
+        init_script=APP_VOICE_STAND_IN,
+    ) as page:
+        callout = page.locator('#callouts .callout[data-kind="level_spike"]')
+        await expect(callout).to_have_text("Zed is level 6", timeout=5000)
+        spoken = await page.evaluate("window.spokenCallouts")
+    assert spoken == []
 
 
 async def test_an_enemy_close_to_six_shows_when_they_reach_it(tmp_path: Path) -> None:

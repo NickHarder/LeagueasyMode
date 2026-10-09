@@ -43,20 +43,27 @@ async def open_settings(preferences_path: Path) -> AsyncIterator[tuple[Page, Ove
                 await browser.close()
 
 
-async def test_every_switch_starts_on_and_a_change_is_kept(tmp_path: Path) -> None:
+async def test_each_switch_starts_as_its_default_and_a_change_is_kept(tmp_path: Path) -> None:
     preferences_path = tmp_path / "preferences.json"
     async with open_settings(preferences_path) as (page, engine):
         switches = page.locator(".settings-row input")
-        await expect(switches).to_have_count(8, timeout=5000)
+        await expect(switches).to_have_count(9, timeout=5000)
+        # Everything shows; only speaking the callouts waits to be turned on.
         for index in range(8):
             await expect(switches.nth(index)).to_be_checked()
+        await expect(page.get_by_label("Speak callouts")).not_to_be_checked()
         await page.get_by_label("Win chance").uncheck()
         await expect(page.locator(".settings-status")).to_have_text("Saved")
         assert not engine.preferences.show_win_chance
+        await page.get_by_label("Speak callouts").check()
+        await expect(page.locator(".settings-status")).to_have_text("Saved")
+        assert engine.preferences.speak_callouts
         screenshot_directory = os.environ.get("OVERLAY_SCREENSHOT_DIRECTORY")
         if screenshot_directory:
             await page.screenshot(path=str(Path(screenshot_directory) / "settings.png"))
-    assert load_preferences(preferences_path) == OverlayPreferences(show_win_chance=False)
+    assert load_preferences(preferences_path) == OverlayPreferences(
+        show_win_chance=False, speak_callouts=True
+    )
 
 
 async def test_the_page_shows_what_was_kept(tmp_path: Path) -> None:
