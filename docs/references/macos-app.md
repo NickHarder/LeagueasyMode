@@ -28,6 +28,8 @@ sources:
     resource: ../../overlay/macos/Sources/OverlayCore/UpdateCheck.swift
   - id: login-item
     resource: ../../overlay/macos/Sources/OverlayCore/LoginItemState.swift
+  - id: game-window
+    resource: ../../overlay/macos/Sources/OverlayCore/GameWindow.swift
   - id: release-workflow
     resource: ../../.github/workflows/release.yml
 ---
@@ -37,11 +39,17 @@ sources:
 A menu bar app (no Dock icon) in Swift, in `overlay/macos/`. It starts the engine, the one the app
 bundle carries or else the one in the clone it was built from (`uv run --project <clone>
 leagueasymode run`), reads the overlay's address from the line the engine prints, and shows that
-page in a window that covers the screen:[^panel]
+page in a window over League:[^panel]
 
 - transparent, borderless, without a shadow, and with clicks passing through to the game;
 - never key or main, and its panel does not activate the app, so League keeps the keyboard;
-- on every Space, full-screen ones included, at the "Screen saver" window level by default.
+- on every Space, full-screen ones included, at the "Screen saver" window level by default;
+- over the screen League is on, or over League's window below its title bar when it is windowed,
+  so the minimap layer lines up there too; over the main screen when no game window is on
+  screen.[^game-window] Every two seconds the app looks for League's game window in the window
+  server's list, by its owner's name ("League of Legends") and bounds, which need no permission,
+  and follows it when it moves, resizes or changes screens. The menu says what it found: "League:
+  full screen, 1920 × 1080", "League: windowed, 1280 × 720", or "League: no game window seen".
 
 It needs no macOS permission: no Screen Recording, no Accessibility, no Input Monitoring. The
 shortcut ⌃⌥⌘L shows and hides the overlay through Carbon's hot keys, which need none.[^hotkey]
@@ -148,6 +156,8 @@ The question it answers: does macOS let the overlay draw over League cleanly?
    - whether League keeps the keyboard and mouse (type in chat, cast, click to move through
      the overlay);
    - the frame rate with and without the overlay (Ctrl+F in game);
+   - what the menu's "League:" line says, and in windowed mode whether the overlay fits the
+     game's picture, its top edge level with the picture's;
    - whether ⌃⌥⌘L hides and shows it;
    - whether a mark (⌃⌥3 then ⌃⌥F) puts "F 5:00" on the mid laner's row, and whether League
      ignores the keys.
@@ -169,6 +179,7 @@ whether `KillerName` holds a game name or a Riot ID, and whether the client serv
 [^cooldown-marking]: `overlay/macos/Sources/OverlayCore/CooldownMarking.swift`
 [^levels]: `overlay/macos/Sources/LeagueasyOverlay/WindowLevelChoice.swift`
 [^engine-command]: `overlay/macos/Sources/OverlayCore/EngineCommand.swift`
+[^game-window]: `overlay/macos/Sources/OverlayCore/GameWindow.swift`
 [^bundled-engine]: `overlay/macos/Sources/OverlayCore/BundledEngine.swift`
 [^build-app]: `overlay/macos/scripts/build_app.sh`
 [^smoke-test]: `overlay/macos/scripts/smoke_test_app.sh`

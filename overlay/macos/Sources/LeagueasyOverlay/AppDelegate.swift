@@ -28,6 +28,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private static let lastUpdateCheckKey = "lastUpdateCheck"
     // How often the app sees whether a check is due; the check itself is at most once a day.
     private static let updateTimerSeconds: TimeInterval = 60 * 60
+    // How often the app looks for League's window, which can move, resize or change screens.
+    private static let gameWindowTimerSeconds: TimeInterval = 2
 
     private var statusItem: NSStatusItem?
     private var overlayPanel: OverlayPanel?
@@ -42,11 +44,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var engineStatusText = "Engine: starting…"
     private var availableRelease: AvailableRelease?
     private var updateTimer: Timer?
+    private var gamePlacement: GamePlacement?
+    private var gameWindowTimer: Timer?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        let panel = OverlayPanel(screenFrame: Self.gameScreenFrame())
+        let placement = Self.currentGamePlacement()
+        let panel = OverlayPanel(screenFrame: placement.frame)
         panel.place(at: levelChoice)
         overlayPanel = panel
+        gamePlacement = placement
         statusItem = makeStatusItem()
         toggleHotKey = GlobalHotKey(
             identifier: Self.toggleHotKeyIdentifier,
@@ -72,6 +78,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             timeInterval: Self.updateTimerSeconds,
             target: self,
             selector: #selector(updateTimerFired(_:)),
+            userInfo: nil,
+            repeats: true
+        )
+        gameWindowTimer = Timer.scheduledTimer(
+            timeInterval: Self.gameWindowTimerSeconds,
+            target: self,
+            selector: #selector(gameWindowTimerFired(_:)),
             userInfo: nil,
             repeats: true
         )
@@ -282,6 +295,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let menu = NSMenu()
         menu.addItem(Self.disabledItem("LeagueasyMode"))
         menu.addItem(Self.disabledItem(engineStatusText))
+        if let gamePlacement {
+            menu.addItem(Self.disabledItem(gamePlacement.menuText))
+        }
         menu.addItem(.separator())
         let showItem = NSMenuItem(
             title: "Show overlay (\(Self.toggleShortcutDescription))",
@@ -420,11 +436,41 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc private func screensDidChange(_ notification: Notification) {
-        overlayPanel?.cover(screenFrame: Self.gameScreenFrame())
+        followGameWindow()
     }
 
-    /// The frame of the screen the game is on: the main screen, where full-screen games open.
-    private static func gameScreenFrame() -> NSRect {
-        (NSScreen.main ?? NSScreen.screens.first)?.frame ?? NSRect(x: 0, y: 0, width: 1440, height: 900)
+    @objc private func gameWindowTimerFired(_ timer: Timer) {
+        followGameWindow()
+    }
+
+    /// Moves the overlay over League's window when it has moved, resized or changed screens.
+    private func followGameWindow() {
+        let placement = Self.currentGamePlacement()
+        guard placement != gamePlacement else {
+            return
+        }
+        gamePlacement = placement
+        overlayPanel?.cover(screenFrame: placement.frame)
+        statusItem?.menu = makeMenu()
+    }
+
+    /// Where the overlay goes now: over League's game window when one is on screen, found by its
+    /// owner's name and bounds, which need no permission; otherwise over the main screen.
+    private static func currentGamePlacement() -> GamePlacement {
+        let windowInfos =
+            CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID)
+            as? [[String: Any]] ?? []
+        let windows = windowInfos.compactMap { ListedWindow(windowInfo: $0) }
+        return GameWindowLocator.placement(
+            gameWindow: GameWindowLocator.gameWindow(in: windows),
+            screenFrames: NSScreen.screens.map(\.frame),
+            titleBarHeight: titleBarHeight
+        )
+    }
+
+    /// The height of an ordinary window's title bar, which League's window has when windowed.
+    private static var titleBarHeight: CGFloat {
+        let contentRect = NSRect(x: 0, y: 0, width: 100, height: 100)
+        return NSWindow.frameRect(forContentRect: contentRect, styleMask: [.titled]).height - contentRect.height
     }
 }
