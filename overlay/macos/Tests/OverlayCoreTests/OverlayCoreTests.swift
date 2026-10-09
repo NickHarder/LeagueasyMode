@@ -563,3 +563,14 @@ final class GameWindowLocatorTests: XCTestCase {
         XCTAssertNil(ListedWindow(windowInfo: [kCGWindowOwnerName as String: "League of Legends"]))
     }
 }
+
+final class LayoutEditingTests: XCTestCase {
+    func testEditModeIsTurnedOnAndOffInThePage() {
+        XCTAssertEqual(LayoutEditing.editingScript(isEditing: true), "window.leagueasymodeSetEditing?.(true);")
+        XCTAssertEqual(LayoutEditing.editingScript(isEditing: false), "window.leagueasymodeSetEditing?.(false);")
+    }
+
+    func testResetPutsTheWidgetsBackInThePage() {
+        XCTAssertEqual(LayoutEditing.resetScript, "window.leagueasymodeResetLayout?.();")
+    }
+}

@@ -34,6 +34,7 @@ import {
   type YouPanel,
   isOverlayState,
 } from "./state.js";
+import { applyLayout, startLayoutEditing } from "./layout.js";
 
 const EVENTS_PATH = "/events";
 const RENDER_INTERVAL_MILLISECONDS = 250;
@@ -973,9 +974,11 @@ function listenToEngine(): void {
       return;
     }
     latestReceivedState = { state: parsedState, receivedAtMilliseconds: performance.now() };
+    applyLayout(parsedState.layout);
     render();
   });
 }
 
+startLayoutEditing();
 listenToEngine();
 window.setInterval(render, RENDER_INTERVAL_MILLISECONDS);

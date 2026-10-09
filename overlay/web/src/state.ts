@@ -334,6 +334,22 @@ export const PREFERENCE_NAMES = [
   "show_suggestions",
 ] as const satisfies readonly (keyof OverlayPreferences)[];
 
+/** The widgets the player can move; the minimap layer stays over League's minimap. */
+export const MOVABLE_WIDGETS = ["objective_strip", "callouts", "enemy_strip", "you_panel"] as const;
+
+export type MovableWidget = (typeof MOVABLE_WIDGETS)[number];
+
+/** How far the player moved a widget, as shares of the overlay's width and height. */
+export interface WidgetOffset {
+  readonly x_share: number;
+  readonly y_share: number;
+}
+
+/** Where the player moved the widgets; a widget not named is in its usual place. */
+export interface OverlayLayout {
+  readonly offsets: Readonly<Partial<Record<MovableWidget, WidgetOffset>>>;
+}
+
 /** Everything the overlay shows at one moment. */
 export interface OverlayState {
   readonly is_game_running: boolean;
@@ -356,6 +372,7 @@ export interface OverlayState {
   readonly contests: readonly ObjectiveContest[];
   readonly you: YouPanel | null;
   readonly preferences: OverlayPreferences;
+  readonly layout: OverlayLayout;
   readonly callouts: readonly Callout[];
 }
 
@@ -781,6 +798,26 @@ export function isOverlayPreferences(value: unknown): value is OverlayPreference
   return isRecord(value) && PREFERENCE_NAMES.every((name) => typeof value[name] === "boolean");
 }
 
+function isWidgetOffset(value: unknown): value is WidgetOffset {
+  return (
+    isRecord(value) &&
+    typeof value["x_share"] === "number" &&
+    typeof value["y_share"] === "number" &&
+    Math.abs(value["x_share"]) <= 1 &&
+    Math.abs(value["y_share"]) <= 1
+  );
+}
+
+/** Return whether a value is a layout as the engine sends it. */
+export function isOverlayLayout(value: unknown): value is OverlayLayout {
+  if (!isRecord(value) || !isRecord(value["offsets"])) {
+    return false;
+  }
+  const offsets = value["offsets"];
+  const movable: ReadonlySet<string> = new Set(MOVABLE_WIDGETS);
+  return Object.entries(offsets).every(([widget, offset]) => movable.has(widget) && isWidgetOffset(offset));
+}
+
 /** Return whether a value is an overlay state as the engine sends it. */
 export function isOverlayState(value: unknown): value is OverlayState {
   if (!isRecord(value)) {
@@ -808,6 +845,7 @@ export function isOverlayState(value: unknown): value is OverlayState {
     isArrayOf(value["contests"], isObjectiveContest) &&
     (value["you"] === null || isYouPanel(value["you"])) &&
     isOverlayPreferences(value["preferences"]) &&
+    isOverlayLayout(value["layout"]) &&
     isArrayOf(value["callouts"], isCallout)
   );
 }

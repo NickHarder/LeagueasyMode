@@ -77,6 +77,15 @@ def default_preferences_path() -> Path:
     return default_application_directory() / "preferences.json"
 
 
+def default_layout_path() -> Path:
+    """Return where the widgets' places are kept when no setting says otherwise.
+
+    Returns:
+        `layout.json` in the application's directory (`default_application_directory`).
+    """
+    return default_application_directory() / "layout.json"
+
+
 def default_model_weights_path() -> Path:
     """Return where the refit models' weights are kept when no setting says otherwise.
 
@@ -153,6 +162,9 @@ class Settings(BaseSettings):
     # What the player chose to see, which the settings page changes; empty for the default
     # (`default_preferences_path`).
     preferences: Path | None = None
+    # Where the player moved the widgets, which the overlay's edit mode changes; empty for the
+    # default (`default_layout_path`).
+    layout: Path | None = None
     # The model provider's key, for anything that calls the real model. An empty line in `.env`
     # leaves it unset. To change provider, change this value and the model id; no other place holds
     # a key.

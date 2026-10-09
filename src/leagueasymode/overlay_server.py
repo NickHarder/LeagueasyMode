@@ -17,8 +17,8 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from leagueasymode.accuracy_history import read_accuracy_history
 from leagueasymode.engine import OverlayEngine
-from leagueasymode.overlay_state import OverlayPreferences, OverlayState
-from leagueasymode.preferences import save_preferences
+from leagueasymode.overlay_state import OverlayLayout, OverlayPreferences, OverlayState
+from leagueasymode.preferences import save_layout, save_preferences
 
 ALLOWED_HOST_NAMES: Final = frozenset({"127.0.0.1", "localhost"})
 # The header the macOS app sends with a mark.
@@ -26,6 +26,8 @@ MARK_REQUEST_HEADER: Final = "X-LeagueasyMode-Request"
 MARK_REQUEST_VALUE: Final = "mark"
 # The same header's value for a change of preferences, from the settings page.
 PREFERENCES_REQUEST_VALUE: Final = "preferences"
+# And for a move of the widgets, from the overlay page in edit mode.
+LAYOUT_REQUEST_VALUE: Final = "layout"
 ENEMY_SLOT_COUNT: Final = 5
 
 
@@ -47,6 +49,7 @@ WEB_ASSETS: Final = {
     "/": ("index.html", "text/html"),
     "/overlay.js": ("overlay.js", "text/javascript"),
     "/state.js": ("state.js", "text/javascript"),
+    "/layout.js": ("layout.js", "text/javascript"),
     "/overlay.css": ("overlay.css", "text/css"),
     "/summary.html": ("summary.html", "text/html"),
     "/summary.js": ("summary.js", "text/javascript"),
@@ -68,6 +71,7 @@ def create_overlay_application(
     summary_path: Path | None = None,
     history_path: Path | None = None,
     preferences_path: Path | None = None,
+    layout_path: Path | None = None,
 ) -> web.Application:
     """Return the overlay's web application.
 
@@ -76,6 +80,7 @@ def create_overlay_application(
         summary_path: The last game's summary, served at `/summary`; None to serve none.
         history_path: The accuracy history, served at `/history`; None to serve none.
         preferences_path: Where a change of preferences is kept; None to keep it for this run.
+        layout_path: Where a move of the widgets is kept; None to keep it for this run.
 
     Returns:
         The application.
@@ -126,6 +131,39 @@ def create_overlay_application(
         )
         return web.json_response({"games": [dataclasses.asdict(game) for game in games]})
 
+    async def status(_request: web.Request) -> web.Response:
+        return web.json_response(text=engine.status.report().model_dump_json())
+
+    application.router.add_get("/status", status)
+    _add_the_players_choices(
+        application, engine, preferences_path=preferences_path, layout_path=layout_path
+    )
+    application.router.add_get("/summary", summary)
+    application.router.add_get("/history", history)
+    application.router.add_get("/state", state)
+    application.router.add_get("/events", events)
+    application.router.add_post("/marks", mark)
+    for route_path, (file_name, content_type) in WEB_ASSETS.items():
+        application.router.add_get(route_path, _asset_handler(file_name, content_type))
+    return application
+
+
+def _add_the_players_choices(
+    application: web.Application,
+    engine: OverlayEngine,
+    *,
+    preferences_path: Path | None,
+    layout_path: Path | None,
+) -> None:
+    """Serve and take the player's choices: what the overlay shows, and where its widgets are.
+
+    Args:
+        application: The overlay's web application.
+        engine: The engine, which sends the choices with its state.
+        preferences_path: Where a change of preferences is kept; None to keep it for this run.
+        layout_path: Where a move of the widgets is kept; None to keep it for this run.
+    """
+
     async def preferences(_request: web.Request) -> web.Response:
         return web.json_response(text=engine.preferences.model_dump_json())
 
@@ -145,20 +183,26 @@ def create_overlay_application(
             await asyncio.to_thread(save_preferences, preferences_path, chosen)
         return web.json_response(text=chosen.model_dump_json())
 
-    async def status(_request: web.Request) -> web.Response:
-        return web.json_response(text=engine.status.report().model_dump_json())
+    async def layout(_request: web.Request) -> web.Response:
+        return web.json_response(text=engine.layout.model_dump_json())
 
-    application.router.add_get("/status", status)
+    async def change_layout(request: web.Request) -> web.Response:
+        # As with preferences: only the overlay page, served from here, can send this header.
+        if request.headers.get(MARK_REQUEST_HEADER) != LAYOUT_REQUEST_VALUE:
+            return web.json_response({"message": "a layout comes from the overlay"}, status=403)
+        try:
+            moved = OverlayLayout.model_validate_json(await request.read())
+        except ValidationError:
+            return web.json_response({"message": "not a layout"}, status=400)
+        engine.set_layout(moved)
+        if layout_path is not None:
+            await asyncio.to_thread(save_layout, layout_path, moved)
+        return web.json_response(text=moved.model_dump_json())
+
+    application.router.add_get("/layout", layout)
+    application.router.add_put("/layout", change_layout)
     application.router.add_get("/preferences", preferences)
     application.router.add_put("/preferences", change_preferences)
-    application.router.add_get("/summary", summary)
-    application.router.add_get("/history", history)
-    application.router.add_get("/state", state)
-    application.router.add_get("/events", events)
-    application.router.add_post("/marks", mark)
-    for route_path, (file_name, content_type) in WEB_ASSETS.items():
-        application.router.add_get(route_path, _asset_handler(file_name, content_type))
-    return application
 
 
 @web.middleware

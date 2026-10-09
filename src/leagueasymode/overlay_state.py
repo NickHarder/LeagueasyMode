@@ -544,6 +544,31 @@ class OverlayPreferences(BaseModel):
     show_suggestions: bool = True
 
 
+# The widgets the player can move; the minimap layer stays over League's minimap.
+type MovableWidget = Literal["objective_strip", "callouts", "enemy_strip", "you_panel"]
+
+
+class WidgetOffset(BaseModel):
+    """How far the player moved a widget from its usual place.
+
+    The offset is in shares of the overlay's width and height: an `x_share` of 0.25 and a `y_share`
+    of -0.1 are a quarter of the width right and a tenth of the height up.
+    """
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    x_share: float = Field(ge=-1.0, le=1.0)
+    y_share: float = Field(ge=-1.0, le=1.0)
+
+
+class OverlayLayout(BaseModel):
+    """Where the player moved the widgets; a widget not named is in its usual place."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    offsets: dict[MovableWidget, WidgetOffset] = Field(default_factory=dict)
+
+
 class OverlayState(BaseModel):
     """Everything the overlay shows at one moment."""
 
@@ -572,6 +597,7 @@ class OverlayState(BaseModel):
     # None while the engine does not follow you, or when spectating.
     you: YouPanel | None = None
     preferences: OverlayPreferences = Field(default_factory=OverlayPreferences)
+    layout: OverlayLayout = Field(default_factory=OverlayLayout)
     callouts: list[Callout] = Field(default_factory=list)
 
 

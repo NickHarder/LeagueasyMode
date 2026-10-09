@@ -6,6 +6,7 @@
  * seconds, so a paused or stalled game does not run its timers down.
  */
 import { isOverlayState, } from "./state.js";
+import { applyLayout, startLayoutEditing } from "./layout.js";
 const EVENTS_PATH = "/events";
 const RENDER_INTERVAL_MILLISECONDS = 250;
 const LONGEST_EXTRAPOLATION_SECONDS = 2;
@@ -838,8 +839,10 @@ function listenToEngine() {
             return;
         }
         latestReceivedState = { state: parsedState, receivedAtMilliseconds: performance.now() };
+        applyLayout(parsedState.layout);
         render();
     });
 }
+startLayoutEditing();
 listenToEngine();
 window.setInterval(render, RENDER_INTERVAL_MILLISECONDS);

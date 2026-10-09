@@ -32,6 +32,7 @@ from leagueasymode.config import (
     Settings,
     default_accuracy_history_path,
     default_last_game_summary_path,
+    default_layout_path,
     default_model_weights_path,
     default_patch_data_directory,
     default_preferences_path,
@@ -60,7 +61,7 @@ from leagueasymode.overlay_server import create_overlay_application
 from leagueasymode.overlay_state import MinimapLayout
 from leagueasymode.patch_data import GAME_VERSION_PATH, game_version_of
 from leagueasymode.player_intel import PLAYER_LOOKUP_PATH_PREFIXES
-from leagueasymode.preferences import load_preferences
+from leagueasymode.preferences import load_layout, load_preferences
 from leagueasymode.recorder import RecorderTimings, record_games
 from leagueasymode.recording.anonymize import IdentityLeakError, anonymize_recording
 from leagueasymode.recording.file_format import COMPRESSED_SUFFIX, PLAIN_SUFFIX
@@ -150,6 +151,7 @@ async def run_overlay(
     # The engine and the recorder both ask about each player; they share the answers.
     shared_answers = SharedAnswers(PLAYER_LOOKUP_PATH_PREFIXES)
     preferences_path = settings.preferences or default_preferences_path()
+    layout_path = settings.layout or default_layout_path()
     status = StatusBoard()
     game_config_path = settings.league_game_config or DEFAULT_GAME_CONFIG_PATH
     minimap_layout = await asyncio.to_thread(read_minimap_layout, game_config_path)
@@ -176,6 +178,7 @@ async def run_overlay(
             minimap_layout=minimap_layout,
             model_weights=model_weights,
             preferences=await asyncio.to_thread(load_preferences, preferences_path),
+            layout=await asyncio.to_thread(load_layout, layout_path),
             status=status,
         )
         history_path = settings.accuracy_history or default_accuracy_history_path()
@@ -186,6 +189,7 @@ async def run_overlay(
                 summary_path=summary_path,
                 history_path=history_path,
                 preferences_path=preferences_path,
+                layout_path=layout_path,
             )
         )
         await runner.setup()

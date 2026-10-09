@@ -224,6 +224,12 @@ elsewhere cannot send; the engine sends it with its next state, so the overlay c
 and keeps it in `preferences.json` in the application's directory (`LEAGUEASYMODE_PREFERENCES`
 moves it). A file that cannot be read leaves everything showing.[^preferences]
 
+Where the player moved the widgets (the macOS app's "Edit layout") travels the same way: each
+movable widget's offset from its usual place, as shares of the overlay's width and height, sent
+with `PUT /layout` only with the header `X-LeagueasyMode-Request: layout`, sent back with every
+state, and kept in `layout.json` (`LEAGUEASYMODE_LAYOUT` moves it). A file that cannot be read
+puts every widget in its usual place.
+
 The engine's own settings come from the repository's `.env` in a clone. An installed app, which
 has no clone, reads `settings.env` in the application's directory instead; where both exist, the
 repository's wins, and a real environment variable wins over either.

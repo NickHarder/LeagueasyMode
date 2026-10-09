@@ -601,6 +601,15 @@
       "title": "MinimapLayout",
       "type": "object"
     },
+    "MovableWidget": {
+      "enum": [
+        "objective_strip",
+        "callouts",
+        "enemy_strip",
+        "you_panel"
+      ],
+      "type": "string"
+    },
     "NextItemEstimate": {
       "additionalProperties": false,
       "description": "A player's likely next finished item, what it still costs them, and when they can buy it.\n\nAn estimate (`inference/build_path.py`), from the components they hold, their champion's\nclass and what they built on it lately.",
@@ -778,6 +787,24 @@
         "is_rule_verified"
       ],
       "title": "ObjectiveTimer",
+      "type": "object"
+    },
+    "OverlayLayout": {
+      "additionalProperties": false,
+      "description": "Where the player moved the widgets; a widget not named is in its usual place.",
+      "properties": {
+        "offsets": {
+          "additionalProperties": {
+            "$ref": "#/$defs/WidgetOffset"
+          },
+          "propertyNames": {
+            "$ref": "#/$defs/MovableWidget"
+          },
+          "title": "Offsets",
+          "type": "object"
+        }
+      },
+      "title": "OverlayLayout",
       "type": "object"
     },
     "OverlayPreferences": {
@@ -1340,6 +1367,30 @@
       "title": "WardEstimate",
       "type": "object"
     },
+    "WidgetOffset": {
+      "additionalProperties": false,
+      "description": "How far the player moved a widget from its usual place.\n\nThe offset is in shares of the overlay's width and height: an `x_share` of 0.25 and a `y_share`\nof -0.1 are a quarter of the width right and a tenth of the height up.",
+      "properties": {
+        "x_share": {
+          "maximum": 1.0,
+          "minimum": -1.0,
+          "title": "X Share",
+          "type": "number"
+        },
+        "y_share": {
+          "maximum": 1.0,
+          "minimum": -1.0,
+          "title": "Y Share",
+          "type": "number"
+        }
+      },
+      "required": [
+        "x_share",
+        "y_share"
+      ],
+      "title": "WidgetOffset",
+      "type": "object"
+    },
     "WinChance": {
       "additionalProperties": false,
       "description": "The chance the player's team wins, and the two things moving it most.\n\nAn estimate (`inference/win_chance.py`): a logistic model over the gold lead, levels,\nstructures, monsters and players alive, with hand-set weights until refit on recorded games.",
@@ -1627,6 +1678,9 @@
     },
     "preferences": {
       "$ref": "#/$defs/OverlayPreferences"
+    },
+    "layout": {
+      "$ref": "#/$defs/OverlayLayout"
     },
     "callouts": {
       "items": {
