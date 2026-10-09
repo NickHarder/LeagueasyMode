@@ -31,12 +31,12 @@ without waiting for the one before to merge.
 | Area | State | Proof |
 |---|---|---|
 | Scaffold | ai-kit v0.11.1, Python layer, GitHub CI | `.copier-answers.yml` |
-| Gate | Green: lint, 815 tests (and 38 in Chromium), secrets | `make gate` |
+| Gate | Green: lint, 819 tests (and 38 in Chromium), secrets | `make gate` |
 | Recorder | Records games, the client's patch data and the post-game timeline; anonymized copies | `uv run leagueasymode record`; `tests/test_recorder.py`, `tests/test_anonymize.py` |
 | Replay | A recording served as a stand-in game API | `uv run leagueasymode replay <recording>`; `tests/test_replay.py` |
 | Engine and overlay page | The dragon and Elder timer, from the game's answer to the page | `uv run leagueasymode run`; `tests/test_tracer_bullet.py` |
 | Phase 2 facts | Objective strip, buffs, inhibitors, numbers window, enemy strip, callouts, item catalog and item gold, roles, combat stats | `tests/test_objective_strip.py`, `test_numbers_window.py`, `test_callouts.py`, `test_item_facts.py`, `test_roles.py`, `test_combat_stats.py`; eight browser tests |
-| Patch stats | Each patch's champion and item stats from Data Dragon, fetched once a patch and kept on disk; **never fetched from the real Data Dragon yet** (this environment cannot reach it) | `tests/test_data_dragon.py` against a stand-in |
+| Patch stats | Each patch's champion and item stats from Data Dragon, fetched once a patch and kept on disk; checked against the real 16.20.1 files on 2026-10-09, with the attack damage growth Data Dragon leaves out since 16.5.1 borrowed from 16.4.1 | `tests/test_data_dragon.py` against a stand-in |
 | Widgets in a browser | Rendered in Chromium against a replay | `uv run pytest -m browser` (needs Chromium); `tests/test_overlay_page.py` |
 | macOS app | Builds on macOS 15 and passes its 58 unit tests in CI; **never run over League** | `overlay/macos/`; CI job `macos-overlay` |
 | App bundle | `LeagueasyMode.app` with the engine inside, signed ad hoc, built by CI, its engine started from an empty home folder; **never opened on a Mac by a person** | `overlay/macos/scripts/build_app.sh`; CI job `macos-app`, which keeps the zip with each run |
@@ -61,9 +61,8 @@ In `AGENTS.md`, this project's own included: every session reads that file.
 
 ## Open, for the owner
 
-1. **Data Dragon from this environment**: the owner said yes on 2026-10-08; the environment's
-   network settings still deny `ddragon.leagueoflegends.com`. Once it is allowed, a session checks
-   the parsing against the real files.
+1. **Data Dragon from this environment**: allowed (the owner, 2026-10-08 and 2026-10-09), and
+   reachable since 2026-10-09; the parsing is checked against the real 16.20.1 files.
 2. **The test on a Mac** in [docs/references/macos-app.md](docs/references/macos-app.md): run the
    app, play a Practice Tool game in each display mode, and record a game or two. The recordings
    (anonymized) become the test data every estimator needs. With 7.2 the app needs no clone: the
@@ -157,7 +156,9 @@ In `AGENTS.md`. Also: a raw recording (it holds other players' names); only `ano
 - Combat stats leave out runes, passives, stacks and buffs, so an estimate runs low for a champion
   that has them. Data Dragon's item stats leave out some stats (ability haste, lethality, magic
   penetration), which the overlay does not show anyway. The Data Dragon test files are
-  hand-written, from memory, not this patch's.
+  hand-written; the reading is checked against the real 16.20.1 files. Data Dragon has given
+  every champion an attack damage growth of 0 since 16.5.1, so the engine borrows 16.4.1's; a
+  champion released since (Locke) has none, and a growth changed since is a patch behind.
 - The Voidgrubs' 14:45 and the Herald's 19:45 leave times follow past seasons and one community
   guide; a recording confirms them.
 - The Swift app moved to the Swift 6 language mode (8.6), whose concurrency checks it passes in

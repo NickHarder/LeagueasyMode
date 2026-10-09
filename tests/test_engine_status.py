@@ -1,6 +1,7 @@
 """What the engine sees, part by part (phase 8.1): the status page's facts and the test's report."""
 
 import asyncio
+import dataclasses
 import datetime
 import json
 import ssl
@@ -13,6 +14,7 @@ from aiohttp import web
 from aiohttp.client_reqrep import ConnectionKey
 from pydantic import JsonValue
 
+from data_dragon_fixtures import FIXTURE_FILES, champions_without_growth
 from game_payloads import (
     DEFAULT_PLAYERS,
     GAME_ID,
@@ -239,6 +241,30 @@ async def test_without_the_client_or_patch_stats_each_part_says_so() -> None:
     assert part_of(status, "patch") == (
         "problem",
         "No stats for game version unknown: Data Dragon was not reached, and none are kept",
+    )
+
+
+async def test_attack_damage_growth_borrowed_from_an_older_patch_is_said() -> None:
+    async def borrowed_growth_stats(_game_version: str | None) -> PatchStats | None:
+        return PatchStats.from_data_dragon(
+            "16.20.1",
+            dataclasses.replace(
+                FIXTURE_FILES,
+                champions=champions_without_growth(),
+                growth_champions=FIXTURE_FILES.champions,
+                growth_version="16.4.1",
+            ),
+        )
+
+    status = await engine_status_when(
+        [all_game_data(60.0)] * 200,
+        lambda status: part_of(status, "patch")[0] == "ok",
+        load_patch_stats=borrowed_growth_stats,
+    )
+    assert part_of(status, "patch") == (
+        "ok",
+        "Patch 16.20.1: 11 champions, 15 items; attack damage growth from 16.4.1, which Data "
+        "Dragon has left out since",
     )
 
 
