@@ -46,6 +46,15 @@ def default_patch_data_directory() -> Path:
     return default_application_directory() / "patch-data"
 
 
+def default_accuracy_history_path() -> Path:
+    """Return where every game's estimator scores are kept when no setting says otherwise.
+
+    Returns:
+        `accuracy-history.jsonl` in the application's directory (`default_application_directory`).
+    """
+    return default_application_directory() / "accuracy-history.jsonl"
+
+
 def default_model_weights_path() -> Path:
     """Return where the refit models' weights are kept when no setting says otherwise.
 
@@ -110,6 +119,9 @@ class Settings(BaseSettings):
     # its start; empty for the default (`default_model_weights_path`). Without the file, the
     # hand-set weights stand.
     model_weights: Path | None = None
+    # Every game's estimator scores, which `leagueasymode run` and `score --keep` add to and
+    # `leagueasymode history` reads; empty for the default (`default_accuracy_history_path`).
+    accuracy_history: Path | None = None
     # The model provider's key, for anything that calls the real model. An empty line in `.env`
     # leaves it unset. To change provider, change this value and the model id; no other place holds
     # a key.

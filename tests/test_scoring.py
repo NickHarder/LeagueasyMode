@@ -16,8 +16,9 @@ from game_payloads import (
     champion_summary,
     gameflow_session,
 )
-from leagueasymode.cli import main
-from leagueasymode.data_dragon import PatchStatsStore
+from leagueasymode.accuracy_history import read_accuracy_history
+from leagueasymode.cli import keep_the_accuracy_of, main
+from leagueasymode.data_dragon import PatchStats, PatchStatsStore
 from leagueasymode.inference.gold import passive_gold
 from leagueasymode.inference.rift_map import RIFT_MAP, MapPoint, RiftMap
 from leagueasymode.inference.win_chance import WIN_CHANCE_RULES, win_chance
@@ -774,3 +775,39 @@ def test_fit_refits_on_twenty_games_and_writes_what_is_kept(
     assert weights is not None
     # Your blue side won less than the hand-set weights expected: the fit leans against it.
     assert weights.win_rules.blue_side_weight < WIN_CHANCE_RULES.blue_side_weight
+
+
+def test_a_scored_game_is_kept_in_the_history_and_shown(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    fit_settings(tmp_path, monkeypatch)
+    history_path = tmp_path / "accuracy-history.jsonl"
+    monkeypatch.setenv("LEAGUEASYMODE_ACCURACY_HISTORY", str(history_path))
+    assert main(["history"]) == 0
+    assert "no game scored yet" in capsys.readouterr().out
+    recording = write_scored_recording(
+        tmp_path, players_at(are_positions_given=True, level=1), winning_team_id=100
+    )
+    assert main(["score", str(recording), "--keep"]) == 0
+    capsys.readouterr()
+    history = read_accuracy_history(history_path)
+    assert [game.recording_name for game in history] == [recording.name]
+    assert (history[0].game_id, history[0].game_version) == (GAME_ID, "16.19.712.1234")
+    assert [score.estimator for score in history[0].scores][:2] == ["roles", "combat stats (yours)"]
+    assert main(["history"]) == 0
+    printed = capsys.readouterr().out
+    assert "roles: last game 100%; 1 games 100%" in printed
+
+
+async def test_a_game_recorded_while_running_is_scored_into_the_history(tmp_path: Path) -> None:
+    recording = write_scored_recording(tmp_path, players_at(are_positions_given=True, level=1))
+    history_path = tmp_path / "history" / "accuracy-history.jsonl"
+
+    async def load_patch_stats(game_version: str | None) -> PatchStats | None:
+        assert game_version == "16.19.712.1234"
+        return fixture_patch_stats()
+
+    await keep_the_accuracy_of(recording, load_patch_stats, history_path)
+    (game,) = read_accuracy_history(history_path)
+    assert game.recording_name == recording.name
+    assert "combat stats (yours)" in [score.estimator for score in game.scores]

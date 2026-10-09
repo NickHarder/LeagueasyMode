@@ -242,3 +242,25 @@ async def test_each_players_rank_and_recent_games_are_recorded(tmp_path: Path) -
     }
     assert f"/lol-ranked/v1/ranked-stats/{zed_puuid}" in paths
     assert f"/lol-match-history/v1/products/lol/{zed_puuid}/matches?begIndex=0&endIndex=20" in paths
+
+
+async def test_each_recorded_game_is_handed_on_once_its_recording_is_closed(tmp_path: Path) -> None:
+    handed_on: list[Path] = []
+
+    async def on_recorded(recording_path: Path) -> None:
+        handed_on.append(recording_path)
+        message = "scoring failed"
+        raise RuntimeError(message)
+
+    async with (
+        serve(scripted_game(a_game_of(3, ends_with_game_end=True))) as game_url,
+        aiohttp.ClientSession() as session,
+    ):
+        game_api = GameApiClient(session, game_url, tls_context=None)
+        recording_path = await record_one_game(
+            game_api, no_client(), tmp_path, FAST_TIMINGS, on_recorded=on_recorded
+        )
+    # A failure after the recording is closed leaves the recording as it is.
+    assert recording_path is not None
+    assert handed_on == [recording_path]
+    assert isinstance(list(iter_recording_lines(recording_path))[-1], RecordingEnded)

@@ -22,6 +22,8 @@ sources:
     resource: ../../src/leagueasymode/scoring.py
   - id: refit
     resource: ../../src/leagueasymode/refit.py
+  - id: accuracy-history
+    resource: ../../src/leagueasymode/accuracy_history.py
 ---
 
 # What a recording is for
@@ -63,6 +65,15 @@ better. The fit is a logistic regression pulled toward the hand-set weights, so 
 move them little. With `--write`, the weights kept go to `model-weights.json` in the
 application's directory (`LEAGUEASYMODE_MODEL_WEIGHTS` moves it), which `leagueasymode run` reads
 at its start; without the file, or with one that cannot be read, the hand-set weights stand.[^refit]
+
+Every game `uv run leagueasymode run` records is scored the same way once its timeline has come,
+and its scores are kept, one line a game, in `accuracy-history.jsonl` in the application's
+directory (`LEAGUEASYMODE_ACCURACY_HISTORY` moves it); `leagueasymode score <recording> --keep`
+adds a game by hand, and scoring a game again replaces its line. A line names the recording's
+file, the game's id and version, and the scores; never a player. `uv run leagueasymode history`
+prints each estimator's last game, its average over the last ten games weighed by their samples,
+and, from six games, whether the newer half beats the older half: "better", "worse" or "steady"
+(within 2%).[^accuracy-history]
 
 # How to make one
 
@@ -138,3 +149,4 @@ A recording holds other players' names, so only an anonymized copy is committed:
 [^anonymize]: `src/leagueasymode/recording/anonymize.py`
 [^scoring]: `src/leagueasymode/scoring.py`
 [^refit]: `src/leagueasymode/refit.py`
+[^accuracy-history]: `src/leagueasymode/accuracy_history.py`
