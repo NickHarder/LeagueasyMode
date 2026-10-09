@@ -26,6 +26,7 @@ from leagueasymode.inference.objectives import (
 )
 from leagueasymode.inference.players import numbers_window, player_cards, team_item_gold
 from leagueasymode.inference.wards import WardTracker
+from leagueasymode.inference.win_chance import win_chance, win_features
 from leagueasymode.league_client import ClientConnector, LeagueClient
 from leagueasymode.overlay_state import (
     CooldownTimer,
@@ -129,17 +130,22 @@ def compute_overlay_state(
         last_backs=last_backs,
         position_clues=position_clues,
     )
+    dragon = dragon_timer(snapshot)
+    buffs = buff_timers(snapshot)
+    inhibitors = inhibitor_timers(snapshot)
+    teams_gold = team_gold(cards)
+    teams_item_gold = team_item_gold(cards)
     return OverlayState(
         is_game_running=True,
         game_time_seconds=snapshot.game_data.game_time_seconds,
-        dragon=dragon_timer(snapshot),
+        dragon=dragon,
         objectives=objective_timers(snapshot),
-        buffs=buff_timers(snapshot),
-        inhibitors=inhibitor_timers(snapshot),
+        buffs=buffs,
+        inhibitors=inhibitors,
         players=cards,
         numbers_window=numbers_window(snapshot),
-        team_item_gold=team_item_gold(cards),
-        team_gold=team_gold(cards),
+        team_item_gold=teams_item_gold,
+        team_gold=teams_gold,
         cooldowns=running_cooldowns(cooldown_timers or [], snapshot.game_data.game_time_seconds),
         jungle_paths=jungle_paths,
         camp_timers=camp_timers,
@@ -149,6 +155,16 @@ def compute_overlay_state(
             else []
         ),
         minimap=minimap,
+        win_chance=win_chance(
+            win_features(
+                snapshot,
+                team_gold=teams_gold,
+                team_item_gold=teams_item_gold,
+                dragon=dragon,
+                buffs=buffs,
+                inhibitors=inhibitors,
+            )
+        ),
     )
 
 

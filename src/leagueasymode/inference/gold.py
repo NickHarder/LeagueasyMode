@@ -374,8 +374,44 @@ def team_gold(cards: list[PlayerCard]) -> TeamGold | None:
     Returns:
         Each team's total gold, and the band of the lead: the players' bands in quadrature.
     """
-    known_golds = [(card.side, card.gold) for card in cards if card.gold is not None]
-    if not cards or len(known_golds) != len(cards):
+    return _team_gold([(card.side, card.gold) for card in cards])
+
+
+def team_gold_of(
+    snapshot: GameSnapshot, gold_estimates: Mapping[PlayerKey, GoldEstimate]
+) -> TeamGold | None:
+    """Return what each team has earned, from each player's estimate by key.
+
+    Args:
+        snapshot: The game's state.
+        gold_estimates: Each player's gold, by key.
+
+    Returns:
+        Each team's total gold and the band of the lead, or None while any player's is unknown.
+    """
+    ally_team = snapshot.ally_team()
+    return _team_gold(
+        [
+            (
+                "ally" if player.team == ally_team else "enemy",
+                gold_estimates.get(player_key(player)),
+            )
+            for player in snapshot.players
+        ]
+    )
+
+
+def _team_gold(sided_golds: list[tuple[str, GoldEstimate | None]]) -> TeamGold | None:
+    """Return what each team has earned, or None while any player's gold is unknown.
+
+    Args:
+        sided_golds: Each player's side, "ally" or "enemy", and gold.
+
+    Returns:
+        Each team's total gold, and the band of the lead: the players' bands in quadrature.
+    """
+    known_golds = [(side, gold) for side, gold in sided_golds if gold is not None]
+    if not sided_golds or len(known_golds) != len(sided_golds):
         return None
     return TeamGold(
         ally_total_gold=sum(gold.total_gold for side, gold in known_golds if side == "ally"),

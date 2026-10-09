@@ -1179,6 +1179,49 @@
       ],
       "title": "WardEstimate",
       "type": "object"
+    },
+    "WinChance": {
+      "additionalProperties": false,
+      "description": "The chance the player's team wins, and the two things moving it most.\n\nAn estimate (`inference/win_chance.py`): a logistic model over the gold lead, levels,\nstructures, monsters and players alive, with hand-set weights until refit on recorded games.",
+      "properties": {
+        "ally_chance": {
+          "title": "Ally Chance",
+          "type": "number"
+        },
+        "reasons": {
+          "items": {
+            "$ref": "#/$defs/WinReason"
+          },
+          "title": "Reasons",
+          "type": "array"
+        }
+      },
+      "required": [
+        "ally_chance",
+        "reasons"
+      ],
+      "title": "WinChance",
+      "type": "object"
+    },
+    "WinReason": {
+      "additionalProperties": false,
+      "description": "One thing moving the win chance, from the player's side.",
+      "properties": {
+        "label": {
+          "title": "Label",
+          "type": "string"
+        },
+        "effect": {
+          "title": "Effect",
+          "type": "number"
+        }
+      },
+      "required": [
+        "label",
+        "effect"
+      ],
+      "title": "WinReason",
+      "type": "object"
     }
   },
   "additionalProperties": false,
@@ -1304,6 +1347,17 @@
       "anyOf": [
         {
           "$ref": "#/$defs/MinimapLayout"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "win_chance": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/WinChance"
         },
         {
           "type": "null"

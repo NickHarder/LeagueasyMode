@@ -421,6 +421,30 @@ class MinimapLayout(BaseModel):
     is_flipped: bool
 
 
+class WinReason(BaseModel):
+    """One thing moving the win chance, from the player's side."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    # Such as "gold +2.1k", "their Baron" or "5v3".
+    label: str
+    # Its pull on the log-odds of a win: above 0 for the player's team, below for the other.
+    effect: float
+
+
+class WinChance(BaseModel):
+    """The chance the player's team wins, and the two things moving it most.
+
+    An estimate (`inference/win_chance.py`): a logistic model over the gold lead, levels,
+    structures, monsters and players alive, with hand-set weights until refit on recorded games.
+    """
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    ally_chance: float
+    reasons: list[WinReason]
+
+
 class Callout(BaseModel):
     """A short notice shown for a few seconds when something happens.
 
@@ -457,6 +481,7 @@ class OverlayState(BaseModel):
     control_wards: list[WardEstimate] = Field(default_factory=list)
     # None while League's settings are not known; the minimap layer then takes the default place.
     minimap: MinimapLayout | None = None
+    win_chance: WinChance | None = None
     callouts: list[Callout] = Field(default_factory=list)
 
 

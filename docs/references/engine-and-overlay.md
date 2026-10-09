@@ -50,6 +50,8 @@ sources:
     resource: ../../src/leagueasymode/inference/wards.py
   - id: league-settings
     resource: ../../src/leagueasymode/league_settings.py
+  - id: win-chance
+    resource: ../../src/leagueasymode/inference/win_chance.py
   - id: overlay-state
     resource: ../../src/leagueasymode/overlay_state.py
   - id: overlay-server
@@ -111,12 +113,13 @@ game API ─▶ GameApiClient ─▶ GameSnapshot ─▶ estimators ─▶ Overl
 | Jungle path (estimator 8, phase 4.4) | estimate | each jungler's (the player in the jungle role) creep score rises in bursts, rises within 6 seconds being one camp finished at the last. Which camp each burst was is decoded from what fits: a camp is up at its first spawn (1:30; the scuttle crabs 3:30) and its respawn after its last clear (buffs 5:00, other camps 2:15, the scuttles 2:30), all unconfirmed this season; between two camps the jungler walks the map at their move speed and takes the camp's clear time (8 to 12 seconds, a first guess). The likeliest path wastes the least time between camps (a unit of log chance for each 20 seconds) and stays in their own jungle (a camp of the other's is 0.3 as likely); a burst nothing could have finished costs 5 units more. The respawn rule needs the whole path, so the decoding keeps the 40 best paths with their history (a beam search, Viterbi with memory); a burst under way waits until it is over. Out of it: the last three camps, the next camp (the one of their own they could start soonest) and when, and each camp cleared that is not back yet. The enemy jungler's row shows "path their red → their krugs · next their raptors ~0:15", and the strip "Camps: their krugs 1:10 · their red 3:40" (the four soonest back). One burst alone cannot tell a camp from another that fits as well, such as the two buffs at 1:42; the next bursts settle it[^jungle-path] |
 | Control wards (estimator 9, phase 4.5) | estimate | a player's count of control wards dropping while alive is a placement, at that moment; where is the position estimate's likeliest region then, with its chance. One control ward per player is down at a time, so a new one replaces their last; a ward's destruction is never seen, so each shows until its owner places another, or for five minutes. The strip shows the enemies' latest three: "Wards: Vi likely top river 60% · 2:10 ago"[^wards] |
 | The minimap layer (phase 4.6) | draws the estimates above | `leagueasymode run` reads League's own settings file once (`game.cfg`, in League's `Config` folder; `LEAGUEASYMODE_LEAGUE_GAME_CONFIG` for another place): the minimap's scale and whether it is flipped to the left. The layer sits in that corner, sized 22% of the window's height times the scale (a first guess, to check against League's minimap on the Mac), and draws each living enemy's likeliest region (a circle, larger and darker with its chance, and the champion's first three letters), each camp down with the time until it is back, and each enemy control ward. A settings file that is missing or cannot be read leaves a scale of 1 on the right[^league-settings] |
+| Win chance (estimator 12, phase 5.1) | estimate | a logistic model from your side: the log-odds of a win add 10 per unit of the gold lead over what a team has earned on average (at least 12,500, so that an early kill is not a won game), 0.3 per level of lead per player, 0.1 per turret (theirs down less yours, from the feed), 0.4 per inhibitor down, 0.1 per dragon, 0.5 for the soul, 0.7 for a Baron buff running and 1.0 for an Elder's (minus the same for theirs), 0.6 per player alive of lead at 30:00 (less before, up to 0.9 after 45:00), and 0.05 for the blue side. A medium gold lead at 15:00 (2.5k) is set to win about 3 in 4 and a large one (5k) about 9 in 10, as seasons 7 to 10 did. The gold lead is the team gold estimate, with its band; the item gold lead stands in while it is unknown. The chance is averaged over the gold lead's band (the probit approximation), so an unsure lead counts for less. All weights are first guesses, to refit on recorded games (phase 5.5). The strip's header shows "Win ~64% · gold +2.1k, Baron": the two things moving it most, from your side[^win-chance] |
 | Inhibitors down | exact | back 5:00 after they fall, or when the feed says they respawned; `Barracks_T1_L1` is team 1's top inhibitor (L, C and R taken as top, mid and bottom, to be confirmed) |
 
 Every rule is checked again against the first recordings. The widgets show the dragon always,
 and beside it the numbers window while it is open, any other monster up or within 90 seconds of
 spawning, each running buff, and each inhibitor down; on the right, each team's item-gold lead
-and estimated gold lead ("Gold −1.8k ±0.6k"), the camps down with their respawns, the enemies' control wards likely
+and estimated gold lead ("Gold −1.8k ±0.6k") under the win chance ("Win ~64% · gold +2.1k, Baron"), the camps down with their respawns, the enemies' control wards likely
 down, and each enemy
 in role order with their role (in
 italics when worked out, with "?" when only a guess), champion, level, item gold and death timer,
@@ -221,3 +224,4 @@ Chromium against a replay (Chromium from `uv run playwright install chromium`, o
 [^jungle-path]: `src/leagueasymode/inference/jungle_path.py`
 [^wards]: `src/leagueasymode/inference/wards.py`
 [^league-settings]: `src/leagueasymode/league_settings.py`
+[^win-chance]: `src/leagueasymode/inference/win_chance.py`

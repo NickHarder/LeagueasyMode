@@ -6,6 +6,15 @@ skill has the format.
 
 ## 2026-10-08
 
+- Phase 5.1, win chance (estimator 12): a logistic model over the gold lead as a share of the
+  gold earned, levels, turrets, inhibitors, dragons, the soul, the Baron and Elder buffs, players
+  alive and the side, with hand-set weights (a 2.5k lead at 15:00 wins about 3 in 4, as seasons 7
+  to 10 did). The gold lead is an estimate with a band, so the chance is averaged over it. The
+  enemy strip's header shows it with its two biggest reasons; the harness scores it against each
+  game's result by its Brier score. Refit on recordings comes in 5.5.
+- Phase 5's plan, a draft for the owner: win chance, fights, objective contests and the You panel,
+  hand-set first and refit on recorded games, with four proposals where the owner decides. Phase
+  4's pull requests (#17 to #20) are merged.
 - Phase 4.6, the minimap layer: `leagueasymode run` reads League's own settings (`game.cfg`) for
   the minimap's scale and side, and draws there each enemy's likeliest region, the camps down and
   the enemy control wards. Regions, camps and wards now carry their place on the map. Its size

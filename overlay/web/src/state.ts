@@ -263,6 +263,18 @@ export interface MinimapLayout {
   readonly is_flipped: boolean;
 }
 
+/** One thing moving the win chance, from the player's side: above 0 for their team. */
+export interface WinReason {
+  readonly label: string;
+  readonly effect: number;
+}
+
+/** The chance the player's team wins, and the two things moving it most: an estimate. */
+export interface WinChance {
+  readonly ally_chance: number;
+  readonly reasons: readonly WinReason[];
+}
+
 /** Everything the overlay shows at one moment. */
 export interface OverlayState {
   readonly is_game_running: boolean;
@@ -280,6 +292,7 @@ export interface OverlayState {
   readonly camp_timers: readonly CampTimer[];
   readonly control_wards: readonly WardEstimate[];
   readonly minimap: MinimapLayout | null;
+  readonly win_chance: WinChance | null;
   readonly callouts: readonly Callout[];
 }
 
@@ -639,6 +652,16 @@ export function isMinimapLayout(value: unknown): value is MinimapLayout {
   return isRecord(value) && typeof value["scale"] === "number" && typeof value["is_flipped"] === "boolean";
 }
 
+/** Return whether a value is one reason of the win chance as the engine sends it. */
+export function isWinReason(value: unknown): value is WinReason {
+  return isRecord(value) && typeof value["label"] === "string" && typeof value["effect"] === "number";
+}
+
+/** Return whether a value is the win chance as the engine sends it. */
+export function isWinChance(value: unknown): value is WinChance {
+  return isRecord(value) && typeof value["ally_chance"] === "number" && isArrayOf(value["reasons"], isWinReason);
+}
+
 /** Return whether a value is an overlay state as the engine sends it. */
 export function isOverlayState(value: unknown): value is OverlayState {
   if (!isRecord(value)) {
@@ -661,6 +684,7 @@ export function isOverlayState(value: unknown): value is OverlayState {
     isArrayOf(value["camp_timers"], isCampTimer) &&
     isArrayOf(value["control_wards"], isWardEstimate) &&
     (value["minimap"] === null || isMinimapLayout(value["minimap"])) &&
+    (value["win_chance"] === null || isWinChance(value["win_chance"])) &&
     isArrayOf(value["callouts"], isCallout)
   );
 }

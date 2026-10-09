@@ -3,8 +3,8 @@
 If you are picking this work up, human or model: read this file top to bottom first. The `handoff` skill
 refreshes it; it describes the current state.
 
-Last updated: 2026-10-08, on branch `feat/minimap-layer`. `main` holds phases 0 to 2 and phase 3.1
-to 3.3 (pull requests #2 to #9, merged); the merged branches are deleted.
+Last updated: 2026-10-08, on branch `feat/win-chance`. `main` holds phases 0 to 4 (pull requests
+#2 to #20, merged).
 
 ## Where things stand
 
@@ -12,26 +12,17 @@ The plan is [docs/plans/overlay-and-inference.md](docs/plans/overlay-and-inferen
 the owner on 2026-10-08). Phase 0 is done; phase 1, the tracer bullet, is built and waits for the
 test on a Mac; phase 2 ([docs/plans/phase-2-exact-facts.md](docs/plans/phase-2-exact-facts.md)) is
 built but for structures, left out until the first recordings. Phase 3
-([docs/plans/phase-3-economy-and-open-policy.md](docs/plans/phase-3-economy-and-open-policy.md)) is
-approved by the owner; 3.1 to 3.3 (loading-screen intel, marked cooldowns, suggestions) are merged
-into `main`; 3.4, the scoring harness, is pull request #10 (`feat/scoring-harness`); 3.5, hidden
-gold, is pull request #11 (`feat/hidden-gold`, which carries 3.4 too); 3.6, hidden experience, is
-pull request #12 (`feat/hidden-experience`, which carries both); 3.7, backs, is pull request #13
-(`feat/backs`); 3.8, the build path, is pull request #14 (`feat/build-path`): phase 3 is built.
-Phase 4 has a draft plan ([docs/plans/phase-4-positions.md](docs/plans/phase-4-positions.md)),
-built on its best guesses until the owner says otherwise; 4.1, the map, is pull request #15
-(`feat/rift-map`); 4.2, the clues, is pull request #16 (`feat/position-clues`); 4.3, positions,
-is pull request #17 (`feat/positions`); 4.4, the jungle path, is pull request #18
-(`feat/jungle-path`); 4.5, control wards, is pull request #19 (`feat/control-wards`); 4.6, the
-minimap layer, is built on `feat/minimap-layer`, which carries everything before it: phase 4 is
-then built. Phase 5 (fights, objective contests, win chance) needs a few dozen recorded games,
-so it waits for recordings; until they come, the work is what can be done without them. Each slice goes up
-as its own pull request into `main` without waiting for the one before to merge.
+([docs/plans/phase-3-economy-and-open-policy.md](docs/plans/phase-3-economy-and-open-policy.md),
+approved) and phase 4 ([docs/plans/phase-4-positions.md](docs/plans/phase-4-positions.md), a
+draft built on its best guesses) are built and merged. Phase 5 has a draft plan
+([docs/plans/phase-5-models.md](docs/plans/phase-5-models.md)): its models are built hand-set now
+and refit once a few dozen recordings exist. 5.1, win chance, is on `feat/win-chance`. Each slice
+goes up as its own pull request into `main` without waiting for the one before to merge.
 
 | Area | State | Proof |
 |---|---|---|
 | Scaffold | ai-kit v0.11.1, Python layer, GitHub CI | `.copier-answers.yml` |
-| Gate | Green: lint, 648 tests (and 18 in Chromium), secrets | `make gate` |
+| Gate | Green: lint, 663 tests (and 19 in Chromium), secrets | `make gate` |
 | Recorder | Records games, the client's patch data and the post-game timeline; anonymized copies | `uv run leagueasymode record`; `tests/test_recorder.py`, `tests/test_anonymize.py` |
 | Replay | A recording served as a stand-in game API | `uv run leagueasymode replay <recording>`; `tests/test_replay.py` |
 | Engine and overlay page | The dragon and Elder timer, from the game's answer to the page | `uv run leagueasymode run`; `tests/test_tracer_bullet.py` |
@@ -84,7 +75,10 @@ In `AGENTS.md`, this project's own included: every session reads that file.
    `game.cfg`, at 22% of the window's height times League's minimap scale; whether that lines up
    with League's own minimap can only be seen on the Mac. Say how far off it is, or send a
    screenshot.
-8. **Documents waiting for approval** (`make docs-status`): the approved plan v2 and phase 2's
+8. **Phase 5's plan** ([docs/plans/phase-5-models.md](docs/plans/phase-5-models.md)), a draft:
+   its order, and its four proposals (win chance shown with its two reasons, the fight chance's
+   wording, contests shown only near a monster, "holding gold" from 1,300).
+9. **Documents waiting for approval** (`make docs-status`): the approved plan v2 and phase 2's
    plan, the retrospective, and the references on recordings, the engine and the macOS app, all
    drafts. Phase 3's plan is approved.
 
