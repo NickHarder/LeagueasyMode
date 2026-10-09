@@ -3,8 +3,11 @@ type: Plan
 title: "Phase 8: ready for the first test, and what v2 still promises"
 description: The slices after the approved plan's seven phases, a status page that turns the first test on a Mac into a report, then what the plan's picture of the overlay promised and phases 1 to 7 left out (moving the widgets, spoken callouts, League's own screen and window, structures), in a proposed build order with where the owner decides.
 tags: [plan, phase-8, first-test]
-status: draft
+status: stable
 generated: { by: claude-code/cloud, at: 2026-10-09T02:05:00Z }
+verified:
+  - { by: human:nickharder, at: 2026-10-09T04:38:24Z }
+approved_sha256: 05f7d93b2fcbb65c04d3a10be984dd8983dc3c7ec15907675b8282978c4ddaed
 ---
 
 # Phase 8: ready for the first test, and what v2 still promises

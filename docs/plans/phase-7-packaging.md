@@ -3,8 +3,11 @@ type: Plan
 title: "Phase 7: packaging, without signing for now"
 description: The slices of phase 7 of the approved plan, settings, an app bundle that needs no clone, and releases with an update check, built without Apple's signing as the owner chose, in a proposed build order with what each needs and where the owner decides.
 tags: [plan, phase-7, packaging]
-status: draft
+status: stable
 generated: { by: claude-code/cloud, at: 2026-10-09T01:37:17Z }
+verified:
+  - { by: human:nickharder, at: 2026-10-09T04:38:24Z }
+approved_sha256: a62d6aafd287333f261afeda43279a3bbbbf3d70ee03926d96ae6d14c0313ad9
 ---
 
 # Phase 7: packaging, without signing for now

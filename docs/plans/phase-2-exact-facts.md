@@ -3,8 +3,11 @@ type: Plan
 title: "Phase 2: patch data and exact facts"
 description: The slices of phase 2 of the approved plan, in build order, with what each shows, what it needs and the points where the owner decides.
 tags: [plan, phase-2]
-status: draft
+status: stable
 generated: { by: claude-code/cloud, at: 2026-10-08T16:21:06Z }
+verified:
+  - { by: human:nickharder, at: 2026-10-09T04:38:23Z }
+approved_sha256: 5cbaf0ac0854cfc16ac96f4850701a05fcb21543a43c64b64f7eeb80a037cbdd
 ---
 
 # Phase 2: patch data and exact facts

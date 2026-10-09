@@ -6,6 +6,9 @@ skill has the format.
 
 ## 2026-10-09
 
+- Every plan approved: the owner, asked about the plan documents, answered "approved". The plan
+  v2 and the plans of phases 2 and 4 to 9 are recorded as approved (`make docs-approve`), as
+  phase 3's was on 2026-10-08.
 - Phase 9.7, the 4:00 habit in the positions: from 3:00 to 5:00, estimator 7 weighs each half of
   the map by a jungler's share of past games there at 4:00 (9.2's counts, a game added to each
   half), so where the enemy jungler likely is after their first clear, the "missing" callouts and
