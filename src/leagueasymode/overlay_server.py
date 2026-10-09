@@ -17,12 +17,15 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from leagueasymode.accuracy_history import read_accuracy_history
 from leagueasymode.engine import OverlayEngine
-from leagueasymode.overlay_state import OverlayState
+from leagueasymode.overlay_state import OverlayPreferences, OverlayState
+from leagueasymode.preferences import save_preferences
 
 ALLOWED_HOST_NAMES: Final = frozenset({"127.0.0.1", "localhost"})
 # The header the macOS app sends with a mark.
 MARK_REQUEST_HEADER: Final = "X-LeagueasyMode-Request"
 MARK_REQUEST_VALUE: Final = "mark"
+# The same header's value for a change of preferences, from the settings page.
+PREFERENCES_REQUEST_VALUE: Final = "preferences"
 ENEMY_SLOT_COUNT: Final = 5
 
 
@@ -49,6 +52,8 @@ WEB_ASSETS: Final = {
     "/summary.js": ("summary.js", "text/javascript"),
     "/summary_state.js": ("summary_state.js", "text/javascript"),
     "/summary.css": ("summary.css", "text/css"),
+    "/settings.html": ("settings.html", "text/html"),
+    "/settings.js": ("settings.js", "text/javascript"),
 }
 
 type Handler = Callable[[web.Request], Awaitable[web.StreamResponse]]
@@ -59,6 +64,7 @@ def create_overlay_application(
     *,
     summary_path: Path | None = None,
     history_path: Path | None = None,
+    preferences_path: Path | None = None,
 ) -> web.Application:
     """Return the overlay's web application.
 
@@ -66,6 +72,7 @@ def create_overlay_application(
         engine: The engine whose state is served.
         summary_path: The last game's summary, served at `/summary`; None to serve none.
         history_path: The accuracy history, served at `/history`; None to serve none.
+        preferences_path: Where a change of preferences is kept; None to keep it for this run.
 
     Returns:
         The application.
@@ -116,6 +123,27 @@ def create_overlay_application(
         )
         return web.json_response({"games": [dataclasses.asdict(game) for game in games]})
 
+    async def preferences(_request: web.Request) -> web.Response:
+        return web.json_response(text=engine.preferences.model_dump_json())
+
+    async def change_preferences(request: web.Request) -> web.Response:
+        # As with marks: a page elsewhere cannot send this header without a preflight this
+        # server never answers, so only the settings page, served from here, can change them.
+        if request.headers.get(MARK_REQUEST_HEADER) != PREFERENCES_REQUEST_VALUE:
+            return web.json_response(
+                {"message": "preferences come from the settings page"}, status=403
+            )
+        try:
+            chosen = OverlayPreferences.model_validate_json(await request.read())
+        except ValidationError:
+            return web.json_response({"message": "not preferences"}, status=400)
+        engine.set_preferences(chosen)
+        if preferences_path is not None:
+            await asyncio.to_thread(save_preferences, preferences_path, chosen)
+        return web.json_response(text=chosen.model_dump_json())
+
+    application.router.add_get("/preferences", preferences)
+    application.router.add_put("/preferences", change_preferences)
     application.router.add_get("/summary", summary)
     application.router.add_get("/history", history)
     application.router.add_get("/state", state)

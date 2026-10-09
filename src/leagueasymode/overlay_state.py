@@ -524,6 +524,26 @@ class Callout(BaseModel):
     shown_until_game_time_seconds: float
 
 
+class OverlayPreferences(BaseModel):
+    """What the player chose to see, from the settings page; everything shows by default.
+
+    Kept in `preferences.json` in the application's directory (`leagueasymode.preferences`).
+    """
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    show_win_chance: bool = True
+    show_fight_chance: bool = True
+    show_contests: bool = True
+    show_you_panel: bool = True
+    show_minimap: bool = True
+    # The enemy strip's estimates: unspent gold, next item, last back, clues and positions.
+    show_enemy_estimates: bool = True
+    show_callouts: bool = True
+    # Callouts that name an action, such as "take it".
+    show_suggestions: bool = True
+
+
 class OverlayState(BaseModel):
     """Everything the overlay shows at one moment."""
 
@@ -551,6 +571,7 @@ class OverlayState(BaseModel):
     contests: list[ObjectiveContest] = Field(default_factory=list)
     # None while the engine does not follow you, or when spectating.
     you: YouPanel | None = None
+    preferences: OverlayPreferences = Field(default_factory=OverlayPreferences)
     callouts: list[Callout] = Field(default_factory=list)
 
 

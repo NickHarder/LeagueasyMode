@@ -34,6 +34,7 @@ from leagueasymode.config import (
     default_last_game_summary_path,
     default_model_weights_path,
     default_patch_data_directory,
+    default_preferences_path,
     default_recordings_directory,
 )
 from leagueasymode.data_dragon import (
@@ -57,6 +58,7 @@ from leagueasymode.league_settings import DEFAULT_GAME_CONFIG_PATH, read_minimap
 from leagueasymode.overlay_server import create_overlay_application
 from leagueasymode.patch_data import GAME_VERSION_PATH, game_version_of
 from leagueasymode.player_intel import PLAYER_LOOKUP_PATH_PREFIXES
+from leagueasymode.preferences import load_preferences
 from leagueasymode.recorder import RecorderTimings, record_games
 from leagueasymode.recording.anonymize import IdentityLeakError, anonymize_recording
 from leagueasymode.recording.file_format import COMPRESSED_SUFFIX, PLAIN_SUFFIX
@@ -145,6 +147,7 @@ async def run_overlay(
     """
     # The engine and the recorder both ask about each player; they share the answers.
     shared_answers = SharedAnswers(PLAYER_LOOKUP_PATH_PREFIXES)
+    preferences_path = settings.preferences or default_preferences_path()
     async with aiohttp.ClientSession() as session:
         engine = OverlayEngine(
             _game_api(session, settings),
@@ -158,11 +161,17 @@ async def run_overlay(
             model_weights=await asyncio.to_thread(
                 load_model_weights, settings.model_weights or default_model_weights_path()
             ),
+            preferences=await asyncio.to_thread(load_preferences, preferences_path),
         )
         history_path = settings.accuracy_history or default_accuracy_history_path()
         summary_path = settings.last_game_summary or default_last_game_summary_path()
         runner = web.AppRunner(
-            create_overlay_application(engine, summary_path=summary_path, history_path=history_path)
+            create_overlay_application(
+                engine,
+                summary_path=summary_path,
+                history_path=history_path,
+                preferences_path=preferences_path,
+            )
         )
         await runner.setup()
         site = web.TCPSite(runner, LOCAL_HOST, settings.overlay_port)
