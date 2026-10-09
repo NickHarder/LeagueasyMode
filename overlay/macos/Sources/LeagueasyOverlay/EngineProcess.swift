@@ -8,38 +8,38 @@ import OverlayCore
 final class EngineProcess {
     private let process = Process()
     private let outputPipe = Pipe()
-    private var lineBuffer = LineBuffer()
 
     /// Prepares the process; nothing runs until `start`.
     ///
     /// - Parameters:
     ///   - command: How to run the engine.
-    ///   - onOverlayURL: Called on the main queue with the overlay's address, once the engine is up.
-    ///   - onExit: Called on the main queue with the engine's exit status, when it stops.
+    ///   - onOverlayURL: Called on the main actor with the overlay's address, once the engine is up.
+    ///   - onExit: Called on the main actor with the engine's exit status, when it stops.
     init(
         command: EngineCommand,
-        onOverlayURL: @escaping @Sendable (URL) -> Void,
-        onExit: @escaping @Sendable (Int32) -> Void
+        onOverlayURL: @escaping @MainActor @Sendable (URL) -> Void,
+        onExit: @escaping @MainActor @Sendable (Int32) -> Void
     ) {
         process.executableURL = command.executableURL
         process.arguments = command.arguments
         process.environment = command.environment
         process.standardOutput = outputPipe
         process.standardError = FileHandle.standardError
-        outputPipe.fileHandleForReading.readabilityHandler = { [weak self] outputHandle in
+        let outputLines = OutputLines()
+        outputPipe.fileHandleForReading.readabilityHandler = { outputHandle in
             let newBytes = outputHandle.availableData
-            guard let self, !newBytes.isEmpty else {
+            guard !newBytes.isEmpty else {
                 return
             }
-            for outputLine in self.lineBuffer.append(newBytes) {
+            for outputLine in outputLines.append(newBytes) {
                 if let overlayURL = EngineAnnouncement.overlayURL(fromLine: outputLine) {
-                    DispatchQueue.main.async { onOverlayURL(overlayURL) }
+                    Task { @MainActor in onOverlayURL(overlayURL) }
                 }
             }
         }
         process.terminationHandler = { finishedProcess in
             let exitStatus = finishedProcess.terminationStatus
-            DispatchQueue.main.async { onExit(exitStatus) }
+            Task { @MainActor in onExit(exitStatus) }
         }
     }
 
@@ -56,5 +56,22 @@ final class EngineProcess {
         if process.isRunning {
             process.terminate()
         }
+    }
+}
+
+/// The engine's output, cut into whole lines as it arrives. The pipe's handler runs on a queue of
+/// its own; the lock keeps the buffer to one caller at a time all the same.
+private final class OutputLines: @unchecked Sendable {
+    private let lock = NSLock()
+    private var lineBuffer = LineBuffer()
+
+    /// Takes the next bytes and returns the lines they complete.
+    ///
+    /// - Parameter newBytes: The bytes.
+    /// - Returns: The whole lines, without their line breaks.
+    func append(_ newBytes: Data) -> [String] {
+        lock.lock()
+        defer { lock.unlock() }
+        return lineBuffer.append(newBytes)
     }
 }

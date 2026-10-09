@@ -3,8 +3,8 @@
 If you are picking this work up, human or model: read this file top to bottom first. The `handoff` skill
 refreshes it; it describes the current state.
 
-Last updated: 2026-10-09, on branch `feat/jungle-start`. `main` holds phases 0 to 7 and phase 8
-up to 8.5 (pull requests #2 to #38, merged).
+Last updated: 2026-10-09, on branch `feat/jungle-start`. `main` holds phases 0 to 8 (pull
+requests #2 to #39, merged).
 
 ## Where things stand
 
@@ -18,13 +18,13 @@ built, its structures in phase 8.5. Phases 3 to 7 are built and merged
 built on their best guesses, phase 7 without signing as the owner chose); phase 5's models are
 hand-set and phase 6's thresholds empty until 20 recorded games exist. Phase 8
 ([docs/plans/phase-8-first-test.md](docs/plans/phase-8-first-test.md), a draft) goes past the
-approved plan: 8.1 to 8.5 (the status page and the report after a test, the overlay over League's
-own screen and window, moving the widgets, spoken callouts, structures) are merged (#34 to #38);
-8.6, the Swift 6 language mode, is on `feat/swift-6` (#39). None waits for the test on a Mac,
-which confirms them. Phase 9 ([docs/plans/phase-9-scouting.md](docs/plans/phase-9-scouting.md), a
-draft) reads the players' past games: 9.1, where the enemy jungler usually starts, is on
-`feat/jungle-start` (#40). Each slice goes up as its own pull request into `main` without waiting
-for the one before to merge.
+approved plan: 8.1 to 8.6 (the status page and the report after a test, the overlay over League's
+own screen and window, moving the widgets, spoken callouts, structures, the Swift 6 language mode)
+are merged (#34 to #39). None waits for the test on a Mac, which confirms them. Phase 8 is built.
+Phase 9 ([docs/plans/phase-9-scouting.md](docs/plans/phase-9-scouting.md), a draft) reads the
+players' past games: 9.1, where the enemy jungler usually starts, is on `feat/jungle-start` (#40).
+Each slice goes up as its own pull request into `main` without waiting for the one before to
+merge.
 
 | Area | State | Proof |
 |---|---|---|
@@ -172,9 +172,9 @@ In `AGENTS.md`. Also: a raw recording (it holds other players' names); only `ano
   hand-written, from memory, not this patch's.
 - The Voidgrubs' 14:45 and the Herald's 19:45 leave times follow past seasons and one community
   guide; a recording confirms them.
-- The Swift app is in the Swift 5 language mode with strict concurrency as warnings, and CI's build
-  shows some (a `@Sendable` closure capturing the engine process, among others); they are to be
-  cleared before it moves to the Swift 6 language mode.
+- The Swift app moved to the Swift 6 language mode (8.6), whose concurrency checks it passes in
+  CI; its threads are as before (AppKit's side on the main thread), which the test on a Mac
+  confirms at run time.
 
 ## History
 

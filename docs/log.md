@@ -16,6 +16,12 @@ skill has the format.
   recording would otherwise have stood in for. Phase 9's plan, a draft: scouting from the players'
   past games, which needs neither the Mac nor recordings ("what are we waiting on? we cant
   proceed without manula tests?").
+- Phase 8.6, Swift 6: the macOS app moves to Swift 6's language mode (tools version 6.0). CI's
+  build showed 16 concurrency warnings in two files; each is fixed at its cause: the app delegate
+  runs on the main actor, as AppKit does; the hot keys' actions run there through
+  `MainActor.assumeIsolated` (Carbon delivers them on the main thread); the engine's output is cut
+  into lines behind a lock and handed to the main actor; the update check awaits `URLSession` in
+  a main-actor task. Phase 8 is built.
 - Phase 8.5, structures (2.6, left out of phase 2): each side's turrets down per lane and the
   inhibitors they open, from the feed's turret names, which the gold, the clues and the post-game
   window already read; the strip shows "Enemy turrets bot 3, inhib open", and an inhibitor

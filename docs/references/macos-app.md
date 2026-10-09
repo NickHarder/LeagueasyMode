@@ -91,12 +91,13 @@ waits until the engine has announced its address.
 `OverlayCore` holds what the app decides without AppKit (which engine to run, its command and
 search path,[^engine-command] reading its output, finding the bundled engine or the clone) and has
 unit tests; CI builds the app and runs them on a
-macOS runner. The app is written for Swift 5 with strict concurrency checking as warnings. CI's
-build shows some, which are to be cleared before it moves to the Swift 6 language mode.
+macOS runner. The app is in Swift 6's language mode, which checks concurrency in full: AppKit's
+side of the app runs on the main actor, the engine's output is read off it behind a lock, and a
+call that could race does not compile.
 
 # Run it from a clone
 
-Needs the Xcode command line tools (`xcode-select --install`) and uv.
+Needs the Xcode 16 command line tools or later (`xcode-select --install`), for Swift 6, and uv.
 
 ```bash
 git clone https://github.com/NickHarder/LeagueasyMode.git && cd LeagueasyMode
