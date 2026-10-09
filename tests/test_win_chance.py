@@ -178,3 +178,14 @@ def test_the_overlay_shows_the_win_chance() -> None:
     with_gold = compute_overlay_state(all_game_data(600.0), gold_tracker=GoldTracker()).win_chance
     assert with_gold is not None
     assert with_gold.ally_chance < without_gold.ally_chance
+
+
+def test_the_overlay_uses_the_weights_it_is_given() -> None:
+    hand_set = compute_overlay_state(all_game_data(600.0)).win_chance
+    refit = compute_overlay_state(
+        all_game_data(600.0),
+        win_rules=dataclasses.replace(WIN_CHANCE_RULES, blue_side_weight=0.5),
+    ).win_chance
+    assert hand_set is not None
+    assert refit is not None
+    assert refit.ally_chance > hand_set.ally_chance

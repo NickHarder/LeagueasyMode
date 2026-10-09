@@ -69,7 +69,8 @@ from leagueasymode.inference.clues import ClueTracker
 from leagueasymode.inference.combat_stats import DEFAULT_MOVE_SPEED, estimated_combat_stats
 from leagueasymode.inference.contests import ContestedObjective, objective_contests
 from leagueasymode.inference.experience import ExperienceTracker
-from leagueasymode.inference.fights import fight_estimate, fighter_of
+from leagueasymode.inference.fights import FIGHT_RULES, fighter_of, strength_log_ratio
+from leagueasymode.inference.fitting import logistic
 from leagueasymode.inference.gold import GoldTracker, PlayerKey, player_key, team_gold_of
 from leagueasymode.inference.jungle_path import JunglePathTracker
 from leagueasymode.inference.objectives import (
@@ -898,22 +899,9 @@ def score_fights(game: RecordedGame, patch_stats: PatchStats | None) -> Estimato
     Returns:
         The Brier score; None when the recording has no fight that can be scored.
     """
-    timeline = _game_timeline(game)
-    if timeline is None or patch_stats is None:
-        return None
-    team_by_id = {
-        participant.participant_id: key[0] for key, participant in _details_participants(game)
-    }
-    key_by_id = {
-        participant.participant_id: key for key, participant in _details_participants(game)
-    }
+    samples = fight_samples(game, patch_stats)
     squared_errors = [
-        squared_error
-        for fight in timeline_fights(timeline)
-        if fight.start_seconds in game.fight_snapshots
-        for squared_error in _fight_squared_error(
-            fight, game.fight_snapshots[fight.start_seconds], team_by_id, key_by_id, patch_stats
-        )
+        (logistic(FIGHT_RULES.steepness * log_ratio) - result) ** 2 for log_ratio, result in samples
     ]
     if not squared_errors:
         return None
@@ -983,6 +971,53 @@ def monster_takes(timeline: GameTimeline) -> list[MonsterTake]:
     )
 
 
+def fight_samples(game: RecordedGame, patch_stats: PatchStats | None) -> list[tuple[float, float]]:
+    """Return each fight of the timeline the fight model can weigh, as the refit takes them.
+
+    Args:
+        game: The recorded game.
+        patch_stats: The patch's stats, for everyone's combat stats but yours.
+
+    Returns:
+        Each fight's logarithm of your side's strength over theirs, and its result (1 when your
+        team lost fewer); none without a timeline or the patch's stats.
+    """
+    timeline = _game_timeline(game)
+    if timeline is None or patch_stats is None:
+        return []
+    team_by_id = {
+        participant.participant_id: key[0] for key, participant in _details_participants(game)
+    }
+    key_by_id = {
+        participant.participant_id: key for key, participant in _details_participants(game)
+    }
+    return [
+        sample
+        for fight in timeline_fights(timeline)
+        if fight.start_seconds in game.fight_snapshots
+        for sample in _fight_sample(
+            fight, game.fight_snapshots[fight.start_seconds], team_by_id, key_by_id, patch_stats
+        )
+    ]
+
+
+def win_samples(game: RecordedGame) -> list[tuple[WinFeatures, float]]:
+    """Return what the win chance read at the start of each minute, with the game's result.
+
+    Args:
+        game: The recorded game.
+
+    Returns:
+        Each minute's features and the result (1 when your team won), in order; none when the
+        recording has no result.
+    """
+    has_ally_won = _has_ally_won(game)
+    if has_ally_won is None:
+        return []
+    result = 1.0 if has_ally_won else 0.0
+    return [(features, result) for _, features in sorted(game.minute_win_features.items())]
+
+
 def timeline_fights(timeline: GameTimeline) -> list[TimelineFight]:
     """Return the timeline's fights: kills close in time and place, two or more of them.
 
@@ -1037,13 +1072,11 @@ def score_win_chance(game: RecordedGame) -> EstimatorScore | None:
     Returns:
         The Brier score; None when the recording has no result or no minute.
     """
-    has_ally_won = _has_ally_won(game)
-    if has_ally_won is None or not game.minute_win_features:
+    samples = win_samples(game)
+    if not samples:
         return None
-    result = 1.0 if has_ally_won else 0.0
     squared_errors = [
-        (win_chance(features).ally_chance - result) ** 2
-        for _, features in sorted(game.minute_win_features.items())
+        (win_chance(features).ally_chance - result) ** 2 for features, result in samples
     ]
     return EstimatorScore(
         estimator="win chance",
@@ -1478,14 +1511,14 @@ def _is_same_fight(cluster: list[TimelineEvent], kill: TimelineEvent) -> bool:
     )
 
 
-def _fight_squared_error(
+def _fight_sample(
     fight: TimelineFight,
     snapshot: GameSnapshot,
     team_by_id: Mapping[int, str],
     key_by_id: Mapping[int, PlayerKey],
     patch_stats: PatchStats,
-) -> list[float]:
-    """Return the squared error of the chance a fight's players had, or nothing for a trade.
+) -> list[tuple[float, float]]:
+    """Return what the fight model read of a fight's players, and the result; nothing for a trade.
 
     Args:
         fight: The fight.
@@ -1495,7 +1528,8 @@ def _fight_squared_error(
         patch_stats: The patch's stats.
 
     Returns:
-        The squared error, alone; nothing when the teams lost as many, or a fighter is unknown.
+        The logarithm of your side's strength over theirs and the result, alone; nothing when
+        the teams lost as many, or a fighter is unknown.
     """
     ally_team = snapshot.ally_team()
     ally_deaths = sum(1 for victim_id in fight.victim_ids if team_by_id.get(victim_id) == ally_team)
@@ -1510,14 +1544,13 @@ def _fight_squared_error(
         if key_by_id.get(participant_id) in player_by_key
     ]
     known = [(is_ally, fighter) for is_ally, fighter in fighters if fighter is not None]
-    estimate = fight_estimate(
+    log_ratio = strength_log_ratio(
         [fighter for is_ally, fighter in known if is_ally],
         [fighter for is_ally, fighter in known if not is_ally],
     )
-    if ally_deaths == enemy_deaths or estimate is None or len(known) != len(fight.participant_ids):
+    if ally_deaths == enemy_deaths or log_ratio is None or len(known) != len(fight.participant_ids):
         return []
-    result = 1.0 if enemy_deaths > ally_deaths else 0.0
-    return [(estimate.ally_chance - result) ** 2]
+    return [(log_ratio, 1.0 if enemy_deaths > ally_deaths else 0.0)]
 
 
 def _game_timeline(game: RecordedGame) -> GameTimeline | None:

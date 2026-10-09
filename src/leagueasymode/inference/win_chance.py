@@ -18,11 +18,14 @@ normal variable the average has no closed form; the probit approximation (MacKay
 within a percentage point of it.
 """
 
+import dataclasses
 import math
+from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Final, Literal
 
 from leagueasymode.game_state import GameSnapshot
+from leagueasymode.inference.fitting import logistic
 from leagueasymode.inference.gold import (
     BAND_STANDARD_DEVIATIONS,
     TURRET_KILLED_EVENT,
@@ -163,6 +166,48 @@ def weights_of(rules: WinChanceRules) -> dict[Feature, float]:
     }
 
 
+# The field of `WinChanceRules` that holds each feature's weight.
+WEIGHT_FIELDS: Final[dict[Feature, str]] = {
+    "blue_side": "blue_side_weight",
+    "gold_share": "gold_share_weight",
+    "level_lead_per_player": "level_weight",
+    "turret_lead": "turret_weight",
+    "inhibitor_lead": "inhibitor_weight",
+    "dragon_lead": "dragon_weight",
+    "soul": "soul_weight",
+    "baron": "baron_weight",
+    "elder": "elder_weight",
+    "alive_lead_by_time": "alive_weight",
+}
+
+
+def feature_vector(features: WinFeatures, rules: WinChanceRules = WIN_CHANCE_RULES) -> list[float]:
+    """Return what the model reads as a list, in the order of `WEIGHT_FIELDS`.
+
+    Args:
+        features: The game at one moment.
+        rules: How the gold and the players alive are scaled.
+
+    Returns:
+        The values.
+    """
+    values = features.values(rules)
+    return [values[feature] for feature in WEIGHT_FIELDS]
+
+
+def rules_with_weights(rules: WinChanceRules, weights: Sequence[float]) -> WinChanceRules:
+    """Return rules with new weights, in the order of `WEIGHT_FIELDS`, the scales kept.
+
+    Args:
+        rules: The rules.
+        weights: The weights.
+
+    Returns:
+        The new rules.
+    """
+    return dataclasses.replace(rules, **dict(zip(WEIGHT_FIELDS.values(), weights, strict=True)))
+
+
 def win_chance(features: WinFeatures, rules: WinChanceRules = WIN_CHANCE_RULES) -> WinChance:
     """Return the chance the player's team wins, and the two things moving it most.
 
@@ -192,7 +237,7 @@ def win_chance(features: WinFeatures, rules: WinChanceRules = WIN_CHANCE_RULES) 
         reverse=True,
     )
     return WinChance(
-        ally_chance=_logistic(log_odds / math.sqrt(1 + math.pi * log_odds_deviation**2 / 8)),
+        ally_chance=logistic(log_odds / math.sqrt(1 + math.pi * log_odds_deviation**2 / 8)),
         reasons=[
             WinReason(label=_reason_label(feature, features), effect=round(effect, 3))
             for feature, effect in named[:SHOWN_REASON_COUNT]
@@ -346,18 +391,3 @@ def _signed(amount: float, *, decimals: int) -> str:
     """
     text = f"{abs(amount):.{decimals}f}"
     return f"+{text}" if amount >= 0 else f"{MINUS_SIGN}{text}"
-
-
-def _logistic(log_odds: float) -> float:
-    """Return the chance of log-odds.
-
-    Args:
-        log_odds: The log-odds.
-
-    Returns:
-        The chance, from 0 to 1.
-    """
-    if log_odds < 0:
-        # The same, written so that a large negative number does not overflow.
-        return math.exp(log_odds) / (1 + math.exp(log_odds))
-    return 1 / (1 + math.exp(-log_odds))

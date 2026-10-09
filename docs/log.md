@@ -4,6 +4,17 @@ What changed in this project and why, newest first. A commit shows the differenc
 gives the reason. The `handoff` skill adds to it at every checkpoint, and the `write-okf-concept`
 skill has the format.
 
+## 2026-10-09
+
+- Phase 5.5, the refit: `leagueasymode fit <recordings> [--write]` refits the win chance's weights
+  on every minute of every recorded game with its result, and the fights' steepness on every
+  fight of the timelines, by a logistic regression pulled toward the hand-set weights (Newton's
+  method, in plain Python: no new dependency). It needs 20 games for each; each fit is checked
+  on games held out in ten folds and kept only when it scores better than the hand-set weights.
+  The weights kept go to `model-weights.json`, which `leagueasymode run` reads at its start. The
+  harness now hands out each game's samples (`win_samples`, `fight_samples`), and one logistic
+  function serves every model.
+
 ## 2026-10-08
 
 - Phase 5.4, the You panel (estimator 13): which of armor, magic resist and health buys the most

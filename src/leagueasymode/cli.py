@@ -14,6 +14,7 @@ from aiohttp import web
 
 from leagueasymode.config import (
     Settings,
+    default_model_weights_path,
     default_patch_data_directory,
     default_recordings_directory,
 )
@@ -40,9 +41,17 @@ from leagueasymode.player_intel import PLAYER_LOOKUP_PATH_PREFIXES
 from leagueasymode.recorder import RecorderTimings, record_games
 from leagueasymode.recording.anonymize import IdentityLeakError, anonymize_recording
 from leagueasymode.recording.file_format import COMPRESSED_SUFFIX, PLAIN_SUFFIX
+from leagueasymode.refit import (
+    MIN_GAMES_TO_FIT,
+    ModelWeights,
+    load_model_weights,
+    refit_fights,
+    refit_win_chance,
+    save_model_weights,
+)
 from leagueasymode.replay import DEFAULT_REPLAY_PORT, RecordingReplay, create_replay_application
 from leagueasymode.riot_tls import create_riot_tls_context
-from leagueasymode.scoring import read_recorded_game, score_game
+from leagueasymode.scoring import fight_samples, read_recorded_game, score_game, win_samples
 
 EXIT_SUCCESS: Final = 0
 EXIT_FAILURE: Final = 1
@@ -69,6 +78,12 @@ def main(arguments: Sequence[str] | None = None) -> int:
     logging.basicConfig(level=settings.log_level, format="%(asctime)s %(levelname)s %(message)s")
     if parsed.command == "score":
         return _score(Path(parsed.recording), settings)
+    if parsed.command == "fit":
+        return _fit(
+            [Path(recording) for recording in parsed.recordings],
+            settings,
+            should_write=parsed.write,
+        )
     if parsed.command == "anonymize":
         return _anonymize(Path(parsed.recording), Path(parsed.output) if parsed.output else None)
     if parsed.command == "record":
@@ -112,6 +127,9 @@ async def run_overlay(
             settings.player_lookup_pause_seconds,
             minimap_layout=await asyncio.to_thread(
                 read_minimap_layout, settings.league_game_config or DEFAULT_GAME_CONFIG_PATH
+            ),
+            model_weights=await asyncio.to_thread(
+                load_model_weights, settings.model_weights or default_model_weights_path()
             ),
         )
         runner = web.AppRunner(create_overlay_application(engine))
@@ -294,6 +312,77 @@ def _score(recording_path: Path, settings: Settings) -> int:
     return EXIT_SUCCESS
 
 
+def _fit(recording_paths: list[Path], settings: Settings, *, should_write: bool) -> int:
+    """Refit the hand-set models on recorded games, print how each scores, and keep what is better.
+
+    Args:
+        recording_paths: The recordings.
+        settings: Where the patch's stats and the weights are kept.
+        should_write: Whether to write the weights kept, for the engine to read.
+
+    Returns:
+        The exit code.
+    """
+    games = [read_recorded_game(recording_path) for recording_path in recording_paths]
+    patch_stats_by_version: dict[str | None, PatchStats | None] = {}
+    for game in games:
+        game_version = game_version_of(game.client_resources.get(GAME_VERSION_PATH))
+        if game_version not in patch_stats_by_version:
+            patch_stats_by_version[game_version] = asyncio.run(
+                _load_patch_stats_once(settings, game_version)
+            )
+    win_games = [win_samples(game) for game in games]
+    fight_games = [
+        fight_samples(
+            game,
+            patch_stats_by_version[game_version_of(game.client_resources.get(GAME_VERSION_PATH))],
+        )
+        for game in games
+    ]
+    win_refit = refit_win_chance(win_games)
+    fight_refit = refit_fights(fight_games)
+    lines = [
+        win_refit.describe()
+        if win_refit is not None
+        else (
+            f"win chance: needs {MIN_GAMES_TO_FIT} recorded games with a result, "
+            f"has {sum(1 for game in win_games if game)}"
+        ),
+        fight_refit.describe()
+        if fight_refit is not None
+        else (
+            f"fights: needs {MIN_GAMES_TO_FIT} recorded games with fights, "
+            f"has {sum(1 for game in fight_games if game)}"
+        ),
+    ]
+    kept_weights = ModelWeights(
+        win_rules=(
+            win_refit.rules
+            if win_refit is not None and win_refit.is_kept
+            else ModelWeights().win_rules
+        ),
+        fight_rules=(
+            fight_refit.rules
+            if fight_refit is not None and fight_refit.is_kept
+            else ModelWeights().fight_rules
+        ),
+    )
+    weights_path = settings.model_weights or default_model_weights_path()
+    is_any_kept = kept_weights != ModelWeights()
+    if should_write and is_any_kept:
+        save_model_weights(weights_path, kept_weights)
+    written_line = (
+        f"wrote {weights_path}"
+        if should_write and is_any_kept
+        else "nothing written: the hand-set weights stand"
+        if should_write
+        else "add --write to keep what was kept"
+    )
+    for line in [*lines, written_line]:
+        print(line)  # noqa: T201 - the command's output
+    return EXIT_SUCCESS
+
+
 async def _load_patch_stats_once(settings: Settings, game_version: str | None) -> PatchStats | None:
     """Load the stats of a game's patch, as the engine would.
 
@@ -426,6 +515,16 @@ def _build_parser() -> argparse.ArgumentParser:
         "score", help="score each estimator against what a recorded game shows to be true"
     )
     score_command.add_argument("recording", help="the recording (.jsonl.xz)")
+    fit_command = commands.add_parser(
+        "fit",
+        help="refit the win chance and the fights on 20 or more recorded games, if that is better",
+    )
+    fit_command.add_argument("recordings", nargs="+", help="the recordings (.jsonl.xz)")
+    fit_command.add_argument(
+        "--write",
+        action="store_true",
+        help="write the weights kept, which the engine reads at its start",
+    )
     anonymize_command = commands.add_parser(
         "anonymize", help="write a copy of a recording with every player's name and id replaced"
     )

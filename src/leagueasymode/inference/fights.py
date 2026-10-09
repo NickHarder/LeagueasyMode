@@ -23,6 +23,7 @@ from typing import Final
 from leagueasymode.data_dragon import PatchStats
 from leagueasymode.game_state import GameSnapshot, ScoreboardPlayer
 from leagueasymode.inference.combat_stats import combat_stats_of
+from leagueasymode.inference.fitting import logistic
 from leagueasymode.overlay_state import CombatStats, FightEstimate
 
 RESISTANCE_SCALE: Final = 100.0
@@ -108,21 +109,33 @@ def fight_estimate(
         return None
     ally_physical, ally_magic = _team_damage(allies, rules)
     enemy_physical, enemy_magic = _team_damage(enemies, rules)
-    ally_physical_share = _share(ally_physical, ally_magic)
-    enemy_physical_share = _share(enemy_physical, enemy_magic)
-    ally_strength = (ally_physical + ally_magic) * sum(
-        effective_health(fighter.stats, enemy_physical_share) for fighter in allies
-    )
-    enemy_strength = (enemy_physical + enemy_magic) * sum(
-        effective_health(fighter.stats, ally_physical_share) for fighter in enemies
-    )
+    ally_strength, enemy_strength = _strengths(allies, enemies, rules)
     return FightEstimate(
         ally_chance=_chance(ally_strength, enemy_strength, rules),
         ally_fighters=len(allies),
         enemy_fighters=len(enemies),
-        ally_physical_share=ally_physical_share,
-        enemy_physical_share=enemy_physical_share,
+        ally_physical_share=_share(ally_physical, ally_magic),
+        enemy_physical_share=_share(enemy_physical, enemy_magic),
     )
+
+
+def strength_log_ratio(
+    allies: Sequence[Fighter], enemies: Sequence[Fighter], rules: FightRules = FIGHT_RULES
+) -> float | None:
+    """Return the logarithm of the allies' strength over the enemies', what the chance is fit on.
+
+    Args:
+        allies: The player's team's fighters.
+        enemies: The other team's.
+        rules: How damage is worked out.
+
+    Returns:
+        The logarithm; None when either side has no strength.
+    """
+    ally_strength, enemy_strength = _strengths(allies, enemies, rules)
+    if ally_strength <= 0 or enemy_strength <= 0:
+        return None
+    return math.log(ally_strength / enemy_strength)
 
 
 def fighter_of(
@@ -186,6 +199,30 @@ def team_fight(
     )
 
 
+def _strengths(
+    allies: Sequence[Fighter], enemies: Sequence[Fighter], rules: FightRules
+) -> tuple[float, float]:
+    """Return each side's strength: its damage a second times its health against the other's.
+
+    Args:
+        allies: The player's team's fighters.
+        enemies: The other team's.
+        rules: How damage is worked out.
+
+    Returns:
+        The allies' strength and the enemies'.
+    """
+    ally_physical, ally_magic = _team_damage(allies, rules)
+    enemy_physical, enemy_magic = _team_damage(enemies, rules)
+    ally_strength = (ally_physical + ally_magic) * sum(
+        effective_health(fighter.stats, _share(enemy_physical, enemy_magic)) for fighter in allies
+    )
+    enemy_strength = (enemy_physical + enemy_magic) * sum(
+        effective_health(fighter.stats, _share(ally_physical, ally_magic)) for fighter in enemies
+    )
+    return ally_strength, enemy_strength
+
+
 def _team_damage(fighters: Sequence[Fighter], rules: FightRules) -> tuple[float, float]:
     """Return a team's damage a second, physical and magic.
 
@@ -240,7 +277,4 @@ def _chance(ally_strength: float, enemy_strength: float, rules: FightRules) -> f
         return 1.0 if ally_strength > 0 else 0.5
     if ally_strength <= 0:
         return 0.0
-    log_odds = rules.steepness * math.log(ally_strength / enemy_strength)
-    if log_odds < 0:
-        return math.exp(log_odds) / (1 + math.exp(log_odds))
-    return 1 / (1 + math.exp(-log_odds))
+    return logistic(rules.steepness * math.log(ally_strength / enemy_strength))

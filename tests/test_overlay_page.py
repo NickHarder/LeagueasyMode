@@ -241,6 +241,7 @@ async def open_overlay(
             data_dragon_base_url=data_dragon_url,
             patch_data_directory=tmp_path / "patch-data",
             league_game_config=tmp_path / "no-game.cfg",
+            model_weights=tmp_path / "no-model-weights.json",
             player_lookup_pause_seconds=0.0,
             poll_interval_seconds=0.1,
             record_while_running=False,
