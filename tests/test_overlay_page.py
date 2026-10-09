@@ -691,8 +691,11 @@ async def test_what_the_player_turned_off_does_not_show(tmp_path: Path) -> None:
 async def test_the_enemy_strip_shows_each_enemys_rank_and_record(tmp_path: Path) -> None:
     async with open_overlay(tmp_path, snapshot_count=60, speed=1.0) as page:
         zed_intel = page.locator("#enemy-strip .enemy-row", has_text="Zed").locator(".enemy-intel")
-        # Platinum IV; 3 wins and 2 losses lately, the last three in a row, all three on Zed.
-        await expect(zed_intel).to_have_text(f"P4 · 3{EN_DASH}2 W3 · 3 on champ", timeout=5000)
+        # Platinum IV; 3 wins and 2 losses lately, the last three in a row, all three on Zed, the
+        # champion they played most.
+        await expect(zed_intel).to_have_text(
+            f"P4 · 3{EN_DASH}2 W3 · 3 on champ (main)", timeout=5000
+        )
         await expect(zed_intel).to_have_attribute("data-off-role", "false")
         caitlyn_intel = page.locator("#enemy-strip .enemy-row", has_text="Caitlyn").locator(
             ".enemy-intel"
@@ -703,7 +706,7 @@ async def test_the_enemy_strip_shows_each_enemys_rank_and_record(tmp_path: Path)
         # her blue buff's half, the bottom one this game.
         vi_intel = page.locator("#enemy-strip .enemy-row", has_text="Vi").locator(".enemy-intel")
         await expect(vi_intel).to_have_text(
-            f"G1 · 4{EN_DASH}0 W4 · 4 on champ · starts red (top) 3/4 · 4:00 bot 3/4"
+            f"G1 · 4{EN_DASH}0 W4 · 4 on champ (main) · starts red (top) 3/4 · 4:00 bot 3/4"
         )
         await keep_screenshot(page, "player-intel")
 

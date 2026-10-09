@@ -38,6 +38,7 @@ const CALLOUT_KINDS = new Set([
     "missing",
     "jungle_start",
     "jungle_four_minutes",
+    "one_trick",
     "inhibitor_open",
     "suggestion",
 ]);
@@ -153,7 +154,10 @@ export function isPlayerIntel(value) {
         typeof value["jungle_start_games"] === "number" &&
         (value["four_minute_half"] === null || isOneOf(value["four_minute_half"], FOUR_MINUTE_HALVES)) &&
         typeof value["four_minute_count"] === "number" &&
-        typeof value["four_minute_games"] === "number");
+        typeof value["four_minute_games"] === "number" &&
+        typeof value["champion_pool_size"] === "number" &&
+        typeof value["is_main_champion"] === "boolean" &&
+        typeof value["is_one_trick"] === "boolean");
 }
 /** Return whether a value is a player's gold as the engine sends it. */
 export function isGoldEstimate(value) {

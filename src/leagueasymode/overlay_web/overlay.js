@@ -492,7 +492,8 @@ export function formatIntel(intel) {
         parts.push(`${String(intel.recent_win_count)}\u2013${String(lossCount)}${streakText}`);
     }
     if (intel.champion_game_count > 0) {
-        parts.push(`${String(intel.champion_game_count)} on champ`);
+        const championText = intel.is_one_trick ? " (one-trick)" : intel.is_main_champion ? " (main)" : "";
+        parts.push(`${String(intel.champion_game_count)} on champ${championText}`);
     }
     else if (intel.recent_game_count >= GAMES_TO_CALL_A_CHAMPION_NEW) {
         parts.push("new on champ");

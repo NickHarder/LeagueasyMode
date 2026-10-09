@@ -88,6 +88,7 @@ class CalloutTracker:
             *self._level_spikes(state, game_time_seconds),
             *_levels_soon(state, game_time_seconds),
             *_jungle_starts(state, game_time_seconds),
+            *_one_tricks(state, game_time_seconds),
             *_jungle_four_minutes(state, game_time_seconds),
             *self._jungler_backs(state, game_time_seconds),
             *self._items_soon(state, game_time_seconds),
@@ -483,6 +484,31 @@ def _jungle_starts(state: OverlayState, game_time_seconds: float) -> list[Callou
         and intel.jungle_start_side is not None
         and intel.jungle_start_games >= JUNGLE_START_MIN_GAMES
         and intel.jungle_start_count >= JUNGLE_START_MIN_SHARE * intel.jungle_start_games
+    ]
+
+
+def _one_tricks(state: OverlayState, game_time_seconds: float) -> list[Callout]:
+    """Return each enemy who plays little but this game's champion, before the camps spawn.
+
+    Args:
+        state: The new state.
+        game_time_seconds: Its game time.
+
+    Returns:
+        A callout for each enemy one-trick; none from 1:30 on.
+    """
+    if game_time_seconds >= JUNGLE_START_BEFORE_SECONDS:
+        return []
+    return [
+        _callout(
+            f"one-trick:{card.champion_name}",
+            "one_trick",
+            f"{card.champion_name} is a one-trick ({intel.champion_game_count} of "
+            f"{intel.recent_game_count} games)",
+            game_time_seconds,
+        )
+        for card in state.players
+        if card.side == "enemy" and (intel := card.intel) is not None and intel.is_one_trick
     ]
 
 

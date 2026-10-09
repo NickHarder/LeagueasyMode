@@ -99,6 +99,10 @@ export interface PlayerIntel {
   readonly four_minute_half: "top" | "mid" | "bot" | null;
   readonly four_minute_count: number;
   readonly four_minute_games: number;
+  /** How many champions their recent games were on, and whether this one is their main or all. */
+  readonly champion_pool_size: number;
+  readonly is_main_champion: boolean;
+  readonly is_one_trick: boolean;
 }
 
 /** A spell the player marked an enemy as having used, and when it is back: an estimate. */
@@ -235,6 +239,7 @@ export type CalloutKind =
   | "missing"
   | "jungle_start"
   | "jungle_four_minutes"
+  | "one_trick"
   | "inhibitor_open"
   | "suggestion";
 
@@ -420,6 +425,7 @@ const CALLOUT_KINDS: ReadonlySet<string> = new Set([
   "missing",
   "jungle_start",
   "jungle_four_minutes",
+  "one_trick",
   "inhibitor_open",
   "suggestion",
 ]);
@@ -564,7 +570,10 @@ export function isPlayerIntel(value: unknown): value is PlayerIntel {
     typeof value["jungle_start_games"] === "number" &&
     (value["four_minute_half"] === null || isOneOf(value["four_minute_half"], FOUR_MINUTE_HALVES)) &&
     typeof value["four_minute_count"] === "number" &&
-    typeof value["four_minute_games"] === "number"
+    typeof value["four_minute_games"] === "number" &&
+    typeof value["champion_pool_size"] === "number" &&
+    typeof value["is_main_champion"] === "boolean" &&
+    typeof value["is_one_trick"] === "boolean"
   );
 }
 
