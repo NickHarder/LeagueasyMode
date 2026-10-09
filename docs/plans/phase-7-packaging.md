@@ -31,8 +31,10 @@ Security, Open Anyway).
 - **7.2** by CI on macOS: the bundle is built and signed ad hoc, and its engine, started with the
   bundled `uv` from an empty home folder as the app starts it, serves every page; the Swift that
   finds the bundled engine and picks it over a clone has unit tests.
-- **7.3** by unit tests of the version comparison and of reading GitHub's answer; the release
-  workflow by its first tag.
+- **7.3** by unit tests of the version comparison, of reading GitHub's answer (a draft, a
+  prerelease, an older version and an address off this repository all ignored), of the
+  once-a-day rule and of open at login's menu item; the release workflow, which builds and checks
+  the app as CI does, by its first tag.
 
 ## Where the owner decides
 

@@ -3,7 +3,7 @@
 If you are picking this work up, human or model: read this file top to bottom first. The `handoff` skill
 refreshes it; it describes the current state.
 
-Last updated: 2026-10-09, on branch `feat/app-bundle`. `main` holds phases 0 to 6 and 7.1 (pull
+Last updated: 2026-10-09, on branch `feat/releases`. `main` holds phases 0 to 6 and 7.1 (pull
 requests #2 to #30, merged).
 
 ## Where things stand
@@ -18,7 +18,8 @@ built but for structures, left out until the first recordings. Phases 3 to 6 are
 are hand-set and phase 6's thresholds empty until 20 recorded games exist. Phase 7
 ([docs/plans/phase-7-packaging.md](docs/plans/phase-7-packaging.md), a draft) is under way,
 without signing as the owner chose: 7.1, settings, is merged; 7.2, the app bundle, is on
-`feat/app-bundle`. Each slice goes up as its own pull request into `main` without waiting for the
+`feat/app-bundle` (#32); 7.3, releases, the update check and open at login, on `feat/releases`.
+Phase 7 is built. Each slice goes up as its own pull request into `main` without waiting for the
 one before to merge.
 
 | Area | State | Proof |
@@ -31,9 +32,10 @@ one before to merge.
 | Phase 2 facts | Objective strip, buffs, inhibitors, numbers window, enemy strip, callouts, item catalog and item gold, roles, combat stats | `tests/test_objective_strip.py`, `test_numbers_window.py`, `test_callouts.py`, `test_item_facts.py`, `test_roles.py`, `test_combat_stats.py`; eight browser tests |
 | Patch stats | Each patch's champion and item stats from Data Dragon, fetched once a patch and kept on disk; **never fetched from the real Data Dragon yet** (this environment cannot reach it) | `tests/test_data_dragon.py` against a stand-in |
 | Widgets in a browser | Rendered in Chromium against a replay | `uv run pytest -m browser` (needs Chromium); `tests/test_overlay_page.py` |
-| macOS app | Builds on macOS 15 and passes its 30 unit tests in CI; **never run over League** | `overlay/macos/`; CI job `macos-overlay` |
+| macOS app | Builds on macOS 15 and passes its 44 unit tests in CI; **never run over League** | `overlay/macos/`; CI job `macos-overlay` |
 | App bundle | `LeagueasyMode.app` with the engine inside, signed ad hoc, built by CI, its engine started from an empty home folder; **never opened on a Mac by a person** | `overlay/macos/scripts/build_app.sh`; CI job `macos-app`, which keeps the zip with each run |
 | CI | 11 jobs, the widgets', the macOS app's and the app bundle's included; none may fail | `.github/workflows/ci.yml` |
+| Releases | A tag `v<version>` publishes the zipped app; the app checks for a newer release once a day; **no release published yet** | `.github/workflows/release.yml`; `docs/references/macos-app.md` |
 | Real game data | **None yet**: every test uses built payloads in the API's documented shape | `tests/game_payloads.py` |
 
 ## How to check your work
@@ -90,7 +92,10 @@ In `AGENTS.md`, this project's own included: every session reads that file.
 10. **Phase 7's plan** ([docs/plans/phase-7-packaging.md](docs/plans/phase-7-packaging.md)), a
     draft: its order, and its proposals (the update check on, once a day, off from the menu; the
     eight switches of the settings page).
-11. **Documents waiting for approval** (`make docs-status`): the approved plan v2 and phase 2's
+11. **The first release**: when the app has been tried on a Mac, tag `v0.1.0` on `main` and push
+    the tag (`docs/references/macos-app.md`, "Releases, updates and opening at login"). Publishing
+    is the owner's call; no session tags a release unasked.
+12. **Documents waiting for approval** (`make docs-status`): the approved plan v2 and phase 2's
    plan, the retrospective, and the references on recordings, the engine and the macOS app, all
    drafts. Phase 3's plan is approved.
 

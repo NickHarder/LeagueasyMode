@@ -6,6 +6,12 @@ skill has the format.
 
 ## 2026-10-09
 
+- Phase 7.3, releases and updates: a tag `v<version>` (the version in `pyproject.toml`) builds
+  the app, checks it as CI does, and publishes a GitHub release with the zip and its SHA-256
+  (`.github/workflows/release.yml`). The bundled app asks GitHub for the latest release at most
+  once a day and, when it is newer, offers its page in the menu; "Check for updates daily" turns
+  that off, as the plan proposed. "Open at login" uses `SMAppService`. The rules (`ReleaseVersion`,
+  `UpdateCheck`, `LoginItemState` in `OverlayCore`) have unit tests. Phase 7 is built, unsigned.
 - Phase 7.2, the app bundle: `overlay/macos/scripts/build_app.sh` builds `LeagueasyMode.app`
   with the engine inside (its wheel, the versions `uv.lock` pins, the Python version, and a copy
   of uv in `Contents/Helpers`), signs it ad hoc and zips it. The app runs the engine it carries

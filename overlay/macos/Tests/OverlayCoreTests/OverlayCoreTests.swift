@@ -1,4 +1,5 @@
 import Foundation
+import ServiceManagement
 import XCTest
 
 @testable import OverlayCore
@@ -327,5 +328,139 @@ final class EnginePageTests: XCTestCase {
 
     func testEachPageHasItsMenuTitle() {
         XCTAssertEqual(EnginePage.allCases.map(\.menuTitle), ["Last game\u{2026}", "Settings\u{2026}"])
+    }
+}
+
+final class ReleaseVersionTests: XCTestCase {
+    func testATagReadsAsItsNumbers() throws {
+        let version = try XCTUnwrap(ReleaseVersion("v1.4.2"))
+        XCTAssertEqual(version.numbers, [1, 4, 2])
+        XCTAssertEqual(version.description, "1.4.2")
+    }
+
+    func testMissingNumbersAreNoughts() {
+        XCTAssertEqual(ReleaseVersion("2"), ReleaseVersion("2.0.0"))
+        XCTAssertEqual(ReleaseVersion("v0.3"), ReleaseVersion("0.3.0"))
+    }
+
+    func testVersionsCompareNumberByNumber() throws {
+        let older = try XCTUnwrap(ReleaseVersion("0.9.12"))
+        let newer = try XCTUnwrap(ReleaseVersion("0.10.0"))
+        XCTAssertLessThan(older, newer)
+        XCTAssertFalse(newer < older)
+    }
+
+    func testAnythingButNumbersIsNoVersion() {
+        for text in ["", "v", "1.2.3.4", "1..2", "1.2-beta", "v1.2.3 ", "latest", "١.٢.٣"] {
+            XCTAssertNil(ReleaseVersion(text), text)
+        }
+    }
+}
+
+final class UpdateCheckTests: XCTestCase {
+    private let appVersion = ReleaseVersion("0.1.0")!
+
+    private func answer(_ fields: [String: Any]) throws -> Data {
+        try JSONSerialization.data(withJSONObject: fields)
+    }
+
+    func testTheRequestAsksGitHubForTheLatestRelease() {
+        let request = UpdateCheck.request(appVersion: appVersion)
+        XCTAssertEqual(
+            request.url?.absoluteString,
+            "https://api.github.com/repos/NickHarder/LeagueasyMode/releases/latest"
+        )
+        XCTAssertEqual(request.httpMethod, "GET")
+        XCTAssertEqual(request.value(forHTTPHeaderField: "Accept"), "application/vnd.github+json")
+        XCTAssertEqual(request.value(forHTTPHeaderField: "User-Agent"), "LeagueasyMode/0.1.0")
+    }
+
+    func testANewerReleaseIsOffered() throws {
+        let release = try XCTUnwrap(
+            UpdateCheck.newerRelease(
+                answer: try answer([
+                    "tag_name": "v0.2.0", "draft": false, "prerelease": false,
+                    "html_url": "https://github.com/NickHarder/LeagueasyMode/releases/tag/v0.2.0",
+                ]),
+                appVersion: appVersion
+            )
+        )
+        XCTAssertEqual(release.version, ReleaseVersion("0.2.0"))
+        XCTAssertEqual(
+            release.pageURL.absoluteString, "https://github.com/NickHarder/LeagueasyMode/releases/tag/v0.2.0"
+        )
+        XCTAssertEqual(release.menuTitle, "LeagueasyMode 0.2.0 is out\u{2026}")
+    }
+
+    func testTheSameOrAnOlderReleaseIsNotOffered() throws {
+        for tagName in ["v0.1.0", "v0.0.9", "0.1"] {
+            XCTAssertNil(
+                UpdateCheck.newerRelease(answer: try answer(["tag_name": tagName]), appVersion: appVersion),
+                tagName
+            )
+        }
+    }
+
+    func testADraftOrPrereleaseIsNotOffered() throws {
+        for fields: [String: Any] in [
+            ["tag_name": "v0.2.0", "draft": true],
+            ["tag_name": "v0.2.0", "prerelease": true],
+        ] {
+            XCTAssertNil(UpdateCheck.newerRelease(answer: try answer(fields), appVersion: appVersion))
+        }
+    }
+
+    func testThePageIsAlwaysThisRepositorysWhateverTheAnswerSays() throws {
+        let release = try XCTUnwrap(
+            UpdateCheck.newerRelease(
+                answer: try answer(["tag_name": "v0.2.0", "html_url": "https://example.com/download"]),
+                appVersion: appVersion
+            )
+        )
+        XCTAssertEqual(release.pageURL.host, "github.com")
+        XCTAssertEqual(release.pageURL.path, "/NickHarder/LeagueasyMode/releases/tag/v0.2.0")
+    }
+
+    func testAnAnswerThatIsNoReleaseIsIgnored() throws {
+        XCTAssertNil(UpdateCheck.newerRelease(answer: Data("not json".utf8), appVersion: appVersion))
+        XCTAssertNil(
+            UpdateCheck.newerRelease(answer: try answer(["message": "Not Found"]), appVersion: appVersion)
+        )
+        XCTAssertNil(
+            UpdateCheck.newerRelease(answer: try answer(["tag_name": "nightly"]), appVersion: appVersion)
+        )
+    }
+
+    func testTheCheckIsDueOnceADay() {
+        let lastCheck = Date(timeIntervalSince1970: 1_000_000)
+        XCTAssertTrue(UpdateCheck.isDue(lastCheckedAt: nil, now: lastCheck))
+        XCTAssertFalse(UpdateCheck.isDue(lastCheckedAt: lastCheck, now: lastCheck.addingTimeInterval(23 * 3600)))
+        XCTAssertTrue(UpdateCheck.isDue(lastCheckedAt: lastCheck, now: lastCheck.addingTimeInterval(24 * 3600)))
+    }
+
+    func testAClockSetBackDoesNotStopTheChecks() {
+        let lastCheck = Date(timeIntervalSince1970: 1_000_000)
+        XCTAssertTrue(UpdateCheck.isDue(lastCheckedAt: lastCheck, now: lastCheck.addingTimeInterval(-60)))
+    }
+}
+
+final class LoginItemStateTests: XCTestCase {
+    func testTheSystemsAnswerIsTheMenuItemsState() {
+        XCTAssertEqual(LoginItemState(status: .enabled, isBundledApp: true), .on)
+        XCTAssertEqual(LoginItemState(status: .notRegistered, isBundledApp: true), .off)
+        XCTAssertEqual(LoginItemState(status: .notFound, isBundledApp: true), .off)
+        XCTAssertEqual(LoginItemState(status: .requiresApproval, isBundledApp: true), .needsApproval)
+    }
+
+    func testAnAppRunFromTheTerminalCannotOpenAtLogin() {
+        XCTAssertEqual(LoginItemState(status: .enabled, isBundledApp: false), .unavailable)
+    }
+
+    func testEachStateHasItsMenuItem() {
+        XCTAssertEqual(LoginItemState.on.menuTitle, "Open at login")
+        XCTAssertTrue(LoginItemState.on.isChecked)
+        XCTAssertFalse(LoginItemState.off.isChecked)
+        XCTAssertEqual(LoginItemState.needsApproval.menuTitle, "Open at login (allow in System Settings\u{2026})")
+        XCTAssertTrue(LoginItemState.needsApproval.isChecked)
     }
 }

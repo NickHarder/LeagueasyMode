@@ -1,6 +1,7 @@
 import AppKit
 import Carbon.HIToolbox
 import OverlayCore
+import ServiceManagement
 
 /// The app: a menu bar item, the overlay panel, the engine it starts and the show/hide shortcut.
 final class AppDelegate: NSObject, NSApplicationDelegate {
@@ -22,6 +23,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         (UInt32(kVK_ANSI_D), .summoner),
         (UInt32(kVK_ANSI_R), .ultimate),
     ]
+    // The update check: whether the player wants it (on unless turned off), and when it last asked.
+    private static let checksForUpdatesKey = "checksForUpdates"
+    private static let lastUpdateCheckKey = "lastUpdateCheck"
+    // How often the app sees whether a check is due; the check itself is at most once a day.
+    private static let updateTimerSeconds: TimeInterval = 60 * 60
 
     private var statusItem: NSStatusItem?
     private var overlayPanel: OverlayPanel?
@@ -34,6 +40,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var isOverlayShown = true
     private var isClickThrough = true
     private var engineStatusText = "Engine: starting…"
+    private var availableRelease: AvailableRelease?
+    private var updateTimer: Timer?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         let panel = OverlayPanel(screenFrame: Self.gameScreenFrame())
@@ -58,6 +66,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             object: nil
         )
         startEngine()
+        UserDefaults.standard.register(defaults: [Self.checksForUpdatesKey: true])
+        checkForUpdatesIfDue()
+        updateTimer = Timer.scheduledTimer(
+            timeInterval: Self.updateTimerSeconds,
+            target: self,
+            selector: #selector(updateTimerFired(_:)),
+            userInfo: nil,
+            repeats: true
+        )
     }
 
     func applicationWillTerminate(_ notification: Notification) {
@@ -108,6 +125,97 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func updateEngineStatus(_ statusText: String) {
         engineStatusText = statusText
+        statusItem?.menu = makeMenu()
+    }
+
+    // MARK: - Updates and login
+
+    /// The app's version, from its bundle; nil when it is not a bundle, as from `swift run`, which a
+    /// clone updates instead.
+    private static var appVersion: ReleaseVersion? {
+        (Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String).flatMap { ReleaseVersion($0) }
+    }
+
+    private static var isBundledApp: Bool {
+        Bundle.main.bundleURL.pathExtension == "app"
+    }
+
+    private var checksForUpdates: Bool {
+        UserDefaults.standard.bool(forKey: Self.checksForUpdatesKey)
+    }
+
+    /// Asks GitHub for the latest release, when the player allows it and a day has passed since the
+    /// last time. A failed request waits for the next day like any other.
+    private func checkForUpdatesIfDue() {
+        let lastCheckedAt = UserDefaults.standard.object(forKey: Self.lastUpdateCheckKey) as? Date
+        guard
+            checksForUpdates,
+            let appVersion = Self.appVersion,
+            UpdateCheck.isDue(lastCheckedAt: lastCheckedAt, now: Date())
+        else {
+            return
+        }
+        UserDefaults.standard.set(Date(), forKey: Self.lastUpdateCheckKey)
+        let request = UpdateCheck.request(appVersion: appVersion)
+        URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
+            if let error {
+                NSLog("LeagueasyMode: the update check did not reach GitHub: %@", error.localizedDescription)
+                return
+            }
+            guard let data, let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+                return
+            }
+            let release = UpdateCheck.newerRelease(answer: data, appVersion: appVersion)
+            DispatchQueue.main.async { self?.didFindRelease(release) }
+        }.resume()
+    }
+
+    private func didFindRelease(_ release: AvailableRelease?) {
+        availableRelease = release
+        statusItem?.menu = makeMenu()
+    }
+
+    @objc private func updateTimerFired(_ timer: Timer) {
+        checkForUpdatesIfDue()
+    }
+
+    @objc private func toggleUpdateCheck(_ sender: NSMenuItem) {
+        UserDefaults.standard.set(!checksForUpdates, forKey: Self.checksForUpdatesKey)
+        if !checksForUpdates {
+            availableRelease = nil
+        }
+        checkForUpdatesIfDue()
+        statusItem?.menu = makeMenu()
+    }
+
+    @objc private func openReleasePage(_ sender: NSMenuItem) {
+        if let availableRelease {
+            NSWorkspace.shared.open(availableRelease.pageURL)
+        }
+    }
+
+    private var loginItemState: LoginItemState {
+        LoginItemState(status: SMAppService.mainApp.status, isBundledApp: Self.isBundledApp)
+    }
+
+    /// Asks macOS to open the app at login, or to stop. The first time, macOS may want the player
+    /// to allow it in System Settings, which this then opens.
+    @objc private func toggleOpenAtLogin(_ sender: NSMenuItem) {
+        do {
+            switch loginItemState {
+            case .on, .needsApproval:
+                try SMAppService.mainApp.unregister()
+            case .off:
+                try SMAppService.mainApp.register()
+            case .unavailable:
+                return
+            }
+        } catch {
+            NSLog("LeagueasyMode: open at login did not change: %@", error.localizedDescription)
+        }
+        if loginItemState == .needsApproval {
+            SMAppService.openSystemSettingsLoginItems()
+        }
         statusItem?.menu = makeMenu()
     }
 
@@ -206,11 +314,42 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
         menu.addItem(.separator())
+        addUpdateAndLoginItems(to: menu)
         let quitItem = NSMenuItem(
             title: "Quit LeagueasyMode", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"
         )
         menu.addItem(quitItem)
         return menu
+    }
+
+    /// The items of a bundled app: a newer release, the update check's switch and open at login.
+    private func addUpdateAndLoginItems(to menu: NSMenu) {
+        guard Self.isBundledApp else {
+            return
+        }
+        if let availableRelease {
+            let releaseItem = NSMenuItem(
+                title: availableRelease.menuTitle, action: #selector(openReleasePage(_:)), keyEquivalent: ""
+            )
+            releaseItem.target = self
+            menu.addItem(releaseItem)
+        }
+        let updateItem = NSMenuItem(
+            title: "Check for updates daily", action: #selector(toggleUpdateCheck(_:)), keyEquivalent: ""
+        )
+        updateItem.target = self
+        updateItem.state = checksForUpdates ? .on : .off
+        menu.addItem(updateItem)
+        let loginState = loginItemState
+        if loginState != .unavailable {
+            let loginItem = NSMenuItem(
+                title: loginState.menuTitle, action: #selector(toggleOpenAtLogin(_:)), keyEquivalent: ""
+            )
+            loginItem.target = self
+            loginItem.state = loginState.isChecked ? .on : .off
+            menu.addItem(loginItem)
+        }
+        menu.addItem(.separator())
     }
 
     private func makeLevelMenu() -> NSMenu {
