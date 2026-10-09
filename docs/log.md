@@ -6,6 +6,12 @@ skill has the format.
 
 ## 2026-10-09
 
+- Phase 9.6, scouting scored: the scoring harness rebuilds the players' records from the client's
+  recorded answers, with the same code the engine's lookups use, decodes the jungle path with
+  the usual starts as the engine does, and scores each jungler's habits against where the game's
+  own timeline puts them: "jungle start (habit)" and "jungle at 4:00 (habit)", kept in the
+  accuracy history with every other score. Whether a habit predicts a game is the question the
+  first recordings answer.
 - Phase 9.5, the usual start in the jungle path: estimator 8 weighs a jungler's first camp, when
   finished by 2:00, by their share of past starts on its side of their jungle (9.1's counts, a
   game added on each side), where one burst of creep score at 1:42 could not tell the two buffs

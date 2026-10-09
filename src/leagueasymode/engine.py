@@ -52,6 +52,7 @@ from leagueasymode.player_intel import (
     DEFAULT_PAUSE_SECONDS,
     PlayerRecord,
     PlayerRecords,
+    jungle_starts_of,
     load_player_records,
 )
 from leagueasymode.refit import ModelWeights
@@ -141,11 +142,7 @@ def compute_overlay_state(
                 player_key(player): move_speed_of(snapshot, player, patch_stats)
                 for player in snapshot.players
             },
-            jungle_starts={
-                key: game_record.record.jungle_starts
-                for key, game_record in (player_records or {}).items()
-                if game_record.record.jungle_starts is not None
-            },
+            jungle_starts=jungle_starts_of(player_records or {}),
         )
         if jungle_tracker is not None
         else ([], [])

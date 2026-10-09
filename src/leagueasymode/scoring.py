@@ -55,7 +55,7 @@ games and never lowered to make a check pass.
 
 import math
 from collections.abc import Callable, Iterator, Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Final, Literal
 
@@ -84,6 +84,7 @@ from leagueasymode.inference.rift_map import RIFT_MAP, RiftMap
 from leagueasymode.inference.roles import assign_roles
 from leagueasymode.inference.wards import WardTracker
 from leagueasymode.inference.win_chance import WinFeatures, win_chance, win_features
+from leagueasymode.jungle_starts import four_minute_side, start_side
 from leagueasymode.league_client import GAMEFLOW_SESSION_PATH, game_id_of
 from leagueasymode.match_timeline import (
     GameTimeline,
@@ -99,7 +100,13 @@ from leagueasymode.overlay_state import (
     PositionEstimate,
 )
 from leagueasymode.patch_data import CHAMPION_SUMMARY_PATH, ITEMS_PATH, ItemCatalog
-from leagueasymode.player_intel import champion_aliases, history_position
+from leagueasymode.player_intel import (
+    PlayerRecords,
+    champion_aliases,
+    history_position,
+    jungle_starts_of,
+    recorded_player_records,
+)
 from leagueasymode.recording.file_format import ClientResource
 from leagueasymode.recording.reader import iter_game_frames, iter_recording_lines
 
@@ -165,6 +172,8 @@ ESTIMATOR_NAMES: Final = frozenset(
         "positions (likeliest region)",
         "positions (chance on the truth)",
         "jungle path",
+        "jungle start (habit)",
+        "jungle at 4:00 (habit)",
         "control wards (of the timeline's)",
         "control wards (of those seen)",
         "map",
@@ -286,6 +295,8 @@ class RecordedGame:
     # The last answer 20 seconds or more before each epic monster's kill, with every player's
     # clues to where they were then, by the game time of the kill.
     contest_moments: Mapping[float, tuple[GameSnapshot, Mapping[PlayerKey, list[PositionClue]]]]
+    # Each player's record, rebuilt from the client's recorded answers as the engine had it.
+    player_records: PlayerRecords = field(default_factory=dict)
 
 
 class DetailsTimeline(RiotPayloadModel):
@@ -354,6 +365,7 @@ def read_recorded_game(recording_path: Path) -> RecordedGame:
         for record in iter_recording_lines(recording_path)
         if isinstance(record, ClientResource)
     }
+    player_records = recorded_player_records(client_resources)
     items_payload = client_resources.get(ITEMS_PATH)
     item_catalog = ItemCatalog.from_client_items(items_payload) if items_payload else None
     gold_tracker = GoldTracker()
@@ -396,7 +408,7 @@ def read_recorded_game(recording_path: Path) -> RecordedGame:
         for take_time in take_times:
             if game_time_seconds <= take_time - CONTEST_LEAD_SECONDS:
                 contest_moments[take_time] = (snapshot, position_clues)
-        jungle_tracker.update(snapshot)
+        jungle_tracker.update(snapshot, jungle_starts=jungle_starts_of(player_records))
         ward_tracker.update(snapshot, {})
         is_minute_start = game_time_seconds - game_minute * SECONDS_PER_MINUTE <= (
             FRAME_ALIGNMENT_SECONDS
@@ -428,6 +440,7 @@ def read_recorded_game(recording_path: Path) -> RecordedGame:
         minute_win_features=win_features_by_minute,
         fight_snapshots=fight_snapshots,
         contest_moments=contest_moments,
+        player_records=player_records,
     )
 
 
@@ -715,6 +728,61 @@ def score_jungle_path(game: RecordedGame) -> EstimatorScore | None:
         value=sum(distances) / len(distances),
         measure="mean_distance_units",
     )
+
+
+def score_jungle_habits(game: RecordedGame) -> list[EstimatorScore]:
+    """Score each jungler's habits from past games against where this game's timeline puts them.
+
+    For each player in the jungle this game whose past games give a usual side: whether they
+    started there (at 2:00), and whether they were on their usual half of the map at 4:00.
+
+    Args:
+        game: The recorded game.
+
+    Returns:
+        A score for the starts and one for 4:00, each left out without a jungler to score.
+    """
+    timeline_payload = _this_games_resource(game.client_resources, TIMELINE_PATH_PREFIX)
+    positions = _details_positions(game)
+    start_hits: list[bool] = []
+    four_minute_hits: list[bool] = []
+    for key, participant in _details_participants(game):
+        game_record = game.player_records.get(key)
+        if positions.get(key) != "JUNGLE" or game_record is None:
+            continue
+        record = game_record.record
+        usual_start = record.jungle_starts.usual_side if record.jungle_starts else None
+        actual_start = start_side(timeline_payload, participant.participant_id, participant.team_id)
+        if usual_start is not None and actual_start is not None:
+            start_hits.append(actual_start == usual_start)
+        usual_four_minutes = (
+            record.four_minute_sides.usual_side if record.four_minute_sides else None
+        )
+        actual_four_minutes = four_minute_side(
+            timeline_payload, participant.participant_id, participant.team_id
+        )
+        if usual_four_minutes is not None and actual_four_minutes is not None:
+            four_minute_hits.append(actual_four_minutes == usual_four_minutes)
+    scores: list[EstimatorScore] = []
+    if start_hits:
+        scores.append(
+            EstimatorScore(
+                estimator="jungle start (habit)",
+                sample_count=len(start_hits),
+                value=sum(start_hits) / len(start_hits),
+                measure="share_correct",
+            )
+        )
+    if four_minute_hits:
+        scores.append(
+            EstimatorScore(
+                estimator="jungle at 4:00 (habit)",
+                sample_count=len(four_minute_hits),
+                value=sum(four_minute_hits) / len(four_minute_hits),
+                measure="share_correct",
+            )
+        )
+    return scores
 
 
 def score_control_wards(game: RecordedGame) -> list[EstimatorScore]:
@@ -1137,6 +1205,7 @@ def score_game(game: RecordedGame, patch_stats: PatchStats | None) -> list[Estim
             for score in [score_jungle_path(game), score_map(game), score_win_chance(game)]
             if score is not None
         ),
+        *score_jungle_habits(game),
     ]
 
 
