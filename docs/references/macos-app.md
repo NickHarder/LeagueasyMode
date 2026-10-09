@@ -1,7 +1,7 @@
 ---
 type: Reference
 title: The macOS overlay app
-description: What the menu bar app does, how to run it from a clone, how to build and open the app that carries its own engine, and the steps for the tracer bullet's test on a Mac over League in each display mode.
+description: What the menu bar app does, how to run it from a clone, how to build, release and open the app that carries its own engine, its update check and open at login, and the steps for the tracer bullet's test on a Mac over League in each display mode.
 tags: [macos, overlay, tracer-bullet]
 status: draft
 generated: { by: claude-code/cloud, at: 2026-10-09T01:37:17Z }
@@ -24,6 +24,12 @@ sources:
     resource: ../../overlay/macos/scripts/build_app.sh
   - id: smoke-test
     resource: ../../overlay/macos/scripts/smoke_test_app.sh
+  - id: update-check
+    resource: ../../overlay/macos/Sources/OverlayCore/UpdateCheck.swift
+  - id: login-item
+    resource: ../../overlay/macos/Sources/OverlayCore/LoginItemState.swift
+  - id: release-workflow
+    resource: ../../.github/workflows/release.yml
 ---
 
 # What it is
@@ -105,6 +111,29 @@ it the first time it opens, once:
 It is built for the architecture of the Mac that builds it. CI's runner is Apple silicon, so the
 zip from CI runs on Apple silicon only.
 
+# Releases, updates and opening at login
+
+**Releasing.** A tag `v<version>` publishes a release on GitHub with the zipped app and its
+SHA-256 (`.github/workflows/release.yml`).[^release-workflow] The tag must be the version in
+`pyproject.toml`, which the app takes as its own: bump it in a pull request
+(`uv version --bump minor`), merge, then `git tag v0.2.0 origin/main && git push origin v0.2.0`.
+The workflow builds and checks the app as CI's `macos-app` job does before it publishes.
+
+**The update check.** Once a day at most, the bundled app asks GitHub's API for the repository's
+latest release, without a token; a draft, a prerelease, or a version not newer than the app's is
+ignored.[^update-check] A newer one adds "LeagueasyMode 0.2.0 is out…" to the menu, which opens the
+release's page; the page's address is always built from the tag on this repository, whatever
+GitHub's answer says. Installing it is by hand: download, unzip, replace the app in
+Applications. "Check for updates daily" in the menu turns the check off; it is the app's only
+request beyond this Mac, League's servers and Data Dragon. An app run from a clone has no version
+and does not check.
+
+**Open at login.** The menu's "Open at login" asks macOS to open the app when the player logs in
+(`SMAppService`, macOS 13 and later).[^login-item] macOS may ask the player to allow it in System
+Settings → General → Login Items, which the app then opens; until then the item reads "allow in
+System Settings…". Only the bundled app offers it. Whether macOS accepts an app signed ad hoc as
+a login item is yet to be seen on a Mac.
+
 # The tracer bullet's test on a Mac
 
 The question it answers: does macOS let the overlay draw over League cleanly?
@@ -138,3 +167,6 @@ whether `KillerName` holds a game name or a Riot ID, and whether the client serv
 [^bundled-engine]: `overlay/macos/Sources/OverlayCore/BundledEngine.swift`
 [^build-app]: `overlay/macos/scripts/build_app.sh`
 [^smoke-test]: `overlay/macos/scripts/smoke_test_app.sh`
+[^release-workflow]: `.github/workflows/release.yml`
+[^update-check]: `overlay/macos/Sources/OverlayCore/UpdateCheck.swift`
+[^login-item]: `overlay/macos/Sources/OverlayCore/LoginItemState.swift`

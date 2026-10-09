@@ -1,0 +1,52 @@
+# Releases of LeagueasyMode.app.
+#
+# A version tag (v0.2.0) builds the app, checks it as CI's `macos-app` job does, and publishes it as
+# a GitHub release with the zip and its SHA-256. The app's update check reads the latest release.
+#
+# The tag must be pyproject.toml's version with a v before it: `uv version --bump minor` in a pull
+# request, merged, then `git tag v0.2.0 origin/main && git push origin v0.2.0`.
+#
+# Every action is named by its commit, with the version beside it, as in ci.yml.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+# Two pushes of one tag never publish at once; a second waits for the first.
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    runs-on: macos-15
+    timeout-minutes: 30
+    permissions:
+      # To create the release and upload the app to it.
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7  # v10.2.0
+      - name: The tag is the project's version
+        run: |
+          version=$(uv version --short --frozen)
+          if [ "$GITHUB_REF_NAME" != "v$version" ]; then
+            echo "release: the tag $GITHUB_REF_NAME is not v$version, the version in pyproject.toml" >&2
+            exit 1
+          fi
+      - run: overlay/macos/scripts/build_app.sh "$RUNNER_TEMP/app"
+      - run: overlay/macos/scripts/smoke_test_app.sh "$RUNNER_TEMP/app/LeagueasyMode.app"
+      - name: Publish the release
+        working-directory: ${{ runner.temp }}/app
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          archive="LeagueasyMode-${GITHUB_REF_NAME#v}.zip"
+          shasum -a 256 "$archive" > "$archive.sha256"
+          gh release create "$GITHUB_REF_NAME" "$archive" "$archive.sha256" \
+            --repo "$GITHUB_REPOSITORY" --verify-tag --generate-notes \
+            --title "LeagueasyMode ${GITHUB_REF_NAME#v}"
