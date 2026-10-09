@@ -3,8 +3,8 @@
 If you are picking this work up, human or model: read this file top to bottom first. The `handoff` skill
 refreshes it; it describes the current state.
 
-Last updated: 2026-10-09, on branch `feat/overlay-settings`. `main` holds phases 0 to 6 (pull
-requests #2 to #29, merged).
+Last updated: 2026-10-09, on branch `feat/app-bundle`. `main` holds phases 0 to 6 and 7.1 (pull
+requests #2 to #30, merged).
 
 ## Where things stand
 
@@ -17,8 +17,9 @@ built but for structures, left out until the first recordings. Phases 3 to 6 are
 [phase 6](docs/plans/phase-6-post-game.md), drafts built on their best guesses); phase 5's models
 are hand-set and phase 6's thresholds empty until 20 recorded games exist. Phase 7
 ([docs/plans/phase-7-packaging.md](docs/plans/phase-7-packaging.md), a draft) is under way,
-without signing as the owner chose: 7.1, settings, is on `feat/overlay-settings`. Each slice goes
-up as its own pull request into `main` without waiting for the one before to merge.
+without signing as the owner chose: 7.1, settings, is merged; 7.2, the app bundle, is on
+`feat/app-bundle`. Each slice goes up as its own pull request into `main` without waiting for the
+one before to merge.
 
 | Area | State | Proof |
 |---|---|---|
@@ -30,8 +31,9 @@ up as its own pull request into `main` without waiting for the one before to mer
 | Phase 2 facts | Objective strip, buffs, inhibitors, numbers window, enemy strip, callouts, item catalog and item gold, roles, combat stats | `tests/test_objective_strip.py`, `test_numbers_window.py`, `test_callouts.py`, `test_item_facts.py`, `test_roles.py`, `test_combat_stats.py`; eight browser tests |
 | Patch stats | Each patch's champion and item stats from Data Dragon, fetched once a patch and kept on disk; **never fetched from the real Data Dragon yet** (this environment cannot reach it) | `tests/test_data_dragon.py` against a stand-in |
 | Widgets in a browser | Rendered in Chromium against a replay | `uv run pytest -m browser` (needs Chromium); `tests/test_overlay_page.py` |
-| macOS app | Builds on macOS 15 and passes its 9 unit tests in CI; **never run over League** | `overlay/macos/`; CI job `macos-overlay` |
-| CI | All 10 jobs green on pull request #2, the widgets' and the macOS app's included | `.github/workflows/ci.yml`; PR #2's checks |
+| macOS app | Builds on macOS 15 and passes its 29 unit tests in CI; **never run over League** | `overlay/macos/`; CI job `macos-overlay` |
+| App bundle | `LeagueasyMode.app` with the engine inside, signed ad hoc, built by CI, its engine started from an empty home folder; **never opened on a Mac by a person** | `overlay/macos/scripts/build_app.sh`; CI job `macos-app`, which keeps the zip with each run |
+| CI | 11 jobs, the widgets', the macOS app's and the app bundle's included; none may fail | `.github/workflows/ci.yml` |
 | Real game data | **None yet**: every test uses built payloads in the API's documented shape | `tests/game_payloads.py` |
 
 ## How to check your work
@@ -42,6 +44,7 @@ make gate                          # everything a push must pass
 uv run pytest -m browser           # the overlay page in Chromium (uv run playwright install chromium)
 (cd overlay/web && npm ci && npm run build)   # after changing the widgets' TypeScript
 (cd overlay/macos && swift build && swift test)   # on a Mac
+overlay/macos/scripts/build_app.sh && overlay/macos/scripts/smoke_test_app.sh dist/LeagueasyMode.app   # on a Mac
 ```
 
 ## Rules
@@ -55,7 +58,9 @@ In `AGENTS.md`, this project's own included: every session reads that file.
    the parsing against the real files.
 2. **The test on a Mac** in [docs/references/macos-app.md](docs/references/macos-app.md): run the
    app, play a Practice Tool game in each display mode, and record a game or two. The recordings
-   (anonymized) become the test data every estimator needs.
+   (anonymized) become the test data every estimator needs. With 7.2 the app needs no clone: the
+   `macos-app` job of a pull request's CI run keeps `LeagueasyMode-<version>.zip` (Apple silicon),
+   and the reference says how to open an unsigned app the first time.
 3. **Compare Riot's root certificate** once with Riot's own `riotgames.pem`: the SHA-256
    fingerprint is in `src/leagueasymode/riot_tls.py`.
 4. **The kit's gate skills** (`kickoff`, `audit-codebase`, `define-personas`, `plan-architecture`,

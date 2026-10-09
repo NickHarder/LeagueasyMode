@@ -6,6 +6,17 @@ skill has the format.
 
 ## 2026-10-09
 
+- Phase 7.2, the app bundle: `overlay/macos/scripts/build_app.sh` builds `LeagueasyMode.app`
+  with the engine inside (its wheel, the versions `uv.lock` pins, the Python version, and a copy
+  of uv in `Contents/Helpers`), signs it ad hoc and zips it. The app runs the engine it carries
+  with `uv tool run`, or a clone's when `LEAGUEASYMODE_REPOSITORY` is set (`BundledEngine` and
+  `EngineCommand.choose` in `OverlayCore`, with unit tests). CI's new `macos-app` job builds it,
+  starts its engine from an empty home folder as the app does, fetches every page, and keeps the
+  zip with the run, so a pull request's build can be tried on a Mac without a clone. Unsigned, as
+  the owner chose; the reference on the macOS app says how to open it the first time.
+- The tests keep the application's files in each test's own folder (`tests/conftest.py`): the
+  accuracy history, the last game, the model weights and now the preferences, which some tests
+  wrote to the home folder before (#31).
 - Phase 7.1, settings: a settings page (`/settings.html`, the macOS app's "Settings…") with a
   switch for each part of the overlay, saved at once through `PUT /preferences` (only with the
   app's header) into `preferences.json`, and sent with the overlay's state so the change shows at
