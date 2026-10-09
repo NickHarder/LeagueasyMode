@@ -6,8 +6,8 @@ skill has the format.
 
 ## 2026-10-09
 
-- Phase 6.2, thresholds in CI: a test scores every anonymized recording in `tests/recordings/`
-  against `tests/accuracy_thresholds.json` (a share must reach its threshold, an error stay under
+- Phase 6.2, thresholds in CI: a test scores every anonymized recording in
+  `tests/fixtures/recorded-games/` against `tests/accuracy_thresholds.json` (a share must reach its threshold, an error stay under
   it), another that only anonymized copies are there, and another that every threshold names an
   estimator the harness scores (the harness now lists them, `ESTIMATOR_NAMES`, checked against
   its own source). `leagueasymode thresholds <recordings> --write` proposes each estimator's

@@ -2,7 +2,8 @@
 
 The plan: "CI fails if any estimator drops below its threshold on the recorded games. The
 thresholds get set from the first batch of recordings and are never lowered to make a test pass."
-Until the first anonymized recordings land in `tests/recordings/`, there is nothing to hold.
+Until the first anonymized recordings land in `tests/fixtures/recorded-games/`, there is nothing
+to hold.
 """
 
 import asyncio
@@ -23,7 +24,8 @@ from leagueasymode.data_dragon import PatchStatsStore, load_patch_stats
 from leagueasymode.patch_data import GAME_VERSION_PATH, game_version_of
 from leagueasymode.scoring import ESTIMATOR_NAMES, EstimatorScore, read_recorded_game, score_game
 
-RECORDINGS_DIRECTORY: Final = Path(__file__).parent / "recordings"
+# Not `recordings/`, which .gitignore keeps out so that no raw recording is committed.
+RECORDINGS_DIRECTORY: Final = Path(__file__).parent / "fixtures" / "recorded-games"
 THRESHOLDS_PATH: Final = Path(__file__).parent / "accuracy_thresholds.json"
 
 
