@@ -74,3 +74,14 @@ def test_the_model_key_comes_from_the_env_file_and_is_never_printed(tmp_path: Pa
     assert settings.model_api_key is not None
     assert settings.model_api_key.get_secret_value() == "not-a-real-key"
     assert "not-a-real-key" not in repr(settings)
+
+
+def test_no_test_writes_to_the_players_own_files() -> None:
+    settings = Settings()
+    for file_path in (
+        settings.accuracy_history,
+        settings.last_game_summary,
+        settings.model_weights,
+    ):
+        assert file_path is not None
+        assert "application" in file_path.parts
