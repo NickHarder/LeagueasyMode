@@ -6,6 +6,13 @@ skill has the format.
 
 ## 2026-10-09
 
+- Data Dragon, checked against the real files (reachable from this environment since the
+  owner's allowance): patch 16.20.1's champions, items and summoner spells all parse as the
+  hand-written test files assumed. One gap is Data Dragon's own: since 16.5.1 it gives every
+  champion an attack damage growth of 0, while the game's data still has it (Ahri's 3 a level, by
+  CommunityDragon's copy of the game's files), so enemies' attack damage ran 50 to 80 low at
+  level 18. A patch without any growth now takes it from the newest older patch that has it
+  (16.4.1), found by halving the older patches, kept on disk, and named on the status page.
 - Phase 9.7, the 4:00 habit in the positions: from 3:00 to 5:00, estimator 7 weighs each half of
   the map by a jungler's share of past games there at 4:00 (9.2's counts, a game added to each
   half), so where the enemy jungler likely is after their first clear, the "missing" callouts and

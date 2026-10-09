@@ -1,16 +1,24 @@
+import json
 import ssl
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from dataclasses import replace
 from pathlib import Path
+from typing import Final
 
 import aiohttp
 import pytest
 
-from data_dragon_fixtures import FIXTURE_FILES, FIXTURE_VERSIONS, fake_data_dragon
+from data_dragon_fixtures import (
+    FIXTURE_FILES,
+    FIXTURE_VERSIONS,
+    champions_without_growth,
+    fake_data_dragon,
+)
 from leagueasymode.data_dragon import (
     DataDragonClient,
     ItemHaste,
+    PatchFiles,
     PatchStats,
     PatchStatsStore,
     create_system_tls_context,
@@ -21,10 +29,14 @@ from local_servers import serve, unused_local_url
 
 @asynccontextmanager
 async def data_dragon_client(
-    requested_paths: list[str], versions: list[str] = FIXTURE_VERSIONS
+    requested_paths: list[str],
+    versions: list[str] = FIXTURE_VERSIONS,
+    growth_missing_since: str | None = None,
 ) -> AsyncIterator[DataDragonClient]:
     async with (
-        serve(fake_data_dragon(requested_paths, versions)) as base_url,
+        serve(
+            fake_data_dragon(requested_paths, versions, growth_missing_since=growth_missing_since)
+        ) as base_url,
         aiohttp.ClientSession() as session,
     ):
         yield DataDragonClient(session, base_url, tls_context=None)
@@ -234,3 +246,64 @@ def test_data_dragon_is_reached_with_the_systems_trust_and_its_hostname_checked(
     tls_context = create_system_tls_context()
     assert tls_context.verify_mode == ssl.CERT_REQUIRED
     assert tls_context.check_hostname is True
+
+
+# Data Dragon's versions around 16.5.1, since which its champions have no attack damage growth.
+GROWTH_VERSIONS: Final = ["16.20.1", "16.19.1", "16.18.1", "16.5.1", "16.4.1", "16.3.1", "15.24.1"]
+AHRI_RAW_NAME: Final = "game_character_displayname_Ahri"
+
+
+async def test_a_patch_without_attack_damage_growth_borrows_it_from_the_newest_that_has_it(
+    patch_data_directory: Path,
+) -> None:
+    requested_paths: list[str] = []
+    store = PatchStatsStore(patch_data_directory)
+    async with data_dragon_client(
+        requested_paths, GROWTH_VERSIONS, growth_missing_since="16.5.1"
+    ) as client:
+        stats = await load_patch_stats(client, store, "16.20.712.1234")
+        paths_after_the_first = list(requested_paths)
+        again = await load_patch_stats(client, store, "16.20.712.1234")
+    assert stats is not None
+    assert (stats.version, stats.growth_version) == ("16.20.1", "16.4.1")
+    ahri = stats.champion_base_stats(AHRI_RAW_NAME, "Ahri")
+    assert ahri is not None
+    assert ahri.attack_damage_per_level == 3.0
+    # Found by halving the older patches, not by asking for each one.
+    growth_paths = [path for path in paths_after_the_first if path.endswith("/champion.json")]
+    assert "/cdn/16.4.1/data/en_US/champion.json" in growth_paths
+    assert len(growth_paths) <= 3
+    # Kept on disk with the patch: the next game asks nothing.
+    assert requested_paths == paths_after_the_first
+    assert again is not None
+    assert again.growth_version == "16.4.1"
+    again_ahri = again.champion_base_stats(AHRI_RAW_NAME, "Ahri")
+    assert again_ahri is not None
+    assert again_ahri.attack_damage_per_level == 3.0
+
+
+def test_borrowed_growth_fills_only_what_the_patch_leaves_out() -> None:
+    growth_champions = json.loads(FIXTURE_FILES.champions)
+    del growth_champions["data"]["Zed"]
+    stats = PatchStats.from_data_dragon(
+        "16.20.1",
+        PatchFiles(
+            champions=champions_without_growth(),
+            items=FIXTURE_FILES.items,
+            summoners=FIXTURE_FILES.summoners,
+            growth_champions=json.dumps(growth_champions).encode(),
+            growth_version="16.4.1",
+        ),
+    )
+    assert stats is not None
+    ahri = stats.champion_base_stats(AHRI_RAW_NAME, "Ahri")
+    zed = stats.champion_base_stats("game_character_displayname_Zed", "Zed")
+    assert ahri is not None
+    assert zed is not None
+    assert (ahri.attack_damage_per_level, zed.attack_damage_per_level) == (3.0, 0.0)
+
+
+def test_a_patch_with_its_own_growth_keeps_it() -> None:
+    stats = PatchStats.from_data_dragon("16.19.1", FIXTURE_FILES)
+    assert stats is not None
+    assert stats.growth_version is None
