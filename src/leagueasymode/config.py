@@ -55,6 +55,15 @@ def default_accuracy_history_path() -> Path:
     return default_application_directory() / "accuracy-history.jsonl"
 
 
+def default_last_game_summary_path() -> Path:
+    """Return where the last game's summary is kept when no setting says otherwise.
+
+    Returns:
+        `last-game.json` in the application's directory (`default_application_directory`).
+    """
+    return default_application_directory() / "last-game.json"
+
+
 def default_model_weights_path() -> Path:
     """Return where the refit models' weights are kept when no setting says otherwise.
 
@@ -122,6 +131,9 @@ class Settings(BaseSettings):
     # Every game's estimator scores, which `leagueasymode run` and `score --keep` add to and
     # `leagueasymode history` reads; empty for the default (`default_accuracy_history_path`).
     accuracy_history: Path | None = None
+    # The last game's summary, which `leagueasymode run` writes after each game it records and the
+    # post-game window shows; empty for the default (`default_last_game_summary_path`).
+    last_game_summary: Path | None = None
     # The model provider's key, for anything that calls the real model. An empty line in `.env`
     # leaves it unset. To change provider, change this value and the model id; no other place holds
     # a key.

@@ -6,6 +6,11 @@ skill has the format.
 
 ## 2026-10-09
 
+- Phase 6.3, the game reconstructed: after each game `leagueasymode run` records, its summary
+  (result, win chance and gold lead each minute, estimated and true, the feed's moments from your
+  side, the three biggest swings with what happened, every score) is written to `last-game.json`;
+  the overlay's server serves it at `/summary`, and the accuracy history at `/history`. The tests'
+  recorded-game builders moved to `tests/recorded_games.py`, and can carry feed events.
 - Phase 6.2, thresholds in CI: a test scores every anonymized recording in
   `tests/fixtures/recorded-games/` against `tests/accuracy_thresholds.json` (a share must reach its threshold, an error stay under
   it), another that only anonymized copies are there, and another that every threshold names an

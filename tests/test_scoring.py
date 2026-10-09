@@ -9,22 +9,20 @@ from pydantic import JsonValue
 
 from data_dragon_fixtures import FIXTURE_FILES, fixture_patch_stats
 from game_payloads import (
-    CHAMPION_IDS,
     DEFAULT_PLAYERS,
     GAME_ID,
-    PlayerSeed,
     all_game_data,
     champion_summary,
     gameflow_session,
 )
 from leagueasymode.accuracy_history import read_accuracy_history
-from leagueasymode.cli import keep_the_accuracy_of, main
+from leagueasymode.cli import after_the_game, main
 from leagueasymode.data_dragon import PatchStats, PatchStatsStore
-from leagueasymode.inference.gold import passive_gold
+from leagueasymode.game_summary import GameSummary
 from leagueasymode.inference.rift_map import RIFT_MAP, MapPoint, RiftMap
 from leagueasymode.inference.win_chance import WIN_CHANCE_RULES, win_chance
 from leagueasymode.league_client import GAMEFLOW_SESSION_PATH
-from leagueasymode.patch_data import CHAMPION_SUMMARY_PATH, GAME_VERSION_PATH, ITEMS_PATH
+from leagueasymode.patch_data import CHAMPION_SUMMARY_PATH
 from leagueasymode.recorder import GAME_DETAILS_PATH_TEMPLATE, TIMELINE_PATH_TEMPLATE
 from leagueasymode.recording.writer import RecordingWriter
 from leagueasymode.refit import MIN_GAMES_TO_FIT, load_model_weights
@@ -46,158 +44,14 @@ from leagueasymode.scoring import (
     score_roles,
     score_win_chance,
 )
-
-# Clear signals for each role: Smite for the junglers, Teleport for the top laners, Heal for the
-# bottom laners, and a support with far less CS than their mid laner.
-CREEP_SCORES: Final = {
-    "Garen": 110,
-    "LeeSin": 60,
-    "Ahri": 150,
-    "Jinx": 160,
-    "Thresh": 20,
-    "Darius": 105,
-    "Vi": 55,
-    "Zed": 140,
-    "Caitlyn": 170,
-    "Lux": 25,
-}
-
-
-def players_at(*, are_positions_given: bool, level: int = 9) -> tuple[PlayerSeed, ...]:
-    return tuple(
-        dataclasses.replace(
-            seed,
-            position=seed.position if are_positions_given else "",
-            creep_score=CREEP_SCORES[seed.champion_name],
-            level=level,
-        )
-        for seed in DEFAULT_PLAYERS
-    )
-
-
-def game_details(
-    positions_by_champion: dict[str, str], winning_team_id: int | None = None
-) -> JsonValue:
-    lane_and_role = {
-        "TOP": ("TOP", "SOLO"),
-        "JUNGLE": ("JUNGLE", "NONE"),
-        "MIDDLE": ("MIDDLE", "SOLO"),
-        "BOTTOM": ("BOTTOM", "CARRY"),
-        "UTILITY": ("BOTTOM", "SUPPORT"),
-    }
-    return {
-        "gameId": GAME_ID,
-        "participants": [
-            {
-                "participantId": index + 1,
-                "championId": CHAMPION_IDS[seed.champion_name],
-                "teamId": 100 if seed.team == "ORDER" else 200,
-                "timeline": {
-                    "lane": lane_and_role[positions_by_champion[seed.champion_name]][0],
-                    "role": lane_and_role[positions_by_champion[seed.champion_name]][1],
-                },
-            }
-            for index, seed in enumerate(DEFAULT_PLAYERS)
-        ],
-        **(
-            {
-                "teams": [
-                    {"teamId": team_id, "win": "Win" if team_id == winning_team_id else "Fail"}
-                    for team_id in (100, 200)
-                ]
-            }
-            if winning_team_id is not None
-            else {}
-        ),
-    }
-
-
-def game_timeline(
-    gold_off_by: int = 0, events_by_minute: dict[int, list[JsonValue]] | None = None
-) -> JsonValue:
-    """A timeline in which every player has earned the starting and passive gold, and spent none."""
-    return {
-        "frameInterval": 60000,
-        "frames": [
-            {
-                "timestamp": minute * 60000 + 25,
-                "participantFrames": {
-                    str(index + 1): {
-                        "participantId": index + 1,
-                        "currentGold": round(500 + passive_gold(minute * 60.0)) + gold_off_by,
-                        "totalGold": round(500 + passive_gold(minute * 60.0)) + gold_off_by,
-                        "level": 1,
-                        "xp": 0,
-                        "minionsKilled": 0,
-                        "jungleMinionsKilled": 0,
-                    }
-                    for index in range(len(DEFAULT_PLAYERS))
-                },
-                "events": (events_by_minute or {}).get(minute, []),
-            }
-            for minute in range(16)
-        ],
-    }
-
-
-def write_scored_recording(
-    directory: Path,
-    players: tuple[PlayerSeed, ...],
-    positions_by_champion: dict[str, str] | None = None,
-    timeline: JsonValue | None = None,
-    zed_buys_at_minute: int | None = None,
-    items_payload: JsonValue | None = None,
-    winning_team_id: int | None = None,
-) -> Path:
-    writer = RecordingWriter(directory / "game.jsonl", keyframe_interval_seconds=60.0)
-    writer.write_started(
-        started_at=datetime.datetime(2026, 10, 8, tzinfo=datetime.UTC),
-        recorder_version="test",
-        poll_interval_seconds=0.5,
-    )
-    writer.write_client_resource(
-        received_at_seconds=0.0, path=GAMEFLOW_SESSION_PATH, payload=gameflow_session()
-    )
-    writer.write_client_resource(
-        received_at_seconds=0.0, path=CHAMPION_SUMMARY_PATH, payload=champion_summary()
-    )
-    writer.write_client_resource(
-        received_at_seconds=0.0, path=GAME_VERSION_PATH, payload="16.19.712.1234"
-    )
-    if items_payload is not None:
-        writer.write_client_resource(
-            received_at_seconds=0.0, path=ITEMS_PATH, payload=items_payload
-        )
-    for minute in range(16):
-        has_zed_bought = zed_buys_at_minute is not None and minute >= zed_buys_at_minute
-        writer.write_snapshot(
-            received_at_seconds=minute * 60.0,
-            payload=all_game_data(
-                minute * 60.0,
-                players=tuple(
-                    dataclasses.replace(seed, items=((1036, "Long Sword", 350),))
-                    if has_zed_bought and seed.champion_name == "Zed"
-                    else seed
-                    for seed in players
-                ),
-            ),
-        )
-    details_positions = positions_by_champion or {
-        seed.champion_name: seed.position for seed in DEFAULT_PLAYERS
-    }
-    writer.write_client_resource(
-        received_at_seconds=1000.0,
-        path=GAME_DETAILS_PATH_TEMPLATE.format(game_id=GAME_ID),
-        payload=game_details(details_positions, winning_team_id),
-    )
-    if timeline is not None:
-        writer.write_client_resource(
-            received_at_seconds=1000.0,
-            path=TIMELINE_PATH_TEMPLATE.format(game_id=GAME_ID),
-            payload=timeline,
-        )
-    writer.write_ended(received_at_seconds=1000.0, reason="game ended")
-    return writer.close()
+from recorded_games import (
+    game_details,
+    game_timeline,
+    kill,
+    monster_kill,
+    players_at,
+    write_scored_recording,
+)
 
 
 def test_the_role_estimator_finds_every_role_the_game_gave_once_they_are_hidden(
@@ -621,23 +475,6 @@ def test_a_game_without_its_result_scores_no_win_chance(tmp_path: Path) -> None:
     assert score_win_chance(read_recorded_game(recording)) is None
 
 
-def kill(
-    game_time_seconds: float,
-    killer_id: int,
-    victim_id: int,
-    assister_ids: list[int],
-    place: tuple[int, int] = (7000, 7000),
-) -> JsonValue:
-    return {
-        "type": "CHAMPION_KILL",
-        "timestamp": round(game_time_seconds * 1000),
-        "killerId": killer_id,
-        "victimId": victim_id,
-        "assistingParticipantIds": list[JsonValue](assister_ids),
-        "position": {"x": place[0], "y": place[1]},
-    }
-
-
 def test_fights_are_scored_against_the_timelines_kills(tmp_path: Path) -> None:
     timeline = game_timeline(
         events_by_minute={
@@ -676,20 +513,6 @@ def test_without_the_patchs_stats_fights_are_not_scored(tmp_path: Path) -> None:
         tmp_path, players_at(are_positions_given=True), timeline=timeline
     )
     assert score_fights(read_recorded_game(recording), None) is None
-
-
-def monster_kill(
-    game_time_seconds: float, team_id: int, monster_type: str, monster_sub_type: str = ""
-) -> JsonValue:
-    pit = (9866, 4414) if monster_type == "DRAGON" else (5007, 10471)
-    return {
-        "type": "ELITE_MONSTER_KILL",
-        "timestamp": round(game_time_seconds * 1000),
-        "killerTeamId": team_id,
-        "monsterType": monster_type,
-        "monsterSubType": monster_sub_type,
-        "position": {"x": pit[0], "y": pit[1]},
-    }
 
 
 def test_objective_contests_are_scored_on_your_teams_takes(tmp_path: Path) -> None:
@@ -801,7 +624,7 @@ def test_a_scored_game_is_kept_in_the_history_and_shown(
     assert "roles: last game 100%; 1 games 100%" in printed
 
 
-async def test_a_game_recorded_while_running_is_scored_into_the_history(tmp_path: Path) -> None:
+async def test_a_game_recorded_while_running_is_scored_and_summed_up(tmp_path: Path) -> None:
     recording = write_scored_recording(tmp_path, players_at(are_positions_given=True, level=1))
     history_path = tmp_path / "history" / "accuracy-history.jsonl"
 
@@ -809,10 +632,15 @@ async def test_a_game_recorded_while_running_is_scored_into_the_history(tmp_path
         assert game_version == "16.19.712.1234"
         return fixture_patch_stats()
 
-    await keep_the_accuracy_of(recording, load_patch_stats, history_path)
+    summary_path = tmp_path / "history" / "last-game.json"
+    await after_the_game(
+        recording, load_patch_stats, history_path=history_path, summary_path=summary_path
+    )
     (game,) = read_accuracy_history(history_path)
     assert game.recording_name == recording.name
     assert "combat stats (yours)" in [score.estimator for score in game.scores]
+    summary = GameSummary.model_validate_json(summary_path.read_text())
+    assert summary.recording_name == recording.name
 
 
 def test_the_list_of_estimators_is_every_name_the_harness_scores() -> None:

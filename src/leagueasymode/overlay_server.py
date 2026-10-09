@@ -6,13 +6,16 @@ refused, so that a web page elsewhere cannot reach it by pointing its own domain
 """
 
 import asyncio
+import dataclasses
 from collections.abc import Awaitable, Callable
 from importlib import resources
+from pathlib import Path
 from typing import Final, Literal
 
 from aiohttp import web
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
+from leagueasymode.accuracy_history import read_accuracy_history
 from leagueasymode.engine import OverlayEngine
 from leagueasymode.overlay_state import OverlayState
 
@@ -47,11 +50,18 @@ WEB_ASSETS: Final = {
 type Handler = Callable[[web.Request], Awaitable[web.StreamResponse]]
 
 
-def create_overlay_application(engine: OverlayEngine) -> web.Application:
+def create_overlay_application(
+    engine: OverlayEngine,
+    *,
+    summary_path: Path | None = None,
+    history_path: Path | None = None,
+) -> web.Application:
     """Return the overlay's web application.
 
     Args:
         engine: The engine whose state is served.
+        summary_path: The last game's summary, served at `/summary`; None to serve none.
+        history_path: The accuracy history, served at `/history`; None to serve none.
 
     Returns:
         The application.
@@ -88,6 +98,22 @@ def create_overlay_application(engine: OverlayEngine) -> web.Application:
             )
         return web.json_response(text=timer.model_dump_json())
 
+    async def summary(_request: web.Request) -> web.Response:
+        summary_text = await asyncio.to_thread(_text_or_none, summary_path)
+        if summary_text is None:
+            return web.json_response({"message": "no game recorded yet"}, status=404)
+        return web.json_response(text=summary_text)
+
+    async def history(_request: web.Request) -> web.Response:
+        games = (
+            await asyncio.to_thread(read_accuracy_history, history_path)
+            if history_path is not None
+            else []
+        )
+        return web.json_response({"games": [dataclasses.asdict(game) for game in games]})
+
+    application.router.add_get("/summary", summary)
+    application.router.add_get("/history", history)
     application.router.add_get("/state", state)
     application.router.add_get("/events", events)
     application.router.add_post("/marks", mark)
@@ -182,6 +208,23 @@ def _event_bytes(state: OverlayState) -> bytes:
         The event's bytes.
     """
     return b"data: " + state.model_dump_json().encode() + b"\n\n"
+
+
+def _text_or_none(file_path: Path | None) -> str | None:
+    """Return a file's text.
+
+    Args:
+        file_path: The file; None for none.
+
+    Returns:
+        The text; None when there is no file.
+    """
+    if file_path is None:
+        return None
+    try:
+        return file_path.read_text()
+    except FileNotFoundError:
+        return None
 
 
 def _asset_handler(file_name: str, content_type: str) -> Handler:

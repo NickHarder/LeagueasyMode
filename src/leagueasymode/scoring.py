@@ -1049,11 +1049,40 @@ def win_samples(game: RecordedGame) -> list[tuple[WinFeatures, float]]:
         Each minute's features and the result (1 when your team won), in order; none when the
         recording has no result.
     """
-    has_ally_won = _has_ally_won(game)
+    has_ally_won = ally_result(game)
     if has_ally_won is None:
         return []
     result = 1.0 if has_ally_won else 0.0
     return [(features, result) for _, features in sorted(game.minute_win_features.items())]
+
+
+def timeline_gold_leads(game: RecordedGame) -> dict[int, float]:
+    """Return your team's gold lead each minute, as the timeline has it.
+
+    Args:
+        game: The recorded game.
+
+    Returns:
+        Your team's gold earned less theirs, by minute; none without a timeline or details.
+    """
+    timeline = _game_timeline(game)
+    team_by_id = {
+        participant.participant_id: key[0] for key, participant in _details_participants(game)
+    }
+    if timeline is None or not team_by_id or not game.minute_snapshots:
+        return {}
+    ally_team = game.minute_snapshots[0].ally_team()
+    return {
+        round(frame.timestamp_milliseconds / MILLISECONDS_PER_SECOND / SECONDS_PER_MINUTE): float(
+            sum(
+                participant_frame.total_gold
+                * (1 if team_by_id.get(participant_frame.participant_id) == ally_team else -1)
+                for participant_frame in frame.participant_frames
+                if participant_frame.participant_id in team_by_id
+            )
+        )
+        for frame in timeline.frames
+    }
 
 
 def timeline_fights(timeline: GameTimeline) -> list[TimelineFight]:
@@ -1649,7 +1678,7 @@ def _game_details(game: RecordedGame) -> GameDetails | None:
         return None
 
 
-def _has_ally_won(game: RecordedGame) -> bool | None:
+def ally_result(game: RecordedGame) -> bool | None:
     """Return whether the team of the player on this machine won, from the game's details.
 
     Args:
@@ -1662,10 +1691,10 @@ def _has_ally_won(game: RecordedGame) -> bool | None:
     if details is None or not game.minute_snapshots:
         return None
     ally_team = game.minute_snapshots[0].ally_team()
-    ally_result = next(
+    ally_team_result = next(
         (team.win for team in details.teams if TEAM_BY_ID.get(team.team_id) == ally_team), None
     )
-    return {"Win": True, "Fail": False}.get(ally_result or "")
+    return {"Win": True, "Fail": False}.get(ally_team_result or "")
 
 
 def _details_participants(game: RecordedGame) -> list[tuple[PlayerKey, DetailsParticipant]]:

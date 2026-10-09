@@ -1,0 +1,227 @@
+{
+  "$defs": {
+    "MomentKind": {
+      "enum": [
+        "kill",
+        "dragon",
+        "elder",
+        "baron",
+        "herald",
+        "voidgrubs",
+        "turret",
+        "inhibitor"
+      ],
+      "type": "string"
+    },
+    "SummaryMoment": {
+      "additionalProperties": false,
+      "description": "One moment of the feed, from your side.",
+      "properties": {
+        "game_time_seconds": {
+          "title": "Game Time Seconds",
+          "type": "number"
+        },
+        "kind": {
+          "$ref": "#/$defs/MomentKind"
+        },
+        "side": {
+          "enum": [
+            "ally",
+            "enemy"
+          ],
+          "title": "Side",
+          "type": "string"
+        },
+        "text": {
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "game_time_seconds",
+        "kind",
+        "side",
+        "text"
+      ],
+      "title": "SummaryMoment",
+      "type": "object"
+    },
+    "SummaryPoint": {
+      "additionalProperties": false,
+      "description": "One minute's value of a series.",
+      "properties": {
+        "minute": {
+          "title": "Minute",
+          "type": "integer"
+        },
+        "value": {
+          "title": "Value",
+          "type": "number"
+        }
+      },
+      "required": [
+        "minute",
+        "value"
+      ],
+      "title": "SummaryPoint",
+      "type": "object"
+    },
+    "SummaryScore": {
+      "additionalProperties": false,
+      "description": "One estimator's score on the game.",
+      "properties": {
+        "estimator": {
+          "title": "Estimator",
+          "type": "string"
+        },
+        "measure": {
+          "title": "Measure",
+          "type": "string"
+        },
+        "sample_count": {
+          "title": "Sample Count",
+          "type": "integer"
+        },
+        "value": {
+          "title": "Value",
+          "type": "number"
+        },
+        "text": {
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "estimator",
+        "measure",
+        "sample_count",
+        "value",
+        "text"
+      ],
+      "title": "SummaryScore",
+      "type": "object"
+    },
+    "WinSwing": {
+      "additionalProperties": false,
+      "description": "A minute that moved the win chance, and what happened in it.",
+      "properties": {
+        "minute": {
+          "title": "Minute",
+          "type": "integer"
+        },
+        "change": {
+          "title": "Change",
+          "type": "number"
+        },
+        "moments": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Moments",
+          "type": "array"
+        }
+      },
+      "required": [
+        "minute",
+        "change",
+        "moments"
+      ],
+      "title": "WinSwing",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "The game reconstructed, for the post-game window.",
+  "properties": {
+    "recording_name": {
+      "title": "Recording Name",
+      "type": "string"
+    },
+    "result": {
+      "anyOf": [
+        {
+          "enum": [
+            "win",
+            "loss"
+          ],
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Result"
+    },
+    "champion_name": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Champion Name"
+    },
+    "duration_seconds": {
+      "title": "Duration Seconds",
+      "type": "number"
+    },
+    "win_chance": {
+      "items": {
+        "$ref": "#/$defs/SummaryPoint"
+      },
+      "title": "Win Chance",
+      "type": "array"
+    },
+    "gold_lead_estimated": {
+      "items": {
+        "$ref": "#/$defs/SummaryPoint"
+      },
+      "title": "Gold Lead Estimated",
+      "type": "array"
+    },
+    "gold_lead_true": {
+      "items": {
+        "$ref": "#/$defs/SummaryPoint"
+      },
+      "title": "Gold Lead True",
+      "type": "array"
+    },
+    "moments": {
+      "items": {
+        "$ref": "#/$defs/SummaryMoment"
+      },
+      "title": "Moments",
+      "type": "array"
+    },
+    "swings": {
+      "items": {
+        "$ref": "#/$defs/WinSwing"
+      },
+      "title": "Swings",
+      "type": "array"
+    },
+    "scores": {
+      "items": {
+        "$ref": "#/$defs/SummaryScore"
+      },
+      "title": "Scores",
+      "type": "array"
+    }
+  },
+  "required": [
+    "recording_name",
+    "result",
+    "champion_name",
+    "duration_seconds",
+    "win_chance",
+    "gold_lead_estimated",
+    "gold_lead_true",
+    "moments",
+    "swings",
+    "scores"
+  ],
+  "title": "GameSummary",
+  "type": "object"
+}
