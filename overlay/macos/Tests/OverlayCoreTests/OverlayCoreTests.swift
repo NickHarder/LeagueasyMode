@@ -166,12 +166,20 @@ final class MarkRequestTests: XCTestCase {
     }
 }
 
-final class PostGameWindowTests: XCTestCase {
-    func testThePageIsBesideTheOverlayPage() {
+final class EnginePageTests: XCTestCase {
+    func testEachPageIsBesideTheOverlayPage() {
         let overlayURL = URL(string: "http://127.0.0.1:52011/")!
         XCTAssertEqual(
-            PostGameWindow.pageURL(overlayURL: overlayURL),
+            EnginePage.lastGame.url(overlayURL: overlayURL),
             URL(string: "http://127.0.0.1:52011/summary.html")
         )
+        XCTAssertEqual(
+            EnginePage.settings.url(overlayURL: overlayURL),
+            URL(string: "http://127.0.0.1:52011/settings.html")
+        )
+    }
+
+    func testEachPageHasItsMenuTitle() {
+        XCTAssertEqual(EnginePage.allCases.map(\.menuTitle), ["Last game\u{2026}", "Settings\u{2026}"])
     }
 }

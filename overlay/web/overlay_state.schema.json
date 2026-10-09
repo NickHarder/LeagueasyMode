@@ -780,6 +780,54 @@
       "title": "ObjectiveTimer",
       "type": "object"
     },
+    "OverlayPreferences": {
+      "additionalProperties": false,
+      "description": "What the player chose to see, from the settings page; everything shows by default.\n\nKept in `preferences.json` in the application's directory (`leagueasymode.preferences`).",
+      "properties": {
+        "show_win_chance": {
+          "default": true,
+          "title": "Show Win Chance",
+          "type": "boolean"
+        },
+        "show_fight_chance": {
+          "default": true,
+          "title": "Show Fight Chance",
+          "type": "boolean"
+        },
+        "show_contests": {
+          "default": true,
+          "title": "Show Contests",
+          "type": "boolean"
+        },
+        "show_you_panel": {
+          "default": true,
+          "title": "Show You Panel",
+          "type": "boolean"
+        },
+        "show_minimap": {
+          "default": true,
+          "title": "Show Minimap",
+          "type": "boolean"
+        },
+        "show_enemy_estimates": {
+          "default": true,
+          "title": "Show Enemy Estimates",
+          "type": "boolean"
+        },
+        "show_callouts": {
+          "default": true,
+          "title": "Show Callouts",
+          "type": "boolean"
+        },
+        "show_suggestions": {
+          "default": true,
+          "title": "Show Suggestions",
+          "type": "boolean"
+        }
+      },
+      "title": "OverlayPreferences",
+      "type": "object"
+    },
     "PlayerCard": {
       "additionalProperties": false,
       "description": "One player as the scoreboard shows them: side, role, level, and when they are back.",
@@ -1576,6 +1624,9 @@
         }
       ],
       "default": null
+    },
+    "preferences": {
+      "$ref": "#/$defs/OverlayPreferences"
     },
     "callouts": {
       "items": {

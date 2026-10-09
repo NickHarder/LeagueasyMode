@@ -4,7 +4,7 @@ from typing import Final
 import pytest
 from pydantic import ValidationError
 
-from leagueasymode.config import ENV_FILE, Settings
+from leagueasymode.config import APPLICATION_SETTINGS_FILE, ENV_FILE, Settings
 
 ENV_EXAMPLE: Final = ENV_FILE.with_name(".env.example")
 PREFIX: Final = "LEAGUEASYMODE_"
@@ -74,3 +74,15 @@ def test_the_model_key_comes_from_the_env_file_and_is_never_printed(tmp_path: Pa
     assert settings.model_api_key is not None
     assert settings.model_api_key.get_secret_value() == "not-a-real-key"
     assert "not-a-real-key" not in repr(settings)
+
+
+def test_an_installed_app_reads_its_own_settings_and_a_clone_its_env() -> None:
+    # The repository's `.env` comes last, so it wins where both exist.
+    assert Settings.model_config.get("env_file") == (APPLICATION_SETTINGS_FILE, ENV_FILE)
+    assert APPLICATION_SETTINGS_FILE.name == "settings.env"
+
+
+def test_the_apps_settings_file_is_read(tmp_path: Path) -> None:
+    settings_file = tmp_path / "settings.env"
+    settings_file.write_text("LEAGUEASYMODE_RECORD_WHILE_RUNNING=false\n")
+    assert not Settings(_env_file=(settings_file, tmp_path / "missing.env")).record_while_running

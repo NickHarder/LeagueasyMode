@@ -39,8 +39,10 @@ from game_payloads import (
 from leagueasymode.cli import run_overlay
 from leagueasymode.config import Settings
 from leagueasymode.league_client import GAMEFLOW_SESSION_PATH
+from leagueasymode.overlay_state import OverlayPreferences
 from leagueasymode.patch_data import CHAMPION_SUMMARY_PATH, GAME_VERSION_PATH, ITEMS_PATH
 from leagueasymode.player_intel import MATCH_HISTORY_PATH_TEMPLATE, RANKED_STATS_PATH_TEMPLATE
+from leagueasymode.preferences import save_preferences
 from leagueasymode.recording.writer import RecordingWriter
 from leagueasymode.replay import RecordingReplay, create_replay_application
 from local_servers import serve
@@ -210,7 +212,10 @@ async def open_overlay(
     zed_buys_at_seconds: float | None = None,
     vi_farms_at_seconds: tuple[float, ...] = (),
     vi_wards_at_seconds: float | None = None,
+    preferences: OverlayPreferences | None = None,
 ) -> AsyncIterator[Page]:
+    if preferences is not None:
+        save_preferences(tmp_path / "preferences.json", preferences)
     replay = RecordingReplay(
         write_recording(
             tmp_path,
@@ -242,6 +247,7 @@ async def open_overlay(
             patch_data_directory=tmp_path / "patch-data",
             league_game_config=tmp_path / "no-game.cfg",
             model_weights=tmp_path / "no-model-weights.json",
+            preferences=tmp_path / "preferences.json",
             player_lookup_pause_seconds=0.0,
             poll_interval_seconds=0.1,
             record_while_running=False,
@@ -537,6 +543,23 @@ async def test_the_you_panel_shows_what_to_build_and_your_pace(tmp_path: Path) -
         # Your Ahri holds 500 gold, under the 1,300 that counts as holding.
         await expect(panel.locator(".you-holding")).to_have_count(0)
         await keep_screenshot(page, "you-panel")
+
+
+async def test_what_the_player_turned_off_does_not_show(tmp_path: Path) -> None:
+    preferences = OverlayPreferences(
+        show_win_chance=False, show_you_panel=False, show_enemy_estimates=False
+    )
+    async with open_overlay(
+        tmp_path, snapshot_count=60, speed=1.0, preferences=preferences
+    ) as page:
+        # The fight chance still shows, and with it the strip's headers, but not the win chance.
+        await expect(page.locator("#enemy-strip .fight-chance")).to_be_visible(timeout=5000)
+        await expect(page.locator("#enemy-strip .win-chance")).to_have_count(0)
+        await expect(page.locator("#you-panel")).to_be_hidden()
+        caitlyn = page.locator("#enemy-strip .enemy-row", has_text="Caitlyn")
+        await expect(caitlyn.locator(".enemy-unspent")).to_have_count(0)
+        # Exact facts stay: her health, armor and magic resist.
+        await expect(caitlyn.locator(".enemy-stats")).to_be_visible()
 
 
 async def test_the_enemy_strip_shows_each_enemys_rank_and_record(tmp_path: Path) -> None:

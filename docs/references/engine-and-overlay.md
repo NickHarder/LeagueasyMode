@@ -60,6 +60,8 @@ sources:
     resource: ../../src/leagueasymode/inference/you.py
   - id: game-summary
     resource: ../../src/leagueasymode/game_summary.py
+  - id: preferences
+    resource: ../../src/leagueasymode/preferences.py
   - id: overlay-state
     resource: ../../src/leagueasymode/overlay_state.py
   - id: overlay-server
@@ -208,6 +210,22 @@ your side ("Zed killed Ahri", "your team took their top outer turret"); the thre
 moved the win chance most, with what happened in each; and every estimator's score. Its contract
 is `overlay/web/game_summary.schema.json`, kept current by a test.[^game-summary]
 
+# Settings
+
+`/settings.html` (`overlay/web/src/settings.ts`), opened by the macOS app's "Settings…", has a
+switch for each part of the overlay: the win chance, the fight chance, the objective contests,
+the You panel, the minimap layer, the enemy estimates (unspent gold, next item, last back, clues,
+likely places, camps down and wards), callouts, and suggestions. Everything shows by default; the
+exact facts of the enemy strip (levels, death timers, items, stats) always do. A change is sent
+with `PUT /preferences`, only with the header `X-LeagueasyMode-Request: preferences`, which a page
+elsewhere cannot send; the engine sends it with its next state, so the overlay changes at once,
+and keeps it in `preferences.json` in the application's directory (`LEAGUEASYMODE_PREFERENCES`
+moves it). A file that cannot be read leaves everything showing.[^preferences]
+
+The engine's own settings come from the repository's `.env` in a clone. An installed app, which
+has no clone, reads `settings.env` in the application's directory instead; where both exist, the
+repository's wins, and a real environment variable wins over either.
+
 # The post-game window
 
 `/summary.html`, a page of its own (`overlay/web/src/summary.ts`), opened by the macOS app's
@@ -271,3 +289,4 @@ Chromium against a replay (Chromium from `uv run playwright install chromium`, o
 [^contests]: `src/leagueasymode/inference/contests.py`
 [^you]: `src/leagueasymode/inference/you.py`
 [^game-summary]: `src/leagueasymode/game_summary.py`
+[^preferences]: `src/leagueasymode/preferences.py`

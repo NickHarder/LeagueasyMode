@@ -4,6 +4,17 @@
  * `overlay/web/overlay_state.schema.json` is that contract's JSON Schema, which a Python test keeps
  * current; a change to it shows up in review beside this file, which must change with it.
  */
+/** The preferences' names, in the settings page's order. */
+export const PREFERENCE_NAMES = [
+    "show_win_chance",
+    "show_fight_chance",
+    "show_contests",
+    "show_you_panel",
+    "show_minimap",
+    "show_enemy_estimates",
+    "show_callouts",
+    "show_suggestions",
+];
 const DRAGON_OBJECTIVES = new Set(["dragon", "elder_dragon"]);
 const DRAGON_STATUSES = new Set(["not_spawned", "respawning", "alive"]);
 const SIDES = new Set(["ally", "enemy"]);
@@ -327,6 +338,10 @@ export function isYouPanel(value) {
         isNumberOrNull(value["creep_score_per_minute"]) &&
         isNumberOrNull(value["usual_creep_score_per_minute"]));
 }
+/** Return whether a value is the player's preferences as the engine sends them. */
+export function isOverlayPreferences(value) {
+    return isRecord(value) && PREFERENCE_NAMES.every((name) => typeof value[name] === "boolean");
+}
 /** Return whether a value is an overlay state as the engine sends it. */
 export function isOverlayState(value) {
     if (!isRecord(value)) {
@@ -352,5 +367,6 @@ export function isOverlayState(value) {
         (value["fight"] === null || isFightEstimate(value["fight"])) &&
         isArrayOf(value["contests"], isObjectiveContest) &&
         (value["you"] === null || isYouPanel(value["you"])) &&
+        isOverlayPreferences(value["preferences"]) &&
         isArrayOf(value["callouts"], isCallout));
 }

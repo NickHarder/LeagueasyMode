@@ -28,6 +28,10 @@ def default_application_directory() -> Path:
     return Path.home() / ".local" / "share" / APPLICATION_NAME.lower()
 
 
+# The settings of an installed app, which has no clone and so no `.env` of the repository's.
+APPLICATION_SETTINGS_FILE: Final = default_application_directory() / "settings.env"
+
+
 def default_recordings_directory() -> Path:
     """Return where recordings are kept when no setting says otherwise.
 
@@ -64,6 +68,15 @@ def default_last_game_summary_path() -> Path:
     return default_application_directory() / "last-game.json"
 
 
+def default_preferences_path() -> Path:
+    """Return where the player's preferences are kept when no setting says otherwise.
+
+    Returns:
+        `preferences.json` in the application's directory (`default_application_directory`).
+    """
+    return default_application_directory() / "preferences.json"
+
+
 def default_model_weights_path() -> Path:
     """Return where the refit models' weights are kept when no setting says otherwise.
 
@@ -79,7 +92,9 @@ class Settings(BaseSettings):
     One `.env` at the repository root holds the keys and settings of every layer. This class reads
     the names that start with its prefix, whatever directory a command runs in, and leaves the other
     layers' names alone. A name with the prefix that is not a field is an error, so a misspelling
-    cannot pass unnoticed. A real environment variable wins over the file.
+    cannot pass unnoticed. An installed app, which has no clone, reads `settings.env` in the
+    application's directory instead (`APPLICATION_SETTINGS_FILE`); where both exist, the
+    repository's `.env` wins, and a real environment variable wins over either.
 
     Every field is listed in `.env.example` with the default written here;
     `tests/test_env_example.py` fails when the two drift apart.
@@ -87,7 +102,8 @@ class Settings(BaseSettings):
 
     model_config = SettingsConfigDict(
         env_prefix="LEAGUEASYMODE_",
-        env_file=ENV_FILE,
+        # Later files win over earlier ones.
+        env_file=(APPLICATION_SETTINGS_FILE, ENV_FILE),
         dotenv_filtering="match_prefix",
         env_ignore_empty=True,
         extra="forbid",
@@ -134,6 +150,9 @@ class Settings(BaseSettings):
     # The last game's summary, which `leagueasymode run` writes after each game it records and the
     # post-game window shows; empty for the default (`default_last_game_summary_path`).
     last_game_summary: Path | None = None
+    # What the player chose to see, which the settings page changes; empty for the default
+    # (`default_preferences_path`).
+    preferences: Path | None = None
     # The model provider's key, for anything that calls the real model. An empty line in `.env`
     # leaves it unset. To change provider, change this value and the model id; no other place holds
     # a key.

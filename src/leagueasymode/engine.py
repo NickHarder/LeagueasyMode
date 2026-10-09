@@ -39,6 +39,7 @@ from leagueasymode.league_client import ClientConnector, LeagueClient
 from leagueasymode.overlay_state import (
     CooldownTimer,
     MinimapLayout,
+    OverlayPreferences,
     OverlayState,
     PlayerCard,
     PositionEstimate,
@@ -246,6 +247,7 @@ class OverlayEngine:
         *,
         minimap_layout: MinimapLayout | None = None,
         model_weights: ModelWeights | None = None,
+        preferences: OverlayPreferences | None = None,
     ) -> None:
         """Keep the game's API, how often to ask it, and where the patch's data comes from.
 
@@ -260,6 +262,7 @@ class OverlayEngine:
             minimap_layout: Where League draws its minimap, from its settings; None while
                 unknown.
             model_weights: The refit models' weights; None for the hand-set ones.
+            preferences: What the player chose to see; None for everything.
         """
         self.game_api: Final = game_api
         self.poll_interval_seconds: Final = poll_interval_seconds
@@ -285,7 +288,8 @@ class OverlayEngine:
         self._jungle_tracker: Final = JunglePathTracker()
         self._ward_tracker: Final = WardTracker()
         self._you_tracker: Final = YouTracker()
-        self._current_state = NOT_RUNNING
+        self._preferences = preferences or OverlayPreferences()
+        self._current_state = NOT_RUNNING.model_copy(update={"preferences": self._preferences})
         self._callouts: Final = CalloutTracker()
         self._subscribers: Final[set[asyncio.Queue[OverlayState]]] = set()
 
@@ -303,6 +307,21 @@ class OverlayEngine:
     def patch_stats(self) -> PatchStats | None:
         """The patch's champion and item stats, once loaded."""
         return self._patch_stats
+
+    @property
+    def preferences(self) -> OverlayPreferences:
+        """What the player chose to see."""
+        return self._preferences
+
+    def set_preferences(self, preferences: OverlayPreferences) -> None:
+        """Take the player's new choices, and send the current state again with them.
+
+        Args:
+            preferences: What the player chose to see.
+        """
+        self._preferences = preferences
+        self._current_state = self._current_state.model_copy(update={"preferences": preferences})
+        self._publish(self._current_state)
 
     def mark_cooldown(self, enemy_slot: int, spell: MarkedSpell) -> CooldownTimer | None:
         """Start the timer of a spell the player marks an enemy as having just used.
@@ -374,7 +393,10 @@ class OverlayEngine:
             if answer_state.is_game_running and not self._current_state.is_game_running:
                 self._start_loading_the_games_data()
             new_state = answer_state.model_copy(
-                update={"callouts": self._callouts.update(answer_state)}
+                update={
+                    "callouts": self._callouts.update(answer_state),
+                    "preferences": self._preferences,
+                }
             )
             if new_state != self._current_state:
                 self._current_state = new_state
