@@ -6,6 +6,7 @@ import datetime
 import logging
 import signal
 import sys
+from collections import Counter
 from collections.abc import Callable, Coroutine, Sequence
 from pathlib import Path
 from typing import Final
@@ -19,7 +20,15 @@ from leagueasymode.accuracy_history import (
     history_lines,
     read_accuracy_history,
 )
+from leagueasymode.accuracy_thresholds import (
+    MIN_GAMES_FOR_THRESHOLDS,
+    load_thresholds,
+    proposed_thresholds,
+    save_thresholds,
+    stricter_thresholds,
+)
 from leagueasymode.config import (
+    REPOSITORY_ROOT,
     Settings,
     default_accuracy_history_path,
     default_model_weights_path,
@@ -87,6 +96,12 @@ def main(arguments: Sequence[str] | None = None) -> int:
     commands: dict[str, Callable[[], int]] = {
         "score": lambda: _score(Path(parsed.recording), settings, should_keep=parsed.keep),
         "history": lambda: _history(settings, parsed.games),
+        "thresholds": lambda: _thresholds(
+            [Path(recording) for recording in parsed.recordings],
+            settings,
+            thresholds_path=Path(parsed.file),
+            should_write=parsed.write,
+        ),
         "fit": lambda: _fit(
             [Path(recording) for recording in parsed.recordings],
             settings,
@@ -334,6 +349,50 @@ def _score(recording_path: Path, settings: Settings, *, should_keep: bool) -> in
             history_path, game_accuracy_of(recording_path, game, scores, _now_text())
         )
         print(f"kept in {history_path}")  # noqa: T201 - as above
+    return EXIT_SUCCESS
+
+
+def _thresholds(
+    recording_paths: list[Path], settings: Settings, *, thresholds_path: Path, should_write: bool
+) -> int:
+    """Propose each estimator's threshold from recorded games, and tighten the file's with it.
+
+    Args:
+        recording_paths: The recordings, 20 or more.
+        settings: Where the patch's stats are kept.
+        thresholds_path: The thresholds file CI holds the recordings to.
+        should_write: Whether to write the thresholds, each only ever made stricter.
+
+    Returns:
+        The exit code.
+    """
+    games = [
+        (
+            game,
+            asyncio.run(
+                _load_patch_stats_once(
+                    settings, game_version_of(game.client_resources.get(GAME_VERSION_PATH))
+                )
+            ),
+        )
+        for game in (read_recorded_game(recording_path) for recording_path in recording_paths)
+    ]
+    scored_games = [score_game(game, patch_stats) for game, patch_stats in games]
+    proposed = proposed_thresholds(scored_games)
+    if not proposed:
+        game_counts = Counter(score.estimator for scores in scored_games for score in scores)
+        counts_text = ", ".join(f"{name} has {count}" for name, count in game_counts.items())
+        print(  # noqa: T201 - the command's output
+            f"no estimator has {MIN_GAMES_FOR_THRESHOLDS} games yet: {counts_text or 'none'}"
+        )
+        return EXIT_SUCCESS
+    measures = {score.estimator: score.measure for scores in scored_games for score in scores}
+    thresholds = stricter_thresholds(load_thresholds(thresholds_path), proposed, measures)
+    for estimator, threshold in sorted(thresholds.items()):
+        print(f"{estimator}: {threshold}")  # noqa: T201 - as above
+    if should_write:
+        save_thresholds(thresholds_path, thresholds)
+        print(f"wrote {thresholds_path}")  # noqa: T201 - as above
     return EXIT_SUCCESS
 
 
@@ -594,6 +653,19 @@ def _build_parser() -> argparse.ArgumentParser:
     score_command.add_argument("recording", help="the recording (.jsonl.xz)")
     score_command.add_argument(
         "--keep", action="store_true", help="add the scores to the accuracy history"
+    )
+    thresholds_command = commands.add_parser(
+        "thresholds",
+        help="propose each estimator's threshold from 20 or more recorded games; never loosens",
+    )
+    thresholds_command.add_argument("recordings", nargs="+", help="the recordings (.jsonl.xz)")
+    thresholds_command.add_argument(
+        "--file",
+        default=str(REPOSITORY_ROOT / "tests" / "accuracy_thresholds.json"),
+        help="the thresholds file (default: tests/accuracy_thresholds.json)",
+    )
+    thresholds_command.add_argument(
+        "--write", action="store_true", help="write the thresholds, each only made stricter"
     )
     history_command = commands.add_parser(
         "history", help="print each estimator's accuracy over the latest games scored"
