@@ -44,7 +44,10 @@ Quitting the app asks the engine to stop; the engine closes the game it is recor
 The menu shows whether the engine runs, toggles the overlay and the click-through, and picks the
 window level, since which level stays above League depends on how League draws:[^levels]
 Floating, Status bar, Screen saver, and Above a captured display (one above the level a game that
-captures the display draws at).
+captures the display draws at). "Last game…" opens the post-game window in the default browser,
+a normal window rather than the click-through overlay: the engine's page `summary.html` beside
+the overlay's (`PostGameWindow` in `OverlayCore` builds its address); it waits until the engine
+has announced its address.
 
 `OverlayCore` holds what the app decides without AppKit (the engine's command and search path,[^engine-command]
 reading its output, finding the clone) and has unit tests; CI builds the app and runs them on a

@@ -3,7 +3,7 @@
 If you are picking this work up, human or model: read this file top to bottom first. The `handoff` skill
 refreshes it; it describes the current state.
 
-Last updated: 2026-10-09, on branch `feat/game-summary-engine`. `main` holds phases 0 to 5 (pull
+Last updated: 2026-10-09, on branch `feat/post-game-window`. `main` holds phases 0 to 5 (pull
 requests #2 to #25, merged).
 
 ## Where things stand
@@ -19,13 +19,14 @@ models are hand-set until `leagueasymode fit` has 20 recorded games. Phase 6
 ([docs/plans/phase-6-post-game.md](docs/plans/phase-6-post-game.md), a draft) is under way: 6.1,
 the accuracy history, is pull request #26 (`feat/accuracy-history`); 6.2, thresholds in CI, is
 pull request #27 (`feat/accuracy-thresholds`, which carries 6.1); 6.3, the game reconstructed, is
-on `feat/game-summary-engine`, which carries both. Each slice goes up as its own pull request
-into `main` without waiting for the one before to merge.
+pull request #28 (`feat/game-summary-engine`, which carries both); 6.4, the post-game window,
+is on `feat/post-game-window`, which carries all three: phase 6 is then built. Each slice goes
+up as its own pull request into `main` without waiting for the one before to merge.
 
 | Area | State | Proof |
 |---|---|---|
 | Scaffold | ai-kit v0.11.1, Python layer, GitHub CI | `.copier-answers.yml` |
-| Gate | Green: lint, 727 tests (and 22 in Chromium), secrets | `make gate` |
+| Gate | Green: lint, 727 tests (and 26 in Chromium), secrets | `make gate` |
 | Recorder | Records games, the client's patch data and the post-game timeline; anonymized copies | `uv run leagueasymode record`; `tests/test_recorder.py`, `tests/test_anonymize.py` |
 | Replay | A recording served as a stand-in game API | `uv run leagueasymode replay <recording>`; `tests/test_replay.py` |
 | Engine and overlay page | The dragon and Elder timer, from the game's answer to the page | `uv run leagueasymode run`; `tests/test_tracer_bullet.py` |

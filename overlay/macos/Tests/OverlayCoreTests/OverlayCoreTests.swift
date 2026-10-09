@@ -165,3 +165,13 @@ final class MarkRequestTests: XCTestCase {
         XCTAssertEqual(decoded["spell"] as? String, "ultimate")
     }
 }
+
+final class PostGameWindowTests: XCTestCase {
+    func testThePageIsBesideTheOverlayPage() {
+        let overlayURL = URL(string: "http://127.0.0.1:52011/")!
+        XCTAssertEqual(
+            PostGameWindow.pageURL(overlayURL: overlayURL),
+            URL(string: "http://127.0.0.1:52011/summary.html")
+        )
+    }
+}

@@ -1,0 +1,318 @@
+/* The post-game window: a page of its own, light or dark with the system, readable at a glance. */
+:root {
+  color-scheme: light;
+  --page: #f9f9f7;
+  --surface-1: #fcfcfb;
+  --text-primary: #0b0b0b;
+  --text-secondary: #52514e;
+  --text-muted: #898781;
+  --gridline: #e1e0d9;
+  --baseline: #c3c2b7;
+  --border: rgb(11 11 11 / 0.1);
+  --series-1: #2a78d6;
+  --series-2: #eb6834;
+  --good: #006300;
+  --bad: #d03b3b;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme="light"])) {
+    color-scheme: dark;
+    --page: #0d0d0d;
+    --surface-1: #1a1a19;
+    --text-primary: #ffffff;
+    --text-secondary: #c3c2b7;
+    --text-muted: #898781;
+    --gridline: #2c2c2a;
+    --baseline: #383835;
+    --border: rgb(255 255 255 / 0.1);
+    --series-1: #3987e5;
+    --series-2: #d95926;
+    --good: #0ca30c;
+    --bad: #e66767;
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --page: #0d0d0d;
+  --surface-1: #1a1a19;
+  --text-primary: #ffffff;
+  --text-secondary: #c3c2b7;
+  --text-muted: #898781;
+  --gridline: #2c2c2a;
+  --baseline: #383835;
+  --border: rgb(255 255 255 / 0.1);
+  --series-1: #3987e5;
+  --series-2: #d95926;
+  --good: #0ca30c;
+  --bad: #e66767;
+}
+
+body {
+  margin: 0;
+  background: var(--page);
+  color: var(--text-primary);
+  font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+.summary {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 24px 16px 48px;
+}
+
+.summary-header {
+  margin-bottom: 16px;
+}
+
+.summary-result {
+  margin: 0;
+  font-size: 48px;
+  font-weight: 600;
+  line-height: 1.1;
+}
+
+.summary-detail {
+  margin: 4px 0 0;
+  color: var(--text-secondary);
+}
+
+.summary-section {
+  margin-top: 16px;
+  padding: 16px;
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.summary-section h2 {
+  margin: 0 0 8px;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.chart {
+  position: relative;
+  margin: 0;
+}
+
+.chart-plot {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.chart-plot:focus-visible {
+  outline: 2px solid var(--series-1);
+  outline-offset: 4px;
+  border-radius: 4px;
+}
+
+.chart-grid {
+  stroke: var(--gridline);
+  stroke-width: 1;
+}
+
+.chart-baseline {
+  stroke: var(--baseline);
+  stroke-width: 1;
+}
+
+.chart-tick {
+  fill: var(--text-muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.chart-tick-y {
+  text-anchor: end;
+}
+
+.chart-tick-x {
+  text-anchor: middle;
+}
+
+.chart-line {
+  fill: none;
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.chart-dot {
+  stroke: var(--surface-1);
+  stroke-width: 2;
+}
+
+.chart-end-label {
+  fill: var(--text-secondary);
+  font-size: 12px;
+}
+
+.chart-crosshair {
+  stroke: var(--text-muted);
+  stroke-width: 1;
+}
+
+.chart-tooltip {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  min-width: 96px;
+  padding: 6px 8px;
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.12);
+  pointer-events: none;
+  font-size: 12px;
+}
+
+.chart-tooltip-time {
+  color: var(--text-muted);
+}
+
+.chart-tooltip-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.chart-tooltip-key,
+.chart-legend-key {
+  display: inline-block;
+  width: 12px;
+  height: 2px;
+  border-radius: 1px;
+}
+
+.chart-tooltip-name {
+  color: var(--text-secondary);
+}
+
+.chart-legend {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 4px;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.chart-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.chart-table summary {
+  margin-top: 4px;
+  color: var(--text-muted);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.chart-table table,
+.summary-accuracy {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.chart-table td,
+.chart-table th,
+.summary-accuracy td,
+.summary-accuracy th {
+  padding: 4px 6px;
+  border-bottom: 1px solid var(--gridline);
+  text-align: left;
+}
+
+.summary-accuracy th,
+.chart-table th {
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.summary-number {
+  font-variant-numeric: tabular-nums;
+}
+
+.summary-swings,
+.summary-moments {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.summary-swings li,
+.summary-moments li {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  padding: 4px 0;
+  border-bottom: 1px solid var(--gridline);
+}
+
+.summary-swing-time,
+.summary-moment-time {
+  min-width: 96px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.summary-moment-time {
+  min-width: 44px;
+}
+
+.summary-swings li[data-direction="ally"] .summary-swing-change {
+  color: var(--good);
+}
+
+.summary-swings li[data-direction="enemy"] .summary-swing-change {
+  color: var(--bad);
+}
+
+.summary-swing-change {
+  min-width: 48px;
+  font-variant-numeric: tabular-nums;
+}
+
+.summary-swing-moments {
+  color: var(--text-secondary);
+}
+
+.summary-moment-key {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  align-self: center;
+}
+
+.summary-moments li[data-side="ally"] .summary-moment-key,
+.chart-legend-item[data-side="ally"] .summary-moment-key {
+  background: var(--series-1);
+}
+
+.summary-moments li[data-side="enemy"] .summary-moment-key,
+.chart-legend-item[data-side="enemy"] .summary-moment-key {
+  background: var(--series-2);
+}
+
+.sparkline {
+  display: block;
+  width: 96px;
+  height: 24px;
+}
+
+.sparkline-line {
+  fill: none;
+  stroke: var(--text-muted);
+  stroke-width: 1.5;
+}
+
+.sparkline-dot {
+  fill: var(--series-1);
+}
