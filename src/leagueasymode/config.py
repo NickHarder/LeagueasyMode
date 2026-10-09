@@ -86,6 +86,15 @@ def default_layout_path() -> Path:
     return default_application_directory() / "layout.json"
 
 
+def default_tuning_path() -> Path:
+    """Return where the owner's changes to the hand-set thresholds are kept by default.
+
+    Returns:
+        `tuning.json` in the application's directory (`default_application_directory`).
+    """
+    return default_application_directory() / "tuning.json"
+
+
 def default_model_weights_path() -> Path:
     """Return where the refit models' weights are kept when no setting says otherwise.
 
@@ -165,6 +174,10 @@ class Settings(BaseSettings):
     # Where the player moved the widgets, which the overlay's edit mode changes; empty for the
     # default (`default_layout_path`).
     layout: Path | None = None
+    # The hand-set thresholds the owner changed (`tuning.py`), which the engine reads at its
+    # start and `leagueasymode tuning --write` writes; empty for the default
+    # (`default_tuning_path`).
+    tuning: Path | None = None
     # The model provider's key, for anything that calls the real model. An empty line in `.env`
     # leaves it unset. To change provider, change this value and the model id; no other place holds
     # a key.

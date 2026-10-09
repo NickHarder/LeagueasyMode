@@ -10,7 +10,8 @@
         "timeline",
         "scoring",
         "settings",
-        "models"
+        "models",
+        "tuning"
       ],
       "type": "string"
     },

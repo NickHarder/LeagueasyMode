@@ -56,6 +56,7 @@ from leagueasymode.player_intel import (
     load_player_records,
 )
 from leagueasymode.refit import ModelWeights
+from leagueasymode.tuning import DEFAULT_TUNING, Tuning
 
 NOT_RUNNING: Final = OverlayState(is_game_running=False)
 
@@ -83,6 +84,7 @@ def compute_overlay_state(
     win_rules: WinChanceRules = WIN_CHANCE_RULES,
     fight_rules: FightRules = FIGHT_RULES,
     status: StatusBoard | None = None,
+    tuning: Tuning = DEFAULT_TUNING,
 ) -> OverlayState:
     """Return what the overlay shows for one answer of the game's API.
 
@@ -106,6 +108,7 @@ def compute_overlay_state(
         win_rules: The win chance's weights, hand-set or refit.
         fight_rules: The fight model's, likewise.
         status: Told whether the answer could be read, and what it held; None to tell nothing.
+        tuning: The hand-set thresholds, as `tuning.json` sets them.
 
     Returns:
         The overlay's state; no game running when there is no answer or it cannot be read.
@@ -156,6 +159,8 @@ def compute_overlay_state(
         level_estimates=level_estimates,
         last_backs=last_backs,
         position_clues=position_clues,
+        intel_rules=tuning.intel,
+        position_rules=tuning.positions,
     )
     dragon = dragon_timer(snapshot)
     objectives = objective_timers(snapshot)
@@ -262,6 +267,7 @@ class OverlayEngine:
         preferences: OverlayPreferences | None = None,
         layout: OverlayLayout | None = None,
         status: StatusBoard | None = None,
+        tuning: Tuning = DEFAULT_TUNING,
     ) -> None:
         """Keep the game's API, how often to ask it, and where the patch's data comes from.
 
@@ -280,8 +286,10 @@ class OverlayEngine:
             layout: Where the player moved the widgets; None for their usual places.
             status: Told what the engine sees, part by part, for the status page; None for a
                 board of its own.
+            tuning: The hand-set thresholds, as `tuning.json` sets them.
         """
         self.game_api: Final = game_api
+        self.tuning: Final = tuning
         self.poll_interval_seconds: Final = poll_interval_seconds
         self.connect_to_client: Final = connect_to_client
         self.load_patch_stats: Final = load_patch_stats
@@ -303,7 +311,7 @@ class OverlayEngine:
         self._experience_tracker: Final = ExperienceTracker()
         self._back_tracker: Final = BackTracker()
         self._clue_tracker: Final = ClueTracker()
-        self._jungle_tracker: Final = JunglePathTracker()
+        self._jungle_tracker: Final = JunglePathTracker(rules=tuning.jungle_path)
         self._ward_tracker: Final = WardTracker()
         self._you_tracker: Final = YouTracker()
         self._preferences = preferences or OverlayPreferences()
@@ -311,7 +319,9 @@ class OverlayEngine:
         self._current_state = NOT_RUNNING.model_copy(
             update={"preferences": self._preferences, "layout": self._layout}
         )
-        self._callouts: Final = CalloutTracker()
+        self._callouts: Final = CalloutTracker(
+            rules=tuning.callouts, suggestion_rules=tuning.suggestions
+        )
         self._subscribers: Final[set[asyncio.Queue[OverlayState]]] = set()
 
     @property
@@ -428,6 +438,7 @@ class OverlayEngine:
                 win_rules=self.model_weights.win_rules,
                 fight_rules=self.model_weights.fight_rules,
                 status=self.status,
+                tuning=self.tuning,
             )
             self._last_payload = payload if answer_state.is_game_running else None
             if answer_state.is_game_running and not self._current_state.is_game_running:
@@ -526,7 +537,7 @@ class OverlayEngine:
             )
             return
         player_records = await load_player_records(
-            client, self._record_cache, self.intel_pause_seconds
+            client, self._record_cache, self.intel_pause_seconds, self.tuning.lookups
         )
         self._player_records = player_records
         logger.info("looked up %d players", len(player_records))

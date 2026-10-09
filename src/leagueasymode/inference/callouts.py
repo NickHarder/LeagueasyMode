@@ -10,35 +10,15 @@ whose clock runs backwards starts a new game.
 import math
 from typing import Final
 
+from pydantic import BaseModel, ConfigDict
+
 from leagueasymode.inference.positions import reach_seconds_of
-from leagueasymode.inference.suggestions import suggestions
+from leagueasymode.inference.suggestions import SUGGESTION_RULES, SuggestionRules, suggestions
 from leagueasymode.overlay_state import Callout, CalloutKind, OverlayState, PlayerCard
 
-CALLOUT_SHOWN_SECONDS: Final = 6.0
 LEVEL_SPIKES: Final = (6, 11, 16)
-# An enemy estimated to reach 6, 11 or 16 within this long is called out, when the estimate's
-# time is sure to within the second figure.
-LEVEL_SOON_SECONDS: Final = 20.0
-LEVEL_SOON_MAX_BAND_SECONDS: Final = 20.0
-# An enemy whose chance to afford their next item reaches this is called out.
-ITEM_SOON_CHANCE: Final = 0.75
-# An enemy unseen this long, likely away from where they play, who could reach your lane this
-# soon, is called out as missing; one at a time, at most once in this long.
-MISSING_UNSEEN_SECONDS: Final = 20.0
-MISSING_AWAY_CHANCE: Final = 0.5
-MISSING_REACH_SECONDS: Final = 20.0
-MISSING_CALLOUT_GAP_SECONDS: Final = 30.0
 LANE_OF_ROLE: Final = {"TOP": "top", "MIDDLE": "mid", "BOTTOM": "bot", "UTILITY": "bot"}
-# Where the enemy jungler usually starts is called out before the camps spawn at 1:30, when at
-# least this share of at least this many of their recent jungle games started on one side.
-JUNGLE_START_BEFORE_SECONDS: Final = 90.0
-JUNGLE_START_MIN_SHARE: Final = 0.7
-JUNGLE_START_MIN_GAMES: Final = 2
-# Where they usually are at 4:00 is called out from 2:45 to 3:30, on the same counts.
-JUNGLE_FOUR_MINUTES_FROM_SECONDS: Final = 165.0
-JUNGLE_FOUR_MINUTES_UNTIL_SECONDS: Final = 210.0
 MAP_HALF_TEXT: Final = {"top": "top side", "mid": "mid", "bot": "bot side"}
-OBJECTIVE_SOON_SECONDS: Final = 60.0
 # A clock this far behind the last one is a new game, not a replayed second.
 NEW_GAME_CLOCK_DROP_SECONDS: Final = 5.0
 SECONDS_PER_MINUTE: Final = 60
@@ -52,11 +32,58 @@ OBJECTIVE_NAMES: Final = {
 }
 
 
+class CalloutRules(BaseModel):
+    """The callouts' hand-set thresholds: `tuning.json`'s "callouts"."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    # How long a callout shows, in game seconds.
+    shown_seconds: float = 6.0
+    # An enemy estimated to reach 6, 11 or 16 within this long is called out, when the estimate's
+    # time is sure to within the second figure.
+    level_soon_seconds: float = 20.0
+    level_soon_max_band_seconds: float = 20.0
+    # An enemy whose chance to afford their next item reaches this is called out.
+    item_soon_chance: float = 0.75
+    # An enemy unseen this long, likely (this chance) away from where they play, who could reach
+    # your lane this soon, is called out as missing; one at a time, at most once in the last.
+    missing_unseen_seconds: float = 20.0
+    missing_away_chance: float = 0.5
+    missing_reach_seconds: float = 20.0
+    missing_gap_seconds: float = 30.0
+    # An objective this close to spawning is called out.
+    objective_soon_seconds: float = 60.0
+    # Scouting (a jungler's usual start, an enemy one-trick) is called out before this: the camps
+    # spawn at 1:30.
+    scouting_until_seconds: float = 90.0
+    # A jungler's habit is called out when at least this share of at least this many of their
+    # recent jungle games had it.
+    habit_min_share: float = 0.7
+    habit_min_games: int = 2
+    # Where a jungler usually is at 4:00 is called out in this window.
+    jungle_four_minutes_from_seconds: float = 165.0
+    jungle_four_minutes_until_seconds: float = 210.0
+
+
+CALLOUT_RULES: Final = CalloutRules()
+
+
 class CalloutTracker:
     """Remembers the last state and the callouts made, and makes the new ones."""
 
-    def __init__(self) -> None:
-        """Start with no game seen."""
+    def __init__(
+        self,
+        rules: CalloutRules = CALLOUT_RULES,
+        suggestion_rules: SuggestionRules = SUGGESTION_RULES,
+    ) -> None:
+        """Start with no game seen.
+
+        Args:
+            rules: The callouts' hand-set thresholds.
+            suggestion_rules: The suggestions'.
+        """
+        self.rules: Final = rules
+        self.suggestion_rules: Final = suggestion_rules
         self._previous_state: OverlayState | None = None
         self._made_callout_ids: set[str] = set()
         self._shown_callouts: list[Callout] = []
@@ -86,10 +113,10 @@ class CalloutTracker:
             self._forget_the_game()
         candidate_callouts = [
             *self._level_spikes(state, game_time_seconds),
-            *_levels_soon(state, game_time_seconds),
-            *_jungle_starts(state, game_time_seconds),
-            *_one_tricks(state, game_time_seconds),
-            *_jungle_four_minutes(state, game_time_seconds),
+            *_levels_soon(state, game_time_seconds, self.rules),
+            *_jungle_starts(state, game_time_seconds, self.rules),
+            *_one_tricks(state, game_time_seconds, self.rules),
+            *_jungle_four_minutes(state, game_time_seconds, self.rules),
             *self._jungler_backs(state, game_time_seconds),
             *self._items_soon(state, game_time_seconds),
             *self._missing(state, game_time_seconds),
@@ -98,10 +125,20 @@ class CalloutTracker:
             *self._item_spikes(state, game_time_seconds),
             *self._cooldowns_ready(state, game_time_seconds),
             *self._inhibitors_opened(state, game_time_seconds),
-            *suggestions(self._previous_state, state, game_time_seconds),
+            *suggestions(self._previous_state, state, game_time_seconds, self.suggestion_rules),
         ]
+        # Each is shown for as long as the rules say from now.
         new_callouts = [
-            callout
+            callout.model_copy(
+                update={
+                    "shown_until_game_time_seconds": game_time_seconds
+                    + (
+                        self.suggestion_rules.shown_seconds
+                        if callout.kind == "suggestion"
+                        else self.rules.shown_seconds
+                    )
+                }
+            )
             for callout in candidate_callouts
             if callout.callout_id not in self._made_callout_ids
         ]
@@ -228,7 +265,7 @@ class CalloutTracker:
         last_missing_seconds = self._last_missing_seconds
         if self._previous_state is None or (
             last_missing_seconds is not None
-            and game_time_seconds - last_missing_seconds < MISSING_CALLOUT_GAP_SECONDS
+            and game_time_seconds - last_missing_seconds < self.rules.missing_gap_seconds
         ):
             return []
         you = next((card for card in state.players if card.is_you), None)
@@ -239,7 +276,7 @@ class CalloutTracker:
             candidate
             for card in state.players
             if card.side == "enemy" and not card.is_dead
-            for candidate in [_missing_from(card, lane)]
+            for candidate in [_missing_from(card, lane, self.rules)]
             if candidate is not None
         ]
         if not candidates:
@@ -287,8 +324,10 @@ class CalloutTracker:
             for estimate in [card.next_item]
             if estimate is not None
             and estimate.chance_to_afford is not None
-            and estimate.chance_to_afford >= ITEM_SOON_CHANCE
-            and not _was_likely(previous_chances.get(card.champion_name), estimate.item_id)
+            and estimate.chance_to_afford >= self.rules.item_soon_chance
+            and not _was_likely(
+                previous_chances.get(card.champion_name), estimate.item_id, self.rules
+            )
         ]
 
     def _item_spikes(self, state: OverlayState, game_time_seconds: float) -> list[Callout]:
@@ -384,17 +423,18 @@ class CalloutTracker:
         Returns:
             The callouts.
         """
+        soon_seconds = self.rules.objective_soon_seconds
         upcoming = [
             (objective_name, spawns_at_seconds, is_verified)
             for objective_name, spawns_at_seconds, is_verified, is_waiting in _spawn_times(state)
-            if is_waiting and 0 < spawns_at_seconds - game_time_seconds <= OBJECTIVE_SOON_SECONDS
+            if is_waiting and 0 < spawns_at_seconds - game_time_seconds <= soon_seconds
         ]
         return [
             _callout(
                 f"soon:{objective_name}:{spawns_at_seconds:.0f}",
                 "objective_soon",
                 f"{OBJECTIVE_NAMES[objective_name]} in "
-                f"{'' if is_verified else PROVISIONAL_MARK}{_clock_text(OBJECTIVE_SOON_SECONDS)}",
+                f"{'' if is_verified else PROVISIONAL_MARK}{_clock_text(soon_seconds)}",
                 game_time_seconds,
             )
             for objective_name, spawns_at_seconds, is_verified in upcoming
@@ -436,12 +476,15 @@ def _spawn_times(state: OverlayState) -> list[tuple[str, float, bool, bool]]:
     return [*dragon_entries, *objective_entries]
 
 
-def _levels_soon(state: OverlayState, game_time_seconds: float) -> list[Callout]:
+def _levels_soon(
+    state: OverlayState, game_time_seconds: float, rules: CalloutRules
+) -> list[Callout]:
     """Return a callout for each enemy about to reach 6, 11 or 16, by their experience's estimate.
 
     Args:
         state: The new state.
         game_time_seconds: Its game time.
+        rules: The hand-set thresholds.
 
     Returns:
         The callouts: those within 20 seconds, whose time is sure to within 20 seconds.
@@ -449,24 +492,29 @@ def _levels_soon(state: OverlayState, game_time_seconds: float) -> list[Callout]
     return [
         callout
         for callout in (
-            _level_soon(card, game_time_seconds) for card in state.players if card.side == "enemy"
+            _level_soon(card, game_time_seconds, rules)
+            for card in state.players
+            if card.side == "enemy"
         )
         if callout is not None
     ]
 
 
-def _jungle_starts(state: OverlayState, game_time_seconds: float) -> list[Callout]:
+def _jungle_starts(
+    state: OverlayState, game_time_seconds: float, rules: CalloutRules
+) -> list[Callout]:
     """Return where the enemy jungler usually starts, before the camps spawn.
 
     Args:
         state: The new state.
         game_time_seconds: Its game time.
+        rules: The hand-set thresholds.
 
     Returns:
         A callout for each enemy in the jungle whose recent jungle games mostly started on one
         side; none from 1:30 on.
     """
-    if game_time_seconds >= JUNGLE_START_BEFORE_SECONDS:
+    if game_time_seconds >= rules.scouting_until_seconds:
         return []
     return [
         _callout(
@@ -482,22 +530,25 @@ def _jungle_starts(state: OverlayState, game_time_seconds: float) -> list[Callou
         and card.role == "JUNGLE"
         and (intel := card.intel) is not None
         and intel.jungle_start_side is not None
-        and intel.jungle_start_games >= JUNGLE_START_MIN_GAMES
-        and intel.jungle_start_count >= JUNGLE_START_MIN_SHARE * intel.jungle_start_games
+        and intel.jungle_start_games >= rules.habit_min_games
+        and intel.jungle_start_count >= rules.habit_min_share * intel.jungle_start_games
     ]
 
 
-def _one_tricks(state: OverlayState, game_time_seconds: float) -> list[Callout]:
+def _one_tricks(
+    state: OverlayState, game_time_seconds: float, rules: CalloutRules
+) -> list[Callout]:
     """Return each enemy who plays little but this game's champion, before the camps spawn.
 
     Args:
         state: The new state.
         game_time_seconds: Its game time.
+        rules: The hand-set thresholds.
 
     Returns:
         A callout for each enemy one-trick; none from 1:30 on.
     """
-    if game_time_seconds >= JUNGLE_START_BEFORE_SECONDS:
+    if game_time_seconds >= rules.scouting_until_seconds:
         return []
     return [
         _callout(
@@ -512,21 +563,24 @@ def _one_tricks(state: OverlayState, game_time_seconds: float) -> list[Callout]:
     ]
 
 
-def _jungle_four_minutes(state: OverlayState, game_time_seconds: float) -> list[Callout]:
+def _jungle_four_minutes(
+    state: OverlayState, game_time_seconds: float, rules: CalloutRules
+) -> list[Callout]:
     """Return where the enemy jungler usually is at 4:00, shortly before it.
 
     Args:
         state: The new state.
         game_time_seconds: Its game time.
+        rules: The hand-set thresholds.
 
     Returns:
         A callout for each enemy in the jungle whose recent jungle games mostly found them on one
         side at 4:00; none outside 2:45 to 3:30.
     """
     if (
-        not JUNGLE_FOUR_MINUTES_FROM_SECONDS
+        not rules.jungle_four_minutes_from_seconds
         <= game_time_seconds
-        < JUNGLE_FOUR_MINUTES_UNTIL_SECONDS
+        < rules.jungle_four_minutes_until_seconds
     ):
         return []
     return [
@@ -542,17 +596,18 @@ def _jungle_four_minutes(state: OverlayState, game_time_seconds: float) -> list[
         and card.role == "JUNGLE"
         and (intel := card.intel) is not None
         and intel.four_minute_half is not None
-        and intel.four_minute_games >= JUNGLE_START_MIN_GAMES
-        and intel.four_minute_count >= JUNGLE_START_MIN_SHARE * intel.four_minute_games
+        and intel.four_minute_games >= rules.habit_min_games
+        and intel.four_minute_count >= rules.habit_min_share * intel.four_minute_games
     ]
 
 
-def _level_soon(card: PlayerCard, game_time_seconds: float) -> Callout | None:
+def _level_soon(card: PlayerCard, game_time_seconds: float, rules: CalloutRules) -> Callout | None:
     """Return the callout for an enemy about to reach their next power level, if they are.
 
     Args:
         card: The enemy.
         game_time_seconds: The game's clock.
+        rules: The hand-set thresholds.
 
     Returns:
         The callout, or None when the level is not near or its time is not sure enough.
@@ -563,11 +618,11 @@ def _level_soon(card: PlayerCard, game_time_seconds: float) -> Callout | None:
         or estimate.next_power_level is None
         or estimate.power_level_at_game_time_seconds is None
         or estimate.power_level_band_seconds is None
-        or estimate.power_level_band_seconds > LEVEL_SOON_MAX_BAND_SECONDS
+        or estimate.power_level_band_seconds > rules.level_soon_max_band_seconds
     ):
         return None
     seconds_to_go = estimate.power_level_at_game_time_seconds - game_time_seconds
-    if not 0 < seconds_to_go <= LEVEL_SOON_SECONDS:
+    if not 0 < seconds_to_go <= rules.level_soon_seconds:
         return None
     return _callout(
         f"level-soon:{card.champion_name}:{estimate.next_power_level}",
@@ -577,12 +632,15 @@ def _level_soon(card: PlayerCard, game_time_seconds: float) -> Callout | None:
     )
 
 
-def _missing_from(card: PlayerCard, lane: str) -> tuple[float, float, str] | None:
+def _missing_from(
+    card: PlayerCard, lane: str, rules: CalloutRules
+) -> tuple[float, float, str] | None:
     """Return how soon an enemy unseen and likely away could reach a lane, if soon enough.
 
     Args:
         card: The enemy.
         lane: "top", "mid" or "bot".
+        rules: The hand-set thresholds.
 
     Returns:
         The seconds to reach it, the seconds unseen and their champion; None when they were seen
@@ -594,20 +652,23 @@ def _missing_from(card: PlayerCard, lane: str) -> tuple[float, float, str] | Non
     reach_seconds = reach_seconds_of(location, lane)
     if (
         reach_seconds is None
-        or location.unseen_seconds < MISSING_UNSEEN_SECONDS
-        or location.away_chance < MISSING_AWAY_CHANCE
-        or reach_seconds > MISSING_REACH_SECONDS
+        or location.unseen_seconds < rules.missing_unseen_seconds
+        or location.away_chance < rules.missing_away_chance
+        or reach_seconds > rules.missing_reach_seconds
     ):
         return None
     return reach_seconds, location.unseen_seconds, card.champion_name
 
 
-def _was_likely(previous: tuple[int, float | None] | None, item_id: int) -> bool:
+def _was_likely(
+    previous: tuple[int, float | None] | None, item_id: int, rules: CalloutRules
+) -> bool:
     """Return whether an enemy was already likely to afford the same item in the last state.
 
     Args:
         previous: Their next item's id and chance to afford it in the last state; None without one.
         item_id: Their next item's id now.
+        rules: The hand-set thresholds.
 
     Returns:
         Whether it was the same item, as likely.
@@ -618,7 +679,7 @@ def _was_likely(previous: tuple[int, float | None] | None, item_id: int) -> bool
     return (
         previous_item_id == item_id
         and previous_chance is not None
-        and previous_chance >= ITEM_SOON_CHANCE
+        and previous_chance >= rules.item_soon_chance
     )
 
 
@@ -653,7 +714,7 @@ def _callout(callout_id: str, kind: CalloutKind, text: str, game_time_seconds: f
         callout_id=callout_id,
         kind=kind,
         text=text,
-        shown_until_game_time_seconds=game_time_seconds + CALLOUT_SHOWN_SECONDS,
+        shown_until_game_time_seconds=game_time_seconds + CALLOUT_RULES.shown_seconds,
     )
 
 

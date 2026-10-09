@@ -6,6 +6,13 @@ skill has the format.
 
 ## 2026-10-09
 
+- Tuning: every hand-set threshold can be changed in one file, `tuning.json` in the
+  application's directory, which names only what it changes. The callouts, the suggestions, the
+  intel, the player lookups, the jungle path and the positions each read their rules from a model
+  whose defaults are the values they had; `leagueasymode tuning` prints them all and `--write`
+  writes them to the file to edit. The engine reads it when it starts, the scoring after a game
+  uses the same values, and the status page says what the file changed or why it could not be
+  read. The owner: "we will tweak as needed. make sure there is an easy way to update them".
 - Every plan approved: the owner, asked about the plan documents, answered "approved". The plan
   v2 and the plans of phases 2 and 4 to 9 are recorded as approved (`make docs-approve`), as
   phase 3's was on 2026-10-08.

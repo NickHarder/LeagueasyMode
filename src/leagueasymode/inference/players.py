@@ -11,8 +11,8 @@ from leagueasymode.game_state import GameSnapshot, ScoreboardPlayer
 from leagueasymode.inference.build_path import next_item
 from leagueasymode.inference.combat_stats import combat_stats_of, move_speed_of
 from leagueasymode.inference.gold import PlayerKey, player_key
-from leagueasymode.inference.intel import player_intel
-from leagueasymode.inference.positions import position_estimate
+from leagueasymode.inference.intel import INTEL_RULES, IntelRules, player_intel
+from leagueasymode.inference.positions import POSITION_RULES, PositionRules, position_estimate
 from leagueasymode.inference.roles import RoleGuess, assign_roles
 from leagueasymode.overlay_state import (
     BackEstimate,
@@ -40,6 +40,8 @@ def player_cards(
     level_estimates: Mapping[PlayerKey, LevelEstimate] | None = None,
     last_backs: Mapping[PlayerKey, BackEstimate] | None = None,
     position_clues: Mapping[PlayerKey, list[PositionClue]] | None = None,
+    intel_rules: IntelRules = INTEL_RULES,
+    position_rules: PositionRules = POSITION_RULES,
 ) -> list[PlayerCard]:
     """Return a card for every player, the player's own team first, each team in scoreboard order.
 
@@ -55,6 +57,8 @@ def player_cards(
         last_backs: Each player's last trip to base, by key; None while trips are not followed.
         position_clues: Each player's clues to where they are, oldest first, by key; None while
             they are not gathered.
+        intel_rules: The intel's hand-set thresholds.
+        position_rules: The positions'.
 
     Returns:
         The cards.
@@ -79,7 +83,7 @@ def player_cards(
             item_gold=_item_gold(player, item_catalog),
             finished_item_names=_finished_item_names(player, item_catalog),
             combat_stats=combat_stats_of(snapshot, player, patch_stats),
-            intel=_intel(player, role_guesses[index], player_records),
+            intel=_intel(player, role_guesses[index], player_records, intel_rules),
             gold=gold_estimates.get(player_key(player)) if gold_estimates is not None else None,
             level_estimate=(
                 level_estimates.get(player_key(player)) if level_estimates is not None else None
@@ -101,6 +105,7 @@ def player_cards(
                 patch_stats,
                 position_clues,
                 player_records=player_records,
+                rules=position_rules,
             ),
         )
         for index, player in [*allies, *enemies]
@@ -174,6 +179,7 @@ def _location(
     position_clues: Mapping[PlayerKey, list[PositionClue]] | None,
     *,
     player_records: PlayerRecords | None,
+    rules: PositionRules,
 ) -> PositionEstimate | None:
     """Return where a player likely is, from their clues and, around 4:00, their past games.
 
@@ -184,6 +190,7 @@ def _location(
         patch_stats: The patch's stats, for their move speed; None while unknown.
         position_clues: Each player's clues, oldest first; None while they are not gathered.
         player_records: Each player's record, for a jungler's 4:00 habit; None while unknown.
+        rules: The positions' hand-set thresholds.
 
     Returns:
         The estimate; None while dead, or while clues are not gathered.
@@ -199,6 +206,7 @@ def _location(
         game_time_seconds=snapshot.game_data.game_time_seconds,
         ally_team=snapshot.ally_team(),
         four_minute_sides=game_record.record.four_minute_sides if game_record else None,
+        rules=rules,
     )
 
 
@@ -219,7 +227,10 @@ def _last_clue(
 
 
 def _intel(
-    player: ScoreboardPlayer, role_guess: RoleGuess, player_records: PlayerRecords | None
+    player: ScoreboardPlayer,
+    role_guess: RoleGuess,
+    player_records: PlayerRecords | None,
+    rules: IntelRules,
 ) -> PlayerIntel | None:
     """Return what a player's record says, matched to them by team and champion.
 
@@ -227,6 +238,7 @@ def _intel(
         player: The player.
         role_guess: Their role this game; a guess is not used to call them off-role.
         player_records: Each player's record; None while unknown.
+        rules: The intel's hand-set thresholds.
 
     Returns:
         The intel, or None when the player has no record.
@@ -244,6 +256,7 @@ def _intel(
         game_record.champion_id,
         role_guess.role if is_position_known else "",
         team=player.team,
+        rules=rules,
     )
 
 

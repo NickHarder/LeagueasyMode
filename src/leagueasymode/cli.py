@@ -37,6 +37,7 @@ from leagueasymode.config import (
     default_patch_data_directory,
     default_preferences_path,
     default_recordings_directory,
+    default_tuning_path,
 )
 from leagueasymode.data_dragon import (
     DataDragonClient,
@@ -76,6 +77,7 @@ from leagueasymode.refit import (
 from leagueasymode.replay import DEFAULT_REPLAY_PORT, RecordingReplay, create_replay_application
 from leagueasymode.riot_tls import create_riot_tls_context
 from leagueasymode.scoring import fight_samples, read_recorded_game, score_game, win_samples
+from leagueasymode.tuning import Tuning, load_tuning, note_tuning, write_tuning
 
 EXIT_SUCCESS: Final = 0
 EXIT_FAILURE: Final = 1
@@ -114,6 +116,7 @@ def main(arguments: Sequence[str] | None = None) -> int:
             settings,
             should_write=parsed.write,
         ),
+        "tuning": lambda: _tuning(settings, should_write=parsed.write),
         "anonymize": lambda: _anonymize(
             Path(parsed.recording), Path(parsed.output) if parsed.output else None
         ),
@@ -165,6 +168,9 @@ async def run_overlay(
         if model_weights is None
         else f"Refit weights from {status.path_text(model_weights_path)}",
     )
+    tuning_path = settings.tuning or default_tuning_path()
+    tuning, tuning_problem = await asyncio.to_thread(load_tuning, tuning_path)
+    note_tuning(status, tuning_path, tuning, tuning_problem)
     if not settings.record_while_running:
         for part_key in ("recording", "timeline", "scoring"):
             status.set_part(part_key, "off", "Off: LEAGUEASYMODE_RECORD_WHILE_RUNNING is false")
@@ -180,6 +186,7 @@ async def run_overlay(
             preferences=await asyncio.to_thread(load_preferences, preferences_path),
             layout=await asyncio.to_thread(load_layout, layout_path),
             status=status,
+            tuning=tuning,
         )
         history_path = settings.accuracy_history or default_accuracy_history_path()
         summary_path = settings.last_game_summary or default_last_game_summary_path()
@@ -207,6 +214,7 @@ async def run_overlay(
                     scoring_patch_stats,
                     history_path=history_path,
                     summary_path=summary_path,
+                    tuning=tuning,
                 )
             except Exception as error:
                 status.set_part(
@@ -230,6 +238,7 @@ async def run_overlay(
                 RecorderTimings(
                     poll_interval_seconds=settings.poll_interval_seconds,
                     lookup_pause_seconds=settings.player_lookup_pause_seconds,
+                    lookup_rules=tuning.lookups,
                 ),
                 stop_requested,
                 on_recorded=score_recorded_game,
@@ -291,6 +300,7 @@ async def record_until_stopped(
         poll_interval_seconds=settings.poll_interval_seconds,
         idle_poll_interval_seconds=idle_poll_interval_seconds,
         lookup_pause_seconds=settings.player_lookup_pause_seconds,
+        lookup_rules=_tuning_of(settings).lookups,
     )
     async with aiohttp.ClientSession() as session:
         logger.info("waiting for a game; recordings go to %s", recordings_directory)
@@ -414,7 +424,7 @@ def _score(recording_path: Path, settings: Settings, *, should_keep: bool) -> in
     Returns:
         The exit code.
     """
-    game = read_recorded_game(recording_path)
+    game = read_recorded_game(recording_path, _tuning_of(settings))
     game_version = game_version_of(game.client_resources.get(GAME_VERSION_PATH))
     patch_stats = asyncio.run(_load_patch_stats_once(settings, game_version))
     scores = score_game(game, patch_stats)
@@ -454,7 +464,10 @@ def _thresholds(
                 )
             ),
         )
-        for game in (read_recorded_game(recording_path) for recording_path in recording_paths)
+        for game in (
+            read_recorded_game(recording_path, _tuning_of(settings))
+            for recording_path in recording_paths
+        )
     ]
     scored_games = [score_game(game, patch_stats) for game, patch_stats in games]
     proposed = proposed_thresholds(scored_games)
@@ -501,6 +514,7 @@ async def after_the_game(
     *,
     history_path: Path,
     summary_path: Path,
+    tuning: Tuning | None = None,
 ) -> None:
     """Score a recorded game, add its scores to the accuracy history, and write its summary.
 
@@ -509,8 +523,9 @@ async def after_the_game(
         load_patch_stats: Returns the stats of the game's patch.
         history_path: The accuracy history.
         summary_path: The last game's summary, for the post-game window.
+        tuning: The hand-set thresholds the engine ran with; None for the defaults.
     """
-    game = await asyncio.to_thread(read_recorded_game, recording_path)
+    game = await asyncio.to_thread(read_recorded_game, recording_path, tuning or Tuning())
     patch_stats = await load_patch_stats(
         game_version_of(game.client_resources.get(GAME_VERSION_PATH))
     )
@@ -523,6 +538,49 @@ async def after_the_game(
     summary = await asyncio.to_thread(game_summary, recording_path.name, game, scores)
     await asyncio.to_thread(_write_whole, summary_path, summary.model_dump_json())
     logger.info("scored %s: %d estimators", recording_path.name, len(scores))
+
+
+def _tuning(settings: Settings, *, should_write: bool) -> int:
+    """Print every hand-set threshold the engine would use, or write them all to the file.
+
+    Args:
+        settings: Where the tuning file is.
+        should_write: Whether to write every value to the file, to edit; never over a file
+            already there.
+
+    Returns:
+        The exit code: 1 when the file cannot be read, or is already there to write.
+    """
+    tuning_path = settings.tuning or default_tuning_path()
+    if should_write:
+        if tuning_path.exists():
+            sys.stderr.write(f"{tuning_path} is already there; edit it, or move it away first\n")
+            return 1
+        write_tuning(tuning_path, Tuning())
+        sys.stdout.write(f"wrote every value to {tuning_path}; the app reads it when it opens\n")
+        return 0
+    tuning, problem = load_tuning(tuning_path)
+    sys.stdout.write(tuning.model_dump_json(indent=2) + "\n")
+    if problem is not None:
+        sys.stderr.write(f"{tuning_path} could not be read ({problem}); these are the defaults\n")
+        return 1
+    return 0
+
+
+def _tuning_of(settings: Settings) -> Tuning:
+    """Return the tuning the settings name, the defaults when its file cannot be read.
+
+    Args:
+        settings: Where the tuning file is.
+
+    Returns:
+        The tuning.
+    """
+    tuning_path = settings.tuning or default_tuning_path()
+    tuning, problem = load_tuning(tuning_path)
+    if problem is not None:
+        logger.warning("could not read %s (%s); the hand-set values stand", tuning_path, problem)
+    return tuning
 
 
 def _write_whole(file_path: Path, file_text: str) -> None:
@@ -558,7 +616,8 @@ def _fit(recording_paths: list[Path], settings: Settings, *, should_write: bool)
     Returns:
         The exit code.
     """
-    games = [read_recorded_game(recording_path) for recording_path in recording_paths]
+    tuning = _tuning_of(settings)
+    games = [read_recorded_game(recording_path, tuning) for recording_path in recording_paths]
     patch_stats_by_version: dict[str | None, PatchStats | None] = {}
     for game in games:
         game_version = game_version_of(game.client_resources.get(GAME_VERSION_PATH))
@@ -781,6 +840,14 @@ def _build_parser() -> argparse.ArgumentParser:
         "--write",
         action="store_true",
         help="write the weights kept, which the engine reads at its start",
+    )
+    tuning_command = commands.add_parser(
+        "tuning", help="print every hand-set threshold the engine uses, from tuning.json or default"
+    )
+    tuning_command.add_argument(
+        "--write",
+        action="store_true",
+        help="write every value to tuning.json, to edit, when there is no such file yet",
     )
     anonymize_command = commands.add_parser(
         "anonymize", help="write a copy of a recording with every player's name and id replaced"

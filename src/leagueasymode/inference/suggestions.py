@@ -15,6 +15,8 @@ any callout. The wording is a first draft for the owner to tune, and it is text 
 import math
 from typing import Final
 
+from pydantic import BaseModel, ConfigDict
+
 from leagueasymode.overlay_state import (
     BuffTimer,
     Callout,
@@ -24,13 +26,6 @@ from leagueasymode.overlay_state import (
     PlayerCard,
 )
 
-SUGGESTION_SHOWN_SECONDS: Final = 6.0
-# An objective spawning within this is as good as up for a numbers window.
-OBJECTIVE_WINDOW_SECONDS: Final = 30.0
-# A window shorter than this is too short to walk to an objective and take it.
-SHORTEST_USABLE_SECONDS: Final = 20.0
-# With their jungler down, an objective spawning within this is worth taking.
-JUNGLER_OBJECTIVE_SECONDS: Final = 60.0
 SECONDS_PER_MINUTE: Final = 60
 OBJECTIVE_NAMES: Final = {
     "dragon": "Dragon",
@@ -49,8 +44,29 @@ BUFF_ADVICE: Final = {
 KNOWN_ROLE_CONFIDENCES: Final = frozenset({"given", "likely"})
 
 
+class SuggestionRules(BaseModel):
+    """The suggestions' hand-set thresholds: `tuning.json`'s "suggestions"."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    # How long a suggestion shows, in game seconds.
+    shown_seconds: float = 6.0
+    # An objective spawning within this is as good as up for a numbers window.
+    objective_window_seconds: float = 30.0
+    # A window shorter than this is too short to walk to an objective and take it.
+    shortest_usable_seconds: float = 20.0
+    # With their jungler down, an objective spawning within this is worth taking.
+    jungler_objective_seconds: float = 60.0
+
+
+SUGGESTION_RULES: Final = SuggestionRules()
+
+
 def suggestions(
-    previous_state: OverlayState | None, state: OverlayState, game_time_seconds: float
+    previous_state: OverlayState | None,
+    state: OverlayState,
+    game_time_seconds: float,
+    rules: SuggestionRules = SUGGESTION_RULES,
 ) -> list[Callout]:
     """Return the suggestions whose facts line up in a state.
 
@@ -60,6 +76,7 @@ def suggestions(
         previous_state: The last state, or None when this is the first of the game.
         state: The new state.
         game_time_seconds: Its game time.
+        rules: The hand-set thresholds.
 
     Returns:
         The suggestions; the caller makes each one only once.
@@ -67,19 +84,22 @@ def suggestions(
     if previous_state is None:
         return []
     return [
-        *_objective_windows(state, game_time_seconds),
-        *_jungler_down(state, game_time_seconds),
+        *_objective_windows(state, game_time_seconds, rules),
+        *_jungler_down(state, game_time_seconds, rules),
         *_spells_down(previous_state, state, game_time_seconds),
         *_buffs_taken(previous_state, state, game_time_seconds),
     ]
 
 
-def _objective_windows(state: OverlayState, game_time_seconds: float) -> list[Callout]:
+def _objective_windows(
+    state: OverlayState, game_time_seconds: float, rules: SuggestionRules
+) -> list[Callout]:
     """Suggest taking an objective that is up, or about to be, while enemies are down.
 
     Args:
         state: The new state.
         game_time_seconds: Its game time.
+        rules: The hand-set thresholds.
 
     Returns:
         One suggestion per such objective.
@@ -88,7 +108,7 @@ def _objective_windows(state: OverlayState, game_time_seconds: float) -> list[Ca
     if window is None:
         return []
     window_seconds_left = window.ends_at_game_time_seconds - game_time_seconds
-    if window_seconds_left < SHORTEST_USABLE_SECONDS:
+    if window_seconds_left < rules.shortest_usable_seconds:
         return []
     enemy_text = "enemy" if window.enemy_dead_count == 1 else "enemies"
     return [
@@ -101,17 +121,20 @@ def _objective_windows(state: OverlayState, game_time_seconds: float) -> list[Ca
             game_time_seconds,
         )
         for objective_name, spawns_at_seconds in _objectives_within(
-            state, game_time_seconds, OBJECTIVE_WINDOW_SECONDS
+            state, game_time_seconds, rules.objective_window_seconds
         )
     ]
 
 
-def _jungler_down(state: OverlayState, game_time_seconds: float) -> list[Callout]:
+def _jungler_down(
+    state: OverlayState, game_time_seconds: float, rules: SuggestionRules
+) -> list[Callout]:
     """Suggest using the time their jungler is dead.
 
     Args:
         state: The new state.
         game_time_seconds: Its game time.
+        rules: The hand-set thresholds.
 
     Returns:
         The suggestion, or nothing.
@@ -120,9 +143,9 @@ def _jungler_down(state: OverlayState, game_time_seconds: float) -> list[Callout
     if jungler is None or not jungler.is_dead or jungler.respawns_at_game_time_seconds is None:
         return []
     seconds_down = jungler.respawns_at_game_time_seconds - game_time_seconds
-    if seconds_down < SHORTEST_USABLE_SECONDS:
+    if seconds_down < rules.shortest_usable_seconds:
         return []
-    near_objectives = _objectives_within(state, game_time_seconds, JUNGLER_OBJECTIVE_SECONDS)
+    near_objectives = _objectives_within(state, game_time_seconds, rules.jungler_objective_seconds)
     advice = (
         f"take {OBJECTIVE_NAMES[near_objectives[0][0]]}" if near_objectives else "invade or push"
     )
@@ -277,7 +300,7 @@ def _suggestion(callout_id: str, text: str, game_time_seconds: float) -> Callout
         callout_id=callout_id,
         kind="suggestion",
         text=text,
-        shown_until_game_time_seconds=game_time_seconds + SUGGESTION_SHOWN_SECONDS,
+        shown_until_game_time_seconds=game_time_seconds + SUGGESTION_RULES.shown_seconds,
     )
 
 

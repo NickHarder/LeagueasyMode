@@ -28,7 +28,16 @@ from leagueasymode.game_state import GameSnapshot
 
 type PartState = Literal["ok", "waiting", "problem", "off"]
 type PartKey = Literal[
-    "game", "client", "patch", "players", "recording", "timeline", "scoring", "settings", "models"
+    "game",
+    "client",
+    "patch",
+    "players",
+    "recording",
+    "timeline",
+    "scoring",
+    "settings",
+    "models",
+    "tuning",
 ]
 
 # Each part, in the order the page shows them, with what it says before anything happens.
@@ -42,6 +51,7 @@ PART_TITLES: Final[dict[PartKey, str]] = {
     "scoring": "After the game",
     "settings": "League's settings",
     "models": "Models",
+    "tuning": "Tuning",
 }
 FIRST_DETAILS: Final[dict[PartKey, str]] = {
     "game": "No answer yet",
@@ -53,6 +63,7 @@ FIRST_DETAILS: Final[dict[PartKey, str]] = {
     "scoring": "After the first recorded game",
     "settings": "Not read yet",
     "models": "Not loaded yet",
+    "tuning": "Read when the engine starts",
 }
 # The feed's events some estimator reads; a test holds this to the estimators' own names.
 READ_EVENT_NAMES: Final = frozenset(

@@ -100,7 +100,12 @@ async def test_each_part_shows_its_state_in_words() -> None:
         await expect(game_row.locator(".status-detail")).to_have_text(
             "Answering: CLASSIC on map 11, 12:34 in, 10 players"
         )
-        await expect(page.locator(".status-part")).to_have_count(9)
+        # The game, the client, the patch, the lookups, the recording, the timeline, the scoring,
+        # League's settings, the models and the tuning.
+        await expect(page.locator(".status-part")).to_have_count(10)
+        await expect(page.locator(".status-part[data-key='tuning'] .status-detail")).to_have_text(
+            "Read when the engine starts"
+        )
         await expect(page.locator(".status-events li")).to_have_text(
             [
                 "ChampionKill \u00d71",

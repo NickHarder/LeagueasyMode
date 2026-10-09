@@ -8,7 +8,7 @@ from leagueasymode.engine import compute_overlay_state
 from leagueasymode.game_state import ScoreboardPlayer
 from leagueasymode.inference.callouts import CalloutTracker
 from leagueasymode.inference.clues import ClueTracker
-from leagueasymode.inference.positions import point_chances, position_estimate
+from leagueasymode.inference.positions import PositionRules, point_chances, position_estimate
 from leagueasymode.inference.rift_map import RIFT_MAP, region_center
 from leagueasymode.jungle_starts import MAP_HALF_BY_REGION, FourMinuteSides
 from leagueasymode.overlay_state import (
@@ -280,3 +280,17 @@ def test_the_overlay_weighs_the_enemy_junglers_four_minute_habit() -> None:
         return next(card for card in state.players if card.champion_name == "Vi").location
 
     assert vi_location(with_records=True) != vi_location(with_records=False)
+
+
+def test_the_four_minute_window_comes_from_the_rules() -> None:
+    narrow = PositionRules(four_minute_habit_until_seconds=200.0)
+    with_habit = point_chances(
+        "CHAOS",
+        "JUNGLE",
+        [],
+        move_speed=MOVE_SPEED,
+        game_time_seconds=240.0,
+        four_minute_sides=VI_FOUR_MINUTES,
+        rules=narrow,
+    )
+    assert with_habit == vi_point_chances(240.0, None)
