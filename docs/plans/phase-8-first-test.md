@@ -23,7 +23,7 @@ next after phase 7. i might do a test later tonight". Second, the plan's picture
 | 8.3 | Moving the widgets | "Edit layout" in the menu makes the overlay take clicks: each widget can be dragged, and "Reset layout" puts them back. The places are kept with the settings | The plan: "You move the widgets around after switching on edit mode from the menu bar" |
 | 8.4 | Spoken callouts | A switch in the settings, off unless turned on: each new callout is spoken by macOS's own voice | The plan: "Callouts: short facts, with optional voice" |
 | 8.5 | Structures (2.6) | Turrets and inhibitors down per lane, and inhibitors exposed | Left out of phase 2 until a recording shows the turret names. Built without waiting after all (the owner, 2026-10-09: "we cant proceed without manula tests?"): the gold, the clues and the post-game window already read the same names, so the first recordings confirm them all at once |
-| 8.6 | The Swift 6 language mode | The app moves to Swift 6 with no concurrency warnings | A known limitation; it waits until the test on a Mac has run, so a change to the app does not land between two tests |
+| 8.6 | The Swift 6 language mode | The app moves to Swift 6 with no concurrency warnings | A known limitation. Proposed to wait for the test on a Mac, so that a change to the app did not land between two tests; built after all as its own pull request, to merge before or after the test |
 
 ## How each is verified
 

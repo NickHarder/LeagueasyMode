@@ -4,6 +4,8 @@ import OverlayCore
 import ServiceManagement
 
 /// The app: a menu bar item, the overlay panel, the engine it starts and the show/hide shortcut.
+/// It runs on the main thread, as AppKit does.
+@MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private static let toggleShortcutDescription = "⌃⌥⌘L"
     private static let toggleHotKeyIdentifier: UInt32 = 1
@@ -114,10 +116,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let process = EngineProcess(
             command: command,
             onOverlayURL: { [weak self] overlayURL in
-                DispatchQueue.main.async { self?.engineDidAnnounce(overlayURL) }
+                self?.engineDidAnnounce(overlayURL)
             },
             onExit: { [weak self] exitStatus in
-                DispatchQueue.main.async { self?.updateEngineStatus("Engine: stopped (exit \(exitStatus))") }
+                self?.updateEngineStatus("Engine: stopped (exit \(exitStatus))")
             }
         )
         do {
@@ -174,17 +176,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         UserDefaults.standard.set(Date(), forKey: Self.lastUpdateCheckKey)
         let request = UpdateCheck.request(appVersion: appVersion)
-        URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
-            if let error {
+        // On the main actor, as this method is; the request itself waits without holding it.
+        Task { [weak self] in
+            do {
+                let (data, response) = try await URLSession.shared.data(for: request)
+                guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+                    return
+                }
+                self?.didFindRelease(UpdateCheck.newerRelease(answer: data, appVersion: appVersion))
+            } catch {
                 NSLog("LeagueasyMode: the update check did not reach GitHub: %@", error.localizedDescription)
-                return
             }
-            guard let data, let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
-                return
-            }
-            let release = UpdateCheck.newerRelease(answer: data, appVersion: appVersion)
-            DispatchQueue.main.async { self?.didFindRelease(release) }
-        }.resume()
+        }
     }
 
     private func didFindRelease(_ release: AvailableRelease?) {

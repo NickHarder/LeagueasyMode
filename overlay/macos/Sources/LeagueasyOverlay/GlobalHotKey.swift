@@ -11,7 +11,7 @@ final class GlobalHotKey {
     private static let signature = OSType(0x4C45_4147)
 
     private let identifier: UInt32
-    private let action: () -> Void
+    private let action: @MainActor @Sendable () -> Void
     private var hotKeyReference: EventHotKeyRef?
     private var handlerReference: EventHandlerRef?
 
@@ -22,7 +22,12 @@ final class GlobalHotKey {
     ///   - keyCode: The key, as a virtual key code (`kVK_ANSI_L`).
     ///   - modifiers: The modifier keys, as Carbon flags (`cmdKey | optionKey | controlKey`).
     ///   - action: What to do when the shortcut is pressed; called on the main thread.
-    init?(identifier: UInt32, keyCode: UInt32, modifiers: UInt32, action: @escaping () -> Void) {
+    init?(
+        identifier: UInt32,
+        keyCode: UInt32,
+        modifiers: UInt32,
+        action: @escaping @MainActor @Sendable () -> Void
+    ) {
         self.identifier = identifier
         self.action = action
         var pressedEventType = EventTypeSpec(
@@ -53,7 +58,9 @@ final class GlobalHotKey {
                 else {
                     return OSStatus(eventNotHandledErr)
                 }
-                hotKey.action()
+                // The application's event target delivers hot keys on the main thread.
+                let action = hotKey.action
+                MainActor.assumeIsolated { action() }
                 return OSStatus(noErr)
             },
             1,
