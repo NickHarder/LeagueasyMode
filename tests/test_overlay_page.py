@@ -37,6 +37,7 @@ from game_payloads import (
     past_game_id,
     puuid_of,
     ranked_stats,
+    turret_killed_event,
 )
 from leagueasymode.cli import run_overlay
 from leagueasymode.config import Settings
@@ -129,6 +130,7 @@ def write_recording(
     zed_buys_at_seconds: float | None = None,
     vi_farms_at_seconds: tuple[float, ...] = (),
     vi_wards_at_seconds: float | None = None,
+    turret_kills: tuple[tuple[int, float, str], ...] = (),
 ) -> Path:
     writer = RecordingWriter(directory / "game.jsonl", keyframe_interval_seconds=60.0)
     writer.write_started(
@@ -161,6 +163,12 @@ def write_recording(
         ]
         if is_baron_taken:
             events.append(baron_kill_event(4, 1380.0, ENEMY_JUNGLER))
+        # Each turret enters the feed when it falls, so that an inhibitor can open mid-replay.
+        events.extend(
+            turret_killed_event(event_id, fell_at_seconds, turret_name, ENEMY_JUNGLER)
+            for event_id, fell_at_seconds, turret_name in turret_kills
+            if fell_at_seconds <= game_time_seconds
+        )
         players = scoreboard_at(
             game_time_seconds,
             respawn_at_by_champion or {},
@@ -249,6 +257,7 @@ async def open_overlay(
     vi_wards_at_seconds: float | None = None,
     preferences: OverlayPreferences | None = None,
     init_script: str | None = None,
+    turret_kills: tuple[tuple[int, float, str], ...] = (),
 ) -> AsyncIterator[Page]:
     if preferences is not None:
         save_preferences(tmp_path / "preferences.json", preferences)
@@ -262,6 +271,7 @@ async def open_overlay(
             zed_buys_at_seconds,
             vi_farms_at_seconds,
             vi_wards_at_seconds,
+            turret_kills,
         ),
         speed=speed,
     )
@@ -346,6 +356,34 @@ async def test_the_strip_shows_the_enemy_buff_and_the_fallen_inhibitor(tmp_path:
         await expect(pills.nth(1)).to_have_text(re.compile(r"^Enemy top inhib\s*4:[45]\d$"))
         await expect(pills.nth(0)).to_have_attribute("data-side", "enemy")
         await keep_screenshot(page, "objective-strip")
+
+
+async def test_the_strip_shows_each_sides_turrets_down_and_an_inhibitor_opening(
+    tmp_path: Path,
+) -> None:
+    turret_kills = (
+        (20, 1000.0, "Turret_T2_R_03_A"),
+        (21, 1200.0, "Turret_T2_R_02_A"),
+        (22, 1300.0, "Turret_T1_C_05_A"),
+        # Their bot inhibitor turret falls a few seconds into the replay, opening the inhibitor.
+        (23, 1398.0, "Turret_T2_R_01_A"),
+    )
+    async with open_overlay(
+        tmp_path, snapshot_count=60, speed=1.0, turret_kills=turret_kills
+    ) as page:
+        enemy_turrets = page.locator(
+            '#objective-pills .pill[data-kind="structures"][data-side="enemy"]'
+        )
+        await expect(enemy_turrets).to_have_text(
+            re.compile(r"^Enemy turrets\s*bot 3, inhib open$"), timeout=8000
+        )
+        ally_turrets = page.locator(
+            '#objective-pills .pill[data-kind="structures"][data-side="ally"]'
+        )
+        await expect(ally_turrets).to_have_text(re.compile(r"^Your turrets\s*mid 1$"))
+        callout = page.locator('#callouts .callout[data-kind="inhibitor_open"]')
+        await expect(callout).to_have_text("Enemy bot inhibitor is open")
+        await keep_screenshot(page, "structures")
 
 
 async def test_an_epic_monster_that_is_up_shows_in_the_strip(tmp_path: Path) -> None:

@@ -185,6 +185,25 @@ export function inhibitorPill(timer, gameTimeSeconds) {
         isUp: false,
     };
 }
+/**
+ * Return the pill of one side's turrets down, lane by lane: "Enemy turrets · top 1 · bot 3, inhib
+ * open"; null while that side has lost none.
+ */
+export function structuresPill(structures, side) {
+    const lanes = structures.filter((lane) => lane.side === side);
+    if (lanes.length === 0) {
+        return null;
+    }
+    return {
+        label: side === "ally" ? "Your turrets" : "Enemy turrets",
+        timeText: lanes
+            .map((lane) => `${LANE_NAMES[lane.lane]} ${String(lane.turrets_down)}${lane.is_inhibitor_exposed ? ", inhib open" : ""}`)
+            .join(" · "),
+        kind: "structures",
+        side,
+        isUp: false,
+    };
+}
 /** Return the pill for a numbers window, or null once it has closed. */
 export function numbersPill(window, gameTimeSeconds) {
     const remainingSeconds = window.ends_at_game_time_seconds - gameTimeSeconds;
@@ -219,6 +238,8 @@ function stripPills(state, gameTimeSeconds) {
         ...state.objectives.map((timer) => objectivePill(timer, gameTimeSeconds)),
         ...state.buffs.map((timer) => buffPill(timer, gameTimeSeconds)),
         ...state.inhibitors.map((timer) => inhibitorPill(timer, gameTimeSeconds)),
+        structuresPill(state.structures, "enemy"),
+        structuresPill(state.structures, "ally"),
         ...(state.preferences.show_contests ? state.contests.map(contestPill) : []),
     ];
     return candidatePills.filter((pill) => pill !== null);

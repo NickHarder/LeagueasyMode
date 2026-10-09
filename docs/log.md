@@ -16,6 +16,12 @@ skill has the format.
   recording would otherwise have stood in for. Phase 9's plan, a draft: scouting from the players'
   past games, which needs neither the Mac nor recordings ("what are we waiting on? we cant
   proceed without manula tests?").
+- Phase 8.5, structures (2.6, left out of phase 2): each side's turrets down per lane and the
+  inhibitors they open, from the feed's turret names, which the gold, the clues and the post-game
+  window already read; the strip shows "Enemy turrets bot 3, inhib open", and an inhibitor
+  opening is called out once. Built without waiting for the first recordings, which confirm the
+  names for all four at once; the owner asked why the rest should wait for a test ("we cant
+  proceed without manula tests?").
 - Phase 8.4, spoken callouts: a ninth switch in the settings, "Speak callouts", off unless turned
   on; with it on, the overlay hands each new callout to the macOS app as it shows, and the app
   speaks it once in macOS's voice (a browser speaks it itself). The plan's "Callouts: short

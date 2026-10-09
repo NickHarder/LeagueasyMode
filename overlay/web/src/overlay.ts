@@ -17,6 +17,7 @@ import {
   type FightEstimate,
   type GoldEstimate,
   type InhibitorTimer,
+  type LaneStructures,
   type JunglePath,
   type LevelEstimate,
   type NextItemEstimate,
@@ -111,7 +112,7 @@ const PROVISIONAL_MARK = "~";
 interface Pill {
   readonly label: string;
   readonly timeText: string;
-  readonly kind: "numbers" | "objective" | "buff" | "inhibitor" | "contest";
+  readonly kind: "numbers" | "objective" | "buff" | "inhibitor" | "structures" | "contest";
   readonly side: "ally" | "enemy" | "neutral";
   readonly isUp: boolean;
 }
@@ -239,6 +240,29 @@ export function inhibitorPill(timer: InhibitorTimer, gameTimeSeconds: number): P
   };
 }
 
+/**
+ * Return the pill of one side's turrets down, lane by lane: "Enemy turrets · top 1 · bot 3, inhib
+ * open"; null while that side has lost none.
+ */
+export function structuresPill(structures: readonly LaneStructures[], side: "ally" | "enemy"): Pill | null {
+  const lanes = structures.filter((lane) => lane.side === side);
+  if (lanes.length === 0) {
+    return null;
+  }
+  return {
+    label: side === "ally" ? "Your turrets" : "Enemy turrets",
+    timeText: lanes
+      .map(
+        (lane) =>
+          `${LANE_NAMES[lane.lane]} ${String(lane.turrets_down)}${lane.is_inhibitor_exposed ? ", inhib open" : ""}`,
+      )
+      .join(" · "),
+    kind: "structures",
+    side,
+    isUp: false,
+  };
+}
+
 /** Return the pill for a numbers window, or null once it has closed. */
 export function numbersPill(window: NumbersWindow, gameTimeSeconds: number): Pill | null {
   const remainingSeconds = window.ends_at_game_time_seconds - gameTimeSeconds;
@@ -276,6 +300,8 @@ function stripPills(state: OverlayState, gameTimeSeconds: number): Pill[] {
     ...state.objectives.map((timer) => objectivePill(timer, gameTimeSeconds)),
     ...state.buffs.map((timer) => buffPill(timer, gameTimeSeconds)),
     ...state.inhibitors.map((timer) => inhibitorPill(timer, gameTimeSeconds)),
+    structuresPill(state.structures, "enemy"),
+    structuresPill(state.structures, "ally"),
     ...(state.preferences.show_contests ? state.contests.map(contestPill) : []),
   ];
   return candidatePills.filter((pill): pill is Pill => pill !== null);

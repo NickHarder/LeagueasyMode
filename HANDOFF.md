@@ -4,34 +4,32 @@ If you are picking this work up, human or model: read this file top to bottom fi
 refreshes it; it describes the current state.
 
 Last updated: 2026-10-09, on branch `feat/jungle-start`. `main` holds phases 0 to 7 and phase 8
-up to 8.4 (pull requests #2 to #37, merged).
+up to 8.5 (pull requests #2 to #38, merged).
 
 ## Where things stand
 
 The plan is [docs/plans/overlay-and-inference.md](docs/plans/overlay-and-inference.md) (approved by
 the owner on 2026-10-08). Phase 0 is done; phase 1, the tracer bullet, is built and waits for the
 test on a Mac; phase 2 ([docs/plans/phase-2-exact-facts.md](docs/plans/phase-2-exact-facts.md)) is
-built but for structures, left out until the first recordings. Phases 3 to 6 are built and merged
+built, its structures in phase 8.5. Phases 3 to 7 are built and merged
 ([phase 3](docs/plans/phase-3-economy-and-open-policy.md), approved;
-[phase 4](docs/plans/phase-4-positions.md), [phase 5](docs/plans/phase-5-models.md) and
-[phase 6](docs/plans/phase-6-post-game.md), drafts built on their best guesses); phase 5's models
-are hand-set and phase 6's thresholds empty until 20 recorded games exist. Phase 7
-([docs/plans/phase-7-packaging.md](docs/plans/phase-7-packaging.md), a draft) is under way,
-without signing as the owner chose, and merged. Phase 8
+[phase 4](docs/plans/phase-4-positions.md), [phase 5](docs/plans/phase-5-models.md),
+[phase 6](docs/plans/phase-6-post-game.md) and [phase 7](docs/plans/phase-7-packaging.md), drafts
+built on their best guesses, phase 7 without signing as the owner chose); phase 5's models are
+hand-set and phase 6's thresholds empty until 20 recorded games exist. Phase 8
 ([docs/plans/phase-8-first-test.md](docs/plans/phase-8-first-test.md), a draft) goes past the
-approved plan: 8.1, the status page and the report after a test, is on `feat/status-page` (#34);
-8.2, the overlay over League's own screen and window, on `feat/game-window` (#35); 8.3, moving
-the widgets, on `feat/edit-layout` (#36); 8.4, spoken callouts, on `feat/spoken-callouts`. Left of
-phase 8: structures (8.5) and the Swift 6 language mode (8.6), both waiting for the test on a
-Mac. Phase 9 ([docs/plans/phase-9-scouting.md](docs/plans/phase-9-scouting.md), a draft) reads
-the players' past games: 9.1, where the enemy jungler usually starts, is on `feat/jungle-start`.
-Each slice goes up as its own pull request into `main` without waiting for the one before to
-merge.
+approved plan: 8.1 to 8.5 (the status page and the report after a test, the overlay over League's
+own screen and window, moving the widgets, spoken callouts, structures) are merged (#34 to #38);
+8.6, the Swift 6 language mode, is on `feat/swift-6` (#39). None waits for the test on a Mac,
+which confirms them. Phase 9 ([docs/plans/phase-9-scouting.md](docs/plans/phase-9-scouting.md), a
+draft) reads the players' past games: 9.1, where the enemy jungler usually starts, is on
+`feat/jungle-start` (#40). Each slice goes up as its own pull request into `main` without waiting
+for the one before to merge.
 
 | Area | State | Proof |
 |---|---|---|
 | Scaffold | ai-kit v0.11.1, Python layer, GitHub CI | `.copier-answers.yml` |
-| Gate | Green: lint, 782 tests (and 37 in Chromium), secrets | `make gate` |
+| Gate | Green: lint, 790 tests (and 38 in Chromium), secrets | `make gate` |
 | Recorder | Records games, the client's patch data and the post-game timeline; anonymized copies | `uv run leagueasymode record`; `tests/test_recorder.py`, `tests/test_anonymize.py` |
 | Replay | A recording served as a stand-in game API | `uv run leagueasymode replay <recording>`; `tests/test_replay.py` |
 | Engine and overlay page | The dragon and Elder timer, from the game's answer to the page | `uv run leagueasymode run`; `tests/test_tracer_bullet.py` |

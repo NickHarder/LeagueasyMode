@@ -22,7 +22,7 @@ next after phase 7. i might do a test later tonight". Second, the plan's picture
 | 8.2 | League's screen and window | The overlay covers the screen League is on, not only the main one. In windowed mode it fits League's window below its title bar, which also lines up the minimap layer. The menu says what it found ("League: windowed, 1280 × 720") | The overlay covers the main screen only (a known limitation). Moved up from fourth for the test tonight, where a second screen or windowed mode would put the overlay in the wrong place |
 | 8.3 | Moving the widgets | "Edit layout" in the menu makes the overlay take clicks: each widget can be dragged, and "Reset layout" puts them back. The places are kept with the settings | The plan: "You move the widgets around after switching on edit mode from the menu bar" |
 | 8.4 | Spoken callouts | A switch in the settings, off unless turned on: each new callout is spoken by macOS's own voice | The plan: "Callouts: short facts, with optional voice" |
-| 8.5 | Structures (2.6) | Turrets and inhibitors down per lane, and inhibitors exposed | Left out of phase 2 until a recording shows the turret names; it waits for the first recordings |
+| 8.5 | Structures (2.6) | Turrets and inhibitors down per lane, and inhibitors exposed | Left out of phase 2 until a recording shows the turret names. Built without waiting after all (the owner, 2026-10-09: "we cant proceed without manula tests?"): the gold, the clues and the post-game window already read the same names, so the first recordings confirm them all at once |
 | 8.6 | The Swift 6 language mode | The app moves to Swift 6 with no concurrency warnings | A known limitation; it waits until the test on a Mac has run, so a change to the app does not land between two tests |
 
 ## How each is verified
@@ -31,10 +31,10 @@ next after phase 7. i might do a test later tonight". Second, the plan's picture
 - **8.2:** by unit tests of finding League's window among the window server's list and of choosing the screen and the frame from its bounds (full screen, a second screen, windowed, none). Whether the game's window is named "League of Legends" and has a title bar when windowed is seen on a Mac.
 - **8.3:** in Chromium: dragging a widget in edit mode moves it, and its place is kept and served back; outside edit mode nothing moves. The app's switch between taking and passing clicks has a unit test.
 - **8.4:** in Chromium: a new callout is handed to the app's voice once, and only with the switch on. The app's side is tried on a Mac.
-- **8.5:** against the first anonymized recordings.
+- **8.5:** by the engine's tests (each side's turrets counted by lane, a turret announced twice, the nexus turrets and unknown names left out, an inhibitor open only while it stands, the callout once) and in Chromium (both sides' pills, and the callout as the inhibitor turret falls mid-replay); the names against the first anonymized recordings.
 
 ## Where the owner decides
 
 1. **What the report holds (8.1).** Proposed: each part's state, the event names, the unreadable fields, the game's version, macOS's and Python's versions. Never a player's name, a Riot ID, the client's password, or the home folder's name; paths start at `~`.
 2. **Voice (8.4).** Proposed: off unless turned on, in the system's default voice.
-3. **The order.** 8.1 and 8.2 first, for the test tonight; 8.5 and 8.6 wait for the test.
+3. **The order.** 8.1 and 8.2 first, for the test tonight; then 8.3 to 8.6, none of which waits for the test.

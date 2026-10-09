@@ -46,6 +46,14 @@ export interface InhibitorTimer {
   readonly respawns_at_game_time_seconds: number;
 }
 
+/** One side's lane that has lost a turret: how many, and whether its inhibitor is open. Exact. */
+export interface LaneStructures {
+  readonly side: Side;
+  readonly lane: Lane;
+  readonly turrets_down: number;
+  readonly is_inhibitor_exposed: boolean;
+}
+
 /**
  * A player's combat stats: exact for the player on this machine, from the game; for the others an
  * estimate from the champion's base stats, level and items, without runes, passives or buffs.
@@ -222,6 +230,7 @@ export type CalloutKind =
   | "went_back"
   | "missing"
   | "jungle_start"
+  | "inhibitor_open"
   | "suggestion";
 
 /** A short notice shown for a few seconds when something happens; never an instruction. */
@@ -367,6 +376,7 @@ export interface OverlayState {
   readonly objectives: readonly ObjectiveTimer[];
   readonly buffs: readonly BuffTimer[];
   readonly inhibitors: readonly InhibitorTimer[];
+  readonly structures: readonly LaneStructures[];
   readonly players: readonly PlayerCard[];
   readonly numbers_window: NumbersWindow | null;
   readonly team_item_gold: TeamItemGold | null;
@@ -404,6 +414,7 @@ const CALLOUT_KINDS: ReadonlySet<string> = new Set([
   "went_back",
   "missing",
   "jungle_start",
+  "inhibitor_open",
   "suggestion",
 ]);
 const START_SIDES: ReadonlySet<string> = new Set(["blue", "red"]);
@@ -480,6 +491,16 @@ export function isInhibitorTimer(value: unknown): value is InhibitorTimer {
     isOneOf(value["side"], SIDES) &&
     isOneOf(value["lane"], LANES) &&
     typeof value["respawns_at_game_time_seconds"] === "number"
+  );
+}
+
+function isLaneStructures(value: unknown): value is LaneStructures {
+  return (
+    isRecord(value) &&
+    isOneOf(value["side"], SIDES) &&
+    isOneOf(value["lane"], LANES) &&
+    typeof value["turrets_down"] === "number" &&
+    typeof value["is_inhibitor_exposed"] === "boolean"
   );
 }
 
@@ -847,6 +868,7 @@ export function isOverlayState(value: unknown): value is OverlayState {
     isArrayOf(value["objectives"], isObjectiveTimer) &&
     isArrayOf(value["buffs"], isBuffTimer) &&
     isArrayOf(value["inhibitors"], isInhibitorTimer) &&
+    isArrayOf(value["structures"], isLaneStructures) &&
     isArrayOf(value["players"], isPlayerCard) &&
     (value["numbers_window"] === null || isNumbersWindow(value["numbers_window"])) &&
     (value["team_item_gold"] === null || isTeamItemGold(value["team_item_gold"])) &&
