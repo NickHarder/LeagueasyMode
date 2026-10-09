@@ -11,6 +11,8 @@ import re
 from dataclasses import dataclass
 from typing import Final, Literal
 
+from pydantic import BaseModel, ConfigDict
+
 from leagueasymode.game_state import GameEvent, GameSnapshot
 from leagueasymode.overlay_state import BuffTimer, DragonTimer, InhibitorTimer, ObjectiveTimer
 
@@ -34,9 +36,13 @@ LANE_BY_LETTER: Final[dict[str, Literal["top", "mid", "bot"]]] = {
 }
 
 
-@dataclass(frozen=True)
-class DragonRules:
-    """When dragons spawn, in game seconds."""
+class DragonRules(BaseModel):
+    """When dragons spawn, in game seconds.
+
+    `tuning.json`'s "dragon".
+    """
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
 
     first_spawn_seconds: float = 300.0
     respawn_seconds: float = 300.0

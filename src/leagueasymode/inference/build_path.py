@@ -19,8 +19,9 @@ estimate gives the chance they hold that much now, and their income so far when 
 import math
 from collections import Counter
 from collections.abc import Mapping
-from dataclasses import dataclass
 from typing import Final
+
+from pydantic import BaseModel, ConfigDict
 
 from leagueasymode.data_dragon import PatchStats
 from leagueasymode.game_state import ScoreboardPlayer
@@ -60,9 +61,13 @@ INCOME_STARTS_AT_SECONDS: Final = GOLD_RULES.passive_gold_rates[0][0]
 SHORTEST_INCOME_SECONDS: Final = 60.0
 
 
-@dataclass(frozen=True)
-class BuildRules:
-    """How much each signal weighs, and how sharply the scores become chances."""
+class BuildRules(BaseModel):
+    """How much each signal weighs, and how sharply the scores become chances.
+
+    `tuning.json`'s "build_path".
+    """
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
 
     component_weight: float = 3.0
     history_weight: float = 2.0

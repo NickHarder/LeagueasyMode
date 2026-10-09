@@ -6,10 +6,21 @@ skill has the format.
 
 ## 2026-10-09
 
+- Phase 9.4, early leads in lane: the player lookups now also read the timelines of each player's
+  newest five games, and each row adds their usual creep score and gold at 10:00 in this game's
+  position ("10:00 76 CS 3.4k"). Until 10:00 the You panel names the enemy in your role with the
+  same numbers, beside your own creep score a minute times ten. The owner, asked about the extra
+  requests: "I am fine with this if the free developer key can handle this". No developer key is
+  used, the client asks with its own session, and the most a game asks, about 70 requests one at a
+  time a quarter of a second apart, would fit even a developer key's limits. While the app records
+  too, a shared answer is now forgotten once the engine and the recorder have both had it, so the
+  timelines do not pile up. How many games are read is `lookups.laner_games_read` in
+  `tuning.json`; 0 reads none.
 - Tuning: every hand-set threshold can be changed in one file, `tuning.json` in the
   application's directory, which names only what it changes. The callouts, the suggestions, the
-  intel, the player lookups, the jungle path and the positions each read their rules from a model
-  whose defaults are the values they had; `leagueasymode tuning` prints them all and `--write`
+  intel, the player lookups, the jungle path, the positions, and the estimators' priors and season
+  numbers (experience, dragon, backs, gold, contests, build path, the You panel) each read their
+  rules from a model whose defaults are the values they had; `leagueasymode tuning` prints them all and `--write`
   writes them to the file to edit. The engine reads it when it starts, the scoring after a game
   uses the same values, and the status page says what the file changed or why it could not be
   read. The owner: "we will tweak as needed. make sure there is an easy way to update them".

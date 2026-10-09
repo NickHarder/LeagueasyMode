@@ -103,6 +103,10 @@ export interface PlayerIntel {
   readonly champion_pool_size: number;
   readonly is_main_champion: boolean;
   readonly is_one_trick: boolean;
+  /** Their usual creep score and gold at 10:00 in this game's position, of how many games. */
+  readonly ten_minute_creep_score: number | null;
+  readonly ten_minute_gold: number | null;
+  readonly ten_minute_games: number;
 }
 
 /** A spell the player marked an enemy as having used, and when it is back: an estimate. */
@@ -314,6 +318,14 @@ export interface DefenseValue {
   readonly effective_health_per_hundred_gold: number;
 }
 
+/** The enemy in the player's role, and their usual creep score and gold at 10:00 in it. */
+export interface LaneOpponent {
+  readonly champion_name: string;
+  readonly ten_minute_creep_score: number;
+  readonly ten_minute_gold: number;
+  readonly ten_minute_games: number;
+}
+
 /** Facts about the player's build and pace, from their own exact numbers. */
 export interface YouPanel {
   readonly defenses: readonly DefenseValue[];
@@ -322,6 +334,8 @@ export interface YouPanel {
   readonly holding_gold_seconds: number | null;
   readonly creep_score_per_minute: number | null;
   readonly usual_creep_score_per_minute: number | null;
+  /** Before 10:00, the player's lane opponent; null when not known. */
+  readonly lane_opponent: LaneOpponent | null;
 }
 
 /** One thing moving the win chance, from the player's side: above 0 for their team. */
@@ -573,7 +587,10 @@ export function isPlayerIntel(value: unknown): value is PlayerIntel {
     typeof value["four_minute_games"] === "number" &&
     typeof value["champion_pool_size"] === "number" &&
     typeof value["is_main_champion"] === "boolean" &&
-    typeof value["is_one_trick"] === "boolean"
+    typeof value["is_one_trick"] === "boolean" &&
+    isNumberOrNull(value["ten_minute_creep_score"]) &&
+    isNumberOrNull(value["ten_minute_gold"]) &&
+    typeof value["ten_minute_games"] === "number"
   );
 }
 
@@ -845,7 +862,18 @@ export function isYouPanel(value: unknown): value is YouPanel {
     typeof value["unspent_gold"] === "number" &&
     isNumberOrNull(value["holding_gold_seconds"]) &&
     isNumberOrNull(value["creep_score_per_minute"]) &&
-    isNumberOrNull(value["usual_creep_score_per_minute"])
+    isNumberOrNull(value["usual_creep_score_per_minute"]) &&
+    (value["lane_opponent"] === null || isLaneOpponent(value["lane_opponent"]))
+  );
+}
+
+function isLaneOpponent(value: unknown): value is LaneOpponent {
+  return (
+    isRecord(value) &&
+    typeof value["champion_name"] === "string" &&
+    typeof value["ten_minute_creep_score"] === "number" &&
+    typeof value["ten_minute_gold"] === "number" &&
+    typeof value["ten_minute_games"] === "number"
   );
 }
 

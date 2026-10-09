@@ -11,6 +11,8 @@ the others, and 380 without the patch's stats.
 from dataclasses import dataclass
 from typing import Final
 
+from pydantic import BaseModel, ConfigDict
+
 from leagueasymode.data_dragon import PatchStats
 from leagueasymode.game_state import GameSnapshot, ScoreboardPlayer
 from leagueasymode.inference.combat_stats import move_speed_of
@@ -26,9 +28,13 @@ from leagueasymode.overlay_state import BackEstimate
 from leagueasymode.patch_data import ItemCatalog
 
 
-@dataclass(frozen=True)
-class BackRules:
-    """What counts as a trip to base, and how long the way back takes."""
+class BackRules(BaseModel):
+    """What counts as a trip to base, and how long the way back takes.
+
+    `tuning.json`'s "backs".
+    """
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
 
     # Shopping before this is the game's start.
     starts_at_seconds: float = 90.0

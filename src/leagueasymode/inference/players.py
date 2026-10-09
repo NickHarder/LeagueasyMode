@@ -8,7 +8,7 @@ from collections.abc import Mapping
 
 from leagueasymode.data_dragon import PatchStats
 from leagueasymode.game_state import GameSnapshot, ScoreboardPlayer
-from leagueasymode.inference.build_path import next_item
+from leagueasymode.inference.build_path import BUILD_RULES, BuildRules, next_item
 from leagueasymode.inference.combat_stats import combat_stats_of, move_speed_of
 from leagueasymode.inference.gold import PlayerKey, player_key
 from leagueasymode.inference.intel import INTEL_RULES, IntelRules, player_intel
@@ -42,6 +42,7 @@ def player_cards(
     position_clues: Mapping[PlayerKey, list[PositionClue]] | None = None,
     intel_rules: IntelRules = INTEL_RULES,
     position_rules: PositionRules = POSITION_RULES,
+    build_rules: BuildRules = BUILD_RULES,
 ) -> list[PlayerCard]:
     """Return a card for every player, the player's own team first, each team in scoreboard order.
 
@@ -59,6 +60,7 @@ def player_cards(
             they are not gathered.
         intel_rules: The intel's hand-set thresholds.
         position_rules: The positions'.
+        build_rules: The build path's weights.
 
     Returns:
         The cards.
@@ -96,6 +98,7 @@ def player_cards(
                 patch_stats,
                 player_records=player_records,
                 gold=gold_estimates.get(player_key(player)) if gold_estimates is not None else None,
+                rules=build_rules,
             ),
             last_clue=_last_clue(player, position_clues),
             location=_location(
@@ -141,6 +144,7 @@ def _next_item(
     *,
     player_records: PlayerRecords | None,
     gold: GoldEstimate | None,
+    rules: BuildRules,
 ) -> NextItemEstimate | None:
     """Return a player's likely next finished item, with what their record says they build.
 
@@ -151,6 +155,7 @@ def _next_item(
         patch_stats: The patch's stats, for the champion's classes; None while unknown.
         player_records: Each player's record; None while unknown.
         gold: Their gold; None while it is not followed.
+        rules: The build path's weights.
 
     Returns:
         The item, or None without the catalog or any candidate.
@@ -168,6 +173,7 @@ def _next_item(
         champion_id=game_record.champion_id if game_record is not None else 0,
         gold=gold,
         game_time_seconds=snapshot.game_data.game_time_seconds,
+        rules=rules,
     )
 
 

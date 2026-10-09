@@ -62,6 +62,9 @@ def player_intel(
     champion_games = [game for game in games if game.champion_id == champion_id]
     usual_position = _usual_position([game.position for game in games], rules)
     jungle_starts = record.jungle_starts
+    early_games = [
+        game for game in record.early_games if not game_position or game.position == game_position
+    ]
     jungle_start_side = jungle_starts.usual_side if jungle_starts else None
     four_minute_sides = record.four_minute_sides
     usual_four_minute_side = four_minute_sides.usual_side if four_minute_sides else None
@@ -90,6 +93,15 @@ def player_intel(
         ),
         is_one_trick=len(games) >= rules.one_trick_min_games
         and len(champion_games) >= rules.one_trick_min_share * len(games),
+        ten_minute_creep_score=(
+            sum(game.creep_score for game in early_games) / len(early_games)
+            if early_games
+            else None
+        ),
+        ten_minute_gold=(
+            sum(game.gold for game in early_games) / len(early_games) if early_games else None
+        ),
+        ten_minute_games=len(early_games),
     )
 
 

@@ -154,6 +154,11 @@ class PlayerIntel(BaseModel):
     champion_pool_size: int = 0
     is_main_champion: bool = False
     is_one_trick: bool = False
+    # Their creep score and gold at 10:00, the mean of their recent games in this game's position
+    # (every game read while it is unknown), and how many games; None and 0 without any.
+    ten_minute_creep_score: float | None = None
+    ten_minute_gold: float | None = None
+    ten_minute_games: int = 0
 
 
 class GoldEstimate(BaseModel):
@@ -505,6 +510,21 @@ class DefenseValue(BaseModel):
     effective_health_per_hundred_gold: float
 
 
+class LaneOpponent(BaseModel):
+    """The enemy in your role, and their usual creep score and gold at 10:00 in it.
+
+    The mean of their recent games in that role, from the timelines the League client keeps of
+    them (`player_intel.py`).
+    """
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    champion_name: str
+    ten_minute_creep_score: float
+    ten_minute_gold: float
+    ten_minute_games: int
+
+
 class YouPanel(BaseModel):
     """Facts about your build and pace (`inference/you.py`), from your own exact numbers."""
 
@@ -521,6 +541,9 @@ class YouPanel(BaseModel):
     # Your creep score a minute this game, from 3:00; and over your recent games, when known.
     creep_score_per_minute: float | None
     usual_creep_score_per_minute: float | None
+    # Before 10:00, the enemy in your role and their usual numbers at 10:00; None when either
+    # role is a guess or their games read have none.
+    lane_opponent: LaneOpponent | None = None
 
 
 class WinReason(BaseModel):

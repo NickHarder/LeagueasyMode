@@ -151,8 +151,11 @@ async def run_overlay(
         stop_requested: Set to stop.
         announce_url: Called once with the overlay page's address, when the server is up.
     """
-    # The engine and the recorder both ask about each player; they share the answers.
-    shared_answers = SharedAnswers(PLAYER_LOOKUP_PATH_PREFIXES)
+    # The engine and the recorder both ask about each player; they share the answers, each kept
+    # until both have had it.
+    shared_answers = SharedAnswers(
+        PLAYER_LOOKUP_PATH_PREFIXES, sharer_count=2 if settings.record_while_running else 1
+    )
     preferences_path = settings.preferences or default_preferences_path()
     layout_path = settings.layout or default_layout_path()
     status = StatusBoard()

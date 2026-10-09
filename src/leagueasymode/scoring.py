@@ -298,6 +298,8 @@ class RecordedGame:
     contest_moments: Mapping[float, tuple[GameSnapshot, Mapping[PlayerKey, list[PositionClue]]]]
     # Each player's record, rebuilt from the client's recorded answers as the engine had it.
     player_records: PlayerRecords = field(default_factory=dict)
+    # The hand-set thresholds the game was read with, which the scores use too.
+    tuning: Tuning = DEFAULT_TUNING
 
 
 class DetailsTimeline(RiotPayloadModel):
@@ -370,9 +372,9 @@ def read_recorded_game(recording_path: Path, tuning: Tuning = DEFAULT_TUNING) ->
     player_records = recorded_player_records(client_resources, tuning.lookups)
     items_payload = client_resources.get(ITEMS_PATH)
     item_catalog = ItemCatalog.from_client_items(items_payload) if items_payload else None
-    gold_tracker = GoldTracker()
-    experience_tracker = ExperienceTracker()
-    back_tracker = BackTracker()
+    gold_tracker = GoldTracker(rules=tuning.gold)
+    experience_tracker = ExperienceTracker(rules=tuning.experience)
+    back_tracker = BackTracker(rules=tuning.backs)
     clue_tracker = ClueTracker()
     jungle_tracker = JunglePathTracker(rules=tuning.jungle_path)
     ward_tracker = WardTracker()
@@ -426,7 +428,7 @@ def read_recorded_game(recording_path: Path, tuning: Tuning = DEFAULT_TUNING) ->
                 snapshot,
                 team_gold=team_gold_of(snapshot, gold_estimates),
                 team_item_gold=None,
-                dragon=dragon_timer(snapshot),
+                dragon=dragon_timer(snapshot, tuning.dragon),
                 buffs=buff_timers(snapshot),
                 inhibitors=inhibitor_timers(snapshot),
             )
@@ -443,6 +445,7 @@ def read_recorded_game(recording_path: Path, tuning: Tuning = DEFAULT_TUNING) ->
         fight_snapshots=fight_snapshots,
         contest_moments=contest_moments,
         player_records=player_records,
+        tuning=tuning,
     )
 
 
@@ -977,7 +980,9 @@ def score_contests(game: RecordedGame, patch_stats: PatchStats | None) -> Estima
         (chance - (1.0 if _was_contested(take, timeline, team_by_id) else 0.0)) ** 2
         for take in monster_takes(timeline)
         if take.seconds in game.contest_moments
-        for chance in _contest_chance_before(take, game.contest_moments[take.seconds], patch_stats)
+        for chance in _contest_chance_before(
+            take, game.contest_moments[take.seconds], patch_stats, game.tuning
+        )
     ]
     if not squared_errors:
         return None
@@ -1365,7 +1370,11 @@ def _next_item_pairs(
         game_time_seconds = snapshot.game_data.game_time_seconds
         for player in snapshot.players:
             predicted = next_item(
-                player, item_catalog, patch_stats, game_time_seconds=game_time_seconds
+                player,
+                item_catalog,
+                patch_stats,
+                game_time_seconds=game_time_seconds,
+                rules=game.tuning.build_path,
             )
             bought_item_id = _next_finished_purchase(
                 events,
@@ -1503,6 +1512,7 @@ def _contest_chance_before(
     take: MonsterTake,
     moment: tuple[GameSnapshot, Mapping[PlayerKey, list[PositionClue]]],
     patch_stats: PatchStats,
+    tuning: Tuning,
 ) -> list[float]:
     """Return the chance of a contest the overlay gave before a take of the player's team.
 
@@ -1510,6 +1520,7 @@ def _contest_chance_before(
         take: The take.
         moment: The game's answer before it, and the clues then.
         patch_stats: The patch's stats.
+        tuning: The hand-set thresholds the game was read with.
 
     Returns:
         The chance, alone; nothing for the other team's take, or a monster not weighed then.
@@ -1519,10 +1530,11 @@ def _contest_chance_before(
         return []
     contests = objective_contests(
         snapshot,
-        dragon=dragon_timer(snapshot),
+        dragon=dragon_timer(snapshot, tuning.dragon),
         objectives=objective_timers(snapshot),
         position_clues=position_clues,
         patch_stats=patch_stats,
+        rules=tuning.contests,
     )
     return [contest.contest_chance for contest in contests if contest.objective == take.objective]
 

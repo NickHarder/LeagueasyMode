@@ -14,6 +14,8 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Final, Literal
 
+from pydantic import BaseModel, ConfigDict
+
 from leagueasymode.game_state import GameSnapshot, ScoreboardPlayer
 from leagueasymode.inference.gold import (
     BAND_STANDARD_DEVIATIONS,
@@ -41,9 +43,13 @@ LANE_KIND_BY_ROLE: Final[Mapping[str, LaneKind]] = {
 UNIFORM_SPREAD_SHARE: Final = 1 / math.sqrt(12)
 
 
-@dataclass(frozen=True)
-class ExperienceRules:
-    """When experience starts, the prior rates by role, and how sure a rate is."""
+class ExperienceRules(BaseModel):
+    """When experience starts, the prior rates by role, and how sure a rate is.
+
+    `tuning.json`'s "experience".
+    """
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
 
     # Minions reach the lanes, and the jungle's camps are up, at about 1:30.
     starts_at_seconds: float = 90.0

@@ -29,6 +29,8 @@ from dataclasses import dataclass
 from statistics import NormalDist
 from typing import Final, Literal
 
+from pydantic import BaseModel, ConfigDict
+
 from leagueasymode.game_state import GameEvent, GameSnapshot, ScoreboardItem, ScoreboardPlayer
 from leagueasymode.inference.objectives import (
     BARON_KILL_EVENT,
@@ -90,13 +92,16 @@ BAND_STANDARD_DEVIATIONS: Final = NormalDist().inv_cdf(0.9)
 NEW_GAME_SLACK_SECONDS: Final = 5.0
 
 
-@dataclass(frozen=True)
-class GoldRules:
+class GoldRules(BaseModel):
     """The season's gold numbers, and how unsure the model is of each kind of income.
 
     From the patch notes: patch 26.16's passive gold and minion gold, patch 25.9's bounties by
     level. Those no source confirmed are marked "unconfirmed"; recordings check every one.
+
+    `tuning.json`'s "gold".
     """
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
 
     starting_gold: float = 500.0
     # 10.5 gold per 5 seconds from 1:30, 11.5 from 15:00, 13 from 25:00.
