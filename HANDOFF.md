@@ -20,8 +20,8 @@ hand-set and phase 6's thresholds empty until 20 recorded games exist. Phase 8
 ([docs/plans/phase-8-first-test.md](docs/plans/phase-8-first-test.md), a draft) goes past the
 approved plan: 8.1 to 8.4 (the status page and the report after a test, the overlay over League's
 own screen and window, moving the widgets, spoken callouts) are merged (#34 to #37); 8.5,
-structures, is on `feat/structures`; 8.6, the Swift 6 language mode, is next. None waits for the
-test on a Mac, which confirms them. Each slice goes up as its own pull request into `main` without
+structures, is on `feat/structures` (#38); 8.6, the Swift 6 language mode, on `feat/swift-6`.
+None waits for the test on a Mac, which confirms them. Phase 8 is built. Each slice goes up as its own pull request into `main` without
 waiting for the one before to merge.
 
 | Area | State | Proof |
@@ -168,9 +168,9 @@ In `AGENTS.md`. Also: a raw recording (it holds other players' names); only `ano
   hand-written, from memory, not this patch's.
 - The Voidgrubs' 14:45 and the Herald's 19:45 leave times follow past seasons and one community
   guide; a recording confirms them.
-- The Swift app is in the Swift 5 language mode with strict concurrency as warnings, and CI's build
-  shows some (a `@Sendable` closure capturing the engine process, among others); they are to be
-  cleared before it moves to the Swift 6 language mode.
+- The Swift app moved to the Swift 6 language mode (8.6), whose concurrency checks it passes in
+  CI; its threads are as before (AppKit's side on the main thread), which the test on a Mac
+  confirms at run time.
 
 ## History
 
