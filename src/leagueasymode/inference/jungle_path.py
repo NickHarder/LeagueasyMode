@@ -5,9 +5,10 @@ one camp, finished at the last. Which camp each burst was is decoded from what i
 camp is up at its first spawn and then its respawn after it was last cleared, and between two
 camps the jungler walks the map (`rift_map.py`) at their move speed and takes the camp's clear
 time. Among the paths that fit, the likeliest wastes the least time between camps and stays in
-their own jungle. The respawn rule depends on the whole path, not only its last camp, so the
-decoding keeps the best paths with their history (a beam search: Viterbi decoding with memory)
-rather than the last camp alone.
+their own jungle, and starts on the side of their jungle they usually start on, when their past
+games say (`jungle_starts.py`): one burst alone cannot tell the two buffs apart. The respawn
+rule depends on the whole path, not only its last camp, so the decoding keeps the best paths with
+their history (a beam search: Viterbi decoding with memory) rather than the last camp alone.
 
 From the likeliest path: the camps lately, the next camp (the soonest they could start, their own
 side first), and when each camp it cleared is back. The camps' timings are from past seasons and
@@ -24,6 +25,7 @@ from leagueasymode.game_state import GameSnapshot
 from leagueasymode.inference.gold import NEW_GAME_SLACK_SECONDS, PlayerKey, player_key
 from leagueasymode.inference.rift_map import RIFT_MAP, TEAM_PREFIX, fountain_of
 from leagueasymode.inference.roles import assign_roles
+from leagueasymode.jungle_starts import JungleStarts
 from leagueasymode.overlay_state import CampTimer, JunglePath
 
 # Each team's camps by kind, and the two scuttle crabs in the river.
@@ -76,6 +78,12 @@ class CampRules:
     enemy_camp_share: float = 0.3
     # A path that cannot fit a burst at all loses this much log chance, so that it still goes on.
     impossible_penalty: float = 5.0
+    # A first camp on the side of their jungle they usually start on weighs their share of past
+    # starts there, with this many games on each side added so that a few games do not decide;
+    # only a first camp finished by 2:00, which is the game's first clear and not the first one
+    # seen by an overlay started later.
+    start_prior_pseudo_games: float = 1.0
+    start_prior_until_seconds: float = 120.0
     beam_width: int = 40
     default_move_speed: float = 380.0
 
@@ -157,13 +165,18 @@ class JunglePathTracker:
         self._last_game_time_seconds = 0.0
 
     def update(
-        self, snapshot: GameSnapshot, move_speeds: Mapping[PlayerKey, float] | None = None
+        self,
+        snapshot: GameSnapshot,
+        move_speeds: Mapping[PlayerKey, float] | None = None,
+        *,
+        jungle_starts: Mapping[PlayerKey, JungleStarts] | None = None,
     ) -> tuple[list[JunglePath], list[CampTimer]]:
         """Take in one answer of the game's API, and return the junglers' paths and camp timers.
 
         Args:
             snapshot: The game's state.
             move_speeds: Each player's move speed; the default speed for one not given.
+            jungle_starts: Where each jungler started their recent games, when known.
 
         Returns:
             Each jungler's path, and every camp cleared that is not back yet, soonest first.
@@ -184,7 +197,13 @@ class JunglePathTracker:
                 key, _Jungler(creep_score=player.scores.creep_score)
             )
             self._take_creep_score(jungler, player.scores.creep_score, game_time_seconds)
-            self._decode_new_bursts(jungler, player.team, move_speed, game_time_seconds)
+            self._decode_new_bursts(
+                jungler,
+                player.team,
+                move_speed,
+                game_time_seconds,
+                (jungle_starts or {}).get(key),
+            )
             side: Literal["ally", "enemy"] = "ally" if player.team == ally_team else "enemy"
             best = max(jungler.paths, key=lambda path: path.log_chance)
             paths.append(
@@ -237,7 +256,12 @@ class JunglePathTracker:
             bursts.append(game_time_seconds)
 
     def _decode_new_bursts(
-        self, jungler: _Jungler, team: str, move_speed: float, game_time_seconds: float
+        self,
+        jungler: _Jungler,
+        team: str,
+        move_speed: float,
+        game_time_seconds: float,
+        jungle_starts: JungleStarts | None,
     ) -> None:
         """Extend the jungler's paths with each burst that is over.
 
@@ -248,6 +272,7 @@ class JunglePathTracker:
             team: Their team.
             move_speed: Their move speed.
             game_time_seconds: The game's clock.
+            jungle_starts: Where they started their recent games; None when not known.
         """
         bursts = jungler.burst_ends_seconds
         while jungler.decoded_burst_count < len(bursts):
@@ -255,11 +280,18 @@ class JunglePathTracker:
             is_last = jungler.decoded_burst_count == len(bursts) - 1
             if is_last and game_time_seconds - burst_end_seconds <= self.rules.burst_gap_seconds:
                 return
-            jungler.paths = self._extended(jungler.paths, burst_end_seconds, team, move_speed)
+            jungler.paths = self._extended(
+                jungler.paths, burst_end_seconds, team, move_speed, jungle_starts
+            )
             jungler.decoded_burst_count += 1
 
     def _extended(
-        self, paths: list[_Path], burst_end_seconds: float, team: str, move_speed: float
+        self,
+        paths: list[_Path],
+        burst_end_seconds: float,
+        team: str,
+        move_speed: float,
+        jungle_starts: JungleStarts | None,
     ) -> list[_Path]:
         """Return the best paths that add one camp, finished by a burst's end, to each path.
 
@@ -268,6 +300,7 @@ class JunglePathTracker:
             burst_end_seconds: When the burst ended.
             team: The jungler's team.
             move_speed: Their move speed.
+            jungle_starts: Where they started their recent games; None when not known.
 
         Returns:
             The best paths, as many as the beam holds.
@@ -277,7 +310,12 @@ class JunglePathTracker:
             _Path(
                 clears=(*path.clears, (camp, burst_end_seconds)),
                 log_chance=path.log_chance
-                + self._step_log_chance(path, camp, burst_end_seconds, team, move_speed),
+                + self._step_log_chance(path, camp, burst_end_seconds, team, move_speed)
+                + (
+                    self._start_log_chance(camp, team, jungle_starts)
+                    if not path.clears and burst_end_seconds <= rules.start_prior_until_seconds
+                    else 0.0
+                ),
             )
             for path in paths
             for camp in camps_of_game()
@@ -322,6 +360,32 @@ class JunglePathTracker:
             )
         wasted_seconds = max(0.0, burst_end_seconds - finishes_at_seconds)
         return side_log_chance - wasted_seconds / rules.waste_scale_seconds
+
+    def _start_log_chance(self, camp: str, team: str, jungle_starts: JungleStarts | None) -> float:
+        """Return the log chance a first camp is on the side of their jungle it is on.
+
+        Args:
+            camp: The camp.
+            team: The jungler's team.
+            jungle_starts: Where they started their recent games; None when not known.
+
+        Returns:
+            The log of twice their smoothed share of starts on the camp's side, so that an even
+            record weighs nothing; nothing for the other team's camps, the scuttles, or no record.
+        """
+        team_prefix = TEAM_PREFIX.get(team)
+        if jungle_starts is None or team_prefix is None:
+            return 0.0
+        pseudo_games = self.rules.start_prior_pseudo_games
+        blue_share = (jungle_starts.blue_count + pseudo_games) / (
+            jungle_starts.game_count + 2 * pseudo_games
+        )
+        region = RIFT_MAP.points[camp].region
+        if region == RIFT_MAP.points[f"{team_prefix}_blue_buff"].region:
+            return math.log(2 * blue_share)
+        if region == RIFT_MAP.points[f"{team_prefix}_red_buff"].region:
+            return math.log(2 * (1 - blue_share))
+        return 0.0
 
     def _up_at(self, path: _Path, camp: str) -> float:
         """Return when a camp is up, as a path has it: its first spawn, or its last respawn.
