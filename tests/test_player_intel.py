@@ -211,6 +211,43 @@ def test_too_few_games_or_no_clear_favourite_gives_no_usual_position() -> None:
     assert intel.is_off_role is False
 
 
+def games_on(game_counts: dict[int, int]) -> PlayerRecord:
+    return PlayerRecord(
+        ranked=None,
+        recent_games=tuple(
+            RecentGame(champion_id, "MIDDLE", is_win=True)
+            for champion_id, game_count in game_counts.items()
+            for _ in range(game_count)
+        ),
+    )
+
+
+def test_a_champion_played_more_than_any_other_is_their_main() -> None:
+    # Zed's history: three games on Zed, two on Ahri.
+    intel = player_intel(zed_record(), ZED_ID, "MIDDLE")
+    assert (intel.champion_pool_size, intel.is_main_champion, intel.is_one_trick) == (
+        2,
+        True,
+        False,
+    )
+    assert player_intel(zed_record(), AHRI_ID, "MIDDLE").is_main_champion is False
+
+
+def test_a_main_needs_a_few_games_and_no_tie_for_the_most() -> None:
+    assert player_intel(games_on({ZED_ID: 2}), ZED_ID, "MIDDLE").is_main_champion is False
+    tie = games_on({ZED_ID: 3, AHRI_ID: 3})
+    assert player_intel(tie, ZED_ID, "MIDDLE").is_main_champion is False
+
+
+def test_most_of_many_recent_games_on_one_champion_is_a_one_trick() -> None:
+    intel = player_intel(games_on({ZED_ID: 14, AHRI_ID: 6}), ZED_ID, "MIDDLE")
+    assert (intel.is_one_trick, intel.is_main_champion) == (True, True)
+    under_the_share = games_on({ZED_ID: 13, AHRI_ID: 7})
+    assert player_intel(under_the_share, ZED_ID, "MIDDLE").is_one_trick is False
+    too_few_games = games_on({ZED_ID: 7})
+    assert player_intel(too_few_games, ZED_ID, "MIDDLE").is_one_trick is False
+
+
 def vi_history() -> JsonValue:
     # Newest first: four jungle games on Vi, on alternating sides, then one game in top.
     return match_history(

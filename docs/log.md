@@ -6,6 +6,11 @@ skill has the format.
 
 ## 2026-10-09
 
+- Phase 9.3, champion pools: from the match history the engine already reads, how many
+  champions a player's recent games were on, and whether this game's is their main (more games
+  than any other, at least three) or they are a one-trick on it (at least 70% of at least eight).
+  The row says "3 on champ (main)" or "14 on champ (one-trick)", and an enemy one-trick is called
+  out before the camps spawn. No new request.
 - Phase 9.2, where the enemy jungler is at 4:00: the timelines 9.1 reads also say which half of
   the map a likely jungler was on at 4:00, once a first clear is done, named for the buff of
   theirs in it, or mid. Their row adds "4:00 bot 3/4", turned into top or bot for their team this

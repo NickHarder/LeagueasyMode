@@ -149,6 +149,11 @@ class PlayerIntel(BaseModel):
     four_minute_half: Literal["top", "mid", "bot"] | None = None
     four_minute_count: int = 0
     four_minute_games: int = 0
+    # How many champions their recent games were on; whether this game's is the one they played
+    # most (in at least three games); and whether most of many recent games were on it.
+    champion_pool_size: int = 0
+    is_main_champion: bool = False
+    is_one_trick: bool = False
 
 
 class GoldEstimate(BaseModel):
@@ -383,6 +388,7 @@ type CalloutKind = Literal[
     "missing",
     "jungle_start",
     "jungle_four_minutes",
+    "one_trick",
     "inhibitor_open",
     "suggestion",
 ]

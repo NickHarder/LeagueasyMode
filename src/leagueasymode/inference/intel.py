@@ -2,7 +2,8 @@
 
 Counted from the League client's answers for the player (`player_intel.py`): their recent games on
 Summoner's Rift, newest first. The usual position needs enough games and a clear favourite, so
-that a player who fills every role is not called off-role. A likely jungler's usual start, and
+that a player who fills every role is not called off-role; the same games say whether this game's
+champion is their main or the only one they play. A likely jungler's usual start, and
 where they usually are at 4:00, are the sides most of their recent jungle games found them on
 (`jungle_starts.py`).
 """
@@ -17,6 +18,11 @@ from leagueasymode.player_intel import PlayerRecord
 # The usual position is the one at least this share of at least this many recent games were in.
 USUAL_POSITION_MIN_GAMES: Final = 5
 USUAL_POSITION_MIN_SHARE: Final = 0.6
+# A champion is their main when they played it more than any other, in at least this many games;
+# a one-trick when at least this share of at least this many recent games were on it.
+MAIN_CHAMPION_MIN_GAMES: Final = 3
+ONE_TRICK_MIN_GAMES: Final = 8
+ONE_TRICK_MIN_SHARE: Final = 0.7
 
 
 def player_intel(
@@ -60,7 +66,29 @@ def player_intel(
         four_minute_half=usual_four_minute_half,
         four_minute_count=four_minute_sides.usual_count if four_minute_sides else 0,
         four_minute_games=four_minute_sides.game_count if four_minute_sides else 0,
+        champion_pool_size=len({game.champion_id for game in games}),
+        is_main_champion=_is_main_champion([game.champion_id for game in games], champion_id),
+        is_one_trick=len(games) >= ONE_TRICK_MIN_GAMES
+        and len(champion_games) >= ONE_TRICK_MIN_SHARE * len(games),
     )
+
+
+def _is_main_champion(champion_ids: list[int], champion_id: int) -> bool:
+    """Return whether a champion is the one a player's recent games were on most.
+
+    Args:
+        champion_ids: Each recent game's champion.
+        champion_id: The champion they play this game.
+
+    Returns:
+        Whether it was played in more recent games than any other, and in at least three.
+    """
+    most_played = Counter(champion_ids).most_common(2)
+    if not most_played or most_played[0][0] != champion_id:
+        return False
+    game_count = most_played[0][1]
+    runner_up_count = most_played[1][1] if len(most_played) > 1 else 0
+    return game_count >= MAIN_CHAMPION_MIN_GAMES and game_count > runner_up_count
 
 
 def _usual_position(positions: list[str]) -> str:

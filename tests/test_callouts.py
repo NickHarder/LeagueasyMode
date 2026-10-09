@@ -281,3 +281,36 @@ def test_a_four_minute_habit_is_not_called_out_late_or_when_unclear() -> None:
     assert (
         CalloutTracker().update(state_at(170.0, [enemy_jungler(3, 5, four_minute_count=3)])) == []
     )
+
+
+def enemy_one_trick(champion_game_count: int, recent_game_count: int) -> PlayerCard:
+    return PlayerCard(
+        champion_name="Zed",
+        side="enemy",
+        position="MIDDLE",
+        level=1,
+        is_dead=False,
+        respawns_at_game_time_seconds=None,
+        intel=PlayerIntel(
+            ranked=None,
+            recent_game_count=recent_game_count,
+            recent_win_count=0,
+            streak=0,
+            champion_game_count=champion_game_count,
+            champion_win_count=0,
+            usual_position="MIDDLE",
+            is_off_role=False,
+            champion_pool_size=3,
+            is_main_champion=True,
+            is_one_trick=True,
+        ),
+    )
+
+
+def test_an_enemy_one_trick_is_called_out_before_the_camps_spawn() -> None:
+    tracker = CalloutTracker()
+    first = tracker.update(state_at(20.0, [enemy_one_trick(15, 20)]))
+    assert [(callout.kind, callout.text) for callout in first] == [
+        ("one_trick", "Zed is a one-trick (15 of 20 games)")
+    ]
+    assert CalloutTracker().update(state_at(95.0, [enemy_one_trick(15, 20)])) == []

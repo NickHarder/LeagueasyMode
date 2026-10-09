@@ -95,6 +95,7 @@
         "missing",
         "jungle_start",
         "jungle_four_minutes",
+        "one_trick",
         "inhibitor_open",
         "suggestion"
       ],
@@ -1193,6 +1194,21 @@
           "default": 0,
           "title": "Four Minute Games",
           "type": "integer"
+        },
+        "champion_pool_size": {
+          "default": 0,
+          "title": "Champion Pool Size",
+          "type": "integer"
+        },
+        "is_main_champion": {
+          "default": false,
+          "title": "Is Main Champion",
+          "type": "boolean"
+        },
+        "is_one_trick": {
+          "default": false,
+          "title": "Is One Trick",
+          "type": "boolean"
         }
       },
       "required": [
