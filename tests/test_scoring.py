@@ -20,11 +20,12 @@ from leagueasymode.cli import main
 from leagueasymode.data_dragon import PatchStatsStore
 from leagueasymode.inference.gold import passive_gold
 from leagueasymode.inference.rift_map import RIFT_MAP, MapPoint, RiftMap
-from leagueasymode.inference.win_chance import win_chance
+from leagueasymode.inference.win_chance import WIN_CHANCE_RULES, win_chance
 from leagueasymode.league_client import GAMEFLOW_SESSION_PATH
 from leagueasymode.patch_data import CHAMPION_SUMMARY_PATH, GAME_VERSION_PATH, ITEMS_PATH
 from leagueasymode.recorder import GAME_DETAILS_PATH_TEMPLATE, TIMELINE_PATH_TEMPLATE
 from leagueasymode.recording.writer import RecordingWriter
+from leagueasymode.refit import MIN_GAMES_TO_FIT, load_model_weights
 from leagueasymode.scoring import (
     read_recorded_game,
     score_backs,
@@ -722,3 +723,54 @@ def test_without_the_patchs_stats_contests_are_not_scored(tmp_path: Path) -> Non
         tmp_path, players_at(are_positions_given=True), timeline=timeline
     )
     assert score_contests(read_recorded_game(recording), None) is None
+
+
+def fit_settings(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    patch_data_directory = tmp_path / "patch-data"
+    PatchStatsStore(patch_data_directory).save("16.19.1", FIXTURE_FILES)
+    monkeypatch.setenv("LEAGUEASYMODE_PATCH_DATA_DIRECTORY", str(patch_data_directory))
+    monkeypatch.setenv("LEAGUEASYMODE_DOWNLOAD_PATCH_STATS", "false")
+    weights_path = tmp_path / "model-weights.json"
+    monkeypatch.setenv("LEAGUEASYMODE_MODEL_WEIGHTS", str(weights_path))
+    return weights_path
+
+
+def test_fit_needs_twenty_games(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    weights_path = fit_settings(tmp_path, monkeypatch)
+    recording = write_scored_recording(tmp_path, DEFAULT_PLAYERS, winning_team_id=100)
+    assert main(["fit", str(recording), "--write"]) == 0
+    printed = capsys.readouterr().out
+    assert "win chance: needs 20 recorded games with a result, has 1" in printed
+    assert "fights: needs 20 recorded games with fights, has 0" in printed
+    assert "nothing written: the hand-set weights stand" in printed
+    assert not weights_path.exists()
+
+
+def test_fit_refits_on_twenty_games_and_writes_what_is_kept(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    weights_path = fit_settings(tmp_path, monkeypatch)
+    recordings = []
+    for index in range(MIN_GAMES_TO_FIT):
+        directory = tmp_path / f"game-{index}"
+        directory.mkdir()
+        # Ahri's team, behind on gold in every built game, wins one game in four.
+        recordings.append(
+            str(
+                write_scored_recording(
+                    directory, DEFAULT_PLAYERS, winning_team_id=100 if index % 4 == 0 else 200
+                )
+            )
+        )
+    assert main(["fit", *recordings, "--write"]) == 0
+    printed = capsys.readouterr().out
+    win_line = next(line for line in printed.splitlines() if line.startswith("win chance:"))
+    assert win_line.startswith("win chance: 20 games, 320 samples: hand-set 0.")
+    assert win_line.endswith("(each game held out): kept")
+    assert f"wrote {weights_path}" in printed
+    weights = load_model_weights(weights_path)
+    assert weights is not None
+    # Your blue side won less than the hand-set weights expected: the fit leans against it.
+    assert weights.win_rules.blue_side_weight < WIN_CHANCE_RULES.blue_side_weight

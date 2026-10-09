@@ -17,7 +17,7 @@ from leagueasymode.inference.combat_stats import move_speed_of
 from leagueasymode.inference.contests import objective_contests
 from leagueasymode.inference.cooldowns import MarkedSpell, marked_cooldown, running_cooldowns
 from leagueasymode.inference.experience import ExperienceTracker
-from leagueasymode.inference.fights import team_fight
+from leagueasymode.inference.fights import FIGHT_RULES, FightRules, team_fight
 from leagueasymode.inference.gold import GoldTracker, PlayerKey, player_key, team_gold
 from leagueasymode.inference.jungle_path import JunglePathTracker
 from leagueasymode.inference.objectives import (
@@ -28,7 +28,12 @@ from leagueasymode.inference.objectives import (
 )
 from leagueasymode.inference.players import numbers_window, player_cards, team_item_gold
 from leagueasymode.inference.wards import WardTracker
-from leagueasymode.inference.win_chance import win_chance, win_features
+from leagueasymode.inference.win_chance import (
+    WIN_CHANCE_RULES,
+    WinChanceRules,
+    win_chance,
+    win_features,
+)
 from leagueasymode.inference.you import YouTracker, you_panel
 from leagueasymode.league_client import ClientConnector, LeagueClient
 from leagueasymode.overlay_state import (
@@ -45,6 +50,7 @@ from leagueasymode.player_intel import (
     PlayerRecords,
     load_player_records,
 )
+from leagueasymode.refit import ModelWeights
 
 NOT_RUNNING: Final = OverlayState(is_game_running=False)
 
@@ -69,6 +75,8 @@ def compute_overlay_state(
     ward_tracker: WardTracker | None = None,
     you_tracker: YouTracker | None = None,
     minimap: MinimapLayout | None = None,
+    win_rules: WinChanceRules = WIN_CHANCE_RULES,
+    fight_rules: FightRules = FIGHT_RULES,
 ) -> OverlayState:
     """Return what the overlay shows for one answer of the game's API.
 
@@ -89,6 +97,8 @@ def compute_overlay_state(
         ward_tracker: The same for the control wards; None to show none.
         you_tracker: The same for how long you have held your gold; None to show no You panel.
         minimap: Where League draws its minimap; None while unknown.
+        win_rules: The win chance's weights, hand-set or refit.
+        fight_rules: The fight model's, likewise.
 
     Returns:
         The overlay's state; no game running when there is no answer or it cannot be read.
@@ -169,9 +179,10 @@ def compute_overlay_state(
                 dragon=dragon,
                 buffs=buffs,
                 inhibitors=inhibitors,
-            )
+            ),
+            win_rules,
         ),
-        fight=team_fight(snapshot, patch_stats),
+        fight=team_fight(snapshot, patch_stats, fight_rules),
         contests=objective_contests(
             snapshot,
             dragon=dragon,
@@ -234,6 +245,7 @@ class OverlayEngine:
         intel_pause_seconds: float = DEFAULT_PAUSE_SECONDS,
         *,
         minimap_layout: MinimapLayout | None = None,
+        model_weights: ModelWeights | None = None,
     ) -> None:
         """Keep the game's API, how often to ask it, and where the patch's data comes from.
 
@@ -247,6 +259,7 @@ class OverlayEngine:
             intel_pause_seconds: The pause after each question about a player.
             minimap_layout: Where League draws its minimap, from its settings; None while
                 unknown.
+            model_weights: The refit models' weights; None for the hand-set ones.
         """
         self.game_api: Final = game_api
         self.poll_interval_seconds: Final = poll_interval_seconds
@@ -254,6 +267,7 @@ class OverlayEngine:
         self.load_patch_stats: Final = load_patch_stats
         self.intel_pause_seconds: Final = intel_pause_seconds
         self.minimap_layout: Final = minimap_layout
+        self.model_weights: Final = model_weights or ModelWeights()
         self._item_catalog: ItemCatalog | None = None
         self._patch_stats: PatchStats | None = None
         self._player_records: PlayerRecords | None = None
@@ -353,6 +367,8 @@ class OverlayEngine:
                 ward_tracker=self._ward_tracker,
                 you_tracker=self._you_tracker,
                 minimap=self.minimap_layout,
+                win_rules=self.model_weights.win_rules,
+                fight_rules=self.model_weights.fight_rules,
             )
             self._last_payload = payload if answer_state.is_game_running else None
             if answer_state.is_game_running and not self._current_state.is_game_running:

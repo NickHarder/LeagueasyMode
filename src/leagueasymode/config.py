@@ -46,6 +46,15 @@ def default_patch_data_directory() -> Path:
     return default_application_directory() / "patch-data"
 
 
+def default_model_weights_path() -> Path:
+    """Return where the refit models' weights are kept when no setting says otherwise.
+
+    Returns:
+        `model-weights.json` in the application's directory (`default_application_directory`).
+    """
+    return default_application_directory() / "model-weights.json"
+
+
 class Settings(BaseSettings):
     """The service's configuration.
 
@@ -97,6 +106,10 @@ class Settings(BaseSettings):
     # Where each patch's Data Dragon files are kept; empty for the default
     # (`default_patch_data_directory`).
     patch_data_directory: Path | None = None
+    # The refit models' weights, which `leagueasymode fit --write` writes and the engine reads at
+    # its start; empty for the default (`default_model_weights_path`). Without the file, the
+    # hand-set weights stand.
+    model_weights: Path | None = None
     # The model provider's key, for anything that calls the real model. An empty line in `.env`
     # leaves it unset. To change provider, change this value and the model id; no other place holds
     # a key.

@@ -125,6 +125,10 @@ game API ─▶ GameApiClient ─▶ GameSnapshot ─▶ estimators ─▶ Overl
 | Win chance (estimator 12, phase 5.1) | estimate | a logistic model from your side: the log-odds of a win add 10 per unit of the gold lead over what a team has earned on average (at least 12,500, so that an early kill is not a won game), 0.3 per level of lead per player, 0.1 per turret (theirs down less yours, from the feed), 0.4 per inhibitor down, 0.1 per dragon, 0.5 for the soul, 0.7 for a Baron buff running and 1.0 for an Elder's (minus the same for theirs), 0.6 per player alive of lead at 30:00 (less before, up to 0.9 after 45:00), and 0.05 for the blue side. A medium gold lead at 15:00 (2.5k) is set to win about 3 in 4 and a large one (5k) about 9 in 10, as seasons 7 to 10 did. The gold lead is the team gold estimate, with its band; the item gold lead stands in while it is unknown. The chance is averaged over the gold lead's band (the probit approximation), so an unsure lead counts for less. All weights are first guesses, to refit on recorded games (phase 5.5). The strip's header shows "Win ~64% · gold +2.1k, Baron": the two things moving it most, from your side[^win-chance] |
 | Inhibitors down | exact | back 5:00 after they fall, or when the feed says they respawned; `Barracks_T1_L1` is team 1's top inhibitor (L, C and R taken as top, mid and bottom, to be confirmed) |
 
+The win chance's weights and the fights' steepness can be refit on recorded games
+(`leagueasymode fit`, in [recordings](recordings.md)); `leagueasymode run` reads the weights kept
+from `model-weights.json` at its start, and uses the hand-set ones without it.
+
 Every rule is checked again against the first recordings. The widgets show the dragon always,
 and beside it the numbers window while it is open, any other monster up or within 90 seconds of
 spawning, each running buff, each inhibitor down, and for Dragon, the Elder or Baron up or

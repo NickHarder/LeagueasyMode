@@ -20,6 +20,8 @@ sources:
     resource: ../../src/leagueasymode/league_client.py
   - id: scoring
     resource: ../../src/leagueasymode/scoring.py
+  - id: refit
+    resource: ../../src/leagueasymode/refit.py
 ---
 
 # What a recording is for
@@ -51,6 +53,16 @@ from 30 seconds before to 10 after), by its Brier score; and the win chance at t
 minute
 against the result the game's details record, by its Brier score (0.25 for a coin flip every
 minute, lower is better).[^scoring]
+
+`uv run leagueasymode fit <recording>... [--write]` refits the hand-set models on recorded games:
+the win chance's weights on every minute of every game with its result, and the fights'
+steepness on every fight of the timelines. It needs 20 games or more for each. Each fit is checked
+on games it did not see (the games split into ten folds, each scored by a fit made without it),
+and printed against the hand-set weights by the Brier score; a fit is kept only when it scores
+better. The fit is a logistic regression pulled toward the hand-set weights, so that a few games
+move them little. With `--write`, the weights kept go to `model-weights.json` in the
+application's directory (`LEAGUEASYMODE_MODEL_WEIGHTS` moves it), which `leagueasymode run` reads
+at its start; without the file, or with one that cannot be read, the hand-set weights stand.[^refit]
 
 # How to make one
 
@@ -125,3 +137,4 @@ A recording holds other players' names, so only an anonymized copy is committed:
 [^riot-tls]: `src/leagueasymode/riot_tls.py`
 [^anonymize]: `src/leagueasymode/recording/anonymize.py`
 [^scoring]: `src/leagueasymode/scoring.py`
+[^refit]: `src/leagueasymode/refit.py`
