@@ -563,6 +563,12 @@ export function formatIntel(intel: PlayerIntel): string {
   if (intel.is_off_role) {
     parts.push(`off-role (${ROLE_SHORT_NAMES[intel.usual_position] ?? intel.usual_position})`);
   }
+  if (intel.jungle_start_side !== null) {
+    const halfText = intel.jungle_start_half !== null ? ` (${intel.jungle_start_half})` : "";
+    parts.push(
+      `starts ${intel.jungle_start_side}${halfText} ${String(intel.jungle_start_count)}/${String(intel.jungle_start_games)}`,
+    );
+  }
   return parts.join(" \u00b7 ");
 }
 

@@ -59,7 +59,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Final, Literal
 
-from pydantic import Field, JsonValue, ValidationError, field_validator
+from pydantic import Field, JsonValue, ValidationError
 
 from leagueasymode.data_dragon import PatchStats
 from leagueasymode.game_state import GameSnapshot, RiotPayloadModel
@@ -84,6 +84,13 @@ from leagueasymode.inference.rift_map import RIFT_MAP, RiftMap
 from leagueasymode.inference.roles import assign_roles
 from leagueasymode.inference.wards import WardTracker
 from leagueasymode.inference.win_chance import WinFeatures, win_chance, win_features
+from leagueasymode.league_client import GAMEFLOW_SESSION_PATH, game_id_of
+from leagueasymode.match_timeline import (
+    GameTimeline,
+    TimelineEvent,
+    TimelineParticipantFrame,
+    TimelinePosition,
+)
 from leagueasymode.overlay_state import (
     CombatStats,
     GoldEstimate,
@@ -313,48 +320,6 @@ class GameDetails(RiotPayloadModel):
     teams: list[DetailsTeam] = Field(default_factory=list)
 
 
-class TimelinePosition(RiotPayloadModel):
-    """A place on the map, in game units."""
-
-    x: int = 0  # ai-kit: ignore-name  the timeline's own name for the coordinate
-    y: int = 0  # ai-kit: ignore-name  as above
-
-
-class TimelineParticipantFrame(RiotPayloadModel):
-    """One participant's gold, experience and position at one frame of the match timeline."""
-
-    participant_id: int = Field(default=0, alias="participantId")
-    position: TimelinePosition | None = None
-    current_gold: int = Field(default=0, alias="currentGold")
-    total_gold: int = Field(default=0, alias="totalGold")
-    experience: int = Field(default=0, alias="xp")
-
-
-class TimelineEvent(RiotPayloadModel):
-    """One event of the match timeline: a purchase or a kill, among others."""
-
-    event_type: str = Field(default="", alias="type")
-    timestamp_milliseconds: int = Field(default=0, alias="timestamp")
-    # The buyer of a purchase, and what they bought.
-    participant_id: int = Field(default=0, alias="participantId")
-    item_id: int = Field(default=0, alias="itemId")
-    # The champion a kill killed, who killed them (0 for a turret or a monster), who helped,
-    # and where.
-    victim_id: int = Field(default=0, alias="victimId")
-    killer_id: int = Field(default=0, alias="killerId")
-    assisting_participant_ids: list[int] = Field(
-        default_factory=list, alias="assistingParticipantIds"
-    )
-    position: TimelinePosition | None = None
-    # The placer of a ward, and its kind.
-    creator_id: int = Field(default=0, alias="creatorId")
-    ward_type: str = Field(default="", alias="wardType")
-    # An epic monster's kill: the team that took it, and the monster.
-    killer_team_id: int = Field(default=0, alias="killerTeamId")
-    monster_type: str = Field(default="", alias="monsterType")
-    monster_sub_type: str = Field(default="", alias="monsterSubType")
-
-
 @dataclass(frozen=True)
 class MonsterTake:
     """An epic monster's kill on the timeline: when, which, by which team, and where."""
@@ -372,35 +337,6 @@ class TimelineFight:
     start_seconds: float
     participant_ids: frozenset[int]
     victim_ids: tuple[int, ...]
-
-
-class TimelineFrame(RiotPayloadModel):
-    """One frame of the match timeline: every participant, about once a minute."""
-
-    timestamp_milliseconds: int = Field(default=0, alias="timestamp")
-    participant_frames: list[TimelineParticipantFrame] = Field(
-        default_factory=list, alias="participantFrames"
-    )
-    events: list[TimelineEvent] = Field(default_factory=list)
-
-    @field_validator("participant_frames", mode="before")
-    @classmethod
-    def _frames_as_a_list(cls, value: object) -> object:
-        """Take the participants' frames keyed by participant id, as the timeline sends them.
-
-        Args:
-            value: The frames, keyed by id or listed.
-
-        Returns:
-            The frames, listed.
-        """
-        return list(value.values()) if isinstance(value, dict) else value
-
-
-class GameTimeline(RiotPayloadModel):
-    """The match timeline from the League client, after the game."""
-
-    frames: list[TimelineFrame] = Field(default_factory=list)
 
 
 def read_recorded_game(recording_path: Path) -> RecordedGame:
@@ -1633,7 +1569,7 @@ def _game_timeline(game: RecordedGame) -> GameTimeline | None:
 
 
 def _timeline_in(client_resources: Mapping[str, JsonValue]) -> GameTimeline | None:
-    """Return the match timeline among the League client's answers.
+    """Return this game's match timeline among the League client's answers.
 
     Args:
         client_resources: The client's latest answer for each path it was asked.
@@ -1641,18 +1577,34 @@ def _timeline_in(client_resources: Mapping[str, JsonValue]) -> GameTimeline | No
     Returns:
         The timeline, or None when there is none that can be read.
     """
-    timeline_payload = next(
-        (
-            payload
-            for path, payload in client_resources.items()
-            if path.startswith(TIMELINE_PATH_PREFIX)
-        ),
-        None,
-    )
     try:
-        return GameTimeline.model_validate(timeline_payload)
+        return GameTimeline.model_validate(
+            _this_games_resource(client_resources, TIMELINE_PATH_PREFIX)
+        )
     except ValidationError:
         return None
+
+
+def _this_games_resource(client_resources: Mapping[str, JsonValue], path_prefix: str) -> JsonValue:
+    """Return the client's answer about this game among those about any game.
+
+    A recording also holds past games' timelines, which the player lookups read for where a
+    jungler starts; this game's is the one named by the game's id in the gameflow session.
+
+    Args:
+        client_resources: The client's latest answer for each path it was asked.
+        path_prefix: The paths' prefix, which the game's id follows.
+
+    Returns:
+        The answer; with no game id recorded, the only one under the prefix; None otherwise.
+    """
+    game_id = game_id_of(client_resources.get(GAMEFLOW_SESSION_PATH))
+    if game_id is not None:
+        return client_resources.get(f"{path_prefix}{game_id}")
+    answers = [
+        payload for path, payload in client_resources.items() if path.startswith(path_prefix)
+    ]
+    return answers[0] if len(answers) == 1 else None
 
 
 def _game_details(game: RecordedGame) -> GameDetails | None:
@@ -1664,16 +1616,10 @@ def _game_details(game: RecordedGame) -> GameDetails | None:
     Returns:
         The details, or None when the recording has none it can read.
     """
-    details_payload = next(
-        (
-            payload
-            for path, payload in game.client_resources.items()
-            if path.startswith(GAME_DETAILS_PATH_PREFIX)
-        ),
-        None,
-    )
     try:
-        return GameDetails.model_validate(details_payload)
+        return GameDetails.model_validate(
+            _this_games_resource(game.client_resources, GAME_DETAILS_PATH_PREFIX)
+        )
     except ValidationError:
         return None
 

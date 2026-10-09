@@ -8,13 +8,16 @@ from aiohttp import web
 from pydantic import JsonValue
 
 from game_payloads import (
+    CHAMPION_IDS,
     DEFAULT_PLAYERS,
     GAME_ID,
+    PastGame,
     all_game_data,
     champion_summary,
     game_start_event,
     gameflow_session,
     match_history,
+    past_game_id,
     puuid_of,
     ranked_stats,
 )
@@ -242,6 +245,52 @@ async def test_each_players_rank_and_recent_games_are_recorded(tmp_path: Path) -
     }
     assert f"/lol-ranked/v1/ranked-stats/{zed_puuid}" in paths
     assert f"/lol-match-history/v1/products/lol/{zed_puuid}/matches?begIndex=0&endIndex=20" in paths
+
+
+async def test_a_likely_junglers_past_jungle_timelines_are_recorded(tmp_path: Path) -> None:
+    client_application = stand_in_client(timeline_misses=0)
+    vi_puuid = puuid_of(DEFAULT_PLAYERS[6])
+    vi_id = CHAMPION_IDS["Vi"]
+    past_timeline_ids: list[str] = []
+
+    async def summary_route(_request: web.Request) -> web.Response:
+        return web.json_response(champion_summary())
+
+    async def history_route(request: web.Request) -> web.Response:
+        puuid = request.match_info["puuid"]
+        past_games = (
+            [PastGame(vi_id, "JUNGLE", "NONE", is_win=True) for _ in range(3)]
+            if puuid == vi_puuid
+            else []
+        )
+        return web.json_response(match_history(puuid, past_games))
+
+    async def past_timeline_route(request: web.Request) -> web.Response:
+        past_timeline_ids.append(request.match_info["game_id"])
+        return web.json_response(TIMELINE)
+
+    client_application.router.add_get(
+        "/lol-game-data/assets/v1/champion-summary.json", summary_route
+    )
+    client_application.router.add_get(
+        "/lol-match-history/v1/products/lol/{puuid}/matches", history_route
+    )
+    client_application.router.add_get(
+        "/lol-match-history/v1/game-timelines/{game_id}", past_timeline_route
+    )
+    recording_path = await record(
+        tmp_path, a_game_of(5, ends_with_game_end=True), client_application
+    )
+    paths = {
+        line.path
+        for line in iter_recording_lines(recording_path)
+        if isinstance(line, ClientResource)
+    }
+    past_game_paths = {
+        f"/lol-match-history/v1/game-timelines/{past_game_id(index)}" for index in range(3)
+    }
+    assert past_game_paths <= paths
+    assert len(past_timeline_ids) == len(past_game_paths)
 
 
 async def test_each_recorded_game_is_handed_on_once_its_recording_is_closed(tmp_path: Path) -> None:

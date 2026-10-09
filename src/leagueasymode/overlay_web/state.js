@@ -36,8 +36,11 @@ const CALLOUT_KINDS = new Set([
     "cooldown_ready",
     "went_back",
     "missing",
+    "jungle_start",
     "suggestion",
 ]);
+const START_SIDES = new Set(["blue", "red"]);
+const MAP_HALVES = new Set(["top", "bot"]);
 const MARKED_SPELLS = new Set(["flash", "summoner", "ultimate"]);
 /** Return whether a value is a plain object, so that its fields can be read. */
 function isRecord(value) {
@@ -133,7 +136,11 @@ export function isPlayerIntel(value) {
         typeof value["champion_game_count"] === "number" &&
         typeof value["champion_win_count"] === "number" &&
         typeof value["usual_position"] === "string" &&
-        typeof value["is_off_role"] === "boolean");
+        typeof value["is_off_role"] === "boolean" &&
+        (value["jungle_start_side"] === null || isOneOf(value["jungle_start_side"], START_SIDES)) &&
+        (value["jungle_start_half"] === null || isOneOf(value["jungle_start_half"], MAP_HALVES)) &&
+        typeof value["jungle_start_count"] === "number" &&
+        typeof value["jungle_start_games"] === "number");
 }
 /** Return whether a value is a player's gold as the engine sends it. */
 export function isGoldEstimate(value) {

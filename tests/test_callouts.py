@@ -7,6 +7,7 @@ from leagueasymode.overlay_state import (
     ObjectiveTimer,
     OverlayState,
     PlayerCard,
+    PlayerIntel,
 )
 
 
@@ -210,3 +211,50 @@ def test_an_unsure_estimate_of_a_power_level_is_not_called_out() -> None:
     tracker = CalloutTracker()
     tracker.update(state_at(300.0, [enemy_close_to_six(300.0, 30.0, 40.0)]))
     assert tracker.update(state_at(310.0, [enemy_close_to_six(310.0, 15.0, 40.0)])) == []
+
+
+def enemy_jungler(start_count: int, start_games: int, role: str = "JUNGLE") -> PlayerCard:
+    return PlayerCard(
+        champion_name="Vi",
+        side="enemy",
+        position="",
+        role=role,
+        role_confidence="likely",
+        level=1,
+        is_dead=False,
+        respawns_at_game_time_seconds=None,
+        intel=PlayerIntel(
+            ranked=None,
+            recent_game_count=start_games,
+            recent_win_count=0,
+            streak=0,
+            champion_game_count=0,
+            champion_win_count=0,
+            usual_position="JUNGLE",
+            is_off_role=False,
+            jungle_start_side="red",
+            jungle_start_half="top",
+            jungle_start_count=start_count,
+            jungle_start_games=start_games,
+        ),
+    )
+
+
+def test_where_the_enemy_jungler_usually_starts_is_called_out_before_the_camps_spawn() -> None:
+    tracker = CalloutTracker()
+    first = tracker.update(state_at(20.0, [enemy_jungler(3, 4)]))
+    assert [(callout.kind, callout.text) for callout in first] == [
+        ("jungle_start", "Vi usually starts red, top side (3 of 4)")
+    ]
+    again = tracker.update(state_at(21.0, [enemy_jungler(3, 4)]))
+    assert [callout.callout_id for callout in again] == [first[0].callout_id]
+
+
+def test_a_jungle_start_is_not_called_out_once_the_camps_are_up() -> None:
+    assert CalloutTracker().update(state_at(95.0, [enemy_jungler(3, 4)])) == []
+
+
+def test_a_jungler_with_no_clear_habit_or_another_role_is_not_called_out() -> None:
+    assert CalloutTracker().update(state_at(20.0, [enemy_jungler(3, 5)])) == []
+    assert CalloutTracker().update(state_at(20.0, [enemy_jungler(1, 1)])) == []
+    assert CalloutTracker().update(state_at(20.0, [enemy_jungler(3, 4, role="TOP")])) == []

@@ -29,6 +29,11 @@ MISSING_AWAY_CHANCE: Final = 0.5
 MISSING_REACH_SECONDS: Final = 20.0
 MISSING_CALLOUT_GAP_SECONDS: Final = 30.0
 LANE_OF_ROLE: Final = {"TOP": "top", "MIDDLE": "mid", "BOTTOM": "bot", "UTILITY": "bot"}
+# Where the enemy jungler usually starts is called out before the camps spawn at 1:30, when at
+# least this share of at least this many of their recent jungle games started on one side.
+JUNGLE_START_BEFORE_SECONDS: Final = 90.0
+JUNGLE_START_MIN_SHARE: Final = 0.7
+JUNGLE_START_MIN_GAMES: Final = 2
 OBJECTIVE_SOON_SECONDS: Final = 60.0
 # A clock this far behind the last one is a new game, not a replayed second.
 NEW_GAME_CLOCK_DROP_SECONDS: Final = 5.0
@@ -78,6 +83,7 @@ class CalloutTracker:
         candidate_callouts = [
             *self._level_spikes(state, game_time_seconds),
             *_levels_soon(state, game_time_seconds),
+            *_jungle_starts(state, game_time_seconds),
             *self._jungler_backs(state, game_time_seconds),
             *self._items_soon(state, game_time_seconds),
             *self._missing(state, game_time_seconds),
@@ -408,6 +414,38 @@ def _levels_soon(state: OverlayState, game_time_seconds: float) -> list[Callout]
             _level_soon(card, game_time_seconds) for card in state.players if card.side == "enemy"
         )
         if callout is not None
+    ]
+
+
+def _jungle_starts(state: OverlayState, game_time_seconds: float) -> list[Callout]:
+    """Return where the enemy jungler usually starts, before the camps spawn.
+
+    Args:
+        state: The new state.
+        game_time_seconds: Its game time.
+
+    Returns:
+        A callout for each enemy in the jungle whose recent jungle games mostly started on one
+        side; none from 1:30 on.
+    """
+    if game_time_seconds >= JUNGLE_START_BEFORE_SECONDS:
+        return []
+    return [
+        _callout(
+            f"jungle-start:{card.champion_name}",
+            "jungle_start",
+            f"{card.champion_name} usually starts {intel.jungle_start_side}"
+            f"{f', {intel.jungle_start_half} side' if intel.jungle_start_half else ''} "
+            f"({intel.jungle_start_count} of {intel.jungle_start_games})",
+            game_time_seconds,
+        )
+        for card in state.players
+        if card.side == "enemy"
+        and card.role == "JUNGLE"
+        and (intel := card.intel) is not None
+        and intel.jungle_start_side is not None
+        and intel.jungle_start_games >= JUNGLE_START_MIN_GAMES
+        and intel.jungle_start_count >= JUNGLE_START_MIN_SHARE * intel.jungle_start_games
     ]
 
 

@@ -159,3 +159,18 @@ async def test_a_shared_question_left_unanswered_is_asked_again() -> None:
         assert await client.get_json("/lol-ranked/v1/ranked-stats/puuid-1") is None
         assert await client.get_json("/lol-ranked/v1/ranked-stats/puuid-1") is None
     assert len(requested_paths) == 2
+
+
+async def test_only_the_latest_shared_answers_are_kept() -> None:
+    requested_paths: list[str] = []
+    shared_answers = SharedAnswers(("/lol-ranked/",), kept_answer_count=2)
+    async with (
+        serve(counting_client_application(requested_paths)) as base_url,
+        aiohttp.ClientSession() as session,
+    ):
+        client = LeagueClient(session, base_url, "", None, shared_answers=shared_answers)
+        for puuid in ("puuid-1", "puuid-2", "puuid-3", "puuid-3", "puuid-1"):
+            await client.get_json(f"/lol-ranked/v1/ranked-stats/{puuid}")
+    # The third answer pushed out the first, which is asked again; the third is still kept.
+    assert requested_paths.count("/lol-ranked/v1/ranked-stats/puuid-1") == 2
+    assert requested_paths.count("/lol-ranked/v1/ranked-stats/puuid-3") == 1

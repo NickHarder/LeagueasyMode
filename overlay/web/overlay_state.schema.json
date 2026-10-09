@@ -93,6 +93,7 @@
         "cooldown_ready",
         "went_back",
         "missing",
+        "jungle_start",
         "suggestion"
       ],
       "type": "string"
@@ -1080,6 +1081,48 @@
         "is_off_role": {
           "title": "Is Off Role",
           "type": "boolean"
+        },
+        "jungle_start_side": {
+          "anyOf": [
+            {
+              "enum": [
+                "blue",
+                "red"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Jungle Start Side"
+        },
+        "jungle_start_half": {
+          "anyOf": [
+            {
+              "enum": [
+                "top",
+                "bot"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Jungle Start Half"
+        },
+        "jungle_start_count": {
+          "default": 0,
+          "title": "Jungle Start Count",
+          "type": "integer"
+        },
+        "jungle_start_games": {
+          "default": 0,
+          "title": "Jungle Start Games",
+          "type": "integer"
         }
       },
       "required": [

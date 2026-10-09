@@ -331,6 +331,7 @@ class PastGame:
     duration_seconds: int = 1800
     item_ids: tuple[int, ...] = ()
     creep_score: int = 0
+    team_id: int = 100
 
 
 def match_history(puuid: str, past_games: list[PastGame]) -> JsonValue:
@@ -341,7 +342,7 @@ def match_history(puuid: str, past_games: list[PastGame]) -> JsonValue:
             "gameCount": len(past_games),
             "games": [
                 {
-                    "gameId": 5000000000 + index,
+                    "gameId": past_game_id(index),
                     "gameCreation": 1790000000000 - index * 3600000,
                     "gameDuration": past_game.duration_seconds,
                     "gameMode": "CLASSIC",
@@ -354,7 +355,7 @@ def match_history(puuid: str, past_games: list[PastGame]) -> JsonValue:
                         {
                             "participantId": 1,
                             "championId": past_game.champion_id,
-                            "teamId": 100,
+                            "teamId": past_game.team_id,
                             "stats": {
                                 "win": past_game.is_win,
                                 "kills": 5,
@@ -373,6 +374,29 @@ def match_history(puuid: str, past_games: list[PastGame]) -> JsonValue:
                 for index, past_game in enumerate(past_games)
             ],
         },
+    }
+
+
+def past_game_id(index: int) -> int:
+    """The id `match_history` gives a player's past game, by its place in their history."""
+    return 5000000000 + index
+
+
+def jungle_start_timeline(x_position: float, y_position: float) -> JsonValue:
+    """A past game's timeline that places participant 1 at a point at 2:00."""
+    return {
+        "frames": [
+            {"timestamp": 0, "participantFrames": {}},
+            {
+                "timestamp": 120_000,
+                "participantFrames": {
+                    "1": {
+                        "participantId": 1,
+                        "position": {"x": round(x_position), "y": round(y_position)},
+                    }
+                },
+            },
+        ]
     }
 
 

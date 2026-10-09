@@ -3,8 +3,8 @@
 If you are picking this work up, human or model: read this file top to bottom first. The `handoff` skill
 refreshes it; it describes the current state.
 
-Last updated: 2026-10-09, on branch `feat/status-page`. `main` holds phases 0 to 7 (pull requests
-#2 to #33, merged).
+Last updated: 2026-10-09, on branch `feat/jungle-start`. `main` holds phases 0 to 7 and phase 8
+up to 8.4 (pull requests #2 to #37, merged).
 
 ## Where things stand
 
@@ -23,13 +23,15 @@ approved plan: 8.1, the status page and the report after a test, is on `feat/sta
 8.2, the overlay over League's own screen and window, on `feat/game-window` (#35); 8.3, moving
 the widgets, on `feat/edit-layout` (#36); 8.4, spoken callouts, on `feat/spoken-callouts`. Left of
 phase 8: structures (8.5) and the Swift 6 language mode (8.6), both waiting for the test on a
-Mac. Each slice goes up as its own pull request into `main` without waiting for
-the one before to merge.
+Mac. Phase 9 ([docs/plans/phase-9-scouting.md](docs/plans/phase-9-scouting.md), a draft) reads
+the players' past games: 9.1, where the enemy jungler usually starts, is on `feat/jungle-start`.
+Each slice goes up as its own pull request into `main` without waiting for the one before to
+merge.
 
 | Area | State | Proof |
 |---|---|---|
 | Scaffold | ai-kit v0.11.1, Python layer, GitHub CI | `.copier-answers.yml` |
-| Gate | Green: lint, 761 tests (and 37 in Chromium), secrets | `make gate` |
+| Gate | Green: lint, 782 tests (and 37 in Chromium), secrets | `make gate` |
 | Recorder | Records games, the client's patch data and the post-game timeline; anonymized copies | `uv run leagueasymode record`; `tests/test_recorder.py`, `tests/test_anonymize.py` |
 | Replay | A recording served as a stand-in game API | `uv run leagueasymode replay <recording>`; `tests/test_replay.py` |
 | Engine and overlay page | The dragon and Elder timer, from the game's answer to the page | `uv run leagueasymode run`; `tests/test_tracer_bullet.py` |
@@ -163,7 +165,9 @@ In `AGENTS.md`. Also: a raw recording (it holds other players' names); only `ano
 - Loading-screen intel reads the client's ranked stats and match history in the shapes other tools
   describe; no real answer has been seen. If the client does not answer for other players, or
   answers in another shape, the line under each enemy stays empty until the first recording shows
-  what to read.
+  what to read. The same holds for the past games' timelines that say where a jungler starts
+  (9.1): the path is the one the post-game timeline uses, and whether the client serves other
+  players' games there is first seen in a recording.
 - Combat stats leave out runes, passives, stacks and buffs, so an estimate runs low for a champion
   that has them. Data Dragon's item stats leave out some stats (ability haste, lethality, magic
   penetration), which the overlay does not show anyway. The Data Dragon test files are
