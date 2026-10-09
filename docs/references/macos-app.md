@@ -1,10 +1,10 @@
 ---
 type: Reference
 title: The macOS overlay app
-description: What the menu bar app does, how to run it from a clone, and the steps for the tracer bullet's test on a Mac over League in each display mode.
+description: What the menu bar app does, how to run it from a clone, how to build and open the app that carries its own engine, and the steps for the tracer bullet's test on a Mac over League in each display mode.
 tags: [macos, overlay, tracer-bullet]
 status: draft
-generated: { by: claude-code/cloud, at: 2026-10-08T21:15:16Z }
+generated: { by: claude-code/cloud, at: 2026-10-09T01:37:17Z }
 sources:
   - id: panel
     resource: ../../overlay/macos/Sources/LeagueasyOverlay/OverlayPanel.swift
@@ -18,13 +18,20 @@ sources:
     resource: ../../overlay/macos/Sources/OverlayCore/EngineCommand.swift
   - id: cooldown-marking
     resource: ../../overlay/macos/Sources/OverlayCore/CooldownMarking.swift
+  - id: bundled-engine
+    resource: ../../overlay/macos/Sources/OverlayCore/BundledEngine.swift
+  - id: build-app
+    resource: ../../overlay/macos/scripts/build_app.sh
+  - id: smoke-test
+    resource: ../../overlay/macos/scripts/smoke_test_app.sh
 ---
 
 # What it is
 
-A menu bar app (no Dock icon) in Swift, in `overlay/macos/`. It starts the engine
-(`uv run --project <clone> leagueasymode run`), reads the overlay's address from the line the engine
-prints, and shows that page in a window that covers the screen:[^panel]
+A menu bar app (no Dock icon) in Swift, in `overlay/macos/`. It starts the engine, the one the app
+bundle carries or else the one in the clone it was built from (`uv run --project <clone>
+leagueasymode run`), reads the overlay's address from the line the engine prints, and shows that
+page in a window that covers the screen:[^panel]
 
 - transparent, borderless, without a shadow, and with clicks passing through to the game;
 - never key or main, and its panel does not activate the app, so League keeps the keyboard;
@@ -49,8 +56,9 @@ settings page in the default browser, normal windows rather than the click-throu
 engine's pages `summary.html` and `settings.html` beside the overlay's (`EnginePage` in
 `OverlayCore` builds their addresses); both wait until the engine has announced its address.
 
-`OverlayCore` holds what the app decides without AppKit (the engine's command and search path,[^engine-command]
-reading its output, finding the clone) and has unit tests; CI builds the app and runs them on a
+`OverlayCore` holds what the app decides without AppKit (which engine to run, its command and
+search path,[^engine-command] reading its output, finding the bundled engine or the clone) and has
+unit tests; CI builds the app and runs them on a
 macOS runner. The app is written for Swift 5 with strict concurrency checking as warnings. CI's
 build shows some, which are to be cleared before it moves to the Swift 6 language mode.
 
@@ -60,12 +68,42 @@ Needs the Xcode command line tools (`xcode-select --install`) and uv.
 
 ```bash
 git clone https://github.com/NickHarder/LeagueasyMode.git && cd LeagueasyMode
-git checkout feat/overlay-and-inference
 cd overlay/macos && swift run LeagueasyOverlay
 ```
 
 The engine's log appears in the same terminal. If the app cannot find the clone, set
 `LEAGUEASYMODE_REPOSITORY` to its path.
+
+# The app without a clone
+
+`overlay/macos/scripts/build_app.sh` builds `LeagueasyMode.app` on a Mac with the Xcode command
+line tools and uv, and zips it as `LeagueasyMode-<version>.zip`, into `dist/` unless given another
+directory.[^build-app] CI builds it for every pull request (job `macos-app`), starts its engine as
+the app would from an empty home folder and fetches each of its pages,[^smoke-test] then keeps the
+zip with the run for 14 days: the run's summary page links to it.
+
+Inside are the app, a copy of uv in `Contents/Helpers`, and in `Contents/Resources/engine` the
+engine as a wheel (its overlay pages with it), the versions `uv.lock` pins and the project's Python
+version. The app runs `uv tool run --from <wheel> --constraints <pins> --python 3.12 leagueasymode
+run`:[^bundled-engine] the first start downloads the engine's dependencies into uv's cache
+(`~/.cache/uv`), and Python 3.12 if none is installed, which takes a minute or so; later starts
+reuse them. The app prefers the engine it carries; setting `LEAGUEASYMODE_REPOSITORY` makes it run
+a clone's instead, to try a change to the engine.
+
+With no clone there is no `.env`: the engine's settings are read from
+`~/Library/Application Support/LeagueasyMode/settings.env`, in the form of `.env.example`, and its
+files (recordings, the accuracy history, the last game, the preferences) are kept beside it.
+
+**Opening it the first time.** The app is signed ad hoc, not with a Developer ID, so macOS stops
+it the first time it opens, once:
+
+- macOS 15 and later: open it, then in System Settings → Privacy & Security, choose "Open
+  Anyway" beside LeagueasyMode, and confirm.
+- macOS 13 and 14: Control-click the app, choose Open, then Open again.
+- Or, in Terminal: `xattr -dr com.apple.quarantine /Applications/LeagueasyMode.app`.
+
+It is built for the architecture of the Mac that builds it. CI's runner is Apple silicon, so the
+zip from CI runs on Apple silicon only.
 
 # The tracer bullet's test on a Mac
 
@@ -97,3 +135,6 @@ whether `KillerName` holds a game name or a Riot ID, and whether the client serv
 [^cooldown-marking]: `overlay/macos/Sources/OverlayCore/CooldownMarking.swift`
 [^levels]: `overlay/macos/Sources/LeagueasyOverlay/WindowLevelChoice.swift`
 [^engine-command]: `overlay/macos/Sources/OverlayCore/EngineCommand.swift`
+[^bundled-engine]: `overlay/macos/Sources/OverlayCore/BundledEngine.swift`
+[^build-app]: `overlay/macos/scripts/build_app.sh`
+[^smoke-test]: `overlay/macos/scripts/smoke_test_app.sh`

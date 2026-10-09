@@ -61,6 +61,152 @@ final class EngineCommandTests: XCTestCase {
             "/usr/bin:/opt/homebrew/bin:/Users/player/.local/bin:/Users/player/.cargo/bin:/usr/local/bin"
         )
     }
+
+    func testTheBundledEngineRunsThroughTheBundledUv() {
+        let bundledEngine = BundledEngine(
+            uvURL: URL(fileURLWithPath: "/Applications/LeagueasyMode.app/Contents/Helpers/uv"),
+            wheelURL: URL(fileURLWithPath: "/Resources/engine/leagueasymode-0.1.0-py3-none-any.whl"),
+            constraintsURL: URL(fileURLWithPath: "/Resources/engine/constraints.txt"),
+            pythonVersion: "3.12"
+        )
+        let command = EngineCommand.make(
+            bundledEngine: bundledEngine, inheritedEnvironment: ["HOME": "/Users/player"]
+        )
+        XCTAssertEqual(
+            command.executableURL.path, "/Applications/LeagueasyMode.app/Contents/Helpers/uv"
+        )
+        XCTAssertEqual(
+            command.arguments,
+            [
+                "tool", "run", "--from", "/Resources/engine/leagueasymode-0.1.0-py3-none-any.whl",
+                "--constraints", "/Resources/engine/constraints.txt", "--python", "3.12",
+                "leagueasymode", "run",
+            ]
+        )
+        XCTAssertEqual(command.environment, ["HOME": "/Users/player"])
+    }
+
+    func testWithoutAPythonVersionUvChoosesOne() {
+        let bundledEngine = BundledEngine(
+            uvURL: URL(fileURLWithPath: "/Helpers/uv"),
+            wheelURL: URL(fileURLWithPath: "/Resources/engine/engine.whl"),
+            constraintsURL: URL(fileURLWithPath: "/Resources/engine/constraints.txt"),
+            pythonVersion: nil
+        )
+        let command = EngineCommand.make(bundledEngine: bundledEngine, inheritedEnvironment: [:])
+        XCTAssertFalse(command.arguments.contains("--python"))
+    }
+}
+
+final class BundledEngineTests: XCTestCase {
+    private var temporaryDirectory: URL!
+    private var contentsDirectory: URL!
+    private var engineDirectory: URL!
+
+    override func setUpWithError() throws {
+        temporaryDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        contentsDirectory = temporaryDirectory.appendingPathComponent(
+            "LeagueasyMode.app/Contents", isDirectory: true
+        )
+        engineDirectory = contentsDirectory.appendingPathComponent("Resources/engine", isDirectory: true)
+        let helpersDirectory = contentsDirectory.appendingPathComponent("Helpers", isDirectory: true)
+        try FileManager.default.createDirectory(at: engineDirectory, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: helpersDirectory, withIntermediateDirectories: true)
+        let uvPath = helpersDirectory.appendingPathComponent("uv").path
+        XCTAssertTrue(FileManager.default.createFile(atPath: uvPath, contents: Data()))
+        try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: uvPath)
+        for fileName in [
+            "leagueasymode-0.1.0-py3-none-any.whl", "leagueasymode-0.2.0-py3-none-any.whl",
+            "constraints.txt",
+        ] {
+            try Data().write(to: engineDirectory.appendingPathComponent(fileName))
+        }
+        try Data("3.12\n".utf8).write(to: engineDirectory.appendingPathComponent("python-version"))
+    }
+
+    override func tearDownWithError() throws {
+        try FileManager.default.removeItem(at: temporaryDirectory)
+    }
+
+    func testTheBundleHoldsTheEngine() throws {
+        let bundledEngine = try XCTUnwrap(BundledEngine.locate(contentsURL: contentsDirectory))
+        XCTAssertEqual(bundledEngine.uvURL.lastPathComponent, "uv")
+        XCTAssertEqual(bundledEngine.wheelURL.lastPathComponent, "leagueasymode-0.2.0-py3-none-any.whl")
+        XCTAssertEqual(bundledEngine.constraintsURL.lastPathComponent, "constraints.txt")
+        XCTAssertEqual(bundledEngine.pythonVersion, "3.12")
+    }
+
+    func testWithoutAPythonVersionFileThereIsNoVersion() throws {
+        try FileManager.default.removeItem(at: engineDirectory.appendingPathComponent("python-version"))
+        let bundledEngine = try XCTUnwrap(BundledEngine.locate(contentsURL: contentsDirectory))
+        XCTAssertNil(bundledEngine.pythonVersion)
+    }
+
+    func testAUvThatCannotRunIsNoEngine() throws {
+        try FileManager.default.setAttributes(
+            [.posixPermissions: 0o644],
+            ofItemAtPath: contentsDirectory.appendingPathComponent("Helpers/uv").path
+        )
+        XCTAssertNil(BundledEngine.locate(contentsURL: contentsDirectory))
+    }
+
+    func testNoWheelIsNoEngine() throws {
+        for fileName in ["leagueasymode-0.1.0-py3-none-any.whl", "leagueasymode-0.2.0-py3-none-any.whl"] {
+            try FileManager.default.removeItem(at: engineDirectory.appendingPathComponent(fileName))
+        }
+        XCTAssertNil(BundledEngine.locate(contentsURL: contentsDirectory))
+    }
+
+    func testNoConstraintsIsNoEngine() throws {
+        try FileManager.default.removeItem(at: engineDirectory.appendingPathComponent("constraints.txt"))
+        XCTAssertNil(BundledEngine.locate(contentsURL: contentsDirectory))
+    }
+
+    func testABuildThatIsNoBundleIsNoEngine() {
+        XCTAssertNil(
+            BundledEngine.locate(contentsURL: URL(fileURLWithPath: "/nowhere/.build/debug/Contents"))
+        )
+    }
+
+    func testTheAppRunsTheEngineItCarries() throws {
+        let command = try XCTUnwrap(
+            EngineCommand.choose(
+                environment: [:],
+                contentsURL: contentsDirectory,
+                sourceFileURL: URL(fileURLWithPath: "/nowhere/AppDelegate.swift"),
+                homeDirectory: URL(fileURLWithPath: "/Users/player")
+            )
+        )
+        XCTAssertEqual(command.executableURL.lastPathComponent, "uv")
+        XCTAssertEqual(Array(command.arguments.prefix(2)), ["tool", "run"])
+    }
+
+    func testTheRepositoryVariablePrefersTheClone() throws {
+        let command = try XCTUnwrap(
+            EngineCommand.choose(
+                environment: [RepositoryLocator.overrideVariable: "/Users/player/LeagueasyMode"],
+                contentsURL: contentsDirectory,
+                sourceFileURL: URL(fileURLWithPath: "/nowhere/AppDelegate.swift"),
+                homeDirectory: URL(fileURLWithPath: "/Users/player")
+            )
+        )
+        XCTAssertEqual(command.executableURL.path, "/usr/bin/env")
+        XCTAssertEqual(
+            Array(command.arguments.prefix(4)), ["uv", "run", "--project", "/Users/player/LeagueasyMode"]
+        )
+    }
+
+    func testWithNeitherThereIsNoEngine() {
+        XCTAssertNil(
+            EngineCommand.choose(
+                environment: [:],
+                contentsURL: URL(fileURLWithPath: "/nowhere/.build/debug/Contents"),
+                sourceFileURL: URL(fileURLWithPath: "/nowhere/AppDelegate.swift"),
+                homeDirectory: URL(fileURLWithPath: "/Users/player")
+            )
+        )
+    }
 }
 
 final class RepositoryLocatorTests: XCTestCase {

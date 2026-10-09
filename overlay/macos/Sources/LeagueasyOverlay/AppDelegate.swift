@@ -67,22 +67,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - The engine
 
     private func startEngine() {
-        let environment = ProcessInfo.processInfo.environment
         guard
-            let repositoryRoot = RepositoryLocator.repositoryRoot(
-                sourceFileURL: URL(fileURLWithPath: #filePath), environment: environment
+            let command = EngineCommand.choose(
+                environment: ProcessInfo.processInfo.environment,
+                contentsURL: Bundle.main.bundleURL.appendingPathComponent("Contents"),
+                sourceFileURL: URL(fileURLWithPath: #filePath),
+                homeDirectory: FileManager.default.homeDirectoryForCurrentUser
             )
         else {
             updateEngineStatus(
-                "Engine: repository not found (set \(RepositoryLocator.overrideVariable))"
+                "Engine: not found (no bundled engine; set \(RepositoryLocator.overrideVariable))"
             )
             return
         }
-        let command = EngineCommand.make(
-            repositoryRoot: repositoryRoot,
-            inheritedEnvironment: environment,
-            homeDirectory: FileManager.default.homeDirectoryForCurrentUser
-        )
         let process = EngineProcess(
             command: command,
             onOverlayURL: { [weak self] overlayURL in

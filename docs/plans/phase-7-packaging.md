@@ -4,7 +4,7 @@ title: "Phase 7: packaging, without signing for now"
 description: The slices of phase 7 of the approved plan, settings, an app bundle that needs no clone, and releases with an update check, built without Apple's signing as the owner chose, in a proposed build order with what each needs and where the owner decides.
 tags: [plan, phase-7, packaging]
 status: draft
-generated: { by: claude-code/cloud, at: 2026-10-09T01:10:00Z }
+generated: { by: claude-code/cloud, at: 2026-10-09T01:37:17Z }
 ---
 
 # Phase 7: packaging, without signing for now
@@ -20,7 +20,7 @@ Security, Open Anyway).
 | # | Slice | Shows | Needs |
 |---|---|---|---|
 | 7.1 | Settings | A settings page (menu, "Settings…"): a switch for each part of the overlay (win chance, fight chance, contests, the You panel, the minimap layer, the enemy estimates, callouts, suggestions), each change showing at once | The player's choices in `preferences.json` in the application's directory, sent to the overlay with its state; the engine's own settings, for an installed app with no clone, in `settings.env` beside it |
-| 7.2 | The app bundle | `LeagueasyMode.app`, built by CI and kept as an artifact of each run, that needs no clone of the repository | The Swift app, the engine as a wheel, and `uv` (one binary, Apache or MIT licensed), all inside the bundle; the app runs the engine with the bundled `uv`, which fetches Python and the engine's dependencies once, on the first start |
+| 7.2 | The app bundle | `LeagueasyMode.app`, built by CI and kept as an artifact of each run, that needs no clone of the repository | The Swift app, the engine as a wheel with the versions `uv.lock` pins, and `uv` (one binary, Apache or MIT licensed), all inside the bundle; the app runs the engine with the bundled `uv`, which fetches Python and the engine's dependencies once, on the first start |
 | 7.3 | Releases and updates | A release on GitHub for each version tag, with the zipped app; the menu says when a newer release is out, and opens its page | A workflow on tags `v*`; the app asks GitHub's API for the latest release at most once a day, a switch in the menu turns that off; "Open at login" in the menu |
 
 ## How each is verified
@@ -28,8 +28,9 @@ Security, Open Anyway).
 - **7.1** by the server's tests (a change without the app's header is refused, an unknown
   preference is refused, a change is kept and sent with the state) and in Chromium (the switches,
   and the overlay without what was turned off).
-- **7.2** by CI on macOS: the bundle is built, and the bundled `uv` runs the bundled engine's
-  `--help`; the Swift that picks the bundled engine over a clone has unit tests.
+- **7.2** by CI on macOS: the bundle is built and signed ad hoc, and its engine, started with the
+  bundled `uv` from an empty home folder as the app starts it, serves every page; the Swift that
+  finds the bundled engine and picks it over a clone has unit tests.
 - **7.3** by unit tests of the version comparison and of reading GitHub's answer; the release
   workflow by its first tag.
 
