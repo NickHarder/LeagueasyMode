@@ -1,7 +1,7 @@
 import AppKit
 import WebKit
 
-/// A transparent window over the whole screen that shows the overlay page.
+/// A transparent window over League, its screen or its window, that shows the overlay page.
 ///
 /// It never becomes key or main and its panel does not activate the app, so League keeps the
 /// keyboard and the focus; clicks pass through it to the game. It joins every Space, the
@@ -53,9 +53,9 @@ final class OverlayPanel: NSPanel {
         orderOut(nil)
     }
 
-    /// Covers a screen again, after the screens change.
+    /// Covers another frame: the screen League is on, its window, or the main screen.
     ///
-    /// - Parameter screenFrame: The screen's frame.
+    /// - Parameter screenFrame: The frame, in AppKit's coordinates.
     func cover(screenFrame: NSRect) {
         setFrame(screenFrame, display: true)
     }

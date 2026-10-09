@@ -1,3 +1,4 @@
+import CoreGraphics
 import Foundation
 import ServiceManagement
 import XCTest
@@ -468,5 +469,97 @@ final class LoginItemStateTests: XCTestCase {
         XCTAssertFalse(LoginItemState.off.isChecked)
         XCTAssertEqual(LoginItemState.needsApproval.menuTitle, "Open at login (allow in System Settings\u{2026})")
         XCTAssertTrue(LoginItemState.needsApproval.isChecked)
+    }
+}
+
+final class GameWindowLocatorTests: XCTestCase {
+    // A 1920 × 1080 main screen, and a 2560 × 1440 one to its right, bottoms level.
+    private let mainScreen = CGRect(x: 0, y: 0, width: 1920, height: 1080)
+    private let secondScreen = CGRect(x: 1920, y: 0, width: 2560, height: 1440)
+    private let titleBarHeight: CGFloat = 28
+
+    private func leagueWindow(_ bounds: CGRect, ownerName: String = "League of Legends") -> ListedWindow {
+        ListedWindow(ownerName: ownerName, bounds: bounds, layer: 0)
+    }
+
+    func testLeaguesGameWindowIsFoundByItsOwnersName() {
+        let windows = [
+            ListedWindow(ownerName: "LeagueClientUx", bounds: CGRect(x: 0, y: 0, width: 1280, height: 720), layer: 0),
+            leagueWindow(CGRect(x: 0, y: 0, width: 1920, height: 1080), ownerName: "LeagueofLegends"),
+            ListedWindow(ownerName: "Finder", bounds: CGRect(x: 0, y: 0, width: 3000, height: 3000), layer: 0),
+        ]
+        XCTAssertEqual(GameWindowLocator.gameWindow(in: windows)?.ownerName, "LeagueofLegends")
+    }
+
+    func testAWindowAboveTheGamesLayerIsNotTheGame() {
+        let windows = [
+            ListedWindow(ownerName: "League of Legends", bounds: CGRect(x: 0, y: 0, width: 40, height: 40), layer: 25)
+        ]
+        XCTAssertNil(GameWindowLocator.gameWindow(in: windows))
+    }
+
+    func testOfSeveralWindowsTheLargestIsTheGame() {
+        let windows = [
+            leagueWindow(CGRect(x: 0, y: 0, width: 300, height: 200)),
+            leagueWindow(CGRect(x: 0, y: 0, width: 1920, height: 1080)),
+        ]
+        XCTAssertEqual(GameWindowLocator.gameWindow(in: windows)?.bounds.width, 1920)
+    }
+
+    func testAFullScreenGameIsCoveredScreenAndAll() {
+        let placement = GameWindowLocator.placement(
+            gameWindow: leagueWindow(CGRect(x: 0, y: 0, width: 1920, height: 1080)),
+            screenFrames: [mainScreen, secondScreen],
+            titleBarHeight: titleBarHeight
+        )
+        XCTAssertEqual(placement, .screen(mainScreen))
+        XCTAssertEqual(placement.frame, mainScreen)
+    }
+
+    func testAGameOnTheSecondScreenIsCoveredThere() {
+        // The window server counts down from the main screen's top: the second screen's top is
+        // 360 points above it.
+        let placement = GameWindowLocator.placement(
+            gameWindow: leagueWindow(CGRect(x: 1920, y: -360, width: 2560, height: 1440)),
+            screenFrames: [mainScreen, secondScreen],
+            titleBarHeight: titleBarHeight
+        )
+        XCTAssertEqual(placement, .screen(secondScreen))
+    }
+
+    func testAWindowedGameIsCoveredBelowItsTitleBar() {
+        let placement = GameWindowLocator.placement(
+            gameWindow: leagueWindow(CGRect(x: 100, y: 100, width: 1280, height: 748)),
+            screenFrames: [mainScreen, secondScreen],
+            titleBarHeight: titleBarHeight
+        )
+        XCTAssertEqual(placement, .window(CGRect(x: 100, y: 232, width: 1280, height: 720)))
+    }
+
+    func testWithNoGameWindowTheMainScreenIsCovered() {
+        let placement = GameWindowLocator.placement(
+            gameWindow: nil, screenFrames: [mainScreen, secondScreen], titleBarHeight: titleBarHeight
+        )
+        XCTAssertEqual(placement, .mainScreen(mainScreen))
+    }
+
+    func testEachPlacementSaysWhatWasFound() {
+        XCTAssertEqual(GamePlacement.screen(mainScreen).menuText, "League: full screen, 1920 × 1080")
+        XCTAssertEqual(
+            GamePlacement.window(CGRect(x: 100, y: 232, width: 1280, height: 720)).menuText,
+            "League: windowed, 1280 × 720"
+        )
+        XCTAssertEqual(GamePlacement.mainScreen(mainScreen).menuText, "League: no game window seen")
+    }
+
+    func testAWindowServerEntryIsRead() throws {
+        let entry: [String: Any] = [
+            kCGWindowOwnerName as String: "League of Legends",
+            kCGWindowLayer as String: 0,
+            kCGWindowBounds as String: ["X": 10, "Y": 20, "Width": 1280, "Height": 748] as NSDictionary,
+        ]
+        let window = try XCTUnwrap(ListedWindow(windowInfo: entry))
+        XCTAssertEqual(window, leagueWindow(CGRect(x: 10, y: 20, width: 1280, height: 748)))
+        XCTAssertNil(ListedWindow(windowInfo: [kCGWindowOwnerName as String: "League of Legends"]))
     }
 }

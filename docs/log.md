@@ -6,6 +6,11 @@ skill has the format.
 
 ## 2026-10-09
 
+- Phase 8.2, League's screen and window: the macOS app finds League's game window in the window
+  server's list every two seconds (its owner's name and bounds, no permission) and covers the
+  screen it fills, or the window below its title bar when windowed, so the minimap layer lines up
+  there too; with no game window, the main screen as before. The menu says what it found. Moved
+  up from fourth in phase 8's plan for the owner's test tonight.
 - Phase 8.1, status and the report after a test: "Status…" in the macOS app opens `/status.html`,
   what the engine sees part by part (the game's API, the League client, patch stats, player
   lookups, the recording, the match timeline, the scoring, League's settings, the models), each
