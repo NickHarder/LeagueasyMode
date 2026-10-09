@@ -10,6 +10,7 @@ import asyncio
 import datetime
 import logging
 import time
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Final
@@ -51,6 +52,9 @@ REASON_GAME_ENDED: Final = "game ended"
 REASON_GAME_STOPPED_ANSWERING: Final = "the game stopped answering"
 REASON_RECORDING_STOPPED: Final = "recording stopped"
 REASON_RECORDING_CANCELLED: Final = "recording cancelled"
+
+# Given a recording once it is closed, to score it or show it.
+type RecordingHandler = Callable[[Path], Awaitable[None]]
 
 logger = logging.getLogger(__name__)
 
@@ -142,6 +146,8 @@ async def record_one_game(
     recordings_directory: Path,
     timings: RecorderTimings,
     stop_requested: asyncio.Event | None = None,
+    *,
+    on_recorded: RecordingHandler | None = None,
 ) -> Path | None:
     """Wait for a game, record it, wait for its timeline, and return the recording's path.
 
@@ -151,6 +157,7 @@ async def record_one_game(
         recordings_directory: Where recordings are kept.
         timings: How often to ask and how long to wait.
         stop_requested: Set to stop: a game being recorded is closed with what it has.
+        on_recorded: Given the recording once it is closed, to score it; None for nothing.
 
     Returns:
         The recording's path, or None when the stop came before any game.
@@ -161,7 +168,7 @@ async def record_one_game(
     )
     if game_over is None:
         return None
-    return await _finish_after_game(game_over, timings, stop_event)
+    return await _finish_after_game(game_over, timings, stop_event, on_recorded)
 
 
 async def record_games(
@@ -170,6 +177,8 @@ async def record_games(
     recordings_directory: Path,
     timings: RecorderTimings,
     stop_requested: asyncio.Event,
+    *,
+    on_recorded: RecordingHandler | None = None,
 ) -> list[Path]:
     """Record every game until stopped; a game's timeline is waited for while the next is awaited.
 
@@ -179,6 +188,7 @@ async def record_games(
         recordings_directory: Where recordings are kept.
         timings: How often to ask and how long to wait.
         stop_requested: Set to stop.
+        on_recorded: Given each recording once it is closed, to score it; None for nothing.
 
     Returns:
         The paths of the recordings made.
@@ -191,7 +201,7 @@ async def record_games(
         if game_over is None:
             break
         finishing_tasks.append(
-            asyncio.create_task(_finish_after_game(game_over, timings, stop_requested))
+            asyncio.create_task(_finish_after_game(game_over, timings, stop_requested, on_recorded))
         )
     return list(await asyncio.gather(*finishing_tasks))
 
@@ -343,14 +353,19 @@ async def _record_client_data_at_start(
 
 
 async def _finish_after_game(
-    game_over: _GameOver, timings: RecorderTimings, stop_requested: asyncio.Event
+    game_over: _GameOver,
+    timings: RecorderTimings,
+    stop_requested: asyncio.Event,
+    on_recorded: RecordingHandler | None,
 ) -> Path:
-    """Write what the League client gives after a game, then close the recording.
+    """Write what the League client gives after a game, close the recording, and hand it on.
 
     Args:
         game_over: The finished game's recording.
         timings: How long to wait for the timeline, and how often to ask.
         stop_requested: Set to stop waiting for the timeline.
+        on_recorded: Given the closed recording; a failure in it is logged, and the recording
+            stays as it is.
 
     Returns:
         The compressed recording's path.
@@ -363,6 +378,11 @@ async def _finish_after_game(
         await _wait_for_timeline(recording, client, game_over.game_id, timings, stop_requested)
     recording_path = await recording.finish(game_over.reason)
     logger.info("recorded a game: %s (%s)", recording_path, game_over.reason)
+    if on_recorded is not None:
+        try:
+            await on_recorded(recording_path)
+        except Exception:
+            logger.exception("could not use the recording %s once closed", recording_path.name)
     return recording_path
 
 

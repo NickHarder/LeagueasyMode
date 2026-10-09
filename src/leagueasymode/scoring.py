@@ -142,6 +142,20 @@ SCORED_STATS: Final[tuple[Callable[[CombatStats], float], ...]] = (
 )
 
 
+# Whether a higher or a lower value of each measure is better.
+MEASURE_DIRECTION: Final[Mapping[str, Literal["higher", "lower"]]] = {
+    "share_correct": "higher",
+    "share_within_band": "higher",
+    "share_matched": "higher",
+    "mean_chance": "higher",
+    "mean_absolute_percent_error": "lower",
+    "mean_absolute_error_gold": "lower",
+    "mean_absolute_error_experience": "lower",
+    "mean_distance_units": "lower",
+    "brier_score": "lower",
+    "fight_brier_score": "lower",
+    "contest_brier_score": "lower",
+}
 # How each measure reads, in one line.
 SCORE_DESCRIPTIONS: Final = {
     "share_correct": "{estimator}: {hit_count}/{sample_count} correct ({percent:.0f}%)",

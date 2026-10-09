@@ -3,8 +3,8 @@
 If you are picking this work up, human or model: read this file top to bottom first. The `handoff` skill
 refreshes it; it describes the current state.
 
-Last updated: 2026-10-09, on branch `feat/refit`. `main` holds phases 0 to 4 (pull requests
-#2 to #20, merged).
+Last updated: 2026-10-09, on branch `feat/accuracy-history`. `main` holds phases 0 to 5 (pull
+requests #2 to #25, merged).
 
 ## Where things stand
 
@@ -13,21 +13,17 @@ the owner on 2026-10-08). Phase 0 is done; phase 1, the tracer bullet, is built 
 test on a Mac; phase 2 ([docs/plans/phase-2-exact-facts.md](docs/plans/phase-2-exact-facts.md)) is
 built but for structures, left out until the first recordings. Phase 3
 ([docs/plans/phase-3-economy-and-open-policy.md](docs/plans/phase-3-economy-and-open-policy.md),
-approved) and phase 4 ([docs/plans/phase-4-positions.md](docs/plans/phase-4-positions.md), a
-draft built on its best guesses) are built and merged. Phase 5 has a draft plan
-([docs/plans/phase-5-models.md](docs/plans/phase-5-models.md)): its models are built hand-set now
-and refit once a few dozen recordings exist. 5.1, win chance, is pull request #21
-(`feat/win-chance`); 5.2, fights, is pull request #22 (`feat/fights`, which carries 5.1); 5.3,
-objective contests, is pull request #23 (`feat/objective-contests`, which carries both); 5.4, the
-You panel, is pull request #24 (`feat/you-panel`, which carries all three); 5.5, the refit, is on
-`feat/refit`, which carries all four: phase 5 is then built. What waits is data: the refit needs
-20 recorded games with their results. Each slice
-goes up as its own pull request into `main` without waiting for the one before to merge.
+approved), phase 4 ([docs/plans/phase-4-positions.md](docs/plans/phase-4-positions.md)) and phase
+5 ([docs/plans/phase-5-models.md](docs/plans/phase-5-models.md)) are built and merged; phase 5's
+models are hand-set until `leagueasymode fit` has 20 recorded games. Phase 6
+([docs/plans/phase-6-post-game.md](docs/plans/phase-6-post-game.md), a draft) is under way: 6.1,
+the accuracy history, is on `feat/accuracy-history`. Each slice goes up as its own pull request
+into `main` without waiting for the one before to merge.
 
 | Area | State | Proof |
 |---|---|---|
 | Scaffold | ai-kit v0.11.1, Python layer, GitHub CI | `.copier-answers.yml` |
-| Gate | Green: lint, 702 tests (and 22 in Chromium), secrets | `make gate` |
+| Gate | Green: lint, 710 tests (and 22 in Chromium), secrets | `make gate` |
 | Recorder | Records games, the client's patch data and the post-game timeline; anonymized copies | `uv run leagueasymode record`; `tests/test_recorder.py`, `tests/test_anonymize.py` |
 | Replay | A recording served as a stand-in game API | `uv run leagueasymode replay <recording>`; `tests/test_replay.py` |
 | Engine and overlay page | The dragon and Elder timer, from the game's answer to the page | `uv run leagueasymode run`; `tests/test_tracer_bullet.py` |
@@ -83,7 +79,10 @@ In `AGENTS.md`, this project's own included: every session reads that file.
 8. **Phase 5's plan** ([docs/plans/phase-5-models.md](docs/plans/phase-5-models.md)), a draft:
    its order, and its four proposals (win chance shown with its two reasons, the fight chance's
    wording, contests shown only near a monster, "holding gold" from 1,300).
-9. **Documents waiting for approval** (`make docs-status`): the approved plan v2 and phase 2's
+9. **Phase 6's plan** ([docs/plans/phase-6-post-game.md](docs/plans/phase-6-post-game.md)), a
+   draft: its order, and its two proposals (the post-game window opened from the menu only;
+   thresholds at the first 20 games' average less a standard deviation).
+10. **Documents waiting for approval** (`make docs-status`): the approved plan v2 and phase 2's
    plan, the retrospective, and the references on recordings, the engine and the macOS app, all
    drafts. Phase 3's plan is approved.
 

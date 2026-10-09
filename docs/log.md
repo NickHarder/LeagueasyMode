@@ -6,6 +6,14 @@ skill has the format.
 
 ## 2026-10-09
 
+- Phase 6.1, the accuracy history: every game `leagueasymode run` records is scored once its
+  timeline has come (the recorder now hands each closed recording on), and `score --keep` scores
+  one by hand; each game's scores are a line of `accuracy-history.jsonl`, never naming a player.
+  `leagueasymode history` prints each estimator's last game, its average over the last ten
+  weighed by samples, and its trend. The CLI's commands are now a table.
+- Phase 6's plan, a draft for the owner: the accuracy history, thresholds in CI, the game
+  reconstructed and the post-game window, with two proposals where the owner decides. Phase 5's
+  pull requests (#21 to #25) are merged.
 - Phase 5.5, the refit: `leagueasymode fit <recordings> [--write]` refits the win chance's weights
   on every minute of every recorded game with its result, and the fights' steepness on every
   fight of the timelines, by a logistic regression pulled toward the hand-set weights (Newton's

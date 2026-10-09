@@ -2,6 +2,7 @@
 
 import argparse
 import asyncio
+import datetime
 import logging
 import signal
 import sys
@@ -12,8 +13,15 @@ from typing import Final
 import aiohttp
 from aiohttp import web
 
+from leagueasymode.accuracy_history import (
+    append_game_accuracy,
+    game_accuracy_of,
+    history_lines,
+    read_accuracy_history,
+)
 from leagueasymode.config import (
     Settings,
+    default_accuracy_history_path,
     default_model_weights_path,
     default_patch_data_directory,
     default_recordings_directory,
@@ -76,28 +84,30 @@ def main(arguments: Sequence[str] | None = None) -> int:
     parsed = parser.parse_args(arguments)
     settings = Settings()
     logging.basicConfig(level=settings.log_level, format="%(asctime)s %(levelname)s %(message)s")
-    if parsed.command == "score":
-        return _score(Path(parsed.recording), settings)
-    if parsed.command == "fit":
-        return _fit(
+    commands: dict[str, Callable[[], int]] = {
+        "score": lambda: _score(Path(parsed.recording), settings, should_keep=parsed.keep),
+        "history": lambda: _history(settings, parsed.games),
+        "fit": lambda: _fit(
             [Path(recording) for recording in parsed.recordings],
             settings,
             should_write=parsed.write,
-        )
-    if parsed.command == "anonymize":
-        return _anonymize(Path(parsed.recording), Path(parsed.output) if parsed.output else None)
-    if parsed.command == "record":
-        return asyncio.run(
+        ),
+        "anonymize": lambda: _anonymize(
+            Path(parsed.recording), Path(parsed.output) if parsed.output else None
+        ),
+        "record": lambda: asyncio.run(
             _until_interrupted(
                 lambda stop_requested: record_until_stopped(settings, stop_requested)
             )
-        )
-    if parsed.command == "run":
-        return asyncio.run(
+        ),
+        "run": lambda: asyncio.run(
             _until_interrupted(
                 lambda stop_requested: run_overlay(settings, stop_requested, _announce_overlay_url)
             )
-        )
+        ),
+    }
+    if parsed.command in commands:
+        return commands[parsed.command]()
     replay = RecordingReplay(Path(parsed.recording), speed=parsed.speed)
     return asyncio.run(
         _until_interrupted(
@@ -139,6 +149,12 @@ async def run_overlay(
         bound_port = runner.addresses[0][1]
         announce_url(f"http://{LOCAL_HOST}:{bound_port}/")
 
+        scoring_patch_stats = _patch_stats_loader(session, settings)
+        history_path = settings.accuracy_history or default_accuracy_history_path()
+
+        async def score_recorded_game(recording_path: Path) -> None:
+            await keep_the_accuracy_of(recording_path, scoring_patch_stats, history_path)
+
         async def record_in_background() -> None:
             await record_games(
                 _game_api(session, settings),
@@ -149,6 +165,7 @@ async def run_overlay(
                     lookup_pause_seconds=settings.player_lookup_pause_seconds,
                 ),
                 stop_requested,
+                on_recorded=score_recorded_game,
             )
 
         background_tasks = [asyncio.create_task(engine.run(stop_requested))]
@@ -292,12 +309,13 @@ def _patch_stats_loader(session: aiohttp.ClientSession, settings: Settings) -> P
     return load
 
 
-def _score(recording_path: Path, settings: Settings) -> int:
+def _score(recording_path: Path, settings: Settings, *, should_keep: bool) -> int:
     """Print how far each estimator is from the truth on a recorded game.
 
     Args:
         recording_path: The recording.
-        settings: Where the patch's stats are kept, and whether they may be downloaded.
+        settings: Where the patch's stats and the accuracy history are kept.
+        should_keep: Whether to add the scores to the accuracy history.
 
     Returns:
         The exit code.
@@ -305,11 +323,70 @@ def _score(recording_path: Path, settings: Settings) -> int:
     game = read_recorded_game(recording_path)
     game_version = game_version_of(game.client_resources.get(GAME_VERSION_PATH))
     patch_stats = asyncio.run(_load_patch_stats_once(settings, game_version))
-    for score in score_game(game, patch_stats):
+    scores = score_game(game, patch_stats)
+    for score in scores:
         print(score.describe())  # noqa: T201 - the command's output
     if patch_stats is None:
         print("combat stats (yours): no stats for this game's patch")  # noqa: T201 - as above
+    if should_keep:
+        history_path = settings.accuracy_history or default_accuracy_history_path()
+        append_game_accuracy(
+            history_path, game_accuracy_of(recording_path, game, scores, _now_text())
+        )
+        print(f"kept in {history_path}")  # noqa: T201 - as above
     return EXIT_SUCCESS
+
+
+def _history(settings: Settings, last_games: int) -> int:
+    """Print each estimator's accuracy over the latest games scored.
+
+    Args:
+        settings: Where the accuracy history is kept.
+        last_games: How many of the latest games to take.
+
+    Returns:
+        The exit code.
+    """
+    history = read_accuracy_history(settings.accuracy_history or default_accuracy_history_path())
+    lines = history_lines(history, last_games) or [
+        "no game scored yet: `leagueasymode run` scores each game it records, and "
+        "`leagueasymode score <recording> --keep` one by hand"
+    ]
+    for line in lines:
+        print(line)  # noqa: T201 - the command's output
+    return EXIT_SUCCESS
+
+
+async def keep_the_accuracy_of(
+    recording_path: Path, load_patch_stats: PatchStatsLoader, history_path: Path
+) -> None:
+    """Score a recorded game, and add its scores to the accuracy history.
+
+    Args:
+        recording_path: The recording, closed.
+        load_patch_stats: Returns the stats of the game's patch.
+        history_path: The accuracy history.
+    """
+    game = await asyncio.to_thread(read_recorded_game, recording_path)
+    patch_stats = await load_patch_stats(
+        game_version_of(game.client_resources.get(GAME_VERSION_PATH))
+    )
+    scores = await asyncio.to_thread(score_game, game, patch_stats)
+    await asyncio.to_thread(
+        append_game_accuracy,
+        history_path,
+        game_accuracy_of(recording_path, game, scores, _now_text()),
+    )
+    logger.info("scored %s: %d estimators", recording_path.name, len(scores))
+
+
+def _now_text() -> str:
+    """Return the time now, as an ISO time in UTC.
+
+    Returns:
+        The time.
+    """
+    return datetime.datetime.now(tz=datetime.UTC).isoformat(timespec="seconds")
 
 
 def _fit(recording_paths: list[Path], settings: Settings, *, should_write: bool) -> int:
@@ -515,6 +592,15 @@ def _build_parser() -> argparse.ArgumentParser:
         "score", help="score each estimator against what a recorded game shows to be true"
     )
     score_command.add_argument("recording", help="the recording (.jsonl.xz)")
+    score_command.add_argument(
+        "--keep", action="store_true", help="add the scores to the accuracy history"
+    )
+    history_command = commands.add_parser(
+        "history", help="print each estimator's accuracy over the latest games scored"
+    )
+    history_command.add_argument(
+        "--games", type=int, default=10, help="how many of the latest games (default: 10)"
+    )
     fit_command = commands.add_parser(
         "fit",
         help="refit the win chance and the fights on 20 or more recorded games, if that is better",
