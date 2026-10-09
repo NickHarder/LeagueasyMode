@@ -9,11 +9,17 @@ from pydantic import JsonValue
 
 from data_dragon_fixtures import FIXTURE_FILES, fixture_patch_stats
 from game_payloads import (
+    CHAMPION_IDS,
     DEFAULT_PLAYERS,
     GAME_ID,
+    PastGame,
     all_game_data,
     champion_summary,
     gameflow_session,
+    jungle_start_timeline,
+    match_history,
+    past_game_id,
+    puuid_of,
 )
 from leagueasymode.accuracy_history import read_accuracy_history
 from leagueasymode.cli import after_the_game, main
@@ -21,8 +27,10 @@ from leagueasymode.data_dragon import PatchStats, PatchStatsStore
 from leagueasymode.game_summary import GameSummary
 from leagueasymode.inference.rift_map import RIFT_MAP, MapPoint, RiftMap
 from leagueasymode.inference.win_chance import WIN_CHANCE_RULES, win_chance
+from leagueasymode.jungle_starts import JungleStarts
 from leagueasymode.league_client import GAMEFLOW_SESSION_PATH
 from leagueasymode.patch_data import CHAMPION_SUMMARY_PATH
+from leagueasymode.player_intel import MATCH_HISTORY_PATH_TEMPLATE
 from leagueasymode.recorder import GAME_DETAILS_PATH_TEMPLATE, TIMELINE_PATH_TEMPLATE
 from leagueasymode.recording.writer import RecordingWriter
 from leagueasymode.refit import MIN_GAMES_TO_FIT, load_model_weights
@@ -36,6 +44,7 @@ from leagueasymode.scoring import (
     score_experience,
     score_fights,
     score_gold,
+    score_jungle_habits,
     score_jungle_path,
     score_map,
     score_next_items,
@@ -163,6 +172,99 @@ def test_the_games_own_timeline_is_scored_not_a_past_game_recorded_before_it(
     )
     earned, _unspent, _band = score_gold(read_recorded_game(recording))
     assert (earned.sample_count, earned.value) == (135, 0.0)
+
+
+def vi_jungling_answers() -> dict[str, JsonValue]:
+    """The client's answers about Vi, the red team's jungler: four jungle games, three started
+    at red buff, three on her blue buff's half of the map at 4:00."""
+    vi_seed = DEFAULT_PLAYERS[6]
+    starts = (
+        (100, "order_red_buff", "top_river_scuttle"),
+        (200, "chaos_red_buff", "bot_river_scuttle"),
+        (100, "order_blue_buff", "mid_center"),
+        (200, "chaos_red_buff", "order_bot_lane_2"),
+    )
+    answers: dict[str, JsonValue] = {
+        MATCH_HISTORY_PATH_TEMPLATE.format(puuid=puuid_of(vi_seed)): match_history(
+            puuid_of(vi_seed),
+            [
+                PastGame(CHAMPION_IDS["Vi"], "JUNGLE", "NONE", is_win=True, team_id=team_id)
+                for team_id, _, _ in starts
+            ],
+        )
+    }
+    for index, (_, start_point_name, four_minute_point_name) in enumerate(starts):
+        start_point = RIFT_MAP.points[start_point_name]
+        four_minute_point = RIFT_MAP.points[four_minute_point_name]
+        answers[TIMELINE_PATH_TEMPLATE.format(game_id=past_game_id(index))] = jungle_start_timeline(
+            start_point.x_position,
+            start_point.y_position,
+            (four_minute_point.x_position, four_minute_point.y_position),
+        )
+    return answers
+
+
+def timeline_with_vi_at(start_point_name: str, four_minute_point_name: str) -> JsonValue:
+    """This game's timeline, with Vi (participant 7) at one point at 2:00 and one at 4:00."""
+    timeline = game_timeline()
+    assert isinstance(timeline, dict)
+    frames = timeline["frames"]
+    assert isinstance(frames, list)
+    for minute, point_name in ((2, start_point_name), (4, four_minute_point_name)):
+        frame = frames[minute]
+        assert isinstance(frame, dict)
+        participant_frames = frame["participantFrames"]
+        assert isinstance(participant_frames, dict)
+        vi_frame = participant_frames["7"]
+        assert isinstance(vi_frame, dict)
+        map_point = RIFT_MAP.points[point_name]
+        vi_frame["position"] = {"x": map_point.x_position, "y": map_point.y_position}
+    return timeline
+
+
+def test_a_junglers_habits_are_scored_against_this_games_timeline(tmp_path: Path) -> None:
+    # Vi starts at her red buff this game, as she usually does, and is on her blue buff's half at
+    # 4:00 (the bottom, for the red team), as she usually is.
+    recording = write_scored_recording(
+        tmp_path,
+        DEFAULT_PLAYERS,
+        timeline=timeline_with_vi_at("chaos_red_buff", "bot_river_scuttle"),
+        client_answers=vi_jungling_answers(),
+    )
+    start, four_minutes = score_jungle_habits(read_recorded_game(recording))
+    assert (start.estimator, start.sample_count, start.value) == ("jungle start (habit)", 1, 1.0)
+    assert (four_minutes.estimator, four_minutes.sample_count, four_minutes.value) == (
+        "jungle at 4:00 (habit)",
+        1,
+        1.0,
+    )
+
+
+def test_a_habit_broken_this_game_scores_a_miss(tmp_path: Path) -> None:
+    recording = write_scored_recording(
+        tmp_path,
+        DEFAULT_PLAYERS,
+        timeline=timeline_with_vi_at("chaos_blue_buff", "top_river_scuttle"),
+        client_answers=vi_jungling_answers(),
+    )
+    start, four_minutes = score_jungle_habits(read_recorded_game(recording))
+    assert (start.sample_count, start.value) == (1, 0.0)
+    assert (four_minutes.sample_count, four_minutes.value) == (1, 0.0)
+
+
+def test_without_a_jungler_record_no_habit_is_scored(tmp_path: Path) -> None:
+    recording = write_scored_recording(
+        tmp_path, DEFAULT_PLAYERS, timeline=timeline_with_vi_at("chaos_red_buff", "mid_center")
+    )
+    assert score_jungle_habits(read_recorded_game(recording)) == []
+
+
+def test_scoring_reads_the_players_records_from_the_recording(tmp_path: Path) -> None:
+    recording = write_scored_recording(
+        tmp_path, DEFAULT_PLAYERS, timeline=game_timeline(), client_answers=vi_jungling_answers()
+    )
+    vi_record = read_recorded_game(recording).player_records[("CHAOS", "vi")].record
+    assert vi_record.jungle_starts == JungleStarts(blue_count=1, red_count=3)
 
 
 def test_a_recording_without_a_timeline_scores_no_gold(tmp_path: Path) -> None:

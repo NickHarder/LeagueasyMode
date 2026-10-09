@@ -38,6 +38,7 @@ from leagueasymode.player_intel import (
     load_player_records,
     ranked_standing_of,
     recent_games_of,
+    recorded_player_records,
 )
 from local_servers import serve
 
@@ -379,6 +380,34 @@ async def test_where_a_jungler_usually_is_at_four_minutes_is_read_from_the_same_
     assert records[("CHAOS", "zed")].record.four_minute_sides is None
     # No more questions than for the starts: the same four timelines.
     assert len([path for path in requested_paths if "game-timelines" in path]) == 4
+
+
+def test_a_recordings_answers_give_the_records_the_engine_had() -> None:
+    client_resources: dict[str, JsonValue] = {
+        "/lol-gameflow/v1/session": gameflow_session(),
+        "/lol-game-data/assets/v1/champion-summary.json": champion_summary(),
+        f"/lol-match-history/v1/products/lol/{puuid_of(VI_SEED)}/matches?begIndex=0&endIndex=20": (
+            vi_history()
+        ),
+        f"/lol-match-history/v1/products/lol/{puuid_of(ZED)}/matches?begIndex=0&endIndex=20": (
+            zed_history()
+        ),
+        **{
+            f"/lol-match-history/v1/game-timelines/{game_id}": start_timeline(
+                point_name, VI_FOUR_MINUTE_POINTS[game_id]
+            )
+            for game_id, point_name in VI_START_POINTS.items()
+        },
+    }
+    records = recorded_player_records(client_resources)
+    vi_record = records[("CHAOS", "vi")].record
+    assert vi_record.jungle_starts == JungleStarts(blue_count=1, red_count=3)
+    assert vi_record.four_minute_sides == FourMinuteSides(blue_count=3, red_count=0, mid_count=1)
+    assert len(records[("CHAOS", "zed")].record.recent_games) == len(
+        recent_games_of(zed_history(), puuid_of(ZED))
+    )
+    # A player the recording holds nothing about has no record.
+    assert ("ORDER", "garen") not in records
 
 
 def fake_league_client(
