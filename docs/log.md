@@ -6,6 +6,16 @@ skill has the format.
 
 ## 2026-10-09
 
+- Phase 9.1, where the enemy jungler starts: for a likely jungler, the engine reads the timelines
+  of up to five of their recent jungle games through the League client. In each, it finds which
+  side of their own jungle they were on at 2:00, blue buff's or red buff's. Their row says
+  "starts red (top) 3/4", with the half of the map that side is for their team this game, and a
+  callout before the camps spawn says "Vi usually starts red, top side (3 of 4)". The recorder
+  keeps each timeline read, so the first recording confirms the shape. Scoring now finds this
+  game's own timeline and details by the game's id, which a past game's timeline in the same
+  recording would otherwise have stood in for. Phase 9's plan, a draft: scouting from the players'
+  past games, which needs neither the Mac nor recordings ("what are we waiting on? we cant
+  proceed without manula tests?").
 - Phase 8.6, Swift 6: the macOS app moves to Swift 6's language mode (tools version 6.0). CI's
   build showed 16 concurrency warnings in two files; each is fixed at its cause: the app delegate
   runs on the main actor, as AppKit does; the hot keys' actions run there through

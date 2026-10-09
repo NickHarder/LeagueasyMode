@@ -13,12 +13,14 @@ so the first recorded game confirms them.
 
 import asyncio
 import logging
+from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Final, Literal
 
 from pydantic import Field, JsonValue, TypeAdapter, ValidationError
 
 from leagueasymode.game_state import RiotPayloadModel
+from leagueasymode.jungle_starts import JungleStarts, start_side
 from leagueasymode.league_client import GAMEFLOW_SESSION_PATH, LeagueClient
 from leagueasymode.overlay_state import RankedStanding
 from leagueasymode.patch_data import CHAMPION_SUMMARY_PATH
@@ -29,10 +31,12 @@ MATCH_HISTORY_PATH_TEMPLATE: Final = (
     "/lol-match-history/v1/products/lol/{puuid}/matches?begIndex=0&endIndex="
     + str(RECENT_GAME_COUNT)
 )
+GAME_TIMELINE_PATH_PREFIX: Final = "/lol-match-history/v1/game-timelines/"
 # The questions about players, whose answers the engine and the recorder share.
 PLAYER_LOOKUP_PATH_PREFIXES: Final = (
     "/lol-ranked/v1/ranked-stats/",
     "/lol-match-history/v1/products/lol/",
+    GAME_TIMELINE_PATH_PREFIX,
 )
 DEFAULT_PAUSE_SECONDS: Final = 0.25
 # Solo queue first: its rank is the one a player is known by.
@@ -60,6 +64,11 @@ SHORTEST_COUNTED_GAME_SECONDS: Final = 300
 POSITIONS: Final = frozenset({"TOP", "JUNGLE", "MIDDLE", "BOTTOM", "UTILITY"})
 TEAM_ONE: Final = "ORDER"
 TEAM_TWO: Final = "CHAOS"
+# A player is a likely jungler when at least half of their newest games, and at least two, were
+# in the jungle; those jungle games' timelines say where they start.
+JUNGLE_POSITION: Final = "JUNGLE"
+JUNGLER_GAMES_READ: Final = 5
+FEWEST_JUNGLE_GAMES: Final = 2
 
 logger = logging.getLogger(__name__)
 
@@ -117,6 +126,7 @@ class HistoryParticipant(RiotPayloadModel):
     """One player's line in a past game."""
 
     participant_id: int = Field(default=0, alias="participantId")
+    team_id: int = Field(default=0, alias="teamId")
     champion_id: int = Field(default=0, alias="championId")
     team_position: str = Field(default="", alias="teamPosition")
     stats: HistoryStats = Field(default_factory=HistoryStats)
@@ -139,6 +149,7 @@ class HistoryIdentity(RiotPayloadModel):
 class HistoryGame(RiotPayloadModel):
     """One past game."""
 
+    game_id: int = Field(default=0, alias="gameId")
     game_creation: int = Field(default=0, alias="gameCreation")
     game_duration_seconds: int = Field(default=0, alias="gameDuration")
     map_id: int = Field(default=0, alias="mapId")
@@ -231,14 +242,21 @@ class RecentGame:
     # Their creep score, lane and jungle, and the game's length.
     creep_score: int = 0
     duration_seconds: int = 0
+    # The game's id, their team's id (100 or 200) and their participant id, which find them in
+    # the game's timeline; 0 when the history does not say.
+    game_id: int = 0
+    team_id: int = 0
+    participant_id: int = 0
 
 
 @dataclass(frozen=True)
 class PlayerRecord:
-    """A player's rank and recent games, newest first."""
+    """A player's rank and recent games, newest first, and where they start in the jungle."""
 
     ranked: RankedStanding | None
     recent_games: tuple[RecentGame, ...]
+    # Counted over their recent jungle games; None when they rarely jungle or none was read.
+    jungle_starts: JungleStarts | None = None
 
 
 @dataclass(frozen=True)
@@ -315,9 +333,43 @@ def recent_games_of(payload: JsonValue | None, puuid: str) -> list[RecentGame]:
             item_ids=line.stats.item_ids(),
             creep_score=line.stats.total_minions_killed + line.stats.neutral_minions_killed,
             duration_seconds=game.game_duration_seconds,
+            game_id=game.game_id,
+            team_id=line.team_id,
+            participant_id=line.participant_id,
         )
         for game, line in newest_first
     ]
+
+
+def jungle_timeline_paths(recent_games: Sequence[RecentGame]) -> list[str]:
+    """Return the timelines to read for where a player starts in the jungle.
+
+    Args:
+        recent_games: Their recent games, newest first.
+
+    Returns:
+        The client's path of each jungle game among the newest few; empty when they are not a
+        likely jungler.
+    """
+    jungle_games = [game for game in _jungle_games_read(recent_games) if game.game_id > 0]
+    return [f"{GAME_TIMELINE_PATH_PREFIX}{game.game_id}" for game in jungle_games]
+
+
+def _jungle_games_read(recent_games: Sequence[RecentGame]) -> list[RecentGame]:
+    """Return the jungle games among a likely jungler's newest few.
+
+    Args:
+        recent_games: Their recent games, newest first.
+
+    Returns:
+        The games; empty when fewer than half of the newest few, or fewer than two, were in the
+        jungle.
+    """
+    newest_games = recent_games[:JUNGLER_GAMES_READ]
+    jungle_games = [game for game in newest_games if game.position == JUNGLE_POSITION]
+    if len(jungle_games) < FEWEST_JUNGLE_GAMES or 2 * len(jungle_games) < len(newest_games):
+        return []
+    return jungle_games
 
 
 def history_position(lane: str, role: str, team_position: str) -> str:
@@ -401,10 +453,38 @@ async def _look_up(client: LeagueClient, puuid: str, pause_seconds: float) -> Pl
     if ranked_payload is None and history_payload is None:
         logger.info("the League client did not answer for one player; asking again next game")
         return None
+    recent_games = recent_games_of(history_payload, puuid)
     return PlayerRecord(
         ranked=ranked_standing_of(ranked_payload),
-        recent_games=tuple(recent_games_of(history_payload, puuid)),
+        recent_games=tuple(recent_games),
+        jungle_starts=await _read_jungle_starts(client, recent_games, pause_seconds),
     )
+
+
+async def _read_jungle_starts(
+    client: LeagueClient, recent_games: Sequence[RecentGame], pause_seconds: float
+) -> JungleStarts | None:
+    """Read where a likely jungler started in each of their recent jungle games.
+
+    Args:
+        client: The League client.
+        recent_games: Their recent games, newest first.
+        pause_seconds: The pause after each request.
+
+    Returns:
+        How many started on each side; None when they are not a likely jungler or no game's
+        start could be read.
+    """
+    sides = []
+    for game in _jungle_games_read(recent_games):
+        if game.game_id <= 0:
+            continue
+        timeline_payload = await client.get_json(f"{GAME_TIMELINE_PATH_PREFIX}{game.game_id}")
+        await asyncio.sleep(pause_seconds)
+        sides.append(start_side(timeline_payload, game.participant_id, game.team_id))
+    if not any(sides):
+        return None
+    return JungleStarts(blue_count=sides.count("blue"), red_count=sides.count("red"))
 
 
 def puuids_in_game(session_payload: JsonValue | None) -> list[str]:

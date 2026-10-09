@@ -32,6 +32,9 @@ APP_PORT_PATTERN: Final = re.compile(r"--app-port=(\d+)")
 AUTH_TOKEN_PATTERN: Final = re.compile(r"--remoting-auth-token=([\w-]+)")
 CLIENT_PROCESS_NAME: Final = "LeagueClientUx"
 DEFAULT_REQUEST_TIMEOUT_SECONDS: Final = 5.0
+# The shared answers kept: a game's ten ranked stats and ten match histories, and the past
+# timelines of up to six likely junglers, five each.
+DEFAULT_KEPT_ANSWER_COUNT: Final = 50
 # The game the client is in: its id and each team's players.
 GAMEFLOW_SESSION_PATH: Final = "/lol-gameflow/v1/session"
 
@@ -134,16 +137,25 @@ class SharedAnswers:
 
     The engine and the recorder both ask about each player in a game; sharing the answers means
     the client, and Riot behind it, is asked once. Only the questions under the given path
-    prefixes are shared, and an answer that did not come is not kept, so it is asked again.
+    prefixes are shared, and an answer that did not come is not kept, so it is asked again. Only
+    the latest answers are kept, enough for a game's players, so that a long session's match
+    timelines do not pile up.
     """
 
-    def __init__(self, shared_path_prefixes: tuple[str, ...]) -> None:
+    def __init__(
+        self,
+        shared_path_prefixes: tuple[str, ...],
+        *,
+        kept_answer_count: int = DEFAULT_KEPT_ANSWER_COUNT,
+    ) -> None:
         """Keep which questions are shared.
 
         Args:
             shared_path_prefixes: The paths whose answers are shared start with one of these.
+            kept_answer_count: How many of the latest answers are kept.
         """
         self.shared_path_prefixes: Final = shared_path_prefixes
+        self.kept_answer_count: Final = kept_answer_count
         self._answers: Final[dict[str, asyncio.Task[JsonValue | None]]] = {}
 
     def is_shared(self, path: str) -> bool:
@@ -173,6 +185,8 @@ class SharedAnswers:
         """
         if path not in self._answers:
             self._answers[path] = asyncio.ensure_future(ask())
+            for oldest_path in list(self._answers)[: -self.kept_answer_count]:
+                del self._answers[oldest_path]
         answer = await self._answers[path]
         if answer is None:
             self._answers.pop(path, None)
@@ -253,6 +267,22 @@ class LeagueClient:
         except ValidationError:
             logger.warning("League client answered %s with something that is not JSON", path)
             return None
+
+
+def game_id_of(session: JsonValue | None) -> int | None:
+    """Return the game's id from the client's gameflow session.
+
+    Args:
+        session: The answer of `/lol-gameflow/v1/session`, or None.
+
+    Returns:
+        The id, or None when the session does not hold one.
+    """
+    game_data = session.get("gameData") if isinstance(session, dict) else None
+    game_id = game_data.get("gameId") if isinstance(game_data, dict) else None
+    if isinstance(game_id, int) and not isinstance(game_id, bool) and game_id > 0:
+        return game_id
+    return None
 
 
 # Finds the running League client and returns a client of its API, or None when it is not running.

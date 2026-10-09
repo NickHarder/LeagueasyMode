@@ -9,7 +9,7 @@ okf_version: "0.2"
 # Subdirectories
 
 * [history](history/index.md) - 1 concept: Retrospective.
-* [plans](plans/index.md) - 8 concepts: Plan.
+* [plans](plans/index.md) - 9 concepts: Plan.
 * [references](references/index.md) - 4 concepts: Reference.
 * [rules](rules/index.md) - 1 concept: Rule.
 

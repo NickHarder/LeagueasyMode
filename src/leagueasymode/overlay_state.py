@@ -136,6 +136,13 @@ class PlayerIntel(BaseModel):
     usual_position: str
     # Whether this game's position is not their usual one.
     is_off_role: bool
+    # A likely jungler's usual first camp's side, "blue" or "red" buff's half of their jungle, the
+    # half of the map that is this game ("top" or "bot"), and how many of the recent jungle games
+    # read started there; None and 0 when not known.
+    jungle_start_side: Literal["blue", "red"] | None = None
+    jungle_start_half: Literal["top", "bot"] | None = None
+    jungle_start_count: int = 0
+    jungle_start_games: int = 0
 
 
 class GoldEstimate(BaseModel):
@@ -368,6 +375,7 @@ type CalloutKind = Literal[
     "cooldown_ready",
     "went_back",
     "missing",
+    "jungle_start",
     "inhibitor_open",
     "suggestion",
 ]

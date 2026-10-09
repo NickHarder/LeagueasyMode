@@ -20,13 +20,20 @@ from pydantic import JsonValue
 from leagueasymode import __version__
 from leagueasymode.engine_status import PartKey, PartState, StatusBoard, duration_text
 from leagueasymode.game_api import GameApiClient
-from leagueasymode.league_client import GAMEFLOW_SESSION_PATH, ClientConnector, LeagueClient
+from leagueasymode.league_client import (
+    GAMEFLOW_SESSION_PATH,
+    ClientConnector,
+    LeagueClient,
+    game_id_of,
+)
 from leagueasymode.patch_data import CHAMPION_SUMMARY_PATH, GAME_VERSION_PATH, ITEMS_PATH
 from leagueasymode.player_intel import (
     DEFAULT_PAUSE_SECONDS,
     MATCH_HISTORY_PATH_TEMPLATE,
     RANKED_STATS_PATH_TEMPLATE,
+    jungle_timeline_paths,
     puuids_in_game,
+    recent_games_of,
 )
 from leagueasymode.recording.file_format import PLAIN_SUFFIX
 from leagueasymode.recording.writer import DEFAULT_KEYFRAME_INTERVAL_SECONDS, RecordingWriter
@@ -351,7 +358,8 @@ async def _record_client_data_at_start(
     """Write what the League client knows at the start of a game, and return the game's id.
 
     That is the gameflow session, the patch's data, each champion's details, and each player's
-    ranked stats and recent games, the answers the engine's loading-screen intel reads.
+    ranked stats and recent games, and a likely jungler's recent jungle games' timelines: the
+    answers the engine's loading-screen intel reads.
 
     Args:
         recording: The open recording.
@@ -375,10 +383,18 @@ async def _record_client_data_at_start(
             recording, client, CHAMPION_DETAILS_PATH_TEMPLATE.format(champion_id=champion_id)
         )
     for puuid in puuids_in_game(session):
-        for path_template in (RANKED_STATS_PATH_TEMPLATE, MATCH_HISTORY_PATH_TEMPLATE):
-            await _record_client_resource(recording, client, path_template.format(puuid=puuid))
+        await _record_client_resource(
+            recording, client, RANKED_STATS_PATH_TEMPLATE.format(puuid=puuid)
+        )
+        await asyncio.sleep(lookup_pause_seconds)
+        history = await _record_client_resource(
+            recording, client, MATCH_HISTORY_PATH_TEMPLATE.format(puuid=puuid)
+        )
+        await asyncio.sleep(lookup_pause_seconds)
+        for timeline_path in jungle_timeline_paths(recent_games_of(history, puuid)):
+            await _record_client_resource(recording, client, timeline_path)
             await asyncio.sleep(lookup_pause_seconds)
-    return _game_id_of(session)
+    return game_id_of(session)
 
 
 async def _finish_after_game(
@@ -514,22 +530,6 @@ def _has_game_ended(payload: JsonValue) -> bool:
         isinstance(event, dict) and event.get("EventName") == GAME_END_EVENT_NAME
         for event in event_list
     )
-
-
-def _game_id_of(session: JsonValue | None) -> int | None:
-    """Return the game's id from the client's gameflow session.
-
-    Args:
-        session: The answer of `/lol-gameflow/v1/session`, or None.
-
-    Returns:
-        The id, or None when the session does not hold one.
-    """
-    game_data = session.get("gameData") if isinstance(session, dict) else None
-    game_id = game_data.get("gameId") if isinstance(game_data, dict) else None
-    if isinstance(game_id, int) and not isinstance(game_id, bool) and game_id > 0:
-        return game_id
-    return None
 
 
 def _champion_ids_in_game(

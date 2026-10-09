@@ -32,13 +32,16 @@ from game_payloads import (
     game_start_event,
     gameflow_session,
     inhibitor_killed_event,
+    jungle_start_timeline,
     match_history,
+    past_game_id,
     puuid_of,
     ranked_stats,
     turret_killed_event,
 )
 from leagueasymode.cli import run_overlay
 from leagueasymode.config import Settings
+from leagueasymode.inference.rift_map import RIFT_MAP
 from leagueasymode.league_client import GAMEFLOW_SESSION_PATH
 from leagueasymode.overlay_state import OverlayPreferences
 from leagueasymode.patch_data import CHAMPION_SUMMARY_PATH, GAME_VERSION_PATH, ITEMS_PATH
@@ -51,6 +54,14 @@ from local_servers import serve
 pytestmark = pytest.mark.browser
 
 ENEMY_JUNGLER: Final = DEFAULT_PLAYERS[6].riot_id_game_name
+VI_SEED: Final = DEFAULT_PLAYERS[6]
+# Vi's recent jungle games, newest first: her team's id and where she was at 2:00.
+VI_STARTS: Final = (
+    (100, "order_red_buff"),
+    (200, "chaos_red_buff"),
+    (100, "order_blue_buff"),
+    (200, "chaos_red_buff"),
+)
 EN_DASH: Final = "\u2013"
 MINUS_SIGN: Final = "\u2212"
 ITEMS_FIXTURE: Final = Path(__file__).parent / "fixtures" / "client" / "items.json"
@@ -177,12 +188,17 @@ def write_recording(
 
 
 def looked_up_players() -> list[tuple[str, JsonValue]]:
-    """The client's answers about each player: Zed has a record, everyone else a bare rank."""
+    """The client's answers about each player.
+
+    Zed has a record and Vi has four games in the jungle, three of them started at red buff;
+    everyone else has a bare rank.
+    """
     zed = DEFAULT_PLAYERS[7]
     zed_id = CHAMPION_IDS["Zed"]
     answers: list[tuple[str, JsonValue]] = [
         (GAMEFLOW_SESSION_PATH, gameflow_session()),
         (CHAMPION_SUMMARY_PATH, champion_summary()),
+        *vis_jungle_starts(),
     ]
     for seed in DEFAULT_PLAYERS:
         is_zed = seed is zed
@@ -194,16 +210,35 @@ def looked_up_players() -> list[tuple[str, JsonValue]]:
                 else ranked_stats("GOLD", "I", 75, 20, 18),
             )
         )
-        past_games = (
-            [PastGame(zed_id, "MIDDLE", "SOLO", is_win=True)] * 3
-            + [PastGame(CHAMPION_IDS["Ahri"], "MIDDLE", "SOLO", is_win=False)] * 2
-            if is_zed
-            else []
-        )
+        if is_zed:
+            past_games = [PastGame(zed_id, "MIDDLE", "SOLO", is_win=True)] * 3 + [
+                PastGame(CHAMPION_IDS["Ahri"], "MIDDLE", "SOLO", is_win=False)
+            ] * 2
+        elif seed is VI_SEED:
+            past_games = [
+                PastGame(CHAMPION_IDS["Vi"], "JUNGLE", "NONE", is_win=True, team_id=team_id)
+                for team_id, _ in VI_STARTS
+            ]
+        else:
+            past_games = []
         answers.append(
             (
                 MATCH_HISTORY_PATH_TEMPLATE.format(puuid=puuid_of(seed)),
                 match_history(puuid_of(seed), past_games),
+            )
+        )
+    return answers
+
+
+def vis_jungle_starts() -> list[tuple[str, JsonValue]]:
+    """Each of Vi's past jungle games' timelines, which place her at a buff at 2:00."""
+    answers: list[tuple[str, JsonValue]] = []
+    for index, (_, start_point_name) in enumerate(VI_STARTS):
+        start_point = RIFT_MAP.points[start_point_name]
+        answers.append(
+            (
+                f"/lol-match-history/v1/game-timelines/{past_game_id(index)}",
+                jungle_start_timeline(start_point.x_position, start_point.y_position),
             )
         )
     return answers
@@ -658,6 +693,12 @@ async def test_the_enemy_strip_shows_each_enemys_rank_and_record(tmp_path: Path)
             ".enemy-intel"
         )
         await expect(caitlyn_intel).to_have_text("G1")
+        # Vi won her four recent games, all in the jungle, three of them started at red buff,
+        # which is the top half of the map for her team this game.
+        vi_intel = page.locator("#enemy-strip .enemy-row", has_text="Vi").locator(".enemy-intel")
+        await expect(vi_intel).to_have_text(
+            f"G1 · 4{EN_DASH}0 W4 · 4 on champ · starts red (top) 3/4"
+        )
         await keep_screenshot(page, "player-intel")
 
 

@@ -230,7 +230,10 @@ def _intel(
         return None
     is_position_known = role_guess.confidence in {"given", "likely"}
     return player_intel(
-        game_record.record, game_record.champion_id, role_guess.role if is_position_known else ""
+        game_record.record,
+        game_record.champion_id,
+        role_guess.role if is_position_known else "",
+        team=player.team,
     )
 
 

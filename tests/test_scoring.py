@@ -152,6 +152,19 @@ def test_gold_off_by_more_than_the_band_is_scored_as_outside_it(tmp_path: Path) 
     assert earned.describe() == "gold earned: 135 player-minutes, 100 gold off on average"
 
 
+def test_the_games_own_timeline_is_scored_not_a_past_game_recorded_before_it(
+    tmp_path: Path,
+) -> None:
+    recording = write_scored_recording(
+        tmp_path,
+        DEFAULT_PLAYERS,
+        timeline=game_timeline(),
+        past_timelines={GAME_ID - 1: {"frames": []}},
+    )
+    earned, _unspent, _band = score_gold(read_recorded_game(recording))
+    assert (earned.sample_count, earned.value) == (135, 0.0)
+
+
 def test_a_recording_without_a_timeline_scores_no_gold(tmp_path: Path) -> None:
     recording = write_scored_recording(tmp_path, DEFAULT_PLAYERS)
     assert score_gold(read_recorded_game(recording)) == []

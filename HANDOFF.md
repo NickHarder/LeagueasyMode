@@ -3,8 +3,8 @@
 If you are picking this work up, human or model: read this file top to bottom first. The `handoff` skill
 refreshes it; it describes the current state.
 
-Last updated: 2026-10-09, on branch `feat/status-page`. `main` holds phases 0 to 7 (pull requests
-#2 to #33, merged).
+Last updated: 2026-10-09, on branch `feat/jungle-start`. `main` holds phases 0 to 8 (pull
+requests #2 to #39, merged).
 
 ## Where things stand
 
@@ -18,16 +18,18 @@ built, its structures in phase 8.5. Phases 3 to 7 are built and merged
 built on their best guesses, phase 7 without signing as the owner chose); phase 5's models are
 hand-set and phase 6's thresholds empty until 20 recorded games exist. Phase 8
 ([docs/plans/phase-8-first-test.md](docs/plans/phase-8-first-test.md), a draft) goes past the
-approved plan: 8.1 to 8.4 (the status page and the report after a test, the overlay over League's
-own screen and window, moving the widgets, spoken callouts) are merged (#34 to #37); 8.5,
-structures, is on `feat/structures` (#38); 8.6, the Swift 6 language mode, on `feat/swift-6`.
-None waits for the test on a Mac, which confirms them. Phase 8 is built. Each slice goes up as its own pull request into `main` without
-waiting for the one before to merge.
+approved plan: 8.1 to 8.6 (the status page and the report after a test, the overlay over League's
+own screen and window, moving the widgets, spoken callouts, structures, the Swift 6 language mode)
+are merged (#34 to #39). None waits for the test on a Mac, which confirms them. Phase 8 is built.
+Phase 9 ([docs/plans/phase-9-scouting.md](docs/plans/phase-9-scouting.md), a draft) reads the
+players' past games: 9.1, where the enemy jungler usually starts, is on `feat/jungle-start` (#40).
+Each slice goes up as its own pull request into `main` without waiting for the one before to
+merge.
 
 | Area | State | Proof |
 |---|---|---|
 | Scaffold | ai-kit v0.11.1, Python layer, GitHub CI | `.copier-answers.yml` |
-| Gate | Green: lint, 769 tests (and 38 in Chromium), secrets | `make gate` |
+| Gate | Green: lint, 790 tests (and 38 in Chromium), secrets | `make gate` |
 | Recorder | Records games, the client's patch data and the post-game timeline; anonymized copies | `uv run leagueasymode record`; `tests/test_recorder.py`, `tests/test_anonymize.py` |
 | Replay | A recording served as a stand-in game API | `uv run leagueasymode replay <recording>`; `tests/test_replay.py` |
 | Engine and overlay page | The dragon and Elder timer, from the game's answer to the page | `uv run leagueasymode run`; `tests/test_tracer_bullet.py` |
@@ -161,7 +163,9 @@ In `AGENTS.md`. Also: a raw recording (it holds other players' names); only `ano
 - Loading-screen intel reads the client's ranked stats and match history in the shapes other tools
   describe; no real answer has been seen. If the client does not answer for other players, or
   answers in another shape, the line under each enemy stays empty until the first recording shows
-  what to read.
+  what to read. The same holds for the past games' timelines that say where a jungler starts
+  (9.1): the path is the one the post-game timeline uses, and whether the client serves other
+  players' games there is first seen in a recording.
 - Combat stats leave out runes, passives, stacks and buffs, so an estimate runs low for a champion
   that has them. Data Dragon's item stats leave out some stats (ability haste, lethality, magic
   penetration), which the overlay does not show anyway. The Data Dragon test files are

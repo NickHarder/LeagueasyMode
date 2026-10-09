@@ -89,6 +89,12 @@ export interface PlayerIntel {
   readonly champion_win_count: number;
   readonly usual_position: string;
   readonly is_off_role: boolean;
+  /** A likely jungler's usual first camp: blue or red buff, the half of the map that is this game. */
+  readonly jungle_start_side: "blue" | "red" | null;
+  readonly jungle_start_half: "top" | "bot" | null;
+  /** How many of their recent jungle games read started there, of how many. */
+  readonly jungle_start_count: number;
+  readonly jungle_start_games: number;
 }
 
 /** A spell the player marked an enemy as having used, and when it is back: an estimate. */
@@ -223,6 +229,7 @@ export type CalloutKind =
   | "cooldown_ready"
   | "went_back"
   | "missing"
+  | "jungle_start"
   | "inhibitor_open"
   | "suggestion";
 
@@ -406,9 +413,12 @@ const CALLOUT_KINDS: ReadonlySet<string> = new Set([
   "cooldown_ready",
   "went_back",
   "missing",
+  "jungle_start",
   "inhibitor_open",
   "suggestion",
 ]);
+const START_SIDES: ReadonlySet<string> = new Set(["blue", "red"]);
+const MAP_HALVES: ReadonlySet<string> = new Set(["top", "bot"]);
 const MARKED_SPELLS: ReadonlySet<string> = new Set(["flash", "summoner", "ultimate"]);
 
 /** Return whether a value is a plain object, so that its fields can be read. */
@@ -540,7 +550,11 @@ export function isPlayerIntel(value: unknown): value is PlayerIntel {
     typeof value["champion_game_count"] === "number" &&
     typeof value["champion_win_count"] === "number" &&
     typeof value["usual_position"] === "string" &&
-    typeof value["is_off_role"] === "boolean"
+    typeof value["is_off_role"] === "boolean" &&
+    (value["jungle_start_side"] === null || isOneOf(value["jungle_start_side"], START_SIDES)) &&
+    (value["jungle_start_half"] === null || isOneOf(value["jungle_start_half"], MAP_HALVES)) &&
+    typeof value["jungle_start_count"] === "number" &&
+    typeof value["jungle_start_games"] === "number"
   );
 }
 

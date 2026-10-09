@@ -2,12 +2,14 @@
 
 Counted from the League client's answers for the player (`player_intel.py`): their recent games on
 Summoner's Rift, newest first. The usual position needs enough games and a clear favourite, so
-that a player who fills every role is not called off-role.
+that a player who fills every role is not called off-role. A likely jungler's usual start is the
+side most of their recent jungle games started on (`jungle_starts.py`).
 """
 
 from collections import Counter
 from typing import Final
 
+from leagueasymode.jungle_starts import start_half
 from leagueasymode.overlay_state import PlayerIntel
 from leagueasymode.player_intel import PlayerRecord
 
@@ -16,13 +18,17 @@ USUAL_POSITION_MIN_GAMES: Final = 5
 USUAL_POSITION_MIN_SHARE: Final = 0.6
 
 
-def player_intel(record: PlayerRecord, champion_id: int, game_position: str) -> PlayerIntel:
+def player_intel(
+    record: PlayerRecord, champion_id: int, game_position: str, *, team: str = ""
+) -> PlayerIntel:
     """Return what a player's record says, given the champion and position they have this game.
 
     Args:
         record: The player's rank and recent games.
         champion_id: The client's id of the champion they play this game.
         game_position: Their position this game, as given or estimated; empty when unknown.
+        team: Their team this game, "ORDER" or "CHAOS", which puts a jungle start on the top or
+            the bottom half of the map; empty when unknown.
 
     Returns:
         The intel.
@@ -30,6 +36,8 @@ def player_intel(record: PlayerRecord, champion_id: int, game_position: str) -> 
     games = record.recent_games
     champion_games = [game for game in games if game.champion_id == champion_id]
     usual_position = _usual_position([game.position for game in games])
+    jungle_starts = record.jungle_starts
+    jungle_start_side = jungle_starts.usual_side if jungle_starts else None
     return PlayerIntel(
         ranked=record.ranked,
         recent_game_count=len(games),
@@ -39,6 +47,10 @@ def player_intel(record: PlayerRecord, champion_id: int, game_position: str) -> 
         champion_win_count=sum(1 for game in champion_games if game.is_win),
         usual_position=usual_position,
         is_off_role=bool(usual_position and game_position and game_position != usual_position),
+        jungle_start_side=jungle_start_side,
+        jungle_start_half=start_half(jungle_start_side, team) if jungle_start_side else None,
+        jungle_start_count=jungle_starts.usual_count if jungle_starts else 0,
+        jungle_start_games=jungle_starts.game_count if jungle_starts else 0,
     )
 
 

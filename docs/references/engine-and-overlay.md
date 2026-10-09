@@ -4,7 +4,7 @@ title: The engine and the overlay page
 description: How the engine turns the game's answers into the overlay's state, how that state reaches the widgets, how the page is built and tested, and how to run it all against a replay.
 tags: [engine, overlay, architecture]
 status: draft
-generated: { by: claude-code/cloud, at: 2026-10-08T23:11:03Z }
+generated: { by: claude-code/cloud, at: 2026-10-09T03:05:00Z }
 sources:
   - id: engine
     resource: ../../src/leagueasymode/engine.py
@@ -74,6 +74,8 @@ sources:
     resource: ../../overlay/web/src/overlay.ts
   - id: engine-status
     resource: ../../src/leagueasymode/engine_status.py
+  - id: jungle-starts
+    resource: ../../src/leagueasymode/jungle_starts.py
   - id: structures
     resource: ../../src/leagueasymode/inference/structures.py
 ---
@@ -115,6 +117,7 @@ game API ─▶ GameApiClient ─▶ GameSnapshot ─▶ estimators ─▶ Overl
 | Roles (estimator 1) | given where the game assigns them; otherwise likely or a guess | each player gets a cost for each role from Smite, a support item, the other summoner spells and, after 3:00, the least CS on the team; each team's open roles go to its open players in the assignment of least total cost, found by trying all of them (120 for five); a player's role is "likely" when every assignment that changes it costs at least 2 more, otherwise a "guess". The costs are a hand-set prior, to be fitted on the roles the post-game timeline records |
 | Combat stats (estimator 2) | exact for the player on this machine; an estimate for the others | the game gives the player on this machine's stats in full (`activePlayer.championStats`). For the others: the champion's base stats from the patch's Data Dragon files, each grown to the level by the game's formula, base + per-level × (level − 1) × (0.7025 + 0.0175 × (level − 1)), plus each item's stats; bonus attack speed adds up before it multiplies the base, up to 2.5; move speed slows above 415 and 490. Runes, passives, stacks and buffs are not counted, so an estimate runs low for a champion that has them; the recordings, which hold the exact stats of the player on this machine all game, are to measure by how much[^combat-stats] |
 | Loading-screen intel (phase 3.1) | exact: restates the League client's answers | each player's solo rank (flex when solo has none); wins and losses over their last 20 games on Summoner's Rift, remakes (under 5:00) left out; the streak from the latest game; games and wins on this game's champion; the position at least 60% of at least five recent games were in, and "off-role" when this game's position, given or likely, differs[^intel] |
+| Where the enemy jungler starts (phase 9.1) | exact count of past games: restates where their recent jungle games' timelines placed them | for a likely jungler (at least half of their newest five games, and at least two, in the jungle), the side of their own jungle each of those games found them on at 2:00 (the timeline's frame nearest it, within 0:30): blue buff's half or red buff's; anywhere else counts for neither. The row says "starts red (top) 3/4": the side more games started on, the half of the map that side is for their team this game (the blue team's blue buff is in its top jungle, the red team's in its bottom), and the count. A callout before the camps spawn at 1:30, "Vi usually starts red, top side (3 of 4)", when at least 70% of at least two games started there[^jungle-starts] |
 | Marked cooldowns (phase 3.2) | estimate | the player marks an enemy's spell from the macOS app (an enemy in role order, then Flash, their other summoner spell, or their ultimate); the timer starts at the game time of the mark and lasts the patch's cooldown, the ultimate's at the rank the enemy's level gives (6, 11, 16), times 100 / (100 + haste), with the ability and summoner spell haste their items' descriptions state. Runes and other haste are not known, so a spell may be back sooner. A callout says when it is back; a new game clears them[^cooldowns] |
 | Suggestions (phase 3.3) | a rule over the facts above; first-draft wording | callouts that name an action, made once when their facts line up, never from the first state seen: an objective up or spawning within 0:30 while more enemies than allies are dead for at least 0:20 ("Baron up, 2 enemies down for 0:40: take it"); their jungler dead for at least 0:20 ("take Dragon" when one is up or within a minute, else "invade or push"); a Flash or ultimate just marked ("punish it", "fight now"); a Baron or Elder buff just taken, by who holds it ("group and push", "group and defend", "force a fight", "avoid fights"). Text only[^suggestions] |
 | Hidden gold (estimator 3, phase 3.5) | exact for the player on this machine (`activePlayer.currentGold`); an estimate with a band for the others | an income model: 500 to start; passive gold of 2.1 a second from 1:30, 2.3 from 15:00, 2.6 from 25:00 (patch 26.16); each creep at the rate of when it died, about 18.5 gold a lane creep before 15:00, 20.1 to 25:00 and 23.9 after (melee 19, ranged 14, cannons by wave), 22 a point of a jungler's (one with Smite) creep score, unconfirmed; a kill 300 gold up to level 6 and 10 more a level to 420, plus a bounty of a third of the victim's kill and assist gold since their last death less 100 (up to 700, unconfirmed), and half the base shared by the assisters (patch 25.9); turrets 50/25/25 to each of the destroying team and 250/425/375 shared by the champions the feed credits (outer, inner, inhibitor), an inhibitor 50 shared, Baron 300 each, all unconfirmed; the support item's quest at 0.75 gold a second within its stage (World Atlas below 400, Runic Compass below 1200), pinned when it reaches the next. A filter corrects it: total gold is a normal estimate carried forward by that income and widened by how unsure each kind is (12% of creep gold, 25% of kill gold, 30% of objective and quest gold, and 0.15 gold a second unseen, turret plates among it); it is never below what the inventory cost plus what was drunk, placed or lost on a sale (30%); a shopping trip of at least 300 gold, over once nothing is bought for 5 seconds, is a measurement of the inventory's cost plus 300 ± 175 left in hand, weighed against the model as a Kalman filter weighs one. Gold per creep is tuned for your kind (lane or jungle) by the gold your own creeps must have paid, weighed 1 per 1000 of it against the model's 1, between 0.75 and 1.33. The band holds the truth about 4 times in 5 (1.28 standard deviations); each team's total is the sum, its band the bands in quadrature. A clock that runs back starts a new game[^gold] |
@@ -182,8 +185,9 @@ restart.[^data-dragon]
 When a game starts, the engine reads the League client's gameflow session for each player's PUUID
 and champion, and asks the client for each player's ranked stats
 (`/lol-ranked/v1/ranked-stats/<puuid>`) and last 20 games
-(`/lol-match-history/v1/products/lol/<puuid>/matches`). The client asks Riot with its own session,
-so no developer key is involved. Each player is asked about once, one request at a time, and kept
+(`/lol-match-history/v1/products/lol/<puuid>/matches`), and for a likely jungler the timelines
+of up to five of their recent jungle games (`/lol-match-history/v1/game-timelines/<gameId>`).
+The client asks Riot with its own session, so no developer key is involved. Each player is asked about once, one request at a time, and kept
 for the engine's lifetime; a player the client does not answer for is asked again at the next
 game. The answers are matched to the scoreboard by team and champion, through the champion
 summary's aliases. The last game's players are forgotten as soon as a new game starts. The shapes
@@ -327,4 +331,5 @@ Chromium against a replay (Chromium from `uv run playwright install chromium`, o
 [^game-summary]: `src/leagueasymode/game_summary.py`
 [^preferences]: `src/leagueasymode/preferences.py`
 [^engine-status]: `src/leagueasymode/engine_status.py`
+[^jungle-starts]: `src/leagueasymode/jungle_starts.py`
 [^structures]: `src/leagueasymode/inference/structures.py`

@@ -14,7 +14,9 @@ from game_payloads import (
     all_game_data,
     champion_summary,
     gameflow_session,
+    jungle_start_timeline,
     match_history,
+    past_game_id,
     puuid_of,
     ranked_stats,
 )
@@ -23,12 +25,16 @@ from leagueasymode.config import Settings
 from leagueasymode.engine import OverlayEngine, compute_overlay_state
 from leagueasymode.game_api import GameApiClient
 from leagueasymode.inference.intel import player_intel
+from leagueasymode.inference.rift_map import RIFT_MAP
+from leagueasymode.jungle_starts import JungleStarts
 from leagueasymode.league_client import LeagueClient
 from leagueasymode.overlay_state import OverlayState, RankedStanding
 from leagueasymode.player_intel import (
+    PLAYER_LOOKUP_PATH_PREFIXES,
     PlayerRecord,
     RecentGame,
     history_position,
+    jungle_timeline_paths,
     load_player_records,
     ranked_standing_of,
     recent_games_of,
@@ -38,6 +44,16 @@ from local_servers import serve
 ZED: Final = DEFAULT_PLAYERS[7]
 ZED_ID: Final = CHAMPION_IDS["Zed"]
 AHRI_ID: Final = CHAMPION_IDS["Ahri"]
+VI_SEED: Final = DEFAULT_PLAYERS[6]
+VI_ID: Final = CHAMPION_IDS["Vi"]
+FIRST_GAME_ID: Final = past_game_id(0)
+# Where Vi was at 2:00 in each of her four jungle games, by game id: red, red, blue, red.
+VI_START_POINTS: Final = {
+    FIRST_GAME_ID: "order_red_buff",
+    FIRST_GAME_ID + 1: "chaos_red_buff",
+    FIRST_GAME_ID + 2: "order_blue_buff",
+    FIRST_GAME_ID + 3: "chaos_red_buff",
+}
 
 
 def zed_history() -> JsonValue:
@@ -88,7 +104,13 @@ def test_flex_stands_in_when_there_is_no_solo_rank() -> None:
 def test_history_gives_each_game_newest_first_with_its_champion_position_and_result() -> None:
     games = recent_games_of(zed_history(), puuid_of(ZED))
     assert games[0] == RecentGame(
-        champion_id=ZED_ID, position="MIDDLE", is_win=True, duration_seconds=1800
+        champion_id=ZED_ID,
+        position="MIDDLE",
+        is_win=True,
+        duration_seconds=1800,
+        game_id=FIRST_GAME_ID,
+        team_id=100,
+        participant_id=1,
     )
     assert [game.is_win for game in games] == [True, True, True, False, False]
 
@@ -181,12 +203,104 @@ def test_too_few_games_or_no_clear_favourite_gives_no_usual_position() -> None:
     assert intel.is_off_role is False
 
 
-def fake_league_client(requested_paths: list[str], failing_puuids: set[str]) -> web.Application:
+def vi_history() -> JsonValue:
+    # Newest first: four jungle games on Vi, on alternating sides, then one game in top.
+    return match_history(
+        puuid_of(VI_SEED),
+        [
+            *(
+                PastGame(
+                    VI_ID, "JUNGLE", "NONE", is_win=True, team_id=100 if index % 2 == 0 else 200
+                )
+                for index in range(4)
+            ),
+            PastGame(VI_ID, "TOP", "SOLO", is_win=False),
+        ],
+    )
+
+
+def start_timeline(point_name: str) -> JsonValue:
+    start_point = RIFT_MAP.points[point_name]
+    return jungle_start_timeline(start_point.x_position, start_point.y_position)
+
+
+def test_history_keeps_each_games_id_team_and_participant() -> None:
+    games = recent_games_of(vi_history(), puuid_of(VI_SEED))
+    assert [(game.game_id, game.team_id, game.participant_id) for game in games[:2]] == [
+        (FIRST_GAME_ID, 100, 1),
+        (FIRST_GAME_ID + 1, 200, 1),
+    ]
+
+
+def test_a_likely_junglers_jungle_games_have_their_timelines_read() -> None:
+    assert jungle_timeline_paths(recent_games_of(vi_history(), puuid_of(VI_SEED))) == [
+        f"/lol-match-history/v1/game-timelines/{FIRST_GAME_ID + index}" for index in range(4)
+    ]
+
+
+def test_a_player_who_rarely_jungles_has_no_timelines_read() -> None:
+    assert jungle_timeline_paths(recent_games_of(zed_history(), puuid_of(ZED))) == []
+    one_jungle_game = [
+        RecentGame(VI_ID, "JUNGLE", is_win=True, game_id=FIRST_GAME_ID),
+        *(
+            RecentGame(VI_ID, "TOP", is_win=True, game_id=FIRST_GAME_ID + index)
+            for index in range(1, 5)
+        ),
+    ]
+    assert jungle_timeline_paths(one_jungle_game) == []
+
+
+def test_past_games_timelines_are_shared_between_the_engine_and_the_recorder() -> None:
+    assert "/lol-match-history/v1/game-timelines/" in PLAYER_LOOKUP_PATH_PREFIXES
+
+
+def test_the_intel_says_where_a_jungler_usually_starts() -> None:
+    record = PlayerRecord(
+        ranked=None,
+        recent_games=(RecentGame(VI_ID, "JUNGLE", is_win=True),),
+        jungle_starts=JungleStarts(blue_count=1, red_count=3),
+    )
+    intel = player_intel(record, VI_ID, "JUNGLE", team="CHAOS")
+    assert (
+        intel.jungle_start_side,
+        intel.jungle_start_half,
+        intel.jungle_start_count,
+        intel.jungle_start_games,
+    ) == ("red", "top", 3, 4)
+    assert player_intel(record, VI_ID, "JUNGLE").jungle_start_half is None
+    assert (
+        player_intel(
+            dataclasses.replace(record, jungle_starts=None), VI_ID, "JUNGLE"
+        ).jungle_start_side
+        is None
+    )
+
+
+async def test_a_junglers_usual_start_is_read_from_their_past_games() -> None:
+    requested_paths: list[str] = []
+    async with (
+        serve(fake_league_client(requested_paths, set(), with_vi_jungling=True)) as client_url,
+        aiohttp.ClientSession() as session,
+    ):
+        client = LeagueClient(session, client_url, password="", tls_context=None)
+        records = await load_player_records(client, {}, pause_seconds=0.0)
+    vi_record = records[("CHAOS", "vi")]
+    assert vi_record.record.jungle_starts == JungleStarts(blue_count=1, red_count=3)
+    assert records[("CHAOS", "zed")].record.jungle_starts is None
+    timeline_paths = [path for path in requested_paths if "game-timelines" in path]
+    assert len(timeline_paths) == 4
+
+
+def fake_league_client(
+    requested_paths: list[str], failing_puuids: set[str], *, with_vi_jungling: bool = False
+) -> web.Application:
     application = web.Application()
     history_by_puuid = {
         puuid_of(seed): match_history(puuid_of(seed), []) for seed in DEFAULT_PLAYERS
     }
     history_by_puuid[puuid_of(ZED)] = zed_history()
+    if with_vi_jungling:
+        history_by_puuid[puuid_of(VI_SEED)] = vi_history()
 
     async def session_route(_request: web.Request) -> web.Response:
         return web.json_response(gameflow_session())
@@ -209,7 +323,16 @@ def fake_league_client(requested_paths: list[str], failing_puuids: set[str]) -> 
     application.router.add_get("/lol-gameflow/v1/session", session_route)
     application.router.add_get("/lol-game-data/assets/v1/champion-summary.json", summary_route)
     application.router.add_get("/lol-ranked/v1/ranked-stats/{puuid}", ranked_route)
+
+    async def timeline_route(request: web.Request) -> web.Response:
+        requested_paths.append(request.path_qs)
+        point_name = VI_START_POINTS.get(int(request.match_info["game_id"]))
+        if point_name is None:
+            return web.json_response({"message": "not found"}, status=404)
+        return web.json_response(start_timeline(point_name))
+
     application.router.add_get("/lol-match-history/v1/products/lol/{puuid}/matches", history_route)
+    application.router.add_get("/lol-match-history/v1/game-timelines/{game_id}", timeline_route)
     return application
 
 
