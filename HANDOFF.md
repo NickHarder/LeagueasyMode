@@ -3,8 +3,8 @@
 If you are picking this work up, human or model: read this file top to bottom first. The `handoff` skill
 refreshes it; it describes the current state.
 
-Last updated: 2026-10-09, on branch `feat/jungle-four-minute-positions`. `main` holds phases 0
-to 8 and phase 9's 9.1 to 9.3, 9.5 and 9.6 (pull requests #2 to #44, merged).
+Last updated: 2026-10-09, on branch `feat/tuning`. `main` holds phases 0 to 8, phase 9 but for
+9.4, the Data Dragon growth fix and the plans' approval (pull requests #2 to #47, merged).
 
 ## Where things stand
 
@@ -14,29 +14,29 @@ test on a Mac; phase 2 ([docs/plans/phase-2-exact-facts.md](docs/plans/phase-2-e
 built, its structures in phase 8.5. Phases 3 to 7 are built and merged
 ([phase 3](docs/plans/phase-3-economy-and-open-policy.md), approved;
 [phase 4](docs/plans/phase-4-positions.md), [phase 5](docs/plans/phase-5-models.md),
-[phase 6](docs/plans/phase-6-post-game.md) and [phase 7](docs/plans/phase-7-packaging.md), drafts
-built on their best guesses, phase 7 without signing as the owner chose); phase 5's models are
-hand-set and phase 6's thresholds empty until 20 recorded games exist. Phase 8
-([docs/plans/phase-8-first-test.md](docs/plans/phase-8-first-test.md), a draft) goes past the
+[phase 6](docs/plans/phase-6-post-game.md) and [phase 7](docs/plans/phase-7-packaging.md), built
+on their best guesses and approved on 2026-10-09, phase 7 without signing as the owner chose);
+phase 5's models are hand-set and phase 6's thresholds empty until 20 recorded games exist. Phase 8
+([docs/plans/phase-8-first-test.md](docs/plans/phase-8-first-test.md), approved) goes past the
 approved plan: 8.1 to 8.6 (the status page and the report after a test, the overlay over League's
 own screen and window, moving the widgets, spoken callouts, structures, the Swift 6 language mode)
 are merged (#34 to #39). None waits for the test on a Mac, which confirms them. Phase 8 is built.
-Phase 9 ([docs/plans/phase-9-scouting.md](docs/plans/phase-9-scouting.md), a draft) reads the
+Phase 9 ([docs/plans/phase-9-scouting.md](docs/plans/phase-9-scouting.md), approved) reads the
 players' past games: 9.1 to 9.3, 9.5 and 9.6 (where the enemy jungler usually starts and is at
 4:00, champion pools, the usual start as a prior for the jungle path, scouting scored after the
-game) are merged (#40 to #44); 9.7, the 4:00 habit in the positions, is on
-`feat/jungle-four-minute-positions`; 9.4 waits for the owner's word on its requests. Each slice goes up as its
-own pull request into `main` without waiting for the one before to merge.
+game) and 9.7 (the 4:00 habit in the positions) are merged (#40 to #45); 9.4, which the owner
+said yes to on 2026-10-09, is next. Each slice goes up as its own pull request into `main`
+without waiting for the one before to merge.
 
 | Area | State | Proof |
 |---|---|---|
 | Scaffold | ai-kit v0.11.1, Python layer, GitHub CI | `.copier-answers.yml` |
-| Gate | Green: lint, 815 tests (and 38 in Chromium), secrets | `make gate` |
+| Gate | Green: lint, 831 tests (and 38 in Chromium), secrets | `make gate` |
 | Recorder | Records games, the client's patch data and the post-game timeline; anonymized copies | `uv run leagueasymode record`; `tests/test_recorder.py`, `tests/test_anonymize.py` |
 | Replay | A recording served as a stand-in game API | `uv run leagueasymode replay <recording>`; `tests/test_replay.py` |
 | Engine and overlay page | The dragon and Elder timer, from the game's answer to the page | `uv run leagueasymode run`; `tests/test_tracer_bullet.py` |
 | Phase 2 facts | Objective strip, buffs, inhibitors, numbers window, enemy strip, callouts, item catalog and item gold, roles, combat stats | `tests/test_objective_strip.py`, `test_numbers_window.py`, `test_callouts.py`, `test_item_facts.py`, `test_roles.py`, `test_combat_stats.py`; eight browser tests |
-| Patch stats | Each patch's champion and item stats from Data Dragon, fetched once a patch and kept on disk; **never fetched from the real Data Dragon yet** (this environment cannot reach it) | `tests/test_data_dragon.py` against a stand-in |
+| Patch stats | Each patch's champion and item stats from Data Dragon, fetched once a patch and kept on disk; checked against the real 16.20.1 files on 2026-10-09, with the attack damage growth Data Dragon leaves out since 16.5.1 borrowed from 16.4.1 | `tests/test_data_dragon.py` against a stand-in |
 | Widgets in a browser | Rendered in Chromium against a replay | `uv run pytest -m browser` (needs Chromium); `tests/test_overlay_page.py` |
 | macOS app | Builds on macOS 15 and passes its 58 unit tests in CI; **never run over League** | `overlay/macos/`; CI job `macos-overlay` |
 | App bundle | `LeagueasyMode.app` with the engine inside, signed ad hoc, built by CI, its engine started from an empty home folder; **never opened on a Mac by a person** | `overlay/macos/scripts/build_app.sh`; CI job `macos-app`, which keeps the zip with each run |
@@ -61,9 +61,8 @@ In `AGENTS.md`, this project's own included: every session reads that file.
 
 ## Open, for the owner
 
-1. **Data Dragon from this environment**: the owner said yes on 2026-10-08; the environment's
-   network settings still deny `ddragon.leagueoflegends.com`. Once it is allowed, a session checks
-   the parsing against the real files.
+1. **Data Dragon from this environment**: allowed (the owner, 2026-10-08 and 2026-10-09), and
+   reachable since 2026-10-09; the parsing is checked against the real 16.20.1 files.
 2. **The test on a Mac** in [docs/references/macos-app.md](docs/references/macos-app.md): run the
    app, play a Practice Tool game in each display mode, and record a game or two. The recordings
    (anonymized) become the test data every estimator needs. With 7.2 the app needs no clone: the
@@ -84,30 +83,16 @@ In `AGENTS.md`, this project's own included: every session reads that file.
    adds "6 in ~0:35" on an enemy's row within 1:30 of 6, 11 or 16, and the callout "Zed hits 6
    in ~0:15"; backs (3.7) add "went back 7:42 · returns ~0:24" and, for their jungler only, the
    callout "Vi went back: in the jungle again in ~0:20". The same applies to both.
-6. **Phase 4's plan** ([docs/plans/phase-4-positions.md](docs/plans/phase-4-positions.md)), a
-   draft: its order, and its three proposals (the minimap layer drawn over League's own minimap,
-   dead camp timers shown, one "missing" callout at a time).
-7. **The minimap layer on the Mac (4.6)**: it is drawn where League's minimap is, from League's
+6. **The minimap layer on the Mac (4.6)**: it is drawn where League's minimap is, from League's
    `game.cfg`, at 22% of the window's height times League's minimap scale; whether that lines up
    with League's own minimap can only be seen on the Mac. Say how far off it is, or send a
    screenshot.
-8. **Phase 5's plan** ([docs/plans/phase-5-models.md](docs/plans/phase-5-models.md)), a draft:
-   its order, and its four proposals (win chance shown with its two reasons, the fight chance's
-   wording, contests shown only near a monster, "holding gold" from 1,300).
-9. **Phase 6's plan** ([docs/plans/phase-6-post-game.md](docs/plans/phase-6-post-game.md)), a
-   draft: its order, and its two proposals (the post-game window opened from the menu only;
-   thresholds at the first 20 games' average less a standard deviation).
-10. **Phase 7's plan** ([docs/plans/phase-7-packaging.md](docs/plans/phase-7-packaging.md)), a
-    draft: its order, and its proposals (the update check on, once a day, off from the menu; the
-    eight switches of the settings page).
-11. **Phase 8's plan** ([docs/plans/phase-8-first-test.md](docs/plans/phase-8-first-test.md)), a
-    draft: its order, what the report holds, and spoken callouts off unless turned on.
-12. **The first release**: when the app has been tried on a Mac, tag `v0.1.0` on `main` and push
-    the tag (`docs/references/macos-app.md`, "Releases, updates and opening at login"). Publishing
-    is the owner's call; no session tags a release unasked.
-13. **Documents waiting for approval** (`make docs-status`): the approved plan v2 and phase 2's
-   plan, the retrospective, and the references on recordings, the engine and the macOS app, all
-   drafts. Phase 3's plan is approved.
+7. **The first release**: when the app has been tried on a Mac, tag `v0.1.0` on `main` and push
+   the tag (`docs/references/macos-app.md`, "Releases, updates and opening at login"). Publishing
+   is the owner's call; no session tags a release unasked.
+8. **Documents waiting for approval** (`make docs-status`): the retrospective, and the references
+   on recordings, the engine and the macOS app, all drafts. Every plan is approved (phase 3's on
+   2026-10-08, the rest on 2026-10-09).
 
 ## Where everything is
 
@@ -174,7 +159,9 @@ In `AGENTS.md`. Also: a raw recording (it holds other players' names); only `ano
 - Combat stats leave out runes, passives, stacks and buffs, so an estimate runs low for a champion
   that has them. Data Dragon's item stats leave out some stats (ability haste, lethality, magic
   penetration), which the overlay does not show anyway. The Data Dragon test files are
-  hand-written, from memory, not this patch's.
+  hand-written; the reading is checked against the real 16.20.1 files. Data Dragon has given
+  every champion an attack damage growth of 0 since 16.5.1, so the engine borrows 16.4.1's; a
+  champion released since (Locke) has none, and a growth changed since is a patch behind.
 - The Voidgrubs' 14:45 and the Herald's 19:45 leave times follow past seasons and one community
   guide; a recording confirms them.
 - The Swift app moved to the Swift 6 language mode (8.6), whose concurrency checks it passes in

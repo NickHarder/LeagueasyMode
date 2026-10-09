@@ -3,8 +3,11 @@ type: Plan
 title: "Phase 6: the post-game window and accuracy history"
 description: The slices of phase 6 of the approved plan, the accuracy history, the accuracy thresholds CI holds, the game reconstructed and the post-game window, in a proposed build order with what each needs and where the owner decides.
 tags: [plan, phase-6, post-game]
-status: draft
+status: stable
 generated: { by: claude-code/cloud, at: 2026-10-09T00:30:00Z }
+verified:
+  - { by: human:nickharder, at: 2026-10-09T04:38:24Z }
+approved_sha256: 873196ee2de0800c1da78b6408c99586f403fa3515584ae0eb14f64498a87e28
 ---
 
 # Phase 6: the post-game window and accuracy history

@@ -182,7 +182,12 @@ the client, Data Dragon's newest patch is used; without Data Dragon, the newest 
 stands in; `LEAGUEASYMODE_DOWNLOAD_PATCH_STATS=False` keeps the engine to what is on disk. HTTPS to
 Data Dragon trusts the Mac's own certificate store. The engine loads the patch's data again at
 every game's start, so a patch that lands between two games is picked up without a
-restart.[^data-dragon]
+restart. Since 16.5.1, Data Dragon gives every champion an attack damage growth of 0, while the
+game's own data still has it (Ahri's 3 a level, checked on 16.20.1): a patch without any growth
+takes each champion's from the newest older patch that has it (16.4.1), found by halving the
+older patches' `champion.json` (eight requests once a patch) and kept beside the patch as
+`attack-damage-growth-<version>.json`. A champion newer than that patch keeps 0. The status page
+says when the growth is borrowed.[^data-dragon]
 
 # Players' records
 

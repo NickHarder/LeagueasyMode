@@ -3,8 +3,11 @@ type: Plan
 title: "Phase 5: models over the whole game"
 description: The slices of phase 5 of the approved plan, win chance, fights, objective contests and the You panel, hand-set first and refit on recorded games, in a proposed build order with what each needs and where the owner decides.
 tags: [plan, phase-5, models]
-status: draft
+status: stable
 generated: { by: claude-code/cloud, at: 2026-10-08T23:40:00Z }
+verified:
+  - { by: human:nickharder, at: 2026-10-09T04:38:23Z }
+approved_sha256: 829598c7ac46bc8cc6335bcf1c7b102af7340d7c705e6c50679088403d49c6d0
 ---
 
 # Phase 5: models over the whole game

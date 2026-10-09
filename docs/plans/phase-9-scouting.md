@@ -3,8 +3,11 @@ type: Plan
 title: "Phase 9: scouting from the players' past games"
 description: What the players' past games can say before and early in this one, starting with where the enemy jungler usually starts, read from the timelines of their recent jungle games through the League client, in a proposed build order with what each needs and where the owner decides.
 tags: [plan, phase-9, scouting]
-status: draft
+status: stable
 generated: { by: claude-code/cloud, at: 2026-10-09T04:20:00Z }
+verified:
+  - { by: human:nickharder, at: 2026-10-09T04:38:24Z }
+approved_sha256: cffa7847dff0f5484f2e301cda36dda89e208b527f119264250c74b1648ac952
 ---
 
 # Phase 9: scouting from the players' past games

@@ -3,8 +3,11 @@ type: Plan
 title: "Phase 4: where the enemies are"
 description: The slices of phase 4 of the approved plan, the map, the clues, the position filter, the jungle path, control wards and the minimap layer, in a proposed build order with what each needs and where the owner decides.
 tags: [plan, phase-4, positions]
-status: draft
+status: stable
 generated: { by: claude-code/cloud, at: 2026-10-08T22:57:15Z }
+verified:
+  - { by: human:nickharder, at: 2026-10-09T04:38:23Z }
+approved_sha256: cd9ba632e4a2be524e4caead9fcbfe4c88687fe719c46f3d742ae8f796b966e3
 ---
 
 # Phase 4: where the enemies are

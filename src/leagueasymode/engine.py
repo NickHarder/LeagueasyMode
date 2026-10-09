@@ -509,11 +509,17 @@ class OverlayEngine:
             return
         self._patch_stats = patch_stats
         logger.info("loaded patch %s's champion and item stats", patch_stats.version)
+        growth_text = (
+            f"; attack damage growth from {patch_stats.growth_version}, which Data Dragon has "
+            "left out since"
+            if patch_stats.growth_version is not None
+            else ""
+        )
         self.status.set_part(
             "patch",
             "ok",
-            f"Patch {patch_stats.version}: {len(patch_stats.champions_by_key)} champions, "
-            f"{len(patch_stats.items_by_id)} items",
+            f"Patch {patch_stats.version}: {patch_stats.champion_count} champions, "
+            f"{len(patch_stats.items_by_id)} items{growth_text}",
         )
 
     async def _load_the_player_records(self, client: LeagueClient | None) -> None:
