@@ -314,6 +314,7 @@ body {
 
 .callout[data-kind="missing"],
 .callout[data-kind="jungle_start"],
+.callout[data-kind="jungle_four_minutes"],
 .callout[data-kind="level_spike"],
 .callout[data-kind="level_soon"] {
   border-color: var(--widget-enemy);

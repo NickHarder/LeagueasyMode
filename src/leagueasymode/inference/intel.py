@@ -2,14 +2,15 @@
 
 Counted from the League client's answers for the player (`player_intel.py`): their recent games on
 Summoner's Rift, newest first. The usual position needs enough games and a clear favourite, so
-that a player who fills every role is not called off-role. A likely jungler's usual start is the
-side most of their recent jungle games started on (`jungle_starts.py`).
+that a player who fills every role is not called off-role. A likely jungler's usual start, and
+where they usually are at 4:00, are the sides most of their recent jungle games found them on
+(`jungle_starts.py`).
 """
 
 from collections import Counter
 from typing import Final
 
-from leagueasymode.jungle_starts import start_half
+from leagueasymode.jungle_starts import four_minute_half, start_half
 from leagueasymode.overlay_state import PlayerIntel
 from leagueasymode.player_intel import PlayerRecord
 
@@ -38,6 +39,11 @@ def player_intel(
     usual_position = _usual_position([game.position for game in games])
     jungle_starts = record.jungle_starts
     jungle_start_side = jungle_starts.usual_side if jungle_starts else None
+    four_minute_sides = record.four_minute_sides
+    usual_four_minute_side = four_minute_sides.usual_side if four_minute_sides else None
+    usual_four_minute_half = (
+        four_minute_half(usual_four_minute_side, team) if usual_four_minute_side else None
+    )
     return PlayerIntel(
         ranked=record.ranked,
         recent_game_count=len(games),
@@ -51,6 +57,9 @@ def player_intel(
         jungle_start_half=start_half(jungle_start_side, team) if jungle_start_side else None,
         jungle_start_count=jungle_starts.usual_count if jungle_starts else 0,
         jungle_start_games=jungle_starts.game_count if jungle_starts else 0,
+        four_minute_half=usual_four_minute_half,
+        four_minute_count=four_minute_sides.usual_count if four_minute_sides else 0,
+        four_minute_games=four_minute_sides.game_count if four_minute_sides else 0,
     )
 
 

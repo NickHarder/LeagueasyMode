@@ -55,12 +55,12 @@ pytestmark = pytest.mark.browser
 
 ENEMY_JUNGLER: Final = DEFAULT_PLAYERS[6].riot_id_game_name
 VI_SEED: Final = DEFAULT_PLAYERS[6]
-# Vi's recent jungle games, newest first: her team's id and where she was at 2:00.
+# Vi's recent jungle games, newest first: her team's id and where she was at 2:00 and at 4:00.
 VI_STARTS: Final = (
-    (100, "order_red_buff"),
-    (200, "chaos_red_buff"),
-    (100, "order_blue_buff"),
-    (200, "chaos_red_buff"),
+    (100, "order_red_buff", "top_river_scuttle"),
+    (200, "chaos_red_buff", "bot_river_scuttle"),
+    (100, "order_blue_buff", "mid_center"),
+    (200, "chaos_red_buff", "order_bot_lane_2"),
 )
 EN_DASH: Final = "\u2013"
 MINUS_SIGN: Final = "\u2212"
@@ -217,7 +217,7 @@ def looked_up_players() -> list[tuple[str, JsonValue]]:
         elif seed is VI_SEED:
             past_games = [
                 PastGame(CHAMPION_IDS["Vi"], "JUNGLE", "NONE", is_win=True, team_id=team_id)
-                for team_id, _ in VI_STARTS
+                for team_id, _, _ in VI_STARTS
             ]
         else:
             past_games = []
@@ -231,14 +231,19 @@ def looked_up_players() -> list[tuple[str, JsonValue]]:
 
 
 def vis_jungle_starts() -> list[tuple[str, JsonValue]]:
-    """Each of Vi's past jungle games' timelines, which place her at a buff at 2:00."""
+    """Each of Vi's past jungle games' timelines: at a buff at 2:00, and somewhere at 4:00."""
     answers: list[tuple[str, JsonValue]] = []
-    for index, (_, start_point_name) in enumerate(VI_STARTS):
+    for index, (_, start_point_name, four_minute_point_name) in enumerate(VI_STARTS):
         start_point = RIFT_MAP.points[start_point_name]
+        four_minute_point = RIFT_MAP.points[four_minute_point_name]
         answers.append(
             (
                 f"/lol-match-history/v1/game-timelines/{past_game_id(index)}",
-                jungle_start_timeline(start_point.x_position, start_point.y_position),
+                jungle_start_timeline(
+                    start_point.x_position,
+                    start_point.y_position,
+                    (four_minute_point.x_position, four_minute_point.y_position),
+                ),
             )
         )
     return answers
@@ -694,10 +699,11 @@ async def test_the_enemy_strip_shows_each_enemys_rank_and_record(tmp_path: Path)
         )
         await expect(caitlyn_intel).to_have_text("G1")
         # Vi won her four recent games, all in the jungle, three of them started at red buff,
-        # which is the top half of the map for her team this game.
+        # which is the top half of the map for her team this game; at 4:00 three found her on
+        # her blue buff's half, the bottom one this game.
         vi_intel = page.locator("#enemy-strip .enemy-row", has_text="Vi").locator(".enemy-intel")
         await expect(vi_intel).to_have_text(
-            f"G1 · 4{EN_DASH}0 W4 · 4 on champ · starts red (top) 3/4"
+            f"G1 · 4{EN_DASH}0 W4 · 4 on champ · starts red (top) 3/4 · 4:00 bot 3/4"
         )
         await keep_screenshot(page, "player-intel")
 

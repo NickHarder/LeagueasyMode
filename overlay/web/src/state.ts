@@ -95,6 +95,10 @@ export interface PlayerIntel {
   /** How many of their recent jungle games read started there, of how many. */
   readonly jungle_start_count: number;
   readonly jungle_start_games: number;
+  /** Where a likely jungler usually is at 4:00, after their first clear, of how many games. */
+  readonly four_minute_half: "top" | "mid" | "bot" | null;
+  readonly four_minute_count: number;
+  readonly four_minute_games: number;
 }
 
 /** A spell the player marked an enemy as having used, and when it is back: an estimate. */
@@ -230,6 +234,7 @@ export type CalloutKind =
   | "went_back"
   | "missing"
   | "jungle_start"
+  | "jungle_four_minutes"
   | "inhibitor_open"
   | "suggestion";
 
@@ -414,11 +419,13 @@ const CALLOUT_KINDS: ReadonlySet<string> = new Set([
   "went_back",
   "missing",
   "jungle_start",
+  "jungle_four_minutes",
   "inhibitor_open",
   "suggestion",
 ]);
 const START_SIDES: ReadonlySet<string> = new Set(["blue", "red"]);
 const MAP_HALVES: ReadonlySet<string> = new Set(["top", "bot"]);
+const FOUR_MINUTE_HALVES: ReadonlySet<string> = new Set(["top", "mid", "bot"]);
 const MARKED_SPELLS: ReadonlySet<string> = new Set(["flash", "summoner", "ultimate"]);
 
 /** Return whether a value is a plain object, so that its fields can be read. */
@@ -554,7 +561,10 @@ export function isPlayerIntel(value: unknown): value is PlayerIntel {
     (value["jungle_start_side"] === null || isOneOf(value["jungle_start_side"], START_SIDES)) &&
     (value["jungle_start_half"] === null || isOneOf(value["jungle_start_half"], MAP_HALVES)) &&
     typeof value["jungle_start_count"] === "number" &&
-    typeof value["jungle_start_games"] === "number"
+    typeof value["jungle_start_games"] === "number" &&
+    (value["four_minute_half"] === null || isOneOf(value["four_minute_half"], FOUR_MINUTE_HALVES)) &&
+    typeof value["four_minute_count"] === "number" &&
+    typeof value["four_minute_games"] === "number"
   );
 }
 

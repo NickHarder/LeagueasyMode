@@ -3,7 +3,7 @@
 If you are picking this work up, human or model: read this file top to bottom first. The `handoff` skill
 refreshes it; it describes the current state.
 
-Last updated: 2026-10-09, on branch `feat/jungle-start`. `main` holds phases 0 to 8 (pull
+Last updated: 2026-10-09, on branch `feat/jungle-four-minutes`. `main` holds phases 0 to 8 (pull
 requests #2 to #39, merged).
 
 ## Where things stand
@@ -22,14 +22,15 @@ approved plan: 8.1 to 8.6 (the status page and the report after a test, the over
 own screen and window, moving the widgets, spoken callouts, structures, the Swift 6 language mode)
 are merged (#34 to #39). None waits for the test on a Mac, which confirms them. Phase 8 is built.
 Phase 9 ([docs/plans/phase-9-scouting.md](docs/plans/phase-9-scouting.md), a draft) reads the
-players' past games: 9.1, where the enemy jungler usually starts, is on `feat/jungle-start` (#40).
+players' past games: 9.1, where the enemy jungler usually starts, is on `feat/jungle-start` (#40);
+9.2, where they usually are at 4:00, on `feat/jungle-four-minutes`, built on it.
 Each slice goes up as its own pull request into `main` without waiting for the one before to
 merge.
 
 | Area | State | Proof |
 |---|---|---|
 | Scaffold | ai-kit v0.11.1, Python layer, GitHub CI | `.copier-answers.yml` |
-| Gate | Green: lint, 790 tests (and 38 in Chromium), secrets | `make gate` |
+| Gate | Green: lint, 798 tests (and 38 in Chromium), secrets | `make gate` |
 | Recorder | Records games, the client's patch data and the post-game timeline; anonymized copies | `uv run leagueasymode record`; `tests/test_recorder.py`, `tests/test_anonymize.py` |
 | Replay | A recording served as a stand-in game API | `uv run leagueasymode replay <recording>`; `tests/test_replay.py` |
 | Engine and overlay page | The dragon and Elder timer, from the game's answer to the page | `uv run leagueasymode run`; `tests/test_tracer_bullet.py` |

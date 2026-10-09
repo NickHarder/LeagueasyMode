@@ -143,6 +143,12 @@ class PlayerIntel(BaseModel):
     jungle_start_half: Literal["top", "bot"] | None = None
     jungle_start_count: int = 0
     jungle_start_games: int = 0
+    # Where a likely jungler usually is at 4:00, after their first clear: the half of the map that
+    # is this game ("top", "mid" or "bot"), and how many of the recent jungle games read found them
+    # there; None and 0 when not known.
+    four_minute_half: Literal["top", "mid", "bot"] | None = None
+    four_minute_count: int = 0
+    four_minute_games: int = 0
 
 
 class GoldEstimate(BaseModel):
@@ -376,6 +382,7 @@ type CalloutKind = Literal[
     "went_back",
     "missing",
     "jungle_start",
+    "jungle_four_minutes",
     "inhibitor_open",
     "suggestion",
 ]

@@ -6,6 +6,11 @@ skill has the format.
 
 ## 2026-10-09
 
+- Phase 9.2, where the enemy jungler is at 4:00: the timelines 9.1 reads also say which half of
+  the map a likely jungler was on at 4:00, once a first clear is done, named for the buff of
+  theirs in it, or mid. Their row adds "4:00 bot 3/4", turned into top or bot for their team this
+  game, and a callout from 2:45 says "Vi is usually bot side at 4:00 (3 of 4)". No new request:
+  the same timelines.
 - Phase 9.1, where the enemy jungler starts: for a likely jungler, the engine reads the timelines
   of up to five of their recent jungle games through the League client. In each, it finds which
   side of their own jungle they were on at 2:00, blue buff's or red buff's. Their row says
