@@ -317,6 +317,41 @@
       "title": "DragonTimer",
       "type": "object"
     },
+    "FightEstimate": {
+      "additionalProperties": false,
+      "description": "An even fight now: every living player of both teams, at full health, all at once.\n\nAn estimate (`inference/fights.py`): each team's damage times its health against the other's\ndamage, from the combat stats, as Lanchester's square law has it; hand-set until refit.",
+      "properties": {
+        "ally_chance": {
+          "title": "Ally Chance",
+          "type": "number"
+        },
+        "ally_fighters": {
+          "title": "Ally Fighters",
+          "type": "integer"
+        },
+        "enemy_fighters": {
+          "title": "Enemy Fighters",
+          "type": "integer"
+        },
+        "ally_physical_share": {
+          "title": "Ally Physical Share",
+          "type": "number"
+        },
+        "enemy_physical_share": {
+          "title": "Enemy Physical Share",
+          "type": "number"
+        }
+      },
+      "required": [
+        "ally_chance",
+        "ally_fighters",
+        "enemy_fighters",
+        "ally_physical_share",
+        "enemy_physical_share"
+      ],
+      "title": "FightEstimate",
+      "type": "object"
+    },
     "GoldEstimate": {
       "additionalProperties": false,
       "description": "A player's gold: what they have earned this game, and what they hold unspent.\n\nExact for the player on this machine, whose gold the game gives; their total adds what they\nown and what they drank, placed or lost on a sale. For the others an estimate\n(`inference/gold.py`), with a band that holds the truth about 4 times in 5.",
@@ -1358,6 +1393,17 @@
       "anyOf": [
         {
           "$ref": "#/$defs/WinChance"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "fight": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/FightEstimate"
         },
         {
           "type": "null"

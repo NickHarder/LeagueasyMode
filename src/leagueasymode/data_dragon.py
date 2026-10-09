@@ -76,11 +76,19 @@ class DataDragonSpell(RiotPayloadModel):
     cooldown: list[float] = Field(default_factory=list)
 
 
+class DataDragonChampionInfo(RiotPayloadModel):
+    """Riot's ratings of a champion, from 0 to 10: how much its damage is attack, and magic."""
+
+    attack: int = 0
+    magic: int = 0
+
+
 class DataDragonChampion(RiotPayloadModel):
     """One champion of Data Dragon's `championFull.json`."""
 
     champion_id: str = Field(alias="id")
     name: str
+    info: DataDragonChampionInfo = Field(default_factory=DataDragonChampionInfo)
     # Its classes, the first its main one: "Marksman", "Mage", "Assassin", "Fighter", "Tank",
     # "Support".
     tags: list[str] = Field(default_factory=list)
@@ -247,6 +255,22 @@ class PatchStats:
         """
         champion = self._champion(raw_champion_name, champion_name)
         return tuple(champion.tags) if champion is not None else ()
+
+    def champion_magic_share(self, raw_champion_name: str, champion_name: str) -> float | None:
+        """Return the share of a champion's damage that is magic, by Riot's ratings.
+
+        Args:
+            raw_champion_name: The scoreboard's `rawChampionName`.
+            champion_name: The scoreboard's `championName`.
+
+        Returns:
+            Its magic rating over its attack and magic ratings; None for a champion this patch's
+            files do not have, or rate at 0 for both.
+        """
+        champion = self._champion(raw_champion_name, champion_name)
+        if champion is None or champion.info.attack + champion.info.magic == 0:
+            return None
+        return champion.info.magic / (champion.info.attack + champion.info.magic)
 
     def ultimate_cooldowns(
         self, raw_champion_name: str, champion_name: str

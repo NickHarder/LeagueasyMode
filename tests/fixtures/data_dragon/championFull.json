@@ -11,9 +11,9 @@
    "title": "",
    "blurb": "",
    "info": {
-    "attack": 5,
-    "defense": 5,
-    "magic": 5,
+    "attack": 7,
+    "defense": 7,
+    "magic": 1,
     "difficulty": 5
    },
    "image": {
@@ -112,10 +112,10 @@
    "title": "",
    "blurb": "",
    "info": {
-    "attack": 5,
+    "attack": 8,
     "defense": 5,
-    "magic": 5,
-    "difficulty": 5
+    "magic": 3,
+    "difficulty": 6
    },
    "image": {
     "full": "LeeSin.png"
@@ -213,9 +213,9 @@
    "title": "",
    "blurb": "",
    "info": {
-    "attack": 5,
-    "defense": 5,
-    "magic": 5,
+    "attack": 3,
+    "defense": 4,
+    "magic": 8,
     "difficulty": 5
    },
    "image": {
@@ -314,10 +314,10 @@
    "title": "",
    "blurb": "",
    "info": {
-    "attack": 5,
-    "defense": 5,
-    "magic": 5,
-    "difficulty": 5
+    "attack": 9,
+    "defense": 2,
+    "magic": 4,
+    "difficulty": 6
    },
    "image": {
     "full": "Jinx.png"
@@ -415,9 +415,9 @@
    "blurb": "",
    "info": {
     "attack": 5,
-    "defense": 5,
-    "magic": 5,
-    "difficulty": 5
+    "defense": 6,
+    "magic": 6,
+    "difficulty": 7
    },
    "image": {
     "full": "Thresh.png"
@@ -515,10 +515,10 @@
    "title": "",
    "blurb": "",
    "info": {
-    "attack": 5,
+    "attack": 9,
     "defense": 5,
-    "magic": 5,
-    "difficulty": 5
+    "magic": 1,
+    "difficulty": 2
    },
    "image": {
     "full": "Darius.png"
@@ -616,10 +616,10 @@
    "title": "",
    "blurb": "",
    "info": {
-    "attack": 5,
+    "attack": 8,
     "defense": 5,
-    "magic": 5,
-    "difficulty": 5
+    "magic": 3,
+    "difficulty": 4
    },
    "image": {
     "full": "Vi.png"
@@ -717,10 +717,10 @@
    "title": "",
    "blurb": "",
    "info": {
-    "attack": 5,
-    "defense": 5,
-    "magic": 5,
-    "difficulty": 5
+    "attack": 9,
+    "defense": 2,
+    "magic": 1,
+    "difficulty": 7
    },
    "image": {
     "full": "Zed.png"
@@ -817,10 +817,10 @@
    "title": "",
    "blurb": "",
    "info": {
-    "attack": 5,
-    "defense": 5,
-    "magic": 5,
-    "difficulty": 5
+    "attack": 8,
+    "defense": 2,
+    "magic": 2,
+    "difficulty": 6
    },
    "image": {
     "full": "Caitlyn.png"
@@ -917,9 +917,9 @@
    "title": "",
    "blurb": "",
    "info": {
-    "attack": 5,
-    "defense": 5,
-    "magic": 5,
+    "attack": 2,
+    "defense": 4,
+    "magic": 9,
     "difficulty": 5
    },
    "image": {
@@ -1018,10 +1018,10 @@
    "title": "",
    "blurb": "",
    "info": {
-    "attack": 5,
+    "attack": 8,
     "defense": 5,
-    "magic": 5,
-    "difficulty": 5
+    "magic": 2,
+    "difficulty": 3
    },
    "image": {
     "full": "MonkeyKing.png"

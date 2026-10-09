@@ -30,6 +30,11 @@ compared with what is known to be true:
   is scored.
 - **The map** (phase 4.1): every player's position each minute on the timeline should lie near a
   path of the hand-built map; how far it lies on average says how well the map was drawn.
+- **Fights** (estimator 10): the timeline records every kill, with its killer, assisters and
+  place. Kills each within 15 seconds of the last and 3000 units of the first make one fight; a
+  fight of two kills or more is won by the team that lost fewer champions (an even trade is
+  left out). The chance its players had, from the last answer before its first kill, is scored
+  by its Brier score.
 - **Win chance** (estimator 12): the game's details say which team won. The chance given at the
   start of each minute is scored by its Brier score, the mean squared distance from the result:
   0.25 for a coin flip every minute, 0 for a sure and right answer.
@@ -58,6 +63,7 @@ from leagueasymode.inference.build_path import next_item
 from leagueasymode.inference.clues import ClueTracker
 from leagueasymode.inference.combat_stats import DEFAULT_MOVE_SPEED, estimated_combat_stats
 from leagueasymode.inference.experience import ExperienceTracker
+from leagueasymode.inference.fights import fight_estimate, fighter_of
 from leagueasymode.inference.gold import GoldTracker, PlayerKey, player_key, team_gold_of
 from leagueasymode.inference.jungle_path import JunglePathTracker
 from leagueasymode.inference.objectives import buff_timers, dragon_timer, inhibitor_timers
@@ -98,6 +104,10 @@ WARD_PLACED_EVENT: Final = "WARD_PLACED"
 CONTROL_WARD_TYPE: Final = "CONTROL_WARD"
 # A placement seen this close to one the timeline records is the same.
 WARD_MATCH_SECONDS: Final = 10.0
+# Kills this close in time to the last of a fight, and in place to its first, belong to it.
+FIGHT_GAP_SECONDS: Final = 15.0
+FIGHT_RADIUS_UNITS: Final = 3000.0
+FIGHT_SMALLEST_KILL_COUNT: Final = 2
 SECONDS_PER_MINUTE: Final = 60
 TEAM_BY_ID: Final = {100: "ORDER", 200: "CHAOS"}
 PERCENT: Final = 100.0
@@ -137,6 +147,9 @@ SCORE_DESCRIPTIONS: Final = {
     "brier_score": (
         "{estimator}: {sample_count} minutes, Brier score {value:.3f} (a coin flip scores 0.250)"
     ),
+    "fight_brier_score": (
+        "{estimator}: {sample_count} fights, Brier score {value:.3f} (a coin flip scores 0.250)"
+    ),
 }
 
 
@@ -159,6 +172,7 @@ class EstimatorScore:
         "mean_distance_units",
         "mean_chance",
         "brier_score",
+        "fight_brier_score",
     ]
 
     def describe(self) -> str:
@@ -198,6 +212,8 @@ class RecordedGame:
     control_wards_seen: Mapping[PlayerKey, tuple[float, ...]]
     # What the win chance read at the first answer of each minute, by minute.
     minute_win_features: Mapping[int, WinFeatures]
+    # The last answer before each of the timeline's fights, by the game time of its first kill.
+    fight_snapshots: Mapping[float, GameSnapshot]
 
 
 class DetailsTimeline(RiotPayloadModel):
@@ -257,11 +273,26 @@ class TimelineEvent(RiotPayloadModel):
     # The buyer of a purchase, and what they bought.
     participant_id: int = Field(default=0, alias="participantId")
     item_id: int = Field(default=0, alias="itemId")
-    # The champion a kill killed.
+    # The champion a kill killed, who killed them (0 for a turret or a monster), who helped,
+    # and where.
     victim_id: int = Field(default=0, alias="victimId")
+    killer_id: int = Field(default=0, alias="killerId")
+    assisting_participant_ids: list[int] = Field(
+        default_factory=list, alias="assistingParticipantIds"
+    )
+    position: TimelinePosition | None = None
     # The placer of a ward, and its kind.
     creator_id: int = Field(default=0, alias="creatorId")
     ward_type: str = Field(default="", alias="wardType")
+
+
+@dataclass(frozen=True)
+class TimelineFight:
+    """Kills close in time and place: who took part, and who died."""
+
+    start_seconds: float
+    participant_ids: frozenset[int]
+    victim_ids: tuple[int, ...]
 
 
 class TimelineFrame(RiotPayloadModel):
@@ -323,6 +354,9 @@ def read_recorded_game(recording_path: Path) -> RecordedGame:
     gold_estimates_by_minute: dict[int, Mapping[PlayerKey, GoldEstimate]] = {}
     level_estimates_by_minute: dict[int, Mapping[PlayerKey, LevelEstimate]] = {}
     win_features_by_minute: dict[int, WinFeatures] = {}
+    timeline = _timeline_in(client_resources)
+    fight_starts = [fight.start_seconds for fight in timeline_fights(timeline)] if timeline else []
+    fight_snapshots: dict[float, GameSnapshot] = {}
     for frame in iter_game_frames(recording_path):
         try:
             snapshot = GameSnapshot.model_validate(frame.payload)
@@ -331,6 +365,9 @@ def read_recorded_game(recording_path: Path) -> RecordedGame:
         game_time_seconds = snapshot.game_data.game_time_seconds
         game_minute = int(game_time_seconds // SECONDS_PER_MINUTE)
         snapshot_by_minute[game_minute] = snapshot
+        for fight_start in fight_starts:
+            if game_time_seconds < fight_start:
+                fight_snapshots[fight_start] = snapshot
         gold_estimates = gold_tracker.update(snapshot, item_catalog)
         level_estimates = experience_tracker.update(snapshot)
         last_backs = back_tracker.update(snapshot, item_catalog)
@@ -369,6 +406,7 @@ def read_recorded_game(recording_path: Path) -> RecordedGame:
         minute_jungle_camps=jungle_camps_by_minute,
         control_wards_seen=ward_tracker.placements(),
         minute_win_features=win_features_by_minute,
+        fight_snapshots=fight_snapshots,
     )
 
 
@@ -804,6 +842,88 @@ def score_backs(game: RecordedGame) -> list[EstimatorScore]:
     ]
 
 
+def score_fights(game: RecordedGame, patch_stats: PatchStats | None) -> EstimatorScore | None:
+    """Score the chance each fight's players had against which team won it.
+
+    Args:
+        game: The recorded game.
+        patch_stats: The patch's stats, for everyone's combat stats but yours.
+
+    Returns:
+        The Brier score; None when the recording has no fight that can be scored.
+    """
+    timeline = _game_timeline(game)
+    if timeline is None or patch_stats is None:
+        return None
+    team_by_id = {
+        participant.participant_id: key[0] for key, participant in _details_participants(game)
+    }
+    key_by_id = {
+        participant.participant_id: key for key, participant in _details_participants(game)
+    }
+    squared_errors = [
+        squared_error
+        for fight in timeline_fights(timeline)
+        if fight.start_seconds in game.fight_snapshots
+        for squared_error in _fight_squared_error(
+            fight, game.fight_snapshots[fight.start_seconds], team_by_id, key_by_id, patch_stats
+        )
+    ]
+    if not squared_errors:
+        return None
+    return EstimatorScore(
+        estimator="fights",
+        sample_count=len(squared_errors),
+        value=sum(squared_errors) / len(squared_errors),
+        measure="fight_brier_score",
+    )
+
+
+def timeline_fights(timeline: GameTimeline) -> list[TimelineFight]:
+    """Return the timeline's fights: kills close in time and place, two or more of them.
+
+    Args:
+        timeline: The match timeline.
+
+    Returns:
+        The fights, oldest first.
+    """
+    kills = sorted(
+        (
+            event
+            for frame in timeline.frames
+            for event in frame.events
+            if event.event_type == CHAMPION_KILL_EVENT
+        ),
+        key=lambda event: event.timestamp_milliseconds,
+    )
+    clusters: list[list[TimelineEvent]] = []
+    for event in kills:
+        cluster = clusters[-1] if clusters else None
+        if cluster is not None and _is_same_fight(cluster, event):
+            cluster.append(event)
+        else:
+            clusters.append([event])
+    return [
+        TimelineFight(
+            start_seconds=cluster[0].timestamp_milliseconds / MILLISECONDS_PER_SECOND,
+            participant_ids=frozenset(
+                participant_id
+                for event in cluster
+                for participant_id in [
+                    event.killer_id,
+                    event.victim_id,
+                    *event.assisting_participant_ids,
+                ]
+                if participant_id > 0
+            ),
+            victim_ids=tuple(event.victim_id for event in cluster),
+        )
+        for cluster in clusters
+        if len(cluster) >= FIGHT_SMALLEST_KILL_COUNT
+    ]
+
+
 def score_win_chance(game: RecordedGame) -> EstimatorScore | None:
     """Score the win chance at the start of each minute against the game's result.
 
@@ -860,7 +980,11 @@ def score_game(game: RecordedGame, patch_stats: PatchStats | None) -> list[Estim
         ),
         *score_gold(game),
         *score_experience(game),
-        *(score for score in [score_next_items(game, patch_stats)] if score is not None),
+        *(
+            score
+            for score in [score_next_items(game, patch_stats), score_fights(game, patch_stats)]
+            if score is not None
+        ),
         *score_backs(game),
         *score_positions(game),
         *score_control_wards(game),
@@ -1133,6 +1257,71 @@ def _is_near(trip_seconds: float, other_trips_seconds: tuple[float, ...]) -> boo
     return any(abs(trip_seconds - other) <= TRIP_MATCH_SECONDS for other in other_trips_seconds)
 
 
+def _is_same_fight(cluster: list[TimelineEvent], kill: TimelineEvent) -> bool:
+    """Return whether a kill belongs to a fight: soon after its last kill, near its first.
+
+    Args:
+        cluster: The fight's kills so far, oldest first.
+        kill: The next kill.
+
+    Returns:
+        Whether it belongs; a kill without a place belongs by time alone.
+    """
+    gap_seconds = (
+        kill.timestamp_milliseconds - cluster[-1].timestamp_milliseconds
+    ) / MILLISECONDS_PER_SECOND
+    first_place = cluster[0].position
+    place = kill.position
+    is_near = (
+        first_place is None
+        or place is None
+        or math.dist((first_place.x, first_place.y), (place.x, place.y)) <= FIGHT_RADIUS_UNITS
+    )
+    return gap_seconds <= FIGHT_GAP_SECONDS and is_near
+
+
+def _fight_squared_error(
+    fight: TimelineFight,
+    snapshot: GameSnapshot,
+    team_by_id: Mapping[int, str],
+    key_by_id: Mapping[int, PlayerKey],
+    patch_stats: PatchStats,
+) -> list[float]:
+    """Return the squared error of the chance a fight's players had, or nothing for a trade.
+
+    Args:
+        fight: The fight.
+        snapshot: The game's last answer before it.
+        team_by_id: Each participant's team.
+        key_by_id: Each participant's key.
+        patch_stats: The patch's stats.
+
+    Returns:
+        The squared error, alone; nothing when the teams lost as many, or a fighter is unknown.
+    """
+    ally_team = snapshot.ally_team()
+    ally_deaths = sum(1 for victim_id in fight.victim_ids if team_by_id.get(victim_id) == ally_team)
+    enemy_deaths = len(fight.victim_ids) - ally_deaths
+    player_by_key = {player_key(player): player for player in snapshot.players}
+    fighters = [
+        (
+            team_by_id.get(participant_id) == ally_team,
+            fighter_of(snapshot, player_by_key[key_by_id[participant_id]], patch_stats),
+        )
+        for participant_id in sorted(fight.participant_ids)
+        if key_by_id.get(participant_id) in player_by_key
+    ]
+    known = [(is_ally, fighter) for is_ally, fighter in fighters if fighter is not None]
+    estimate = fight_estimate(
+        [fighter for is_ally, fighter in known if is_ally],
+        [fighter for is_ally, fighter in known if not is_ally],
+    )
+    if ally_deaths == enemy_deaths or estimate is None or len(known) != len(fight.participant_ids):
+        return []
+    result = 1.0 if enemy_deaths > ally_deaths else 0.0
+    return [(estimate.ally_chance - result) ** 2]
+
+
 def _game_timeline(game: RecordedGame) -> GameTimeline | None:
     """Return the match timeline the recording holds.
 
@@ -1142,10 +1331,22 @@ def _game_timeline(game: RecordedGame) -> GameTimeline | None:
     Returns:
         The timeline, or None when the recording has none it can read.
     """
+    return _timeline_in(game.client_resources)
+
+
+def _timeline_in(client_resources: Mapping[str, JsonValue]) -> GameTimeline | None:
+    """Return the match timeline among the League client's answers.
+
+    Args:
+        client_resources: The client's latest answer for each path it was asked.
+
+    Returns:
+        The timeline, or None when there is none that can be read.
+    """
     timeline_payload = next(
         (
             payload
-            for path, payload in game.client_resources.items()
+            for path, payload in client_resources.items()
             if path.startswith(TIMELINE_PATH_PREFIX)
         ),
         None,

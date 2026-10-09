@@ -501,6 +501,16 @@ async def test_the_enemy_strip_shows_the_win_chance_and_what_moves_it(tmp_path: 
         await keep_screenshot(page, "win-chance")
 
 
+async def test_the_enemy_strip_shows_an_even_fights_chance(tmp_path: Path) -> None:
+    async with open_overlay(tmp_path, snapshot_count=60, speed=1.0) as page:
+        # Everyone is alive at 23:15; the stand-in patch rates their damage mostly physical.
+        fight = page.locator("#enemy-strip .fight-chance")
+        await expect(fight).to_have_text(
+            re.compile(r"^Fight now\s*~\d+% \u00b7 their damage \d+% physical$"), timeout=5000
+        )
+        await keep_screenshot(page, "fight-chance")
+
+
 async def test_the_enemy_strip_shows_each_enemys_rank_and_record(tmp_path: Path) -> None:
     async with open_overlay(tmp_path, snapshot_count=60, speed=1.0) as page:
         zed_intel = page.locator("#enemy-strip .enemy-row", has_text="Zed").locator(".enemy-intel")

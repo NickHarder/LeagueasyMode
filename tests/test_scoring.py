@@ -31,6 +31,7 @@ from leagueasymode.scoring import (
     score_combat_stats,
     score_control_wards,
     score_experience,
+    score_fights,
     score_gold,
     score_jungle_path,
     score_map,
@@ -613,3 +614,60 @@ def test_the_win_chance_at_the_start_is_the_blue_sides_lean(tmp_path: Path) -> N
 def test_a_game_without_its_result_scores_no_win_chance(tmp_path: Path) -> None:
     recording = write_scored_recording(tmp_path, DEFAULT_PLAYERS)
     assert score_win_chance(read_recorded_game(recording)) is None
+
+
+def kill(
+    game_time_seconds: float,
+    killer_id: int,
+    victim_id: int,
+    assister_ids: list[int],
+    place: tuple[int, int] = (7000, 7000),
+) -> JsonValue:
+    return {
+        "type": "CHAMPION_KILL",
+        "timestamp": round(game_time_seconds * 1000),
+        "killerId": killer_id,
+        "victimId": victim_id,
+        "assistingParticipantIds": list[JsonValue](assister_ids),
+        "position": {"x": place[0], "y": place[1]},
+    }
+
+
+def test_fights_are_scored_against_the_timelines_kills(tmp_path: Path) -> None:
+    timeline = game_timeline(
+        events_by_minute={
+            # Garen, Lee Sin and Ahri (1 to 3) kill Vi and Zed (7, 8): your team wins it 3 on 2.
+            10: [kill(605.0, 1, 7, [2, 3]), kill(610.0, 3, 8, [1])],
+            # One kill alone is no fight; nor two at once across the map, nor a trade.
+            12: [
+                kill(725.0, 6, 1, []),
+                kill(785.0, 4, 9, [], place=(2000, 2000)),
+                kill(786.0, 10, 5, [], place=(12000, 12000)),
+                kill(845.0, 8, 3, [7]),
+                kill(850.0, 2, 7, [8]),
+            ],
+        }
+    )
+    recording = write_scored_recording(
+        tmp_path, players_at(are_positions_given=True), timeline=timeline
+    )
+    score = score_fights(read_recorded_game(recording), fixture_patch_stats())
+    assert score is not None
+    assert (score.estimator, score.sample_count, score.measure) == (
+        "fights",
+        1,
+        "fight_brier_score",
+    )
+    # Three level-9 champions against two: your team was likely to win it, and did.
+    assert 0.0 < score.value < 0.1
+    assert score.describe().startswith("fights: 1 fights, Brier score 0.0")
+
+
+def test_without_the_patchs_stats_fights_are_not_scored(tmp_path: Path) -> None:
+    timeline = game_timeline(
+        events_by_minute={10: [kill(605.0, 1, 7, [2, 3]), kill(610.0, 3, 8, [1])]}
+    )
+    recording = write_scored_recording(
+        tmp_path, players_at(are_positions_given=True), timeline=timeline
+    )
+    assert score_fights(read_recorded_game(recording), None) is None

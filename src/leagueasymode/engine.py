@@ -16,6 +16,7 @@ from leagueasymode.inference.clues import ClueTracker
 from leagueasymode.inference.combat_stats import move_speed_of
 from leagueasymode.inference.cooldowns import MarkedSpell, marked_cooldown, running_cooldowns
 from leagueasymode.inference.experience import ExperienceTracker
+from leagueasymode.inference.fights import team_fight
 from leagueasymode.inference.gold import GoldTracker, PlayerKey, player_key, team_gold
 from leagueasymode.inference.jungle_path import JunglePathTracker
 from leagueasymode.inference.objectives import (
@@ -165,6 +166,7 @@ def compute_overlay_state(
                 inhibitors=inhibitors,
             )
         ),
+        fight=team_fight(snapshot, patch_stats),
     )
 
 

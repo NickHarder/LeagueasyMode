@@ -212,3 +212,28 @@ def move_speed_of(
         return active_player.champion_stats.move_speed
     estimate = estimated_combat_stats(player, patch_stats) if patch_stats is not None else None
     return estimate.move_speed if estimate is not None else DEFAULT_MOVE_SPEED
+
+
+def combat_stats_of(
+    snapshot: GameSnapshot, player: ScoreboardPlayer, patch_stats: PatchStats | None
+) -> CombatStats | None:
+    """Return a player's combat stats: the game's own for the player on this machine.
+
+    Args:
+        snapshot: The game's state.
+        player: The player.
+        patch_stats: The patch's stats; None while unknown.
+
+    Returns:
+        The stats, or None while they cannot be had.
+    """
+    active_player = snapshot.active_player
+    if (
+        active_player is not None
+        and active_player.champion_stats is not None
+        and snapshot.is_active_player(player)
+    ):
+        return exact_combat_stats(active_player.champion_stats)
+    if patch_stats is None:
+        return None
+    return estimated_combat_stats(player, patch_stats)

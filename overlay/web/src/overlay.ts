@@ -14,6 +14,7 @@ import {
   type CombatStats,
   type CooldownTimer,
   type DragonTimer,
+  type FightEstimate,
   type GoldEstimate,
   type InhibitorTimer,
   type JunglePath,
@@ -438,9 +439,20 @@ export function formatWinChance(chance: WinChance): string {
   return reasonsText === "" ? percentText : `${percentText} \u00b7 ${reasonsText}`;
 }
 
+/** Return an even fight's chance in words: "~71% 5v4 · their damage 70% physical". */
+export function formatFight(fight: FightEstimate): string {
+  const percentText = `~${String(Math.round(fight.ally_chance * PERCENT))}%`;
+  const countsText =
+    fight.ally_fighters === fight.enemy_fighters
+      ? ""
+      : ` ${String(fight.ally_fighters)}v${String(fight.enemy_fighters)}`;
+  const physicalText = `their damage ${String(Math.round(fight.enemy_physical_share * PERCENT))}% physical`;
+  return `${percentText}${countsText} \u00b7 ${physicalText}`;
+}
+
 /**
- * Return the enemy strip's headers: the win chance, the item-gold lead and the estimated gold lead,
- * when known.
+ * Return the enemy strip's headers: the win chance, an even fight's chance, the item-gold lead and
+ * the estimated gold lead, when known.
  */
 function leadElements(state: OverlayState): HTMLElement[] {
   const headers: HTMLElement[] = [];
@@ -449,6 +461,11 @@ function leadElements(state: OverlayState): HTMLElement[] {
     // Colored by side like a lead: "ally" above an even chance.
     const leaning = Math.round((winChance.ally_chance - EVEN_CHANCE) * PERCENT);
     headers.push(leadElement("win-chance", "Win", leaning, formatWinChance(winChance)));
+  }
+  const fight = state.fight;
+  if (fight !== null) {
+    const fightLeaning = Math.round((fight.ally_chance - EVEN_CHANCE) * PERCENT);
+    headers.push(leadElement("fight-chance", "Fight now", fightLeaning, formatFight(fight)));
   }
   const itemGold = state.team_item_gold;
   if (itemGold !== null) {
