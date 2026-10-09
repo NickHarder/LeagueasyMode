@@ -6,6 +6,11 @@ skill has the format.
 
 ## 2026-10-09
 
+- Phase 9.7, the 4:00 habit in the positions: from 3:00 to 5:00, estimator 7 weighs each half of
+  the map by a jungler's share of past games there at 4:00 (9.2's counts, a game added to each
+  half), so where the enemy jungler likely is after their first clear, the "missing" callouts and
+  the minimap lean the way they usually go. Scoring weighs it the same way, so the positions'
+  scores say whether it helps.
 - Phase 9.6, scouting scored: the scoring harness rebuilds the players' records from the client's
   recorded answers, with the same code the engine's lookups use, decodes the jungle path with
   the usual starts as the engine does, and scores each jungler's habits against where the game's

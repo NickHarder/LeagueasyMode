@@ -95,7 +95,12 @@ def player_cards(
             ),
             last_clue=_last_clue(player, position_clues),
             location=_location(
-                snapshot, player, role_guesses[index].role, patch_stats, position_clues
+                snapshot,
+                player,
+                role_guesses[index].role,
+                patch_stats,
+                position_clues,
+                player_records=player_records,
             ),
         )
         for index, player in [*allies, *enemies]
@@ -167,8 +172,10 @@ def _location(
     role: str,
     patch_stats: PatchStats | None,
     position_clues: Mapping[PlayerKey, list[PositionClue]] | None,
+    *,
+    player_records: PlayerRecords | None,
 ) -> PositionEstimate | None:
-    """Return where a player likely is, from their clues.
+    """Return where a player likely is, from their clues and, around 4:00, their past games.
 
     Args:
         snapshot: The game's state.
@@ -176,12 +183,14 @@ def _location(
         role: Their role, given or worked out.
         patch_stats: The patch's stats, for their move speed; None while unknown.
         position_clues: Each player's clues, oldest first; None while they are not gathered.
+        player_records: Each player's record, for a jungler's 4:00 habit; None while unknown.
 
     Returns:
         The estimate; None while dead, or while clues are not gathered.
     """
     if position_clues is None:
         return None
+    game_record = (player_records or {}).get(player_key(player))
     return position_estimate(
         player,
         role,
@@ -189,6 +198,7 @@ def _location(
         move_speed=move_speed_of(snapshot, player, patch_stats),
         game_time_seconds=snapshot.game_data.game_time_seconds,
         ally_team=snapshot.ally_team(),
+        four_minute_sides=game_record.record.four_minute_sides if game_record else None,
     )
 
 

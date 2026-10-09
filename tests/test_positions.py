@@ -3,13 +3,14 @@ from typing import Final
 
 import pytest
 
-from game_payloads import DEFAULT_PLAYERS, all_game_data, player_payload
+from game_payloads import CHAMPION_IDS, DEFAULT_PLAYERS, all_game_data, player_payload
 from leagueasymode.engine import compute_overlay_state
 from leagueasymode.game_state import ScoreboardPlayer
 from leagueasymode.inference.callouts import CalloutTracker
 from leagueasymode.inference.clues import ClueTracker
-from leagueasymode.inference.positions import position_estimate
+from leagueasymode.inference.positions import point_chances, position_estimate
 from leagueasymode.inference.rift_map import RIFT_MAP, region_center
+from leagueasymode.jungle_starts import MAP_HALF_BY_REGION, FourMinuteSides
 from leagueasymode.overlay_state import (
     OverlayState,
     PlayerCard,
@@ -17,8 +18,12 @@ from leagueasymode.overlay_state import (
     PositionEstimate,
     RegionChance,
 )
+from leagueasymode.player_intel import GamePlayerRecord, PlayerRecord
 
 MOVE_SPEED: Final = 380.0
+# Three of Vi's four recent jungle games found her on her blue buff's half at 4:00, one mid; on
+# the red team, her blue buff's half is the bottom one.
+VI_FOUR_MINUTES: Final = FourMinuteSides(blue_count=3, red_count=0, mid_count=1)
 
 
 def scoreboard_player(champion_name: str, *, is_dead: bool = False) -> ScoreboardPlayer:
@@ -219,3 +224,59 @@ def test_an_enemy_far_from_your_lane_is_not_called_out() -> None:
     callouts = CalloutTracker()
     callouts.update(state_with(600.0))
     assert callouts.update(state_with(601.0, missing_enemy("Vi", 25.0, 35.0))) == []
+
+
+def bot_half_chance(chances: dict[str, float]) -> float:
+    return sum(
+        chance
+        for name, chance in chances.items()
+        if MAP_HALF_BY_REGION.get(RIFT_MAP.points[name].region) == "bot"
+    )
+
+
+def vi_point_chances(
+    game_time_seconds: float, four_minute_sides: FourMinuteSides | None, role: str = "JUNGLE"
+) -> dict[str, float]:
+    return point_chances(
+        "CHAOS",
+        role,
+        [],
+        move_speed=MOVE_SPEED,
+        game_time_seconds=game_time_seconds,
+        four_minute_sides=four_minute_sides,
+    )
+
+
+def test_an_enemy_junglers_four_minute_habit_weighs_where_they_likely_are_then() -> None:
+    with_habit = vi_point_chances(240.0, VI_FOUR_MINUTES)
+    assert bot_half_chance(with_habit) > bot_half_chance(vi_point_chances(240.0, None))
+    assert sum(with_habit.values()) == pytest.approx(1.0)
+
+
+def test_the_four_minute_habit_weighs_nothing_away_from_four_minutes_or_the_jungle() -> None:
+    for game_time_seconds in (120.0, 600.0):
+        assert vi_point_chances(game_time_seconds, VI_FOUR_MINUTES) == vi_point_chances(
+            game_time_seconds, None
+        )
+    assert vi_point_chances(240.0, VI_FOUR_MINUTES, role="TOP") == vi_point_chances(
+        240.0, None, role="TOP"
+    )
+
+
+def test_the_overlay_weighs_the_enemy_junglers_four_minute_habit() -> None:
+    records = {
+        ("CHAOS", "vi"): GamePlayerRecord(
+            champion_id=CHAMPION_IDS["Vi"],
+            record=PlayerRecord(ranked=None, recent_games=(), four_minute_sides=VI_FOUR_MINUTES),
+        )
+    }
+
+    def vi_location(with_records: bool) -> PositionEstimate | None:
+        state = compute_overlay_state(
+            all_game_data(240.0),
+            player_records=records if with_records else None,
+            clue_tracker=ClueTracker(),
+        )
+        return next(card for card in state.players if card.champion_name == "Vi").location
+
+    assert vi_location(with_records=True) != vi_location(with_records=False)

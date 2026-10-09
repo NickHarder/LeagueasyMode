@@ -417,7 +417,7 @@ def read_recorded_game(recording_path: Path) -> RecordedGame:
             gold_estimates_by_minute[game_minute] = gold_estimates
             level_estimates_by_minute[game_minute] = level_estimates
             position_estimates_by_minute[game_minute] = _position_estimates(
-                snapshot, position_clues
+                snapshot, position_clues, player_records
             )
             jungle_camps_by_minute[game_minute] = jungle_tracker.last_clears()
             win_features_by_minute[game_minute] = win_features(
@@ -1300,7 +1300,9 @@ def _timeline_trips(timeline: GameTimeline, participant_id: int) -> tuple[float,
 
 
 def _position_estimates(
-    snapshot: GameSnapshot, position_clues: Mapping[PlayerKey, list[PositionClue]]
+    snapshot: GameSnapshot,
+    position_clues: Mapping[PlayerKey, list[PositionClue]],
+    player_records: PlayerRecords,
 ) -> dict[PlayerKey, PositionEstimate]:
     """Return where each living player likely is, as the overlay would have shown it.
 
@@ -1309,6 +1311,7 @@ def _position_estimates(
     Args:
         snapshot: The game's state.
         position_clues: Each player's clues so far.
+        player_records: Each player's record, for a jungler's 4:00 habit.
 
     Returns:
         The estimates by key; the dead are left out.
@@ -1321,6 +1324,11 @@ def _position_estimates(
             move_speed=DEFAULT_MOVE_SPEED,
             game_time_seconds=snapshot.game_data.game_time_seconds,
             ally_team=snapshot.ally_team(),
+            four_minute_sides=(
+                game_record.record.four_minute_sides
+                if (game_record := player_records.get(player_key(player))) is not None
+                else None
+            ),
         )
         for player, role_guess in zip(snapshot.players, assign_roles(snapshot), strict=True)
     }
