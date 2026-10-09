@@ -40,6 +40,7 @@ from leagueasymode.league_client import ClientConnector, LeagueClient
 from leagueasymode.overlay_state import (
     CooldownTimer,
     MinimapLayout,
+    OverlayLayout,
     OverlayPreferences,
     OverlayState,
     PlayerCard,
@@ -255,6 +256,7 @@ class OverlayEngine:
         minimap_layout: MinimapLayout | None = None,
         model_weights: ModelWeights | None = None,
         preferences: OverlayPreferences | None = None,
+        layout: OverlayLayout | None = None,
         status: StatusBoard | None = None,
     ) -> None:
         """Keep the game's API, how often to ask it, and where the patch's data comes from.
@@ -271,6 +273,7 @@ class OverlayEngine:
                 unknown.
             model_weights: The refit models' weights; None for the hand-set ones.
             preferences: What the player chose to see; None for everything.
+            layout: Where the player moved the widgets; None for their usual places.
             status: Told what the engine sees, part by part, for the status page; None for a
                 board of its own.
         """
@@ -300,7 +303,10 @@ class OverlayEngine:
         self._ward_tracker: Final = WardTracker()
         self._you_tracker: Final = YouTracker()
         self._preferences = preferences or OverlayPreferences()
-        self._current_state = NOT_RUNNING.model_copy(update={"preferences": self._preferences})
+        self._layout = layout or OverlayLayout()
+        self._current_state = NOT_RUNNING.model_copy(
+            update={"preferences": self._preferences, "layout": self._layout}
+        )
         self._callouts: Final = CalloutTracker()
         self._subscribers: Final[set[asyncio.Queue[OverlayState]]] = set()
 
@@ -332,6 +338,21 @@ class OverlayEngine:
         """
         self._preferences = preferences
         self._current_state = self._current_state.model_copy(update={"preferences": preferences})
+        self._publish(self._current_state)
+
+    @property
+    def layout(self) -> OverlayLayout:
+        """Where the player moved the widgets."""
+        return self._layout
+
+    def set_layout(self, layout: OverlayLayout) -> None:
+        """Take where the player moved the widgets, and send the current state again with it.
+
+        Args:
+            layout: The widgets' places.
+        """
+        self._layout = layout
+        self._current_state = self._current_state.model_copy(update={"layout": layout})
         self._publish(self._current_state)
 
     def mark_cooldown(self, enemy_slot: int, spell: MarkedSpell) -> CooldownTimer | None:
@@ -411,6 +432,7 @@ class OverlayEngine:
                 update={
                     "callouts": self._callouts.update(answer_state),
                     "preferences": self._preferences,
+                    "layout": self._layout,
                 }
             )
             if new_state != self._current_state:

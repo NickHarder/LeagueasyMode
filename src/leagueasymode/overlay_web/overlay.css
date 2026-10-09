@@ -421,3 +421,76 @@ body {
 .minimap-ward {
   fill: #f0c75e;
 }
+
+/* Edit mode (the macOS app's "Edit layout"): each movable widget is outlined and named, an empty
+   one too, and can be dragged; a notice at the bottom says how to finish. */
+.editing-layout [data-movable] {
+  min-width: 160px;
+  min-height: 32px;
+  outline: 2px dashed var(--widget-alive);
+  outline-offset: 2px;
+  cursor: grab;
+  touch-action: none;
+}
+
+.editing-layout [data-movable]:active {
+  cursor: grabbing;
+}
+
+.editing-layout [data-movable][hidden] {
+  display: flex !important;
+  background: var(--widget-surface);
+}
+
+.editing-layout [data-movable]::before {
+  content: attr(data-movable);
+  position: absolute;
+  top: -20px;
+  left: 0;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--widget-surface);
+  color: var(--widget-text);
+  font: 600 11px/16px system-ui, -apple-system, sans-serif;
+  white-space: nowrap;
+}
+
+/* The objective strip sits at the screen's top edge: its name goes below it, in the middle like
+   its pills, clear of the callouts' name. */
+.editing-layout .strip[data-movable]::before {
+  top: auto;
+  bottom: -20px;
+  left: 50%;
+  translate: -50% 0;
+}
+
+.layout-editor {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  display: none;
+  gap: 12px;
+  align-items: center;
+  padding: 8px 12px;
+  translate: -50% 0;
+  border: 1px solid var(--widget-border);
+  border-radius: 10px;
+  background: var(--widget-surface);
+  color: var(--widget-text);
+  font: 13px/1.4 system-ui, -apple-system, sans-serif;
+}
+
+.editing-layout .layout-editor {
+  display: flex;
+}
+
+.layout-editor button {
+  padding: 4px 10px;
+  border: 1px solid var(--widget-border);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--widget-text);
+  font: inherit;
+  white-space: nowrap;
+  cursor: pointer;
+}

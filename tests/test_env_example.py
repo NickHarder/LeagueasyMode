@@ -95,6 +95,7 @@ def test_no_test_writes_to_the_players_own_files() -> None:
         settings.last_game_summary,
         settings.model_weights,
         settings.preferences,
+        settings.layout,
     ):
         assert file_path is not None
         assert "application" in file_path.parts

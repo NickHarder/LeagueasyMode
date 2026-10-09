@@ -41,6 +41,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var levelChoice = WindowLevelChoice.initialChoice
     private var isOverlayShown = true
     private var isClickThrough = true
+    private var isEditingLayout = false
     private var engineStatusText = "Engine: starting…"
     private var availableRelease: AvailableRelease?
     private var updateTimer: Timer?
@@ -129,6 +130,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func engineDidAnnounce(_ overlayURL: URL) {
         self.overlayURL = overlayURL
+        // A page loaded afresh is out of edit mode; so is the app.
+        isEditingLayout = false
+        overlayPanel?.setEditingLayout(false, isClickThrough: isClickThrough)
         overlayPanel?.loadOverlay(from: overlayURL)
         if isOverlayShown {
             overlayPanel?.showOverlay()
@@ -313,6 +317,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         clickThroughItem.target = self
         clickThroughItem.state = isClickThrough ? .on : .off
         menu.addItem(clickThroughItem)
+        if overlayURL != nil {
+            let editItem = NSMenuItem(
+                title: "Edit layout", action: #selector(toggleEditLayout(_:)), keyEquivalent: ""
+            )
+            editItem.target = self
+            editItem.state = isEditingLayout ? .on : .off
+            menu.addItem(editItem)
+            let resetItem = NSMenuItem(
+                title: "Reset layout", action: #selector(resetLayout(_:)), keyEquivalent: ""
+            )
+            resetItem.target = self
+            menu.addItem(resetItem)
+        } else {
+            menu.addItem(Self.disabledItem("Edit layout"))
+        }
         let levelItem = NSMenuItem(title: "Window level", action: nil, keyEquivalent: "")
         levelItem.submenu = makeLevelMenu()
         menu.addItem(levelItem)
@@ -406,8 +425,25 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func toggleClickThrough(_ sender: NSMenuItem) {
         isClickThrough.toggle()
-        overlayPanel?.setClickThrough(isClickThrough)
+        // In edit mode the panel takes clicks whatever this says; it applies once editing ends.
+        if !isEditingLayout {
+            overlayPanel?.setClickThrough(isClickThrough)
+        }
         statusItem?.menu = makeMenu()
+    }
+
+    /// Turns edit mode on or off: on, the overlay takes clicks and its widgets can be dragged.
+    @objc private func toggleEditLayout(_ sender: NSMenuItem) {
+        isEditingLayout.toggle()
+        if isEditingLayout && !isOverlayShown {
+            toggleOverlay()
+        }
+        overlayPanel?.setEditingLayout(isEditingLayout, isClickThrough: isClickThrough)
+        statusItem?.menu = makeMenu()
+    }
+
+    @objc private func resetLayout(_ sender: NSMenuItem) {
+        overlayPanel?.resetLayout()
     }
 
     @objc private func chooseLevel(_ sender: NSMenuItem) {

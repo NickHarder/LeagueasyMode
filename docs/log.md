@@ -6,6 +6,12 @@ skill has the format.
 
 ## 2026-10-09
 
+- Phase 8.3, moving the widgets: "Edit layout" in the macOS app's menu makes the overlay take
+  clicks and outlines and names each movable widget (the objective strip, the callouts, the enemy
+  strip, the You panel; the minimap layer stays over League's); a dragged widget stays where it is
+  dropped. The engine keeps the places in `layout.json`, as shares of the overlay's size, and
+  sends them with every state; "Reset layout" puts every widget back. The plan's "You move the
+  widgets around after switching on edit mode from the menu bar".
 - Phase 8.2, League's screen and window: the macOS app finds League's game window in the window
   server's list every two seconds (its owner's name and bounds, no permission) and covers the
   screen it fills, or the window below its title bar when windowed, so the minimap layer lines up

@@ -30,6 +30,8 @@ sources:
     resource: ../../overlay/macos/Sources/OverlayCore/LoginItemState.swift
   - id: game-window
     resource: ../../overlay/macos/Sources/OverlayCore/GameWindow.swift
+  - id: layout-editing
+    resource: ../../overlay/web/src/layout.ts
   - id: release-workflow
     resource: ../../.github/workflows/release.yml
 ---
@@ -61,6 +63,14 @@ their ultimate, within three seconds. Every key carries ⌃⌥, so marking never
 uses. The app posts the mark to the engine's `/marks`, which starts the timer shown on that
 enemy's row.[^cooldown-marking]
 Quitting the app asks the engine to stop; the engine closes the game it is recording first.
+
+**Moving the widgets:** "Edit layout" in the menu makes the overlay take clicks and outlines
+each movable widget with its name, an empty one too: the objective strip, the callouts, the enemy
+strip and the You panel (the minimap layer stays over League's minimap). Drag one and drop it; it
+stays there, kept by the engine in `layout.json` in the application's directory as shares of the
+overlay's width and height, so it keeps its place when League's window changes size. Choose
+"Edit layout" again to finish; "Reset layout", in the menu or on the notice at the bottom of the
+overlay while editing, puts every widget back.[^layout-editing]
 
 The menu shows whether the engine runs, toggles the overlay and the click-through, and picks the
 window level, since which level stays above League depends on how League draws:[^levels]
@@ -180,6 +190,7 @@ whether `KillerName` holds a game name or a Riot ID, and whether the client serv
 [^levels]: `overlay/macos/Sources/LeagueasyOverlay/WindowLevelChoice.swift`
 [^engine-command]: `overlay/macos/Sources/OverlayCore/EngineCommand.swift`
 [^game-window]: `overlay/macos/Sources/OverlayCore/GameWindow.swift`
+[^layout-editing]: `overlay/web/src/layout.ts`
 [^bundled-engine]: `overlay/macos/Sources/OverlayCore/BundledEngine.swift`
 [^build-app]: `overlay/macos/scripts/build_app.sh`
 [^smoke-test]: `overlay/macos/scripts/smoke_test_app.sh`

@@ -1,13 +1,15 @@
 import AppKit
+import OverlayCore
 import WebKit
 
 /// A transparent window over League, its screen or its window, that shows the overlay page.
 ///
-/// It never becomes key or main and its panel does not activate the app, so League keeps the
-/// keyboard and the focus; clicks pass through it to the game. It joins every Space, the
-/// full-screen ones included.
+/// It never becomes main and its panel does not activate the app, so League keeps the keyboard
+/// and the focus; clicks pass through it to the game. Only in edit mode does it become key and
+/// take clicks, so its widgets can be dragged. It joins every Space, the full-screen ones included.
 final class OverlayPanel: NSPanel {
     private let webView = WKWebView(frame: .zero, configuration: WKWebViewConfiguration())
+    private var isEditingLayout = false
 
     /// Creates the panel over a screen, hidden until `showOverlay` is called.
     ///
@@ -33,7 +35,7 @@ final class OverlayPanel: NSPanel {
         contentView = webView
     }
 
-    override var canBecomeKey: Bool { false }
+    override var canBecomeKey: Bool { isEditingLayout }
     override var canBecomeMain: Bool { false }
 
     /// Loads the overlay page from the engine's local server.
@@ -65,6 +67,27 @@ final class OverlayPanel: NSPanel {
     /// - Parameter isClickThrough: Whether clicks pass through.
     func setClickThrough(_ isClickThrough: Bool) {
         ignoresMouseEvents = isClickThrough
+    }
+
+    /// Turns edit mode on or off: the panel takes clicks and the page lets its widgets be dragged,
+    /// or the panel goes back to letting clicks through as the menu says.
+    ///
+    /// - Parameters:
+    ///   - isEditing: Whether edit mode is on.
+    ///   - isClickThrough: Whether clicks pass through outside edit mode.
+    func setEditingLayout(_ isEditing: Bool, isClickThrough: Bool) {
+        isEditingLayout = isEditing
+        ignoresMouseEvents = isEditing ? false : isClickThrough
+        webView.evaluateJavaScript(LayoutEditing.editingScript(isEditing: isEditing))
+        if isEditing {
+            // A non-activating panel becomes key without bringing the app forward.
+            makeKeyAndOrderFront(nil)
+        }
+    }
+
+    /// Puts every widget back in its usual place.
+    func resetLayout() {
+        webView.evaluateJavaScript(LayoutEditing.resetScript)
     }
 
     /// Puts the panel at a window level.

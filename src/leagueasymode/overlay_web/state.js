@@ -15,6 +15,8 @@ export const PREFERENCE_NAMES = [
     "show_callouts",
     "show_suggestions",
 ];
+/** The widgets the player can move; the minimap layer stays over League's minimap. */
+export const MOVABLE_WIDGETS = ["objective_strip", "callouts", "enemy_strip", "you_panel"];
 const DRAGON_OBJECTIVES = new Set(["dragon", "elder_dragon"]);
 const DRAGON_STATUSES = new Set(["not_spawned", "respawning", "alive"]);
 const SIDES = new Set(["ally", "enemy"]);
@@ -342,6 +344,22 @@ export function isYouPanel(value) {
 export function isOverlayPreferences(value) {
     return isRecord(value) && PREFERENCE_NAMES.every((name) => typeof value[name] === "boolean");
 }
+function isWidgetOffset(value) {
+    return (isRecord(value) &&
+        typeof value["x_share"] === "number" &&
+        typeof value["y_share"] === "number" &&
+        Math.abs(value["x_share"]) <= 1 &&
+        Math.abs(value["y_share"]) <= 1);
+}
+/** Return whether a value is a layout as the engine sends it. */
+export function isOverlayLayout(value) {
+    if (!isRecord(value) || !isRecord(value["offsets"])) {
+        return false;
+    }
+    const offsets = value["offsets"];
+    const movable = new Set(MOVABLE_WIDGETS);
+    return Object.entries(offsets).every(([widget, offset]) => movable.has(widget) && isWidgetOffset(offset));
+}
 /** Return whether a value is an overlay state as the engine sends it. */
 export function isOverlayState(value) {
     if (!isRecord(value)) {
@@ -368,5 +386,6 @@ export function isOverlayState(value) {
         isArrayOf(value["contests"], isObjectiveContest) &&
         (value["you"] === null || isYouPanel(value["you"])) &&
         isOverlayPreferences(value["preferences"]) &&
+        isOverlayLayout(value["layout"]) &&
         isArrayOf(value["callouts"], isCallout));
 }
