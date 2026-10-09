@@ -4,8 +4,11 @@ Every threshold the overlay was given by hand, not by a game's rules or a fit, l
 model beside the code it tunes, its value the model's default: when a callout comes and what it
 needs (`inference/callouts.py`), the suggestions' windows (`inference/suggestions.py`), what makes
 a main or a one-trick (`inference/intel.py`), whom the lookups read timelines for
-(`player_intel.py`), the jungle path's camp timings and weights (`inference/jungle_path.py`), and
-the positions' (`inference/positions.py`). This module gathers them under one name each.
+(`player_intel.py`), the jungle path's camp timings and weights (`inference/jungle_path.py`), the
+positions' (`inference/positions.py`), and the estimators' priors and the season's numbers that
+recordings will correct: experience rates, dragon timings, trips to base, gold, the monsters'
+health and Smite's damage, the build path's weights, and the You panel's thresholds. This module
+gathers them under one name each.
 
 `tuning.json` in the application's directory (`LEAGUEASYMODE_TUNING` moves it) names only what it
 changes; anything it leaves out keeps its default. `leagueasymode tuning` prints every value the
@@ -23,11 +26,18 @@ from typing import Final
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from leagueasymode.engine_status import StatusBoard
+from leagueasymode.inference.backs import BackRules
+from leagueasymode.inference.build_path import BuildRules
 from leagueasymode.inference.callouts import CalloutRules
+from leagueasymode.inference.contests import ContestRules
+from leagueasymode.inference.experience import ExperienceRules
+from leagueasymode.inference.gold import GoldRules
 from leagueasymode.inference.intel import IntelRules
 from leagueasymode.inference.jungle_path import CampRules
+from leagueasymode.inference.objectives import DragonRules
 from leagueasymode.inference.positions import PositionRules
 from leagueasymode.inference.suggestions import SuggestionRules
+from leagueasymode.inference.you import YouRules
 from leagueasymode.player_intel import LookupRules
 
 
@@ -42,6 +52,13 @@ class Tuning(BaseModel):
     lookups: LookupRules = Field(default_factory=LookupRules)
     jungle_path: CampRules = Field(default_factory=CampRules)
     positions: PositionRules = Field(default_factory=PositionRules)
+    experience: ExperienceRules = Field(default_factory=ExperienceRules)
+    dragon: DragonRules = Field(default_factory=DragonRules)
+    backs: BackRules = Field(default_factory=BackRules)
+    gold: GoldRules = Field(default_factory=GoldRules)
+    contests: ContestRules = Field(default_factory=ContestRules)
+    build_path: BuildRules = Field(default_factory=BuildRules)
+    you: YouRules = Field(default_factory=YouRules)
 
 
 DEFAULT_TUNING: Final = Tuning()

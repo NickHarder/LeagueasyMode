@@ -11,6 +11,7 @@ from leagueasymode.engine import compute_overlay_state
 from leagueasymode.engine_status import StatusBoard
 from leagueasymode.inference.callouts import CalloutRules
 from leagueasymode.inference.intel import IntelRules
+from leagueasymode.inference.objectives import DragonRules
 from leagueasymode.player_intel import GamePlayerRecord, PlayerRecord, recent_games_of
 from leagueasymode.tuning import Tuning, changed_values, load_tuning, note_tuning, write_tuning
 from test_player_intel import ZED, zed_history
@@ -59,6 +60,13 @@ def test_the_written_file_holds_every_value_and_reads_back_the_same(tmp_path: Pa
         "lookups",
         "jungle_path",
         "positions",
+        "experience",
+        "dragon",
+        "backs",
+        "gold",
+        "contests",
+        "build_path",
+        "you",
     }
     assert load_tuning(tuning_path) == (Tuning(), None)
 
@@ -82,6 +90,16 @@ def test_the_engine_shows_what_the_tuning_says() -> None:
     # Three games on Zed make a main by default, not when a main needs four.
     assert is_zed_main(Tuning())
     assert not is_zed_main(Tuning(intel=IntelRules(main_champion_min_games=4)))
+
+
+def test_the_engine_times_the_dragon_as_the_tuning_says() -> None:
+    def first_dragon_spawn(tuning: Tuning) -> float | None:
+        dragon = compute_overlay_state(all_game_data(60.0), tuning=tuning).dragon
+        assert dragon is not None
+        return dragon.spawns_at_game_time_seconds
+
+    assert first_dragon_spawn(Tuning()) == 300.0
+    assert first_dragon_spawn(Tuning(dragon=DragonRules(first_spawn_seconds=240.0))) == 240.0
 
 
 def test_the_status_page_says_what_the_tuning_changed(tmp_path: Path) -> None:

@@ -31,7 +31,7 @@ without waiting for the one before to merge.
 | Area | State | Proof |
 |---|---|---|
 | Scaffold | ai-kit v0.11.1, Python layer, GitHub CI | `.copier-answers.yml` |
-| Gate | Green: lint, 831 tests (and 38 in Chromium), secrets | `make gate` |
+| Gate | Green: lint, 832 tests (and 38 in Chromium), secrets | `make gate` |
 | Recorder | Records games, the client's patch data and the post-game timeline; anonymized copies | `uv run leagueasymode record`; `tests/test_recorder.py`, `tests/test_anonymize.py` |
 | Replay | A recording served as a stand-in game API | `uv run leagueasymode replay <recording>`; `tests/test_replay.py` |
 | Engine and overlay page | The dragon and Elder timer, from the game's answer to the page | `uv run leagueasymode run`; `tests/test_tracer_bullet.py` |

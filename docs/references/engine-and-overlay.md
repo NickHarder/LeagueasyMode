@@ -256,7 +256,7 @@ repository's wins, and a real environment variable wins over either.
 
 Every threshold the overlay was given by hand, not by a game's rules or a fit, can be changed in
 one file: `tuning.json` in the application's directory (`LEAGUEASYMODE_TUNING` moves it). It has
-six parts, each the rules of the code it tunes, with the hand-set value as the default:
+thirteen parts, each the rules of the code it tunes, with the hand-set value as the default:
 
 - `callouts`: how long a callout shows, and when each comes (a level within 0:20, an item at 75%
   likely, a missing enemy unseen 0:20 who could reach your lane within 0:20, at most one every
@@ -269,7 +269,17 @@ six parts, each the rules of the code it tunes, with the hand-set value as the d
 - `lookups`: whom the player lookups read past timelines for (half of the newest five games, and
   at least two, in the jungle);
 - `jungle_path`: the camps' spawn, respawn and clear times, and how a path is weighed;
-- `positions`: how much of the time a champion moves, and when a jungler's 4:00 habit weighs.
+- `positions`: how much of the time a champion moves, and when a jungler's 4:00 habit weighs;
+- `experience`, `gold`, `backs`: the estimators' priors and the season's numbers, several marked
+  unconfirmed until a recording checks them (each role's experience rate, passive and minion
+  gold, bounties, turret gold, what counts as a trip to base);
+- `dragon`: when dragons and the Elder spawn, and how many make a soul;
+- `contests`: the monsters' health and resistances, Smite's damage, and when a monster is weighed;
+- `build_path`: how much each signal weighs in the next item;
+- `you`: when gold counts as held, when the creep pace shows, and each stat's gold value.
+
+The win chance's and the fights' weights are not here: `leagueasymode fit --write` refits them
+on recorded games, into `model-weights.json`.
 
 The file names only what it changes; anything it leaves out keeps its default, so
 `{"intel": {"one_trick_min_share": 0.8}}` is a whole file. `uv run leagueasymode tuning` prints

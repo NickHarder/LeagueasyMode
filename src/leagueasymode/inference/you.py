@@ -12,8 +12,9 @@
 """
 
 from collections.abc import Mapping
-from dataclasses import dataclass
 from typing import Final, Literal
+
+from pydantic import BaseModel, ConfigDict
 
 from leagueasymode.data_dragon import ItemStatBonuses, PatchStats
 from leagueasymode.game_state import GameSnapshot
@@ -37,9 +38,13 @@ BASIC_ITEM_IDS: Final[Mapping[DefensiveStat, int]] = {
 }
 
 
-@dataclass(frozen=True)
-class YouRules:
-    """The You panel's thresholds, and each stat's price without the patch's items."""
+class YouRules(BaseModel):
+    """The You panel's thresholds, and each stat's price without the patch's items.
+
+    `tuning.json`'s "you".
+    """
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
 
     holding_gold_threshold: float = 1300.0
     # Creep score a minute is shown from this time; before it, too little has died.

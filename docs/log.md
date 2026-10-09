@@ -8,8 +8,9 @@ skill has the format.
 
 - Tuning: every hand-set threshold can be changed in one file, `tuning.json` in the
   application's directory, which names only what it changes. The callouts, the suggestions, the
-  intel, the player lookups, the jungle path and the positions each read their rules from a model
-  whose defaults are the values they had; `leagueasymode tuning` prints them all and `--write`
+  intel, the player lookups, the jungle path, the positions, and the estimators' priors and season
+  numbers (experience, dragon, backs, gold, contests, build path, the You panel) each read their
+  rules from a model whose defaults are the values they had; `leagueasymode tuning` prints them all and `--write`
   writes them to the file to edit. The engine reads it when it starts, the scoring after a game
   uses the same values, and the status page says what the file changed or why it could not be
   read. The owner: "we will tweak as needed. make sure there is an easy way to update them".

@@ -17,8 +17,9 @@ then.
 
 import math
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass
 from typing import Final, Literal
+
+from pydantic import BaseModel, ConfigDict
 
 from leagueasymode.data_dragon import PatchStats
 from leagueasymode.game_state import GameSnapshot, ScoreboardPlayer
@@ -46,12 +47,15 @@ PIT_OF: Final[Mapping[ContestedObjective, str]] = {
 }
 
 
-@dataclass(frozen=True)
-class ContestRules:
+class ContestRules(BaseModel):
     """The monsters' health and resistances, Smite's damage, and when a monster is weighed.
 
     The 2026 season's, from patch 26.1's notes as trackers list them; unconfirmed.
+
+    `tuning.json`'s "contests".
     """
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
 
     baron_health: float = 16_300.0
     baron_health_per_minute: float = 190.0

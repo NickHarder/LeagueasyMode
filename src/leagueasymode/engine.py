@@ -161,8 +161,9 @@ def compute_overlay_state(
         position_clues=position_clues,
         intel_rules=tuning.intel,
         position_rules=tuning.positions,
+        build_rules=tuning.build_path,
     )
-    dragon = dragon_timer(snapshot)
+    dragon = dragon_timer(snapshot, tuning.dragon)
     objectives = objective_timers(snapshot)
     buffs = buff_timers(snapshot)
     inhibitors = inhibitor_timers(snapshot)
@@ -207,6 +208,7 @@ def compute_overlay_state(
             objectives=objectives,
             position_clues=position_clues or {},
             patch_stats=patch_stats,
+            rules=tuning.contests,
         ),
         you=(
             you_panel(
@@ -215,6 +217,7 @@ def compute_overlay_state(
                 item_catalog=item_catalog,
                 patch_stats=patch_stats,
                 player_records=player_records,
+                rules=tuning.you,
             )
             if you_tracker is not None
             else None
@@ -307,13 +310,13 @@ class OverlayEngine:
         self._last_payload: JsonValue | None = None
         self._cooldown_timers: list[CooldownTimer] = []
         # Each starts over by itself when a new game's clock begins.
-        self._gold_tracker: Final = GoldTracker()
-        self._experience_tracker: Final = ExperienceTracker()
-        self._back_tracker: Final = BackTracker()
+        self._gold_tracker: Final = GoldTracker(rules=tuning.gold)
+        self._experience_tracker: Final = ExperienceTracker(rules=tuning.experience)
+        self._back_tracker: Final = BackTracker(rules=tuning.backs)
         self._clue_tracker: Final = ClueTracker()
         self._jungle_tracker: Final = JunglePathTracker(rules=tuning.jungle_path)
         self._ward_tracker: Final = WardTracker()
-        self._you_tracker: Final = YouTracker()
+        self._you_tracker: Final = YouTracker(rules=tuning.you)
         self._preferences = preferences or OverlayPreferences()
         self._layout = layout or OverlayLayout()
         self._current_state = NOT_RUNNING.model_copy(
