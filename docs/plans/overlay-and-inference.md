@@ -3,9 +3,12 @@ type: Plan
 title: "Plan v2: a macOS overlay built around inference"
 description: The plan the owner approved on 2026-10-08, word for word, for turning LeagueasyMode into a macOS overlay with an inference engine fed only by League's local APIs.
 tags: [plan, overlay, inference]
-status: draft
+status: stable
 generated: { by: claude-code/cloud, at: 2026-10-08T13:23:21Z }
 approved_by_owner_in_session: 2026-10-08
+verified:
+  - { by: human:nickharder, at: 2026-10-09T04:38:23Z }
+approved_sha256: 558bc3ac78604d0291f5dae371c121510fd8023ccdf7d8c6658bdfea500aa546
 ---
 
 # LeagueasyMode plan, v2: a macOS overlay built around inference

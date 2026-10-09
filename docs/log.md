@@ -6,6 +6,9 @@ skill has the format.
 
 ## 2026-10-09
 
+- Every plan approved: the owner, asked about the plan documents, answered "approved". The plan
+  v2 and the plans of phases 2 and 4 to 9 are recorded as approved (`make docs-approve`), as
+  phase 3's was on 2026-10-08.
 - Data Dragon, checked against the real files (reachable from this environment since the
   owner's allowance): patch 16.20.1's champions, items and summoner spells all parse as the
   hand-written test files assumed. One gap is Data Dragon's own: since 16.5.1 it gives every
