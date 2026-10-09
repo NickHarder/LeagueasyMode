@@ -3,9 +3,10 @@
 If you are picking this work up, human or model: read this file top to bottom first. The `handoff` skill
 refreshes it; it describes the current state.
 
-Last updated: 2026-10-09, on branch `feat/ten-minute-leads`, stacked on `feat/tuning` (pull
-request #48). `main` holds phases 0 to 8, phase 9 but for 9.4, the Data Dragon growth fix and the
-plans' approval (pull requests #2 to #47, merged).
+Last updated: 2026-10-09, on branch `feat/ten-minute-leads` (pull request #49). `main` holds
+phases 0 to 8, phase 9 but for 9.4, the Data Dragon growth fix, the plans' approval and
+`tuning.json` (pull requests #2 to #48, merged); the estimators' priors in `tuning.json` were
+pushed to #48 after it merged and ride with #49.
 
 ## Where things stand
 
@@ -26,9 +27,9 @@ Phase 9 ([docs/plans/phase-9-scouting.md](docs/plans/phase-9-scouting.md), appro
 players' past games: 9.1 to 9.3, 9.5 and 9.6 (where the enemy jungler usually starts and is at
 4:00, champion pools, the usual start as a prior for the jungle path, scouting scored after the
 game) and 9.7 (the 4:00 habit in the positions) are merged (#40 to #45); 9.4 (each player's
-creep score and gold at 10:00, which the owner said yes to on 2026-10-09) is built on
-`feat/ten-minute-leads`, after one `tuning.json` for the hand-set thresholds (#48). Each slice
-goes up as its own pull request into `main` without waiting for the one before to merge.
+creep score and gold at 10:00, which the owner said yes to on 2026-10-09) is built in pull
+request #49, after one `tuning.json` for the hand-set thresholds (#48, merged). Each slice goes
+up as its own pull request into `main` without waiting for the one before to merge.
 
 | Area | State | Proof |
 |---|---|---|
