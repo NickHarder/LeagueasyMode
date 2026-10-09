@@ -24,7 +24,7 @@ against its timeline; phase 6 keeps those scores, checks them, and shows them.
 | # | Slice | Shows | Needs |
 |---|---|---|---|
 | 6.1 | Accuracy history | `leagueasymode history`: each estimator's last game, its average over the last 10 games, and whether it is getting better or worse | Each game `leagueasymode run` records is scored once its timeline has come, off the engine's loop; `score --keep` scores one by hand. One line a game in `accuracy-history.jsonl` in the application's directory, naming the recording's file, the game's id and version, never a player |
-| 6.2 | Thresholds in CI | A failing check when an estimator falls below its threshold on the recordings in the repository | Anonymized recordings in `tests/recordings/`, each estimator's threshold in `tests/accuracy_thresholds.json`, set from the first batch and never lowered; until then there is nothing to hold |
+| 6.2 | Thresholds in CI | A failing check when an estimator falls below its threshold on the recordings in the repository | Anonymized recordings in `tests/fixtures/recorded-games/`, each estimator's threshold in `tests/accuracy_thresholds.json`, set from the first batch and never lowered; until then there is nothing to hold |
 | 6.3 | The game reconstructed | Nothing alone; 6.4 shows it | From the recording: the result, the win chance each minute, the gold lead each minute estimated and as the timeline has it, the moments that moved the win chance most and what happened then, the kills and objectives, and each estimator's score; served by the engine at `/summary` for the last game recorded |
 | 6.4 | The post-game window | The game reconstructed, and the accuracy history over the last games | A page of its own at `/summary.html`, a normal window rather than the click-through overlay; the macOS app's menu gains "Last game…", which opens it |
 
@@ -33,9 +33,9 @@ against its timeline; phase 6 keeps those scores, checks them, and shows them.
 - **6.1** on built recordings: the history keeps each game once, reads back what it wrote,
   averages by samples, and names the trend; the engine's step after a recording is tested on
   its own.
-- **6.2** by a test that scores every recording in `tests/recordings/` and fails below a
-  threshold; and by a test that every threshold names an estimator the harness scores, so that
-  a misspelled one cannot pass unnoticed.
+- **6.2** by a test that scores every recording in `tests/fixtures/recorded-games/` and fails
+  below a threshold; and by a test that every threshold names an estimator the harness scores,
+  so that a misspelled one cannot pass unnoticed.
 - **6.3** on built recordings whose truth is known.
 - **6.4** in Chromium against a built summary, as the overlay's widgets are; the menu item by
   the macOS build in CI.

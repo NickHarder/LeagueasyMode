@@ -6,6 +6,13 @@ skill has the format.
 
 ## 2026-10-09
 
+- Phase 6.2, thresholds in CI: a test scores every anonymized recording in
+  `tests/fixtures/recorded-games/` against `tests/accuracy_thresholds.json` (a share must reach its threshold, an error stay under
+  it), another that only anonymized copies are there, and another that every threshold names an
+  estimator the harness scores (the harness now lists them, `ESTIMATOR_NAMES`, checked against
+  its own source). `leagueasymode thresholds <recordings> --write` proposes each estimator's
+  average less a standard deviation from 20 games and only ever tightens the file. Empty until
+  the first recordings.
 - Phase 6.1, the accuracy history: every game `leagueasymode run` records is scored once its
   timeline has come (the recorder now hands each closed recording on), and `score --keep` scores
   one by hand; each game's scores are a line of `accuracy-history.jsonl`, never naming a player.

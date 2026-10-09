@@ -1,5 +1,6 @@
 import dataclasses
 import datetime
+import re
 from pathlib import Path
 from typing import Final
 
@@ -28,6 +29,7 @@ from leagueasymode.recorder import GAME_DETAILS_PATH_TEMPLATE, TIMELINE_PATH_TEM
 from leagueasymode.recording.writer import RecordingWriter
 from leagueasymode.refit import MIN_GAMES_TO_FIT, load_model_weights
 from leagueasymode.scoring import (
+    ESTIMATOR_NAMES,
     read_recorded_game,
     score_backs,
     score_combat_stats,
@@ -811,3 +813,20 @@ async def test_a_game_recorded_while_running_is_scored_into_the_history(tmp_path
     (game,) = read_accuracy_history(history_path)
     assert game.recording_name == recording.name
     assert "combat stats (yours)" in [score.estimator for score in game.scores]
+
+
+def test_the_list_of_estimators_is_every_name_the_harness_scores() -> None:
+    source = (Path(__file__).parents[1] / "src" / "leagueasymode" / "scoring.py").read_text()
+    assert set(re.findall(r'estimator="([^"]+)"', source)) == ESTIMATOR_NAMES
+
+
+def test_thresholds_need_twenty_games(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    fit_settings(tmp_path, monkeypatch)
+    thresholds_path = tmp_path / "accuracy_thresholds.json"
+    recording = write_scored_recording(tmp_path, players_at(are_positions_given=True, level=1))
+    assert main(["thresholds", str(recording), "--file", str(thresholds_path), "--write"]) == 0
+    printed = capsys.readouterr().out
+    assert "no estimator has 20 games yet: roles has 1" in printed
+    assert not thresholds_path.exists()

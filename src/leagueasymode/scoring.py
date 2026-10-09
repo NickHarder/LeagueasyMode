@@ -142,6 +142,30 @@ SCORED_STATS: Final[tuple[Callable[[CombatStats], float], ...]] = (
 )
 
 
+# Every estimator the harness scores, by the name its score carries.
+ESTIMATOR_NAMES: Final = frozenset(
+    {
+        "roles",
+        "combat stats (yours)",
+        "gold earned",
+        "gold unspent",
+        "gold band",
+        "experience",
+        "experience band",
+        "next item",
+        "backs (of the timeline's)",
+        "backs (of those seen)",
+        "positions (likeliest region)",
+        "positions (chance on the truth)",
+        "jungle path",
+        "control wards (of the timeline's)",
+        "control wards (of those seen)",
+        "map",
+        "fights",
+        "objective contests",
+        "win chance",
+    }
+)
 # Whether a higher or a lower value of each measure is better.
 MEASURE_DIRECTION: Final[Mapping[str, Literal["higher", "lower"]]] = {
     "share_correct": "higher",

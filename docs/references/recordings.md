@@ -24,6 +24,8 @@ sources:
     resource: ../../src/leagueasymode/refit.py
   - id: accuracy-history
     resource: ../../src/leagueasymode/accuracy_history.py
+  - id: accuracy-thresholds
+    resource: ../../src/leagueasymode/accuracy_thresholds.py
 ---
 
 # What a recording is for
@@ -74,6 +76,18 @@ file, the game's id and version, and the scores; never a player. `uv run leaguea
 prints each estimator's last game, its average over the last ten games weighed by their samples,
 and, from six games, whether the newer half beats the older half: "better", "worse" or "steady"
 (within 2%).[^accuracy-history]
+
+CI holds the anonymized recordings in `tests/fixtures/recorded-games/` to each estimator's
+threshold in `tests/accuracy_thresholds.json`: a share must reach it, an error stay at or under
+it, and a test fails on the first recording that misses. The thresholds come from the first batch
+of recordings: `uv run leagueasymode thresholds <recordings> --write` proposes, for each estimator
+scored on 20 games or more, its average less one standard deviation toward the worse side, and
+writes it only where it is stricter than the threshold held, so a threshold is never loosened.
+The patch's Data Dragon files for those recordings go in
+`tests/fixtures/recorded-games/patch-data/<version>/`, as `leagueasymode` keeps them, so that the
+combat stats, fights and contests are scored too. Only anonymized copies may be committed there
+(`.gitignore` keeps every folder named `recordings/` out), and a test checks every file's
+name.[^accuracy-thresholds]
 
 # How to make one
 
@@ -150,3 +164,4 @@ A recording holds other players' names, so only an anonymized copy is committed:
 [^scoring]: `src/leagueasymode/scoring.py`
 [^refit]: `src/leagueasymode/refit.py`
 [^accuracy-history]: `src/leagueasymode/accuracy_history.py`
+[^accuracy-thresholds]: `src/leagueasymode/accuracy_thresholds.py`
