@@ -17,7 +17,7 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from typing import Final, Literal
 
-from pydantic import Field, JsonValue, TypeAdapter, ValidationError
+from pydantic import BaseModel, ConfigDict, Field, JsonValue, TypeAdapter, ValidationError
 
 from leagueasymode.game_state import RiotPayloadModel
 from leagueasymode.jungle_starts import (
@@ -69,13 +69,24 @@ SHORTEST_COUNTED_GAME_SECONDS: Final = 300
 POSITIONS: Final = frozenset({"TOP", "JUNGLE", "MIDDLE", "BOTTOM", "UTILITY"})
 TEAM_ONE: Final = "ORDER"
 TEAM_TWO: Final = "CHAOS"
-# A player is a likely jungler when at least half of their newest games, and at least two, were
-# in the jungle; those jungle games' timelines say where they start.
 JUNGLE_POSITION: Final = "JUNGLE"
-JUNGLER_GAMES_READ: Final = 5
-FEWEST_JUNGLE_GAMES: Final = 2
 
 logger = logging.getLogger(__name__)
+
+
+class LookupRules(BaseModel):
+    """What the player lookups read: `tuning.json`'s "lookups"."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    # A player is a likely jungler when at least half of their newest this many games, and at
+    # least the second figure, were in the jungle; those jungle games' timelines say where they
+    # start and are at 4:00.
+    jungler_games_read: int = 5
+    fewest_jungle_games: int = 2
+
+
+LOOKUP_RULES: Final = LookupRules()
 
 
 class RankedEntry(RiotPayloadModel):
@@ -348,33 +359,37 @@ def recent_games_of(payload: JsonValue | None, puuid: str) -> list[RecentGame]:
     ]
 
 
-def jungle_timeline_paths(recent_games: Sequence[RecentGame]) -> list[str]:
+def jungle_timeline_paths(
+    recent_games: Sequence[RecentGame], rules: LookupRules = LOOKUP_RULES
+) -> list[str]:
     """Return the timelines to read for where a player starts in the jungle.
 
     Args:
         recent_games: Their recent games, newest first.
+        rules: The hand-set thresholds.
 
     Returns:
         The client's path of each jungle game among the newest few; empty when they are not a
         likely jungler.
     """
-    jungle_games = [game for game in _jungle_games_read(recent_games) if game.game_id > 0]
+    jungle_games = [game for game in _jungle_games_read(recent_games, rules) if game.game_id > 0]
     return [f"{GAME_TIMELINE_PATH_PREFIX}{game.game_id}" for game in jungle_games]
 
 
-def _jungle_games_read(recent_games: Sequence[RecentGame]) -> list[RecentGame]:
+def _jungle_games_read(recent_games: Sequence[RecentGame], rules: LookupRules) -> list[RecentGame]:
     """Return the jungle games among a likely jungler's newest few.
 
     Args:
         recent_games: Their recent games, newest first.
+        rules: The hand-set thresholds.
 
     Returns:
         The games; empty when fewer than half of the newest few, or fewer than two, were in the
         jungle.
     """
-    newest_games = recent_games[:JUNGLER_GAMES_READ]
+    newest_games = recent_games[: rules.jungler_games_read]
     jungle_games = [game for game in newest_games if game.position == JUNGLE_POSITION]
-    if len(jungle_games) < FEWEST_JUNGLE_GAMES or 2 * len(jungle_games) < len(newest_games):
+    if len(jungle_games) < rules.fewest_jungle_games or 2 * len(jungle_games) < len(newest_games):
         return []
     return jungle_games
 
@@ -409,6 +424,7 @@ async def load_player_records(
     client: LeagueClient,
     cache: dict[str, PlayerRecord],
     pause_seconds: float = DEFAULT_PAUSE_SECONDS,
+    rules: LookupRules = LOOKUP_RULES,
 ) -> PlayerRecords:
     """Return the record of each player in the game in progress, asking only for those not known.
 
@@ -416,6 +432,7 @@ async def load_player_records(
         client: The League client.
         cache: Records already known, by PUUID; new ones are added to it.
         pause_seconds: The pause after each request.
+        rules: What the lookups read.
 
     Returns:
         Each player's record by team and champion; empty when the client lists no game.
@@ -426,7 +443,9 @@ async def load_player_records(
     players = _players_in_game(session_payload, await client.get_json(CHAMPION_SUMMARY_PATH))
     records: PlayerRecords = {}
     for key, player in players:
-        record = cache.get(player.puuid) or await _look_up(client, player.puuid, pause_seconds)
+        record = cache.get(player.puuid) or await _look_up(
+            client, player.puuid, pause_seconds, rules
+        )
         if record is None:
             continue
         cache[player.puuid] = record
@@ -450,13 +469,16 @@ def jungle_starts_of(player_records: PlayerRecords) -> dict[tuple[str, str], Jun
     }
 
 
-def recorded_player_records(client_resources: Mapping[str, JsonValue]) -> PlayerRecords:
+def recorded_player_records(
+    client_resources: Mapping[str, JsonValue], rules: LookupRules = LOOKUP_RULES
+) -> PlayerRecords:
     """Return the record of each player in a recorded game, from the client's recorded answers.
 
     The recorder asks what the engine asks, so the records are those the engine had.
 
     Args:
         client_resources: The client's latest answer for each path it was asked.
+        rules: What the lookups read.
 
     Returns:
         Each player's record by team and champion; empty when the recording lists no game.
@@ -476,7 +498,7 @@ def recorded_player_records(client_resources: Mapping[str, JsonValue]) -> Player
             {
                 timeline_path: client_resources.get(timeline_path)
                 for timeline_path in jungle_timeline_paths(
-                    recent_games_of(history_payload, player.puuid)
+                    recent_games_of(history_payload, player.puuid), rules
                 )
             },
         )
@@ -490,6 +512,7 @@ def player_record(
     ranked_payload: JsonValue | None,
     history_payload: JsonValue | None,
     timeline_payloads: Mapping[str, JsonValue | None],
+    rules: LookupRules = LOOKUP_RULES,
 ) -> PlayerRecord | None:
     """Return a player's record from the client's answers about them.
 
@@ -498,6 +521,7 @@ def player_record(
         ranked_payload: The answer for their ranked stats, or None.
         history_payload: The answer for their match history, or None.
         timeline_payloads: The answer for each of their past games' timelines read, by path.
+        rules: What the lookups read.
 
     Returns:
         The record, or None when the client answered neither for their rank nor their history.
@@ -505,7 +529,7 @@ def player_record(
     if ranked_payload is None and history_payload is None:
         return None
     recent_games = recent_games_of(history_payload, puuid)
-    jungle_starts, four_minute_sides = _jungle_habits(recent_games, timeline_payloads)
+    jungle_starts, four_minute_sides = _jungle_habits(recent_games, timeline_payloads, rules)
     return PlayerRecord(
         ranked=ranked_standing_of(ranked_payload),
         recent_games=tuple(recent_games),
@@ -514,13 +538,16 @@ def player_record(
     )
 
 
-async def _look_up(client: LeagueClient, puuid: str, pause_seconds: float) -> PlayerRecord | None:
+async def _look_up(
+    client: LeagueClient, puuid: str, pause_seconds: float, rules: LookupRules
+) -> PlayerRecord | None:
     """Ask the client for one player's rank, recent games and jungle timelines, one at a time.
 
     Args:
         client: The League client.
         puuid: The player.
         pause_seconds: The pause after each request.
+        rules: What the lookups read.
 
     Returns:
         The record, or None when the client answered neither for their rank nor their history.
@@ -533,20 +560,23 @@ async def _look_up(client: LeagueClient, puuid: str, pause_seconds: float) -> Pl
         logger.info("the League client did not answer for one player; asking again next game")
         return None
     timeline_payloads: dict[str, JsonValue | None] = {}
-    for timeline_path in jungle_timeline_paths(recent_games_of(history_payload, puuid)):
+    for timeline_path in jungle_timeline_paths(recent_games_of(history_payload, puuid), rules):
         timeline_payloads[timeline_path] = await client.get_json(timeline_path)
         await asyncio.sleep(pause_seconds)
-    return player_record(puuid, ranked_payload, history_payload, timeline_payloads)
+    return player_record(puuid, ranked_payload, history_payload, timeline_payloads, rules)
 
 
 def _jungle_habits(
-    recent_games: Sequence[RecentGame], timeline_payloads: Mapping[str, JsonValue | None]
+    recent_games: Sequence[RecentGame],
+    timeline_payloads: Mapping[str, JsonValue | None],
+    rules: LookupRules,
 ) -> tuple[JungleStarts | None, FourMinuteSides | None]:
     """Count where a likely jungler started, and was at 4:00, in each of their recent jungle games.
 
     Args:
         recent_games: Their recent games, newest first.
         timeline_payloads: The answer for each of those games' timelines, by path.
+        rules: What the lookups read.
 
     Returns:
         How many started on each side, and how many were on each side at 4:00; each None when
@@ -554,7 +584,7 @@ def _jungle_habits(
     """
     starts = []
     four_minute_sides = []
-    for game in _jungle_games_read(recent_games):
+    for game in _jungle_games_read(recent_games, rules):
         timeline_payload = timeline_payloads.get(f"{GAME_TIMELINE_PATH_PREFIX}{game.game_id}")
         starts.append(start_side(timeline_payload, game.participant_id, game.team_id))
         four_minute_sides.append(

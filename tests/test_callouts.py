@@ -1,4 +1,4 @@
-from leagueasymode.inference.callouts import CALLOUT_SHOWN_SECONDS, CalloutTracker
+from leagueasymode.inference.callouts import CALLOUT_RULES, CalloutRules, CalloutTracker
 from leagueasymode.overlay_state import (
     CooldownTimer,
     DragonTimer,
@@ -65,8 +65,11 @@ def test_a_callout_is_shown_for_a_few_seconds_then_gone() -> None:
     tracker = CalloutTracker()
     tracker.update(state_at(400.0, [enemy("Zed", 10)]))
     shown = tracker.update(state_at(401.0, [enemy("Zed", 11)]))
-    assert shown[0].shown_until_game_time_seconds == 401.0 + CALLOUT_SHOWN_SECONDS
-    assert tracker.update(state_at(401.0 + CALLOUT_SHOWN_SECONDS + 0.5, [enemy("Zed", 11)])) == []
+    assert shown[0].shown_until_game_time_seconds == 401.0 + CALLOUT_RULES.shown_seconds
+    assert (
+        tracker.update(state_at(401.0 + CALLOUT_RULES.shown_seconds + 0.5, [enemy("Zed", 11)]))
+        == []
+    )
 
 
 def test_levels_already_reached_when_the_overlay_starts_are_not_called_out() -> None:
@@ -314,3 +317,12 @@ def test_an_enemy_one_trick_is_called_out_before_the_camps_spawn() -> None:
         ("one_trick", "Zed is a one-trick (15 of 20 games)")
     ]
     assert CalloutTracker().update(state_at(95.0, [enemy_one_trick(15, 20)])) == []
+
+
+def test_the_habit_thresholds_come_from_the_rules() -> None:
+    # Three of five is not a habit by default, but is when 60% is enough.
+    assert CalloutTracker().update(state_at(20.0, [enemy_jungler(3, 5)])) == []
+    lenient = CalloutTracker(rules=CalloutRules(habit_min_share=0.6))
+    assert [callout.kind for callout in lenient.update(state_at(20.0, [enemy_jungler(3, 5)]))] == [
+        "jungle_start"
+    ]

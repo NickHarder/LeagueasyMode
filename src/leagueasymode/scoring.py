@@ -79,7 +79,7 @@ from leagueasymode.inference.objectives import (
     inhibitor_timers,
     objective_timers,
 )
-from leagueasymode.inference.positions import position_estimate
+from leagueasymode.inference.positions import PositionRules, position_estimate
 from leagueasymode.inference.rift_map import RIFT_MAP, RiftMap
 from leagueasymode.inference.roles import assign_roles
 from leagueasymode.inference.wards import WardTracker
@@ -109,6 +109,7 @@ from leagueasymode.player_intel import (
 )
 from leagueasymode.recording.file_format import ClientResource
 from leagueasymode.recording.reader import iter_game_frames, iter_recording_lines
+from leagueasymode.tuning import DEFAULT_TUNING, Tuning
 
 GAME_DETAILS_PATH_PREFIX: Final = "/lol-match-history/v1/games/"
 TIMELINE_PATH_PREFIX: Final = "/lol-match-history/v1/game-timelines/"
@@ -350,11 +351,12 @@ class TimelineFight:
     victim_ids: tuple[int, ...]
 
 
-def read_recorded_game(recording_path: Path) -> RecordedGame:
+def read_recorded_game(recording_path: Path, tuning: Tuning = DEFAULT_TUNING) -> RecordedGame:
     """Read what the harness needs from a recording, running the trackers through it.
 
     Args:
         recording_path: The recording.
+        tuning: The hand-set thresholds, as the engine had them.
 
     Returns:
         The game's snapshot at the end of each minute, the client's answers, and the gold and
@@ -365,14 +367,14 @@ def read_recorded_game(recording_path: Path) -> RecordedGame:
         for record in iter_recording_lines(recording_path)
         if isinstance(record, ClientResource)
     }
-    player_records = recorded_player_records(client_resources)
+    player_records = recorded_player_records(client_resources, tuning.lookups)
     items_payload = client_resources.get(ITEMS_PATH)
     item_catalog = ItemCatalog.from_client_items(items_payload) if items_payload else None
     gold_tracker = GoldTracker()
     experience_tracker = ExperienceTracker()
     back_tracker = BackTracker()
     clue_tracker = ClueTracker()
-    jungle_tracker = JunglePathTracker()
+    jungle_tracker = JunglePathTracker(rules=tuning.jungle_path)
     ward_tracker = WardTracker()
     jungle_camps_by_minute: dict[int, Mapping[PlayerKey, tuple[str, float]]] = {}
     trips_by_player: dict[PlayerKey, list[float]] = {}
@@ -417,7 +419,7 @@ def read_recorded_game(recording_path: Path) -> RecordedGame:
             gold_estimates_by_minute[game_minute] = gold_estimates
             level_estimates_by_minute[game_minute] = level_estimates
             position_estimates_by_minute[game_minute] = _position_estimates(
-                snapshot, position_clues, player_records
+                snapshot, position_clues, player_records, tuning.positions
             )
             jungle_camps_by_minute[game_minute] = jungle_tracker.last_clears()
             win_features_by_minute[game_minute] = win_features(
@@ -1303,6 +1305,7 @@ def _position_estimates(
     snapshot: GameSnapshot,
     position_clues: Mapping[PlayerKey, list[PositionClue]],
     player_records: PlayerRecords,
+    rules: PositionRules,
 ) -> dict[PlayerKey, PositionEstimate]:
     """Return where each living player likely is, as the overlay would have shown it.
 
@@ -1312,6 +1315,7 @@ def _position_estimates(
         snapshot: The game's state.
         position_clues: Each player's clues so far.
         player_records: Each player's record, for a jungler's 4:00 habit.
+        rules: The positions' hand-set thresholds.
 
     Returns:
         The estimates by key; the dead are left out.
@@ -1329,6 +1333,7 @@ def _position_estimates(
                 if (game_record := player_records.get(player_key(player))) is not None
                 else None
             ),
+            rules=rules,
         )
         for player, role_guess in zip(snapshot.players, assign_roles(snapshot), strict=True)
     }

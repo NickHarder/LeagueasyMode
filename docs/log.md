@@ -6,6 +6,13 @@ skill has the format.
 
 ## 2026-10-09
 
+- Tuning: every hand-set threshold can be changed in one file, `tuning.json` in the
+  application's directory, which names only what it changes. The callouts, the suggestions, the
+  intel, the player lookups, the jungle path and the positions each read their rules from a model
+  whose defaults are the values they had; `leagueasymode tuning` prints them all and `--write`
+  writes them to the file to edit. The engine reads it when it starts, the scoring after a game
+  uses the same values, and the status page says what the file changed or why it could not be
+  read. The owner: "we will tweak as needed. make sure there is an easy way to update them".
 - Phase 9.7, the 4:00 habit in the positions: from 3:00 to 5:00, estimator 7 weighs each half of
   the map by a jungler's share of past games there at 4:00 (9.2's counts, a game added to each
   half), so where the enemy jungler likely is after their first clear, the "missing" callouts and

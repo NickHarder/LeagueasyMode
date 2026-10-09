@@ -21,6 +21,8 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 from typing import Final, Literal
 
+from pydantic import BaseModel, ConfigDict, Field
+
 from leagueasymode.game_state import GameSnapshot
 from leagueasymode.inference.gold import NEW_GAME_SLACK_SECONDS, PlayerKey, player_key
 from leagueasymode.inference.rift_map import RIFT_MAP, TEAM_PREFIX, fountain_of
@@ -45,9 +47,13 @@ BUFF_KINDS: Final = frozenset({"blue_buff", "red_buff"})
 RECENT_CAMP_COUNT: Final = 3
 
 
-@dataclass(frozen=True)
-class CampRules:
-    """When camps are up, how long they take, and how the decoding weighs a path."""
+class CampRules(BaseModel):
+    """When camps are up, how long they take, and how a path is weighed.
+
+    `tuning.json`'s "jungle_path".
+    """
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
 
     # Unconfirmed: past seasons' timings.
     first_spawn_seconds: float = 90.0
@@ -56,7 +62,7 @@ class CampRules:
     camp_respawn_seconds: float = 135.0
     scuttle_respawn_seconds: float = 150.0
     # A first guess at how long each camp takes.
-    clear_seconds: Mapping[str, float] = field(
+    clear_seconds: dict[str, float] = Field(
         default_factory=lambda: {
             "blue_buff": 12.0,
             "gromp": 10.0,

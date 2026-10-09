@@ -15,8 +15,9 @@ lane is the walk from the clue's place at full speed, less the time since.
 import math
 from collections import defaultdict
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass
 from typing import Final
+
+from pydantic import BaseModel, ConfigDict
 
 from leagueasymode.game_state import ScoreboardPlayer
 from leagueasymode.inference.rift_map import RIFT_MAP, TEAM_PREFIX, fountain_of, region_center
@@ -84,9 +85,13 @@ REGION_WORDS: Final = {
 SHOWN_REGION_COUNT: Final = 3
 
 
-@dataclass(frozen=True)
-class PositionRules:
-    """How much of the time a champion moves."""
+class PositionRules(BaseModel):
+    """How much of the time a champion moves, and when a jungler's habit weighs.
+
+    `tuning.json`'s "positions".
+    """
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
 
     # Between clues a champion farms, fights and waits as well as walks.
     moving_share: float = 0.8

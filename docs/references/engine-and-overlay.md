@@ -4,7 +4,7 @@ title: The engine and the overlay page
 description: How the engine turns the game's answers into the overlay's state, how that state reaches the widgets, how the page is built and tested, and how to run it all against a replay.
 tags: [engine, overlay, architecture]
 status: draft
-generated: { by: claude-code/cloud, at: 2026-10-09T04:20:00Z }
+generated: { by: claude-code/cloud, at: 2026-10-09T05:10:00Z }
 sources:
   - id: engine
     resource: ../../src/leagueasymode/engine.py
@@ -74,6 +74,8 @@ sources:
     resource: ../../overlay/web/src/overlay.ts
   - id: engine-status
     resource: ../../src/leagueasymode/engine_status.py
+  - id: tuning
+    resource: ../../src/leagueasymode/tuning.py
   - id: jungle-starts
     resource: ../../src/leagueasymode/jungle_starts.py
   - id: structures
@@ -245,6 +247,34 @@ The engine's own settings come from the repository's `.env` in a clone. An insta
 has no clone, reads `settings.env` in the application's directory instead; where both exist, the
 repository's wins, and a real environment variable wins over either.
 
+## Tuning
+
+Every threshold the overlay was given by hand, not by a game's rules or a fit, can be changed in
+one file: `tuning.json` in the application's directory (`LEAGUEASYMODE_TUNING` moves it). It has
+six parts, each the rules of the code it tunes, with the hand-set value as the default:
+
+- `callouts`: how long a callout shows, and when each comes (a level within 0:20, an item at 75%
+  likely, a missing enemy unseen 0:20 who could reach your lane within 0:20, at most one every
+  0:30, an objective a minute away, scouting before 1:30, a jungler's habit at 70% of at least two
+  games, the 4:00 habit from 2:45 to 3:30);
+- `suggestions`: how long one shows, and its windows (an objective within 0:30, a window of at
+  least 0:20, an objective within a minute while their jungler is down);
+- `intel`: what makes a usual position (60% of five games), a main (three games) and a one-trick
+  (70% of eight);
+- `lookups`: whom the player lookups read past timelines for (half of the newest five games, and
+  at least two, in the jungle);
+- `jungle_path`: the camps' spawn, respawn and clear times, and how a path is weighed;
+- `positions`: how much of the time a champion moves, and when a jungler's 4:00 habit weighs.
+
+The file names only what it changes; anything it leaves out keeps its default, so
+`{"intel": {"one_trick_min_share": 0.8}}` is a whole file. `uv run leagueasymode tuning` prints
+every value the engine would use, and `uv run leagueasymode tuning --write` writes them all to the
+file, to edit, when there is none yet; it never writes over one. The engine reads the file when
+it starts: after an edit, quit the app and open it again. A file that cannot be read (a name
+misspelled, a value of the wrong kind, not JSON) changes nothing, and the status page's "Tuning"
+says where it went wrong; otherwise it names each value the file changed. The scoring after a
+game uses the same values as the engine, so the accuracy history says how a change did.[^tuning]
+
 # Status, and the report after a test
 
 `/status.html` (`overlay/web/src/status.ts`), opened by the macOS app's "Status…", shows what the
@@ -333,5 +363,6 @@ Chromium against a replay (Chromium from `uv run playwright install chromium`, o
 [^game-summary]: `src/leagueasymode/game_summary.py`
 [^preferences]: `src/leagueasymode/preferences.py`
 [^engine-status]: `src/leagueasymode/engine_status.py`
+[^tuning]: `src/leagueasymode/tuning.py`
 [^jungle-starts]: `src/leagueasymode/jungle_starts.py`
 [^structures]: `src/leagueasymode/inference/structures.py`

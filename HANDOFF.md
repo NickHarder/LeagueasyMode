@@ -145,6 +145,9 @@ In `AGENTS.md`. Also: a raw recording (it holds other players' names); only `ano
   `main` as it is ready, assuming the earlier ones will be merged (the owner, 2026-10-08: "keep
   building as well and putting in new mrs even if i havent merged"). A slice built on an unmerged
   one says so in its pull request, and targets `main` all the same.
+- The hand-set thresholds are tweaked as games show what they should be, in one file anyone can
+  edit: `tuning.json` (the owner, 2026-10-09: "we will tweak as needed. make sure there is an
+  easy way to update them"; `docs/references/engine-and-overlay.md`, "Tuning").
 
 ## Known limitations
 
@@ -161,7 +164,7 @@ In `AGENTS.md`. Also: a raw recording (it holds other players' names); only `ano
   item names are to be checked on a real catalog.
 - The role costs are a hand-set prior, not yet fitted on recorded games.
 - The suggestions' wording is a first draft, and their thresholds (an objective within 0:30, a
-  window of at least 0:20) are hand-set; the owner tunes both.
+  window of at least 0:20) are hand-set, like every other threshold, in `tuning.json`.
 - Loading-screen intel reads the client's ranked stats and match history in the shapes other tools
   describe; no real answer has been seen. If the client does not answer for other players, or
   answers in another shape, the line under each enemy stays empty until the first recording shows

@@ -29,8 +29,10 @@ from leagueasymode.league_client import (
 from leagueasymode.patch_data import CHAMPION_SUMMARY_PATH, GAME_VERSION_PATH, ITEMS_PATH
 from leagueasymode.player_intel import (
     DEFAULT_PAUSE_SECONDS,
+    LOOKUP_RULES,
     MATCH_HISTORY_PATH_TEMPLATE,
     RANKED_STATS_PATH_TEMPLATE,
+    LookupRules,
     jungle_timeline_paths,
     puuids_in_game,
     recent_games_of,
@@ -79,6 +81,8 @@ class RecorderTimings:
     keyframe_interval_seconds: float = DEFAULT_KEYFRAME_INTERVAL_SECONDS
     # The pause after each question about a player, to stay gentle on the client and on Riot.
     lookup_pause_seconds: float = DEFAULT_PAUSE_SECONDS
+    # Which past games' timelines to record, the ones the engine's lookups read.
+    lookup_rules: LookupRules = LOOKUP_RULES
 
 
 class _SharedRecording:
@@ -274,7 +278,9 @@ async def _record_until_game_over(
     recording.note("recording", "ok", f"Recording this game to {recording_path.name}")
     await recording.write_snapshot(first_payload)
     start_task = asyncio.create_task(
-        _record_client_data_at_start(recording, first_payload, timings.lookup_pause_seconds)
+        _record_client_data_at_start(
+            recording, first_payload, timings.lookup_pause_seconds, timings.lookup_rules
+        )
     )
     try:
         reason = await _record_snapshots(
@@ -353,7 +359,10 @@ async def _record_snapshots(
 
 
 async def _record_client_data_at_start(
-    recording: _SharedRecording, first_payload: JsonValue, lookup_pause_seconds: float
+    recording: _SharedRecording,
+    first_payload: JsonValue,
+    lookup_pause_seconds: float,
+    lookup_rules: LookupRules,
 ) -> int | None:
     """Write what the League client knows at the start of a game, and return the game's id.
 
@@ -365,6 +374,7 @@ async def _record_client_data_at_start(
         recording: The open recording.
         first_payload: The game's first answer, which names the champions in the game.
         lookup_pause_seconds: The pause after each question about a player.
+        lookup_rules: Which past games' timelines to ask for.
 
     Returns:
         The game's id, or None when the client is not running or does not say.
@@ -391,7 +401,7 @@ async def _record_client_data_at_start(
             recording, client, MATCH_HISTORY_PATH_TEMPLATE.format(puuid=puuid)
         )
         await asyncio.sleep(lookup_pause_seconds)
-        for timeline_path in jungle_timeline_paths(recent_games_of(history, puuid)):
+        for timeline_path in jungle_timeline_paths(recent_games_of(history, puuid), lookup_rules):
             await _record_client_resource(recording, client, timeline_path)
             await asyncio.sleep(lookup_pause_seconds)
     return game_id_of(session)

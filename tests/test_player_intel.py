@@ -31,6 +31,7 @@ from leagueasymode.league_client import LeagueClient
 from leagueasymode.overlay_state import OverlayState, RankedStanding
 from leagueasymode.player_intel import (
     PLAYER_LOOKUP_PATH_PREFIXES,
+    LookupRules,
     PlayerRecord,
     RecentGame,
     history_position,
@@ -303,6 +304,12 @@ def test_a_player_who_rarely_jungles_has_no_timelines_read() -> None:
         ),
     ]
     assert jungle_timeline_paths(one_jungle_game) == []
+
+
+def test_the_lookup_rules_decide_who_counts_as_a_likely_jungler() -> None:
+    vi_games = recent_games_of(vi_history(), puuid_of(VI_SEED))
+    assert jungle_timeline_paths(vi_games, LookupRules(fewest_jungle_games=5)) == []
+    assert len(jungle_timeline_paths(vi_games, LookupRules(jungler_games_read=3))) == 3
 
 
 def test_past_games_timelines_are_shared_between_the_engine_and_the_recorder() -> None:
