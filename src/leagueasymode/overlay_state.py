@@ -65,6 +65,22 @@ class InhibitorTimer(BaseModel):
     respawns_at_game_time_seconds: float
 
 
+class LaneStructures(BaseModel):
+    """One side's lane: how many of its three turrets are down, and whether its inhibitor is open.
+
+    Exact: it restates the feed's turret and inhibitor announcements.
+    """
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    side: Literal["ally", "enemy"]
+    lane: Literal["top", "mid", "bot"]
+    # Of the lane's outer, inner and inhibitor turrets.
+    turrets_down: int = Field(ge=1, le=3)
+    # The inhibitor turret is down and the inhibitor stands: the inhibitor can be taken.
+    is_inhibitor_exposed: bool
+
+
 class CombatStats(BaseModel):
     """A player's combat stats.
 
@@ -352,6 +368,7 @@ type CalloutKind = Literal[
     "cooldown_ready",
     "went_back",
     "missing",
+    "inhibitor_open",
     "suggestion",
 ]
 
@@ -582,6 +599,8 @@ class OverlayState(BaseModel):
     objectives: list[ObjectiveTimer] = Field(default_factory=list)
     buffs: list[BuffTimer] = Field(default_factory=list)
     inhibitors: list[InhibitorTimer] = Field(default_factory=list)
+    # Only the lanes that have lost a turret, the player's side first, top to bot.
+    structures: list[LaneStructures] = Field(default_factory=list)
     players: list[PlayerCard] = Field(default_factory=list)
     numbers_window: NumbersWindow | None = None
     team_item_gold: TeamItemGold | None = None

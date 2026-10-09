@@ -28,6 +28,7 @@ from leagueasymode.inference.objectives import (
     objective_timers,
 )
 from leagueasymode.inference.players import numbers_window, player_cards, team_item_gold
+from leagueasymode.inference.structures import lane_structures
 from leagueasymode.inference.wards import WardTracker
 from leagueasymode.inference.win_chance import (
     WIN_CHANCE_RULES,
@@ -167,6 +168,7 @@ def compute_overlay_state(
         objectives=objectives,
         buffs=buffs,
         inhibitors=inhibitors,
+        structures=lane_structures(snapshot),
         players=cards,
         numbers_window=numbers_window(snapshot),
         team_item_gold=teams_item_gold,

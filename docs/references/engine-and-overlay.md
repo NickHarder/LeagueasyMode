@@ -74,6 +74,8 @@ sources:
     resource: ../../overlay/web/src/overlay.ts
   - id: engine-status
     resource: ../../src/leagueasymode/engine_status.py
+  - id: structures
+    resource: ../../src/leagueasymode/inference/structures.py
 ---
 
 # The path of one answer
@@ -130,6 +132,7 @@ game API ─▶ GameApiClient ─▶ GameSnapshot ─▶ estimators ─▶ Overl
 | You (estimator 13, phase 5.4) | exact numbers through formulas | from your own stats and gold, which the game gives in full. What to build: for armor, magic resist and health, the effective health a hundred gold of it buys now, against the enemy's damage mix (estimator 10, the dead counted too); effective health is health over the share of their damage that gets through, so its rise per point is exact (armor: health × physical share × (100 / (100 + armor))² / 100 over the share taken, squared). Each stat's price is the patch's basic item for it (Cloth Armor, Null-Magic Mantle, Ruby Crystal: the client's price over Data Dragon's amount), else 20, 18 and 2.67 gold a point. Holding gold: how long your unspent gold has stayed at 1,300 or more while alive (a first guess), shown from 0:30. Creep score a minute from 3:00, against yours over your recent Summoner's Rift games (the client's match history: minions and monsters over the games' minutes). A panel on the left shows "HP 1.7× Armor · their damage 88% physical", "1.5k held 2:10" and "CS 7.2/min · your usual 6.4"[^you] |
 | Win chance (estimator 12, phase 5.1) | estimate | a logistic model from your side: the log-odds of a win add 10 per unit of the gold lead over what a team has earned on average (at least 12,500, so that an early kill is not a won game), 0.3 per level of lead per player, 0.1 per turret (theirs down less yours, from the feed), 0.4 per inhibitor down, 0.1 per dragon, 0.5 for the soul, 0.7 for a Baron buff running and 1.0 for an Elder's (minus the same for theirs), 0.6 per player alive of lead at 30:00 (less before, up to 0.9 after 45:00), and 0.05 for the blue side. A medium gold lead at 15:00 (2.5k) is set to win about 3 in 4 and a large one (5k) about 9 in 10, as seasons 7 to 10 did. The gold lead is the team gold estimate, with its band; the item gold lead stands in while it is unknown. The chance is averaged over the gold lead's band (the probit approximation), so an unsure lead counts for less. All weights are first guesses, to refit on recorded games (phase 5.5). The strip's header shows "Win ~64% · gold +2.1k, Baron": the two things moving it most, from your side[^win-chance] |
 | Inhibitors down | exact | back 5:00 after they fall, or when the feed says they respawned; `Barracks_T1_L1` is team 1's top inhibitor (L, C and R taken as top, mid and bottom, to be confirmed) |
+| Structures (phase 8.5) | exact | each side's outer, inner and inhibitor turrets down per lane, from the feed's turret names (`Turret_T2_R_01_A`: team 2's bottom inhibitor turret, the names the gold and the clues read, to be confirmed), and whether each inhibitor is open: its turret down and it standing. The nexus turrets are left out, since the feed does not say whether they come back. The strip shows "Enemy turrets bot 3, inhib open" and "Your turrets mid 1"; an inhibitor opening is called out once a game ("Enemy bot inhibitor is open")[^structures] |
 
 The win chance's weights and the fights' steepness can be refit on recorded games
 (`leagueasymode fit`, in [recordings](recordings.md)); `leagueasymode run` reads the weights kept
@@ -137,7 +140,7 @@ from `model-weights.json` at its start, and uses the hand-set ones without it.
 
 Every rule is checked again against the first recordings. The widgets show the dragon always,
 and beside it the numbers window while it is open, any other monster up or within 90 seconds of
-spawning, each running buff, each inhibitor down, and for Dragon, the Elder or Baron up or
+spawning, each running buff, each inhibitor down, each side's turrets down by lane, and for Dragon, the Elder or Baron up or
 within 0:30, how long your team takes and the chance of a contest; on the right, each team's item-gold lead
 and estimated gold lead ("Gold −1.8k ±0.6k") under the win chance ("Win ~64% · gold +2.1k, Baron") and an even fight's ("Fight now ~71% 5v4 · their damage 70% physical"), the camps down with their respawns, the enemies' control wards likely
 down, and each enemy
@@ -324,3 +327,4 @@ Chromium against a replay (Chromium from `uv run playwright install chromium`, o
 [^game-summary]: `src/leagueasymode/game_summary.py`
 [^preferences]: `src/leagueasymode/preferences.py`
 [^engine-status]: `src/leagueasymode/engine_status.py`
+[^structures]: `src/leagueasymode/inference/structures.py`
