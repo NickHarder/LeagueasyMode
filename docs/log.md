@@ -6,6 +6,11 @@ skill has the format.
 
 ## 2026-10-08
 
+- Phase 5.4, the You panel (estimator 13): which of armor, magic resist and health buys the most
+  effective health per hundred gold against the enemy's damage mix, from your exact stats and the
+  patch's basic items' prices; how long you have held 1,300 gold or more alive; and your creep
+  score a minute against your recent games, for which the match history's minions and monsters
+  and each game's length are now read. A panel on the left shows them.
 - Phase 5.3, objective contests (estimator 11): for Dragon, the Elder and Baron up or within 0:30,
   the monster's 2026 health (patch 26.1's notes, unconfirmed) less a Smite over your living
   team's damage through its resistances, against each enemy's chance to reach the pit first,

@@ -142,6 +142,28 @@ body {
   display: none;
 }
 
+/* The You panel: on the left, across from the enemy strip. */
+.you-panel {
+  position: fixed;
+  top: 64px;
+  left: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 6px 8px;
+  border: 1px solid var(--widget-border);
+  border-radius: 10px;
+  background: var(--widget-surface);
+  color: var(--widget-text);
+  font: 600 12px/1.2 -apple-system, "SF Pro Text", system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 1px 2px rgb(0 0 0 / 0.6);
+}
+
+.you-panel[hidden] {
+  display: none;
+}
+
 .enemy-row {
   display: grid;
   grid-template-columns: 3.5ch 1fr 2ch 4.5ch 4ch;

@@ -310,6 +310,23 @@ export function isObjectiveContest(value) {
         (value["likeliest_contester"] === null || typeof value["likeliest_contester"] === "string") &&
         typeof value["likeliest_chance"] === "number");
 }
+const DEFENSIVE_STATS = new Set(["armor", "magic_resist", "health"]);
+/** Return whether a value is one defensive stat's value as the engine sends it. */
+export function isDefenseValue(value) {
+    return (isRecord(value) &&
+        isOneOf(value["stat"], DEFENSIVE_STATS) &&
+        typeof value["effective_health_per_hundred_gold"] === "number");
+}
+/** Return whether a value is the You panel as the engine sends it. */
+export function isYouPanel(value) {
+    return (isRecord(value) &&
+        isArrayOf(value["defenses"], isDefenseValue) &&
+        isNumberOrNull(value["enemy_physical_share"]) &&
+        typeof value["unspent_gold"] === "number" &&
+        isNumberOrNull(value["holding_gold_seconds"]) &&
+        isNumberOrNull(value["creep_score_per_minute"]) &&
+        isNumberOrNull(value["usual_creep_score_per_minute"]));
+}
 /** Return whether a value is an overlay state as the engine sends it. */
 export function isOverlayState(value) {
     if (!isRecord(value)) {
@@ -334,5 +351,6 @@ export function isOverlayState(value) {
         (value["win_chance"] === null || isWinChance(value["win_chance"])) &&
         (value["fight"] === null || isFightEstimate(value["fight"])) &&
         isArrayOf(value["contests"], isObjectiveContest) &&
+        (value["you"] === null || isYouPanel(value["you"])) &&
         isArrayOf(value["callouts"], isCallout));
 }

@@ -523,6 +523,21 @@ async def test_the_enemy_strip_shows_an_even_fights_chance(tmp_path: Path) -> No
         await keep_screenshot(page, "fight-chance")
 
 
+async def test_the_you_panel_shows_what_to_build_and_your_pace(tmp_path: Path) -> None:
+    async with open_overlay(tmp_path, snapshot_count=60, speed=1.0) as page:
+        panel = page.locator("#you-panel")
+        await expect(panel.locator(".you-defenses")).to_have_text(
+            re.compile(
+                r"^(Armor|MR|HP) \d+\.\d\u00d7 (Armor|MR|HP) \u00b7 their damage \d+% physical$"
+            ),
+            timeout=5000,
+        )
+        await expect(panel.locator(".you-pace")).to_have_text(re.compile(r"^CS \d+\.\d/min"))
+        # Your Ahri holds 500 gold, under the 1,300 that counts as holding.
+        await expect(panel.locator(".you-holding")).to_have_count(0)
+        await keep_screenshot(page, "you-panel")
+
+
 async def test_the_enemy_strip_shows_each_enemys_rank_and_record(tmp_path: Path) -> None:
     async with open_overlay(tmp_path, snapshot_count=60, speed=1.0) as page:
         zed_intel = page.locator("#enemy-strip .enemy-row", has_text="Zed").locator(".enemy-intel")

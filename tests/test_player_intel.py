@@ -87,7 +87,9 @@ def test_flex_stands_in_when_there_is_no_solo_rank() -> None:
 
 def test_history_gives_each_game_newest_first_with_its_champion_position_and_result() -> None:
     games = recent_games_of(zed_history(), puuid_of(ZED))
-    assert games[0] == RecentGame(champion_id=ZED_ID, position="MIDDLE", is_win=True)
+    assert games[0] == RecentGame(
+        champion_id=ZED_ID, position="MIDDLE", is_win=True, duration_seconds=1800
+    )
     assert [game.is_win for game in games] == [True, True, True, False, False]
 
 

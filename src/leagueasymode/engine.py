@@ -29,6 +29,7 @@ from leagueasymode.inference.objectives import (
 from leagueasymode.inference.players import numbers_window, player_cards, team_item_gold
 from leagueasymode.inference.wards import WardTracker
 from leagueasymode.inference.win_chance import win_chance, win_features
+from leagueasymode.inference.you import YouTracker, you_panel
 from leagueasymode.league_client import ClientConnector, LeagueClient
 from leagueasymode.overlay_state import (
     CooldownTimer,
@@ -66,6 +67,7 @@ def compute_overlay_state(
     clue_tracker: ClueTracker | None = None,
     jungle_tracker: JunglePathTracker | None = None,
     ward_tracker: WardTracker | None = None,
+    you_tracker: YouTracker | None = None,
     minimap: MinimapLayout | None = None,
 ) -> OverlayState:
     """Return what the overlay shows for one answer of the game's API.
@@ -85,6 +87,7 @@ def compute_overlay_state(
         clue_tracker: The same for the clues to where each player is; None to show none.
         jungle_tracker: The same for the junglers' clears; None to show none.
         ward_tracker: The same for the control wards; None to show none.
+        you_tracker: The same for how long you have held your gold; None to show no You panel.
         minimap: Where League draws its minimap; None while unknown.
 
     Returns:
@@ -176,6 +179,17 @@ def compute_overlay_state(
             position_clues=position_clues or {},
             patch_stats=patch_stats,
         ),
+        you=(
+            you_panel(
+                snapshot,
+                holding_gold_seconds=you_tracker.update(snapshot),
+                item_catalog=item_catalog,
+                patch_stats=patch_stats,
+                player_records=player_records,
+            )
+            if you_tracker is not None
+            else None
+        ),
     )
 
 
@@ -256,6 +270,7 @@ class OverlayEngine:
         self._clue_tracker: Final = ClueTracker()
         self._jungle_tracker: Final = JunglePathTracker()
         self._ward_tracker: Final = WardTracker()
+        self._you_tracker: Final = YouTracker()
         self._current_state = NOT_RUNNING
         self._callouts: Final = CalloutTracker()
         self._subscribers: Final[set[asyncio.Queue[OverlayState]]] = set()
@@ -336,6 +351,7 @@ class OverlayEngine:
                 clue_tracker=self._clue_tracker,
                 jungle_tracker=self._jungle_tracker,
                 ward_tracker=self._ward_tracker,
+                you_tracker=self._you_tracker,
                 minimap=self.minimap_layout,
             )
             self._last_payload = payload if answer_state.is_game_running else None
