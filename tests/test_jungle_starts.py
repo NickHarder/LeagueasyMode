@@ -5,9 +5,17 @@ from typing import Final
 from pydantic import JsonValue
 
 from leagueasymode.inference.rift_map import RIFT_MAP
-from leagueasymode.jungle_starts import JungleStarts, start_half, start_side
+from leagueasymode.jungle_starts import (
+    FourMinuteSides,
+    JungleStarts,
+    four_minute_half,
+    four_minute_side,
+    start_half,
+    start_side,
+)
 
 PARTICIPANT_ID: Final = 7
+FOUR_MINUTES: Final = 240_000
 BLUE_TEAM: Final = 100
 RED_TEAM: Final = 200
 
@@ -91,3 +99,39 @@ def test_a_start_is_on_the_top_or_bottom_half_by_the_team_played_this_game() -> 
     assert start_half("blue", "CHAOS") == "bot"
     assert start_half("red", "CHAOS") == "top"
     assert start_half("red", "") is None
+
+
+def at_four_minutes(point_name: str, team_id: int) -> str | None:
+    return four_minute_side(
+        timeline_with(point(point_name), at_milliseconds=FOUR_MINUTES), PARTICIPANT_ID, team_id
+    )
+
+
+def test_at_four_minutes_a_jungler_is_on_the_side_of_one_of_their_buffs_or_mid() -> None:
+    # The blue team's top half holds its blue buff; the red team's top half holds its red buff.
+    assert at_four_minutes("top_river_scuttle", BLUE_TEAM) == "blue"
+    assert at_four_minutes("order_bot_lane_2", BLUE_TEAM) == "red"
+    assert at_four_minutes("top_river_scuttle", RED_TEAM) == "red"
+    assert at_four_minutes("chaos_blue_buff", RED_TEAM) == "blue"
+    assert at_four_minutes("mid_center", BLUE_TEAM) == "mid"
+
+
+def test_in_a_base_or_without_a_frame_near_four_minutes_there_is_no_side() -> None:
+    assert at_four_minutes("order_fountain", BLUE_TEAM) is None
+    assert (
+        four_minute_side(timeline_with(point("top_river_scuttle")), PARTICIPANT_ID, BLUE_TEAM)
+        is None
+    )
+
+
+def test_the_usual_four_minute_side_is_the_one_most_games_were_on() -> None:
+    sides = FourMinuteSides(blue_count=1, red_count=0, mid_count=3)
+    assert (sides.game_count, sides.usual_side, sides.usual_count) == (4, "mid", 3)
+    assert FourMinuteSides(blue_count=2, red_count=2, mid_count=0).usual_side is None
+
+
+def test_a_four_minute_side_is_a_half_of_the_map_by_the_team_played_this_game() -> None:
+    assert four_minute_half("blue", "ORDER") == "top"
+    assert four_minute_half("blue", "CHAOS") == "bot"
+    assert four_minute_half("mid", "CHAOS") == "mid"
+    assert four_minute_half("red", "") is None

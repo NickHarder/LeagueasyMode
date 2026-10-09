@@ -213,7 +213,9 @@ def test_an_unsure_estimate_of_a_power_level_is_not_called_out() -> None:
     assert tracker.update(state_at(310.0, [enemy_close_to_six(310.0, 15.0, 40.0)])) == []
 
 
-def enemy_jungler(start_count: int, start_games: int, role: str = "JUNGLE") -> PlayerCard:
+def enemy_jungler(
+    start_count: int, start_games: int, role: str = "JUNGLE", four_minute_count: int = 0
+) -> PlayerCard:
     return PlayerCard(
         champion_name="Vi",
         side="enemy",
@@ -236,6 +238,9 @@ def enemy_jungler(start_count: int, start_games: int, role: str = "JUNGLE") -> P
             jungle_start_half="top",
             jungle_start_count=start_count,
             jungle_start_games=start_games,
+            four_minute_half="bot" if four_minute_count else None,
+            four_minute_count=four_minute_count,
+            four_minute_games=start_games if four_minute_count else 0,
         ),
     )
 
@@ -258,3 +263,21 @@ def test_a_jungler_with_no_clear_habit_or_another_role_is_not_called_out() -> No
     assert CalloutTracker().update(state_at(20.0, [enemy_jungler(3, 5)])) == []
     assert CalloutTracker().update(state_at(20.0, [enemy_jungler(1, 1)])) == []
     assert CalloutTracker().update(state_at(20.0, [enemy_jungler(3, 4, role="TOP")])) == []
+
+
+def test_where_the_enemy_jungler_usually_is_at_four_minutes_is_called_out_before_it() -> None:
+    tracker = CalloutTracker()
+    assert tracker.update(state_at(150.0, [enemy_jungler(3, 4, four_minute_count=3)])) == []
+    soon = tracker.update(state_at(170.0, [enemy_jungler(3, 4, four_minute_count=3)]))
+    assert [(callout.kind, callout.text) for callout in soon] == [
+        ("jungle_four_minutes", "Vi is usually bot side at 4:00 (3 of 4)")
+    ]
+
+
+def test_a_four_minute_habit_is_not_called_out_late_or_when_unclear() -> None:
+    assert (
+        CalloutTracker().update(state_at(215.0, [enemy_jungler(3, 4, four_minute_count=3)])) == []
+    )
+    assert (
+        CalloutTracker().update(state_at(170.0, [enemy_jungler(3, 5, four_minute_count=3)])) == []
+    )

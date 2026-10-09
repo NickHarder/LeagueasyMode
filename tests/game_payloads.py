@@ -382,22 +382,40 @@ def past_game_id(index: int) -> int:
     return 5000000000 + index
 
 
-def jungle_start_timeline(x_position: float, y_position: float) -> JsonValue:
-    """A past game's timeline that places participant 1 at a point at 2:00."""
-    return {
-        "frames": [
-            {"timestamp": 0, "participantFrames": {}},
+def jungle_start_timeline(
+    x_position: float,
+    y_position: float,
+    four_minute_position: tuple[float, float] | None = None,
+) -> JsonValue:
+    """A past game's timeline that places participant 1 at a point at 2:00, and one at 4:00."""
+    frames: list[JsonValue] = [
+        {"timestamp": 0, "participantFrames": {}},
+        {
+            "timestamp": 120_000,
+            "participantFrames": {
+                "1": {
+                    "participantId": 1,
+                    "position": {"x": round(x_position), "y": round(y_position)},
+                }
+            },
+        },
+    ]
+    if four_minute_position is not None:
+        frames.append(
             {
-                "timestamp": 120_000,
+                "timestamp": 240_000,
                 "participantFrames": {
                     "1": {
                         "participantId": 1,
-                        "position": {"x": round(x_position), "y": round(y_position)},
+                        "position": {
+                            "x": round(four_minute_position[0]),
+                            "y": round(four_minute_position[1]),
+                        },
                     }
                 },
-            },
-        ]
-    }
+            }
+        )
+    return {"frames": frames}
 
 
 def baron_kill_event(event_id: int, event_time: float, killer_name: str) -> dict[str, JsonValue]:

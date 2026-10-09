@@ -595,6 +595,11 @@ export function formatIntel(intel: PlayerIntel): string {
       `starts ${intel.jungle_start_side}${halfText} ${String(intel.jungle_start_count)}/${String(intel.jungle_start_games)}`,
     );
   }
+  if (intel.four_minute_half !== null) {
+    parts.push(
+      `4:00 ${intel.four_minute_half} ${String(intel.four_minute_count)}/${String(intel.four_minute_games)}`,
+    );
+  }
   return parts.join(" \u00b7 ");
 }
 

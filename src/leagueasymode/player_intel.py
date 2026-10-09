@@ -20,7 +20,12 @@ from typing import Final, Literal
 from pydantic import Field, JsonValue, TypeAdapter, ValidationError
 
 from leagueasymode.game_state import RiotPayloadModel
-from leagueasymode.jungle_starts import JungleStarts, start_side
+from leagueasymode.jungle_starts import (
+    FourMinuteSides,
+    JungleStarts,
+    four_minute_side,
+    start_side,
+)
 from leagueasymode.league_client import GAMEFLOW_SESSION_PATH, LeagueClient
 from leagueasymode.overlay_state import RankedStanding
 from leagueasymode.patch_data import CHAMPION_SUMMARY_PATH
@@ -255,8 +260,10 @@ class PlayerRecord:
 
     ranked: RankedStanding | None
     recent_games: tuple[RecentGame, ...]
-    # Counted over their recent jungle games; None when they rarely jungle or none was read.
+    # Counted over their recent jungle games: where they started, and where they were at 4:00;
+    # None when they rarely jungle or no game said.
     jungle_starts: JungleStarts | None = None
+    four_minute_sides: FourMinuteSides | None = None
 
 
 @dataclass(frozen=True)
@@ -454,17 +461,19 @@ async def _look_up(client: LeagueClient, puuid: str, pause_seconds: float) -> Pl
         logger.info("the League client did not answer for one player; asking again next game")
         return None
     recent_games = recent_games_of(history_payload, puuid)
+    jungle_starts, four_minute_sides = await _read_jungle_games(client, recent_games, pause_seconds)
     return PlayerRecord(
         ranked=ranked_standing_of(ranked_payload),
         recent_games=tuple(recent_games),
-        jungle_starts=await _read_jungle_starts(client, recent_games, pause_seconds),
+        jungle_starts=jungle_starts,
+        four_minute_sides=four_minute_sides,
     )
 
 
-async def _read_jungle_starts(
+async def _read_jungle_games(
     client: LeagueClient, recent_games: Sequence[RecentGame], pause_seconds: float
-) -> JungleStarts | None:
-    """Read where a likely jungler started in each of their recent jungle games.
+) -> tuple[JungleStarts | None, FourMinuteSides | None]:
+    """Read where a likely jungler started, and was at 4:00, in each of their recent jungle games.
 
     Args:
         client: The League client.
@@ -472,19 +481,32 @@ async def _read_jungle_starts(
         pause_seconds: The pause after each request.
 
     Returns:
-        How many started on each side; None when they are not a likely jungler or no game's
-        start could be read.
+        How many started on each side, and how many were on each side at 4:00; each None when
+        they are not a likely jungler or no game said.
     """
-    sides = []
+    starts = []
+    four_minute_sides = []
     for game in _jungle_games_read(recent_games):
         if game.game_id <= 0:
             continue
         timeline_payload = await client.get_json(f"{GAME_TIMELINE_PATH_PREFIX}{game.game_id}")
         await asyncio.sleep(pause_seconds)
-        sides.append(start_side(timeline_payload, game.participant_id, game.team_id))
-    if not any(sides):
-        return None
-    return JungleStarts(blue_count=sides.count("blue"), red_count=sides.count("red"))
+        starts.append(start_side(timeline_payload, game.participant_id, game.team_id))
+        four_minute_sides.append(
+            four_minute_side(timeline_payload, game.participant_id, game.team_id)
+        )
+    return (
+        JungleStarts(blue_count=starts.count("blue"), red_count=starts.count("red"))
+        if any(starts)
+        else None,
+        FourMinuteSides(
+            blue_count=four_minute_sides.count("blue"),
+            red_count=four_minute_sides.count("red"),
+            mid_count=four_minute_sides.count("mid"),
+        )
+        if any(four_minute_sides)
+        else None,
+    )
 
 
 def puuids_in_game(session_payload: JsonValue | None) -> list[str]:

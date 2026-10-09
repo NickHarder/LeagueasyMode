@@ -34,6 +34,10 @@ LANE_OF_ROLE: Final = {"TOP": "top", "MIDDLE": "mid", "BOTTOM": "bot", "UTILITY"
 JUNGLE_START_BEFORE_SECONDS: Final = 90.0
 JUNGLE_START_MIN_SHARE: Final = 0.7
 JUNGLE_START_MIN_GAMES: Final = 2
+# Where they usually are at 4:00 is called out from 2:45 to 3:30, on the same counts.
+JUNGLE_FOUR_MINUTES_FROM_SECONDS: Final = 165.0
+JUNGLE_FOUR_MINUTES_UNTIL_SECONDS: Final = 210.0
+MAP_HALF_TEXT: Final = {"top": "top side", "mid": "mid", "bot": "bot side"}
 OBJECTIVE_SOON_SECONDS: Final = 60.0
 # A clock this far behind the last one is a new game, not a replayed second.
 NEW_GAME_CLOCK_DROP_SECONDS: Final = 5.0
@@ -84,6 +88,7 @@ class CalloutTracker:
             *self._level_spikes(state, game_time_seconds),
             *_levels_soon(state, game_time_seconds),
             *_jungle_starts(state, game_time_seconds),
+            *_jungle_four_minutes(state, game_time_seconds),
             *self._jungler_backs(state, game_time_seconds),
             *self._items_soon(state, game_time_seconds),
             *self._missing(state, game_time_seconds),
@@ -478,6 +483,41 @@ def _jungle_starts(state: OverlayState, game_time_seconds: float) -> list[Callou
         and intel.jungle_start_side is not None
         and intel.jungle_start_games >= JUNGLE_START_MIN_GAMES
         and intel.jungle_start_count >= JUNGLE_START_MIN_SHARE * intel.jungle_start_games
+    ]
+
+
+def _jungle_four_minutes(state: OverlayState, game_time_seconds: float) -> list[Callout]:
+    """Return where the enemy jungler usually is at 4:00, shortly before it.
+
+    Args:
+        state: The new state.
+        game_time_seconds: Its game time.
+
+    Returns:
+        A callout for each enemy in the jungle whose recent jungle games mostly found them on one
+        side at 4:00; none outside 2:45 to 3:30.
+    """
+    if (
+        not JUNGLE_FOUR_MINUTES_FROM_SECONDS
+        <= game_time_seconds
+        < JUNGLE_FOUR_MINUTES_UNTIL_SECONDS
+    ):
+        return []
+    return [
+        _callout(
+            f"jungle-four-minutes:{card.champion_name}",
+            "jungle_four_minutes",
+            f"{card.champion_name} is usually {MAP_HALF_TEXT[intel.four_minute_half]} at 4:00 "
+            f"({intel.four_minute_count} of {intel.four_minute_games})",
+            game_time_seconds,
+        )
+        for card in state.players
+        if card.side == "enemy"
+        and card.role == "JUNGLE"
+        and (intel := card.intel) is not None
+        and intel.four_minute_half is not None
+        and intel.four_minute_games >= JUNGLE_START_MIN_GAMES
+        and intel.four_minute_count >= JUNGLE_START_MIN_SHARE * intel.four_minute_games
     ]
 
 

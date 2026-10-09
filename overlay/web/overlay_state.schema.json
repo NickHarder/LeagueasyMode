@@ -94,6 +94,7 @@
         "went_back",
         "missing",
         "jungle_start",
+        "jungle_four_minutes",
         "inhibitor_open",
         "suggestion"
       ],
@@ -1164,6 +1165,33 @@
         "jungle_start_games": {
           "default": 0,
           "title": "Jungle Start Games",
+          "type": "integer"
+        },
+        "four_minute_half": {
+          "anyOf": [
+            {
+              "enum": [
+                "top",
+                "mid",
+                "bot"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Four Minute Half"
+        },
+        "four_minute_count": {
+          "default": 0,
+          "title": "Four Minute Count",
+          "type": "integer"
+        },
+        "four_minute_games": {
+          "default": 0,
+          "title": "Four Minute Games",
           "type": "integer"
         }
       },

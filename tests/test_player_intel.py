@@ -26,7 +26,7 @@ from leagueasymode.engine import OverlayEngine, compute_overlay_state
 from leagueasymode.game_api import GameApiClient
 from leagueasymode.inference.intel import player_intel
 from leagueasymode.inference.rift_map import RIFT_MAP
-from leagueasymode.jungle_starts import JungleStarts
+from leagueasymode.jungle_starts import FourMinuteSides, JungleStarts
 from leagueasymode.league_client import LeagueClient
 from leagueasymode.overlay_state import OverlayState, RankedStanding
 from leagueasymode.player_intel import (
@@ -53,6 +53,14 @@ VI_START_POINTS: Final = {
     FIRST_GAME_ID + 1: "chaos_red_buff",
     FIRST_GAME_ID + 2: "order_blue_buff",
     FIRST_GAME_ID + 3: "chaos_red_buff",
+}
+# Where she was at 4:00: on her blue buff's side three times (the blue team's top, the red team's
+# bottom), and mid once.
+VI_FOUR_MINUTE_POINTS: Final = {
+    FIRST_GAME_ID: "top_river_scuttle",
+    FIRST_GAME_ID + 1: "bot_river_scuttle",
+    FIRST_GAME_ID + 2: "mid_center",
+    FIRST_GAME_ID + 3: "order_bot_lane_2",
 }
 
 
@@ -219,9 +227,18 @@ def vi_history() -> JsonValue:
     )
 
 
-def start_timeline(point_name: str) -> JsonValue:
+def start_timeline(point_name: str, four_minute_point_name: str | None = None) -> JsonValue:
     start_point = RIFT_MAP.points[point_name]
-    return jungle_start_timeline(start_point.x_position, start_point.y_position)
+    four_minute_point = (
+        RIFT_MAP.points[four_minute_point_name] if four_minute_point_name is not None else None
+    )
+    return jungle_start_timeline(
+        start_point.x_position,
+        start_point.y_position,
+        (four_minute_point.x_position, four_minute_point.y_position)
+        if four_minute_point is not None
+        else None,
+    )
 
 
 def test_history_keeps_each_games_id_team_and_participant() -> None:
@@ -291,6 +308,42 @@ async def test_a_junglers_usual_start_is_read_from_their_past_games() -> None:
     assert len(timeline_paths) == 4
 
 
+def test_the_intel_says_where_a_jungler_usually_is_at_four_minutes() -> None:
+    record = PlayerRecord(
+        ranked=None,
+        recent_games=(RecentGame(VI_ID, "JUNGLE", is_win=True),),
+        four_minute_sides=FourMinuteSides(blue_count=3, red_count=0, mid_count=1),
+    )
+    intel = player_intel(record, VI_ID, "JUNGLE", team="CHAOS")
+    assert (intel.four_minute_half, intel.four_minute_count, intel.four_minute_games) == (
+        "bot",
+        3,
+        4,
+    )
+    assert player_intel(record, VI_ID, "JUNGLE").four_minute_half is None
+    assert (
+        player_intel(
+            dataclasses.replace(record, four_minute_sides=None), VI_ID, "JUNGLE", team="CHAOS"
+        ).four_minute_half
+        is None
+    )
+
+
+async def test_where_a_jungler_usually_is_at_four_minutes_is_read_from_the_same_games() -> None:
+    requested_paths: list[str] = []
+    async with (
+        serve(fake_league_client(requested_paths, set(), with_vi_jungling=True)) as client_url,
+        aiohttp.ClientSession() as session,
+    ):
+        client = LeagueClient(session, client_url, password="", tls_context=None)
+        records = await load_player_records(client, {}, pause_seconds=0.0)
+    vi_record = records[("CHAOS", "vi")].record
+    assert vi_record.four_minute_sides == FourMinuteSides(blue_count=3, red_count=0, mid_count=1)
+    assert records[("CHAOS", "zed")].record.four_minute_sides is None
+    # No more questions than for the starts: the same four timelines.
+    assert len([path for path in requested_paths if "game-timelines" in path]) == 4
+
+
 def fake_league_client(
     requested_paths: list[str], failing_puuids: set[str], *, with_vi_jungling: bool = False
 ) -> web.Application:
@@ -326,10 +379,11 @@ def fake_league_client(
 
     async def timeline_route(request: web.Request) -> web.Response:
         requested_paths.append(request.path_qs)
-        point_name = VI_START_POINTS.get(int(request.match_info["game_id"]))
+        game_id = int(request.match_info["game_id"])
+        point_name = VI_START_POINTS.get(game_id)
         if point_name is None:
             return web.json_response({"message": "not found"}, status=404)
-        return web.json_response(start_timeline(point_name))
+        return web.json_response(start_timeline(point_name, VI_FOUR_MINUTE_POINTS.get(game_id)))
 
     application.router.add_get("/lol-match-history/v1/products/lol/{puuid}/matches", history_route)
     application.router.add_get("/lol-match-history/v1/game-timelines/{game_id}", timeline_route)
