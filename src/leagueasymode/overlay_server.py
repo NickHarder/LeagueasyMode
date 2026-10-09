@@ -45,6 +45,10 @@ WEB_ASSETS: Final = {
     "/overlay.js": ("overlay.js", "text/javascript"),
     "/state.js": ("state.js", "text/javascript"),
     "/overlay.css": ("overlay.css", "text/css"),
+    "/summary.html": ("summary.html", "text/html"),
+    "/summary.js": ("summary.js", "text/javascript"),
+    "/summary_state.js": ("summary_state.js", "text/javascript"),
+    "/summary.css": ("summary.css", "text/css"),
 }
 
 type Handler = Callable[[web.Request], Awaitable[web.StreamResponse]]

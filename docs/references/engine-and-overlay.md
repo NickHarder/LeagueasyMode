@@ -208,6 +208,19 @@ your side ("Zed killed Ahri", "your team took their top outer turret"); the thre
 moved the win chance most, with what happened in each; and every estimator's score. Its contract
 is `overlay/web/game_summary.schema.json`, kept current by a test.[^game-summary]
 
+# The post-game window
+
+`/summary.html`, a page of its own (`overlay/web/src/summary.ts`), opened by the macOS app's
+"Last game…" in a normal window. It reads `/summary` and `/history` once and shows the result
+("Victory", your champion and the game's length); your win chance each minute as a line, the
+three biggest swings marked on it; the gold lead each minute, the overlay's estimate against the
+timeline's, with a legend and labels at the lines' ends; the three swings with what happened in
+each; the game's moments, a dot for whose good each was; and each estimator's score this game,
+its average over the last ten games in the history, and a sparkline of them. Each chart has a
+crosshair whose readout lists every line at the minute under the pointer, the same with the arrow
+keys once focused, and a table of its values beneath. Light or dark with the system; the two
+series colors pass every colorblindness and contrast check in both. Before any game it says so.
+
 # The widgets
 
 TypeScript in `overlay/web/src/`, under `strict` and every stricter check TypeScript has,

@@ -6,6 +6,11 @@ skill has the format.
 
 ## 2026-10-09
 
+- Phase 6.4, the post-game window: `/summary.html` shows the last game reconstructed, the win
+  chance and the gold lead (estimated against the timeline) as charts with a crosshair, keyboard
+  readout and table, the swings and moments, and each estimator's score against its last ten
+  games with a sparkline; light or dark, its colors checked for colorblindness and contrast. The
+  macOS app's menu gains "Last game…", which opens it in the default browser. Phase 6 is built.
 - Phase 6.3, the game reconstructed: after each game `leagueasymode run` records, its summary
   (result, win chance and gold lead each minute, estimated and true, the feed's moments from your
   side, the three biggest swings with what happened, every score) is written to `last-game.json`;

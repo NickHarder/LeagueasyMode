@@ -196,6 +196,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         levelItem.submenu = makeLevelMenu()
         menu.addItem(levelItem)
         menu.addItem(.separator())
+        if overlayURL != nil {
+            let lastGameItem = NSMenuItem(
+                title: "Last game\u{2026}", action: #selector(openLastGame(_:)), keyEquivalent: ""
+            )
+            lastGameItem.target = self
+            menu.addItem(lastGameItem)
+        } else {
+            menu.addItem(Self.disabledItem("Last game\u{2026}"))
+        }
+        menu.addItem(.separator())
         let quitItem = NSMenuItem(
             title: "Quit LeagueasyMode", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"
         )
@@ -255,6 +265,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         levelChoice = choice
         overlayPanel?.place(at: choice)
         statusItem?.menu = makeMenu()
+    }
+
+    /// Opens the post-game window in the default browser: a normal window, unlike the overlay.
+    @objc private func openLastGame(_ sender: NSMenuItem) {
+        guard let overlayURL, let pageURL = PostGameWindow.pageURL(overlayURL: overlayURL) else {
+            return
+        }
+        NSWorkspace.shared.open(pageURL)
     }
 
     @objc private func screensDidChange(_ notification: Notification) {
