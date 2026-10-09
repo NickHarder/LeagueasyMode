@@ -162,6 +162,35 @@ def four_minute_half(side: FourMinuteSide, team: str) -> MapHalf | Literal["mid"
     return "mid" if side == "mid" else start_half(side, team)
 
 
+def four_minute_half_weights(
+    four_minute_sides: FourMinuteSides, team: str, pseudo_games: float = 1.0
+) -> dict[str, float]:
+    """Return how much a jungler's 4:00 habit weighs each half of the map this game.
+
+    Each half weighs three times its share of their recent games at 4:00, with a game added to
+    each half so that a few games do not decide; an even record weighs each half 1.
+
+    Args:
+        four_minute_sides: Where their recent jungle games found them at 4:00.
+        team: Their team this game, "ORDER" or "CHAOS".
+        pseudo_games: The games added to each half.
+
+    Returns:
+        The weight of "top", "mid" and "bot"; empty when the team is not known.
+    """
+    blue_half = start_half("blue", team)
+    red_half = start_half("red", team)
+    if blue_half is None or red_half is None:
+        return {}
+    counts: dict[str, int] = {
+        blue_half: four_minute_sides.blue_count,
+        red_half: four_minute_sides.red_count,
+        "mid": four_minute_sides.mid_count,
+    }
+    total = four_minute_sides.game_count + len(counts) * pseudo_games
+    return {half: len(counts) * (count + pseudo_games) / total for half, count in counts.items()}
+
+
 def start_half(side: StartSide, team: str) -> MapHalf | None:
     """Return the half of the map a start is on for the team a jungler plays this game.
 

@@ -3,8 +3,8 @@
 If you are picking this work up, human or model: read this file top to bottom first. The `handoff` skill
 refreshes it; it describes the current state.
 
-Last updated: 2026-10-09, on branch `feat/scouting-scored`. `main` holds phases 0 to 8 and
-phase 9's 9.1 to 9.3 and 9.5 (pull requests #2 to #43, merged).
+Last updated: 2026-10-09, on branch `feat/jungle-four-minute-positions`. `main` holds phases 0
+to 8 and phase 9's 9.1 to 9.3, 9.5 and 9.6 (pull requests #2 to #44, merged).
 
 ## Where things stand
 
@@ -22,16 +22,16 @@ approved plan: 8.1 to 8.6 (the status page and the report after a test, the over
 own screen and window, moving the widgets, spoken callouts, structures, the Swift 6 language mode)
 are merged (#34 to #39). None waits for the test on a Mac, which confirms them. Phase 8 is built.
 Phase 9 ([docs/plans/phase-9-scouting.md](docs/plans/phase-9-scouting.md), a draft) reads the
-players' past games: 9.1 to 9.3 and 9.5 (where the enemy jungler usually starts and is at 4:00,
-champion pools, the usual start as a prior for the jungle path) are merged (#40 to #43); 9.6,
-scouting scored after the game, is on `feat/scouting-scored`; 9.4 waits for the owner's word on
-its requests. Each slice goes up as its
+players' past games: 9.1 to 9.3, 9.5 and 9.6 (where the enemy jungler usually starts and is at
+4:00, champion pools, the usual start as a prior for the jungle path, scouting scored after the
+game) are merged (#40 to #44); 9.7, the 4:00 habit in the positions, is on
+`feat/jungle-four-minute-positions`; 9.4 waits for the owner's word on its requests. Each slice goes up as its
 own pull request into `main` without waiting for the one before to merge.
 
 | Area | State | Proof |
 |---|---|---|
 | Scaffold | ai-kit v0.11.1, Python layer, GitHub CI | `.copier-answers.yml` |
-| Gate | Green: lint, 811 tests (and 38 in Chromium), secrets | `make gate` |
+| Gate | Green: lint, 815 tests (and 38 in Chromium), secrets | `make gate` |
 | Recorder | Records games, the client's patch data and the post-game timeline; anonymized copies | `uv run leagueasymode record`; `tests/test_recorder.py`, `tests/test_anonymize.py` |
 | Replay | A recording served as a stand-in game API | `uv run leagueasymode replay <recording>`; `tests/test_replay.py` |
 | Engine and overlay page | The dragon and Elder timer, from the game's answer to the page | `uv run leagueasymode run`; `tests/test_tracer_bullet.py` |

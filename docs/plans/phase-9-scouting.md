@@ -4,7 +4,7 @@ title: "Phase 9: scouting from the players' past games"
 description: What the players' past games can say before and early in this one, starting with where the enemy jungler usually starts, read from the timelines of their recent jungle games through the League client, in a proposed build order with what each needs and where the owner decides.
 tags: [plan, phase-9, scouting]
 status: draft
-generated: { by: claude-code/cloud, at: 2026-10-09T04:00:00Z }
+generated: { by: claude-code/cloud, at: 2026-10-09T04:20:00Z }
 ---
 
 # Phase 9: scouting from the players' past games
@@ -26,6 +26,7 @@ through the client's own session, "just not with a dev key".
 | 9.3 | Champion pools | For each player: how many different champions their last 20 games were on, and whether this game's is their main (played more than any other, in at least three) or they are a one-trick on it (at least 70% of at least eight games). The row says "3 on champ (main)" or "14 on champ (one-trick)", beside 3.1's "new on champ"; an enemy one-trick is called out before the camps spawn: "Zed is a one-trick (14 of 20 games)" | Nothing new to ask: the match history 3.1 reads |
 | 9.5 | The usual start in the jungle path | The jungle path (estimator 8) weighs a jungler's first camp by their share of past starts on its side, so one burst at 1:42 no longer leaves the two buffs to chance | Nothing new: 9.1's counts |
 | 9.6 | Scouting scored | After each recorded game: the players' records rebuilt from the client's recorded answers, the jungle path decoded with the usual starts as the engine has them, and each jungler's habits (start, 4:00) scored against where the game's own timeline puts them: "jungle start (habit): 1/1 correct". Kept in the accuracy history like every other score | Nothing new: the recorder already keeps the answers |
+| 9.7 | The 4:00 habit in the positions | The positions (estimator 7) weigh each half of the map from 3:00 to 5:00 by a jungler's 4:00 habit, so where the enemy jungler likely is, the "missing" callouts and the minimap lean the way they usually go after their first clear | Nothing new: 9.2's counts; scored with the positions |
 | 9.4 | Early leads in lane | For each enemy laner: their creep score and gold at 10:00 in their recent games in this position, from the same timelines, beside your own pace in the You panel | A timeline for each laner's recent games: up to five requests per player, fifty a game. Proposed only once 9.1's requests are seen to be fine |
 
 ## How each is verified

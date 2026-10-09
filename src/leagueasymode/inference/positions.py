@@ -7,8 +7,9 @@ walked to since, at their move speed for the share of the time a champion moves.
 is weighed by how much a player of their role is found in its region: a laner in their lane, the
 river beside it and their own jungle behind it; a jungler in their jungle, the river, and the
 other team's jungle less. With no clue for long, the reach covers the map and the role's habits
-alone remain. The soonest they could reach each lane is the walk from the clue's place at full
-speed, less the time since.
+alone remain. Around 4:00, a jungler's own habit from past games, the half of the map they are
+usually on then (`jungle_starts.py`), weighs each half too. The soonest they could reach each
+lane is the walk from the clue's place at full speed, less the time since.
 """
 
 import math
@@ -19,6 +20,11 @@ from typing import Final
 
 from leagueasymode.game_state import ScoreboardPlayer
 from leagueasymode.inference.rift_map import RIFT_MAP, TEAM_PREFIX, fountain_of, region_center
+from leagueasymode.jungle_starts import (
+    MAP_HALF_BY_REGION,
+    FourMinuteSides,
+    four_minute_half_weights,
+)
 from leagueasymode.overlay_state import PositionClue, PositionEstimate, RegionChance
 
 # How much a player of each role is found in each region, as the region stands to their team:
@@ -84,6 +90,9 @@ class PositionRules:
 
     # Between clues a champion farms, fights and waits as well as walks.
     moving_share: float = 0.8
+    # A jungler's 4:00 habit weighs the halves of the map from 3:00 to 5:00.
+    four_minute_habit_from_seconds: float = 180.0
+    four_minute_habit_until_seconds: float = 300.0
 
 
 POSITION_RULES: Final = PositionRules()
@@ -97,6 +106,7 @@ def position_estimate(
     move_speed: float,
     game_time_seconds: float,
     ally_team: str,
+    four_minute_sides: FourMinuteSides | None = None,
     rules: PositionRules = POSITION_RULES,
 ) -> PositionEstimate | None:
     """Return where a player likely is now.
@@ -108,6 +118,7 @@ def position_estimate(
         move_speed: Their move speed, in game units a second.
         game_time_seconds: The game's clock.
         ally_team: The team of the player on this machine, to put regions in their words.
+        four_minute_sides: Where their past jungle games found them at 4:00; None when unknown.
         rules: How much of the time a champion moves.
 
     Returns:
@@ -127,6 +138,7 @@ def position_estimate(
         clues,
         move_speed=move_speed,
         game_time_seconds=game_time_seconds,
+        four_minute_sides=four_minute_sides,
         rules=rules,
     ).items():
         chance_by_region[RIFT_MAP.points[name].region] += chance
@@ -164,6 +176,7 @@ def point_chances(
     *,
     move_speed: float,
     game_time_seconds: float,
+    four_minute_sides: FourMinuteSides | None = None,
     rules: PositionRules = POSITION_RULES,
 ) -> dict[str, float]:
     """Return the chance a living player is at each of the map's points now.
@@ -174,6 +187,8 @@ def point_chances(
         clues: Their clues so far, oldest first.
         move_speed: Their move speed, in game units a second.
         game_time_seconds: The game's clock.
+        four_minute_sides: Where a jungler's past games found them at 4:00, which weighs the
+            halves of the map from 3:00 to 5:00; None when unknown.
         rules: How much of the time a champion moves.
 
     Returns:
@@ -189,8 +204,21 @@ def point_chances(
         for name in RIFT_MAP.points
     }
     reach_units = move_speed * rules.moving_share * since_seconds
+    is_four_minute_habit_on = (
+        four_minute_sides is not None
+        and role == "JUNGLE"
+        and rules.four_minute_habit_from_seconds
+        <= game_time_seconds
+        <= rules.four_minute_habit_until_seconds
+    )
+    half_weights: Mapping[str, float] = (
+        four_minute_half_weights(four_minute_sides, team)
+        if four_minute_sides is not None and is_four_minute_habit_on
+        else {}
+    )
     reachable_weights = {
         name: _region_weight(role, team, RIFT_MAP.points[name].region)
+        * _half_weight(RIFT_MAP.points[name].region, half_weights)
         for name, distance in nearest_start.items()
         if distance <= reach_units
     }
@@ -267,6 +295,20 @@ def _team_region(region: str, team: str) -> str:
     own_prefix = TEAM_PREFIX.get(team, "order")
     enemy_prefix = "chaos" if own_prefix == "order" else "order"
     return region.replace("own_", f"{own_prefix}_").replace("enemy_", f"{enemy_prefix}_")
+
+
+def _half_weight(region: str, half_weights: Mapping[str, float]) -> float:
+    """Return how much a habit weighs a region by the half of the map it is in.
+
+    Args:
+        region: The map's region.
+        half_weights: The weight of each half; empty for none.
+
+    Returns:
+        The weight; 1 for a base, which is in no half, or without a habit.
+    """
+    half = MAP_HALF_BY_REGION.get(region)
+    return half_weights.get(half, 1.0) if half is not None else 1.0
 
 
 def _region_weight(role: str, team: str, region: str) -> float:

@@ -2,6 +2,7 @@
 
 from typing import Final
 
+import pytest
 from pydantic import JsonValue
 
 from leagueasymode.inference.rift_map import RIFT_MAP
@@ -9,6 +10,7 @@ from leagueasymode.jungle_starts import (
     FourMinuteSides,
     JungleStarts,
     four_minute_half,
+    four_minute_half_weights,
     four_minute_side,
     start_half,
     start_side,
@@ -135,3 +137,12 @@ def test_a_four_minute_side_is_a_half_of_the_map_by_the_team_played_this_game() 
     assert four_minute_half("blue", "CHAOS") == "bot"
     assert four_minute_half("mid", "CHAOS") == "mid"
     assert four_minute_half("red", "") is None
+
+
+def test_four_minute_habits_weigh_each_half_of_the_map_with_a_game_added_to_each() -> None:
+    weights = four_minute_half_weights(
+        FourMinuteSides(blue_count=3, red_count=0, mid_count=1), "CHAOS"
+    )
+    # Seven games with the three added: the red team's blue buff's half is the bottom one.
+    assert weights == pytest.approx({"bot": 3 * 4 / 7, "mid": 3 * 2 / 7, "top": 3 * 1 / 7})
+    assert four_minute_half_weights(FourMinuteSides(1, 1, 1), "") == {}
