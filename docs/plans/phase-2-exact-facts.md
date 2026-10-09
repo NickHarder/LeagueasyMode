@@ -45,7 +45,7 @@ app moves to the Swift 6 language mode.
 | 2.3 | Callouts | Built: `inference/callouts.py` (levels, numbers window, objectives soon); voice later |
 | 2.4 | Patch data | Built: the item catalog from the client (`patch_data.py`); champion and item stats from Data Dragon (`data_dragon.py`) |
 | 2.5 | Item spikes and gold lead | Built: item gold, finished items, team item gold, item callouts |
-| 2.6 | Structures | Not built: League's own scoreboard shows each team's tower count, and a lane-by-lane view rests on turret names no recording has confirmed; revisit with the first recordings |
+| 2.6 | Structures | Built in phase 8.5 (`inference/structures.py`): the turret names it reads are those the gold, the clues and the post-game window already read, so it rests on no new guess; the first recordings confirm them all at once |
 | 2.7 | Roles | Built: `inference/roles.py` |
 | 2.8 | Combat stats | Built: `inference/combat_stats.py`; health, armor and magic resist under each enemy |
 

@@ -93,6 +93,7 @@
         "cooldown_ready",
         "went_back",
         "missing",
+        "inhibitor_open",
         "suggestion"
       ],
       "type": "string"
@@ -511,6 +512,47 @@
         "next_camp_at_game_time_seconds"
       ],
       "title": "JunglePath",
+      "type": "object"
+    },
+    "LaneStructures": {
+      "additionalProperties": false,
+      "description": "One side's lane: how many of its three turrets are down, and whether its inhibitor is open.\n\nExact: it restates the feed's turret and inhibitor announcements.",
+      "properties": {
+        "side": {
+          "enum": [
+            "ally",
+            "enemy"
+          ],
+          "title": "Side",
+          "type": "string"
+        },
+        "lane": {
+          "enum": [
+            "top",
+            "mid",
+            "bot"
+          ],
+          "title": "Lane",
+          "type": "string"
+        },
+        "turrets_down": {
+          "maximum": 3,
+          "minimum": 1,
+          "title": "Turrets Down",
+          "type": "integer"
+        },
+        "is_inhibitor_exposed": {
+          "title": "Is Inhibitor Exposed",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "side",
+        "lane",
+        "turrets_down",
+        "is_inhibitor_exposed"
+      ],
+      "title": "LaneStructures",
       "type": "object"
     },
     "LevelEstimate": {
@@ -1560,6 +1602,13 @@
         "$ref": "#/$defs/InhibitorTimer"
       },
       "title": "Inhibitors",
+      "type": "array"
+    },
+    "structures": {
+      "items": {
+        "$ref": "#/$defs/LaneStructures"
+      },
+      "title": "Structures",
       "type": "array"
     },
     "players": {

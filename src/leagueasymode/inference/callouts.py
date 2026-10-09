@@ -85,6 +85,7 @@ class CalloutTracker:
             *self._objectives_soon(state, game_time_seconds),
             *self._item_spikes(state, game_time_seconds),
             *self._cooldowns_ready(state, game_time_seconds),
+            *self._inhibitors_opened(state, game_time_seconds),
             *suggestions(self._previous_state, state, game_time_seconds),
         ]
         new_callouts = [
@@ -138,6 +139,37 @@ class CalloutTracker:
             if card.side == "enemy"
             for spike_level in LEVEL_SPIKES
             if _has_just_reached(previous_levels, card, spike_level)
+        ]
+
+    def _inhibitors_opened(self, state: OverlayState, game_time_seconds: float) -> list[Callout]:
+        """Return a callout for each inhibitor, either side's, whose turret has just fallen.
+
+        An inhibitor already open when the overlay first sees the game is not called out, and
+        each is called out once a game.
+
+        Args:
+            state: The new state.
+            game_time_seconds: Its game time.
+
+        Returns:
+            The callouts.
+        """
+        if self._previous_state is None:
+            return []
+        previously_open = {
+            (lane.side, lane.lane)
+            for lane in self._previous_state.structures
+            if lane.is_inhibitor_exposed
+        }
+        return [
+            _callout(
+                f"inhibitor-open:{lane.side}:{lane.lane}",
+                "inhibitor_open",
+                f"{'Your' if lane.side == 'ally' else 'Enemy'} {lane.lane} inhibitor is open",
+                game_time_seconds,
+            )
+            for lane in state.structures
+            if lane.is_inhibitor_exposed and (lane.side, lane.lane) not in previously_open
         ]
 
     def _jungler_backs(self, state: OverlayState, game_time_seconds: float) -> list[Callout]:

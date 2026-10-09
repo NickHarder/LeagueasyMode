@@ -36,6 +36,7 @@ const CALLOUT_KINDS = new Set([
     "cooldown_ready",
     "went_back",
     "missing",
+    "inhibitor_open",
     "suggestion",
 ]);
 const MARKED_SPELLS = new Set(["flash", "summoner", "ultimate"]);
@@ -95,6 +96,13 @@ export function isInhibitorTimer(value) {
         isOneOf(value["side"], SIDES) &&
         isOneOf(value["lane"], LANES) &&
         typeof value["respawns_at_game_time_seconds"] === "number");
+}
+function isLaneStructures(value) {
+    return (isRecord(value) &&
+        isOneOf(value["side"], SIDES) &&
+        isOneOf(value["lane"], LANES) &&
+        typeof value["turrets_down"] === "number" &&
+        typeof value["is_inhibitor_exposed"] === "boolean");
 }
 const COMBAT_STAT_NAMES = [
     "health",
@@ -373,6 +381,7 @@ export function isOverlayState(value) {
         isArrayOf(value["objectives"], isObjectiveTimer) &&
         isArrayOf(value["buffs"], isBuffTimer) &&
         isArrayOf(value["inhibitors"], isInhibitorTimer) &&
+        isArrayOf(value["structures"], isLaneStructures) &&
         isArrayOf(value["players"], isPlayerCard) &&
         (value["numbers_window"] === null || isNumbersWindow(value["numbers_window"])) &&
         (value["team_item_gold"] === null || isTeamItemGold(value["team_item_gold"])) &&
