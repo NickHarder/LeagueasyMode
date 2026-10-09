@@ -35,6 +35,11 @@ compared with what is known to be true:
   fight of two kills or more is won by the team that lost fewer champions (an even trade is
   left out). The chance its players had, from the last answer before its first kill, is scored
   by its Brier score.
+- **Objective contests** (estimator 11): the timeline records each epic monster's kill, the team
+  that took it and where. For each of your team's takes of Dragon, the Elder or Baron, the chance
+  given 20 seconds before it is scored against whether it was contested: a kill within 30 seconds
+  before and 10 after it, within 3000 units of it, with one of the other team's champions in it.
+  Its Brier score.
 - **Win chance** (estimator 12): the game's details say which team won. The chance given at the
   start of each minute is scored by its Brier score, the mean squared distance from the result:
   0.25 for a coin flip every minute, 0 for a sure and right answer.
@@ -62,11 +67,17 @@ from leagueasymode.inference.backs import BackTracker
 from leagueasymode.inference.build_path import next_item
 from leagueasymode.inference.clues import ClueTracker
 from leagueasymode.inference.combat_stats import DEFAULT_MOVE_SPEED, estimated_combat_stats
+from leagueasymode.inference.contests import ContestedObjective, objective_contests
 from leagueasymode.inference.experience import ExperienceTracker
 from leagueasymode.inference.fights import fight_estimate, fighter_of
 from leagueasymode.inference.gold import GoldTracker, PlayerKey, player_key, team_gold_of
 from leagueasymode.inference.jungle_path import JunglePathTracker
-from leagueasymode.inference.objectives import buff_timers, dragon_timer, inhibitor_timers
+from leagueasymode.inference.objectives import (
+    buff_timers,
+    dragon_timer,
+    inhibitor_timers,
+    objective_timers,
+)
 from leagueasymode.inference.positions import position_estimate
 from leagueasymode.inference.rift_map import RIFT_MAP, RiftMap
 from leagueasymode.inference.roles import assign_roles
@@ -108,6 +119,14 @@ WARD_MATCH_SECONDS: Final = 10.0
 FIGHT_GAP_SECONDS: Final = 15.0
 FIGHT_RADIUS_UNITS: Final = 3000.0
 FIGHT_SMALLEST_KILL_COUNT: Final = 2
+ELITE_MONSTER_KILL_EVENT: Final = "ELITE_MONSTER_KILL"
+# A take is weighed from the last answer this long before it; a kill this close in time and place,
+# with one of the other team's champions in it, is a contest.
+CONTEST_LEAD_SECONDS: Final = 20.0
+CONTEST_BEFORE_SECONDS: Final = 30.0
+CONTEST_AFTER_SECONDS: Final = 10.0
+CONTEST_RADIUS_UNITS: Final = 3000.0
+ELDER_SUB_TYPE: Final = "ELDER_DRAGON"
 SECONDS_PER_MINUTE: Final = 60
 TEAM_BY_ID: Final = {100: "ORDER", 200: "CHAOS"}
 PERCENT: Final = 100.0
@@ -150,6 +169,9 @@ SCORE_DESCRIPTIONS: Final = {
     "fight_brier_score": (
         "{estimator}: {sample_count} fights, Brier score {value:.3f} (a coin flip scores 0.250)"
     ),
+    "contest_brier_score": (
+        "{estimator}: {sample_count} takes, Brier score {value:.3f} (a coin flip scores 0.250)"
+    ),
 }
 
 
@@ -173,6 +195,7 @@ class EstimatorScore:
         "mean_chance",
         "brier_score",
         "fight_brier_score",
+        "contest_brier_score",
     ]
 
     def describe(self) -> str:
@@ -214,6 +237,9 @@ class RecordedGame:
     minute_win_features: Mapping[int, WinFeatures]
     # The last answer before each of the timeline's fights, by the game time of its first kill.
     fight_snapshots: Mapping[float, GameSnapshot]
+    # The last answer 20 seconds or more before each epic monster's kill, with every player's
+    # clues to where they were then, by the game time of the kill.
+    contest_moments: Mapping[float, tuple[GameSnapshot, Mapping[PlayerKey, list[PositionClue]]]]
 
 
 class DetailsTimeline(RiotPayloadModel):
@@ -284,6 +310,20 @@ class TimelineEvent(RiotPayloadModel):
     # The placer of a ward, and its kind.
     creator_id: int = Field(default=0, alias="creatorId")
     ward_type: str = Field(default="", alias="wardType")
+    # An epic monster's kill: the team that took it, and the monster.
+    killer_team_id: int = Field(default=0, alias="killerTeamId")
+    monster_type: str = Field(default="", alias="monsterType")
+    monster_sub_type: str = Field(default="", alias="monsterSubType")
+
+
+@dataclass(frozen=True)
+class MonsterTake:
+    """An epic monster's kill on the timeline: when, which, by which team, and where."""
+
+    seconds: float
+    objective: ContestedObjective
+    team_id: int
+    position: TimelinePosition | None
 
 
 @dataclass(frozen=True)
@@ -357,6 +397,8 @@ def read_recorded_game(recording_path: Path) -> RecordedGame:
     timeline = _timeline_in(client_resources)
     fight_starts = [fight.start_seconds for fight in timeline_fights(timeline)] if timeline else []
     fight_snapshots: dict[float, GameSnapshot] = {}
+    take_times = [take.seconds for take in monster_takes(timeline)] if timeline else []
+    contest_moments: dict[float, tuple[GameSnapshot, Mapping[PlayerKey, list[PositionClue]]]] = {}
     for frame in iter_game_frames(recording_path):
         try:
             snapshot = GameSnapshot.model_validate(frame.payload)
@@ -376,6 +418,9 @@ def read_recorded_game(recording_path: Path) -> RecordedGame:
             if last_back.shopped_at_game_time_seconds not in player_trips:
                 player_trips.append(last_back.shopped_at_game_time_seconds)
         position_clues = clue_tracker.update(snapshot, last_backs)
+        for take_time in take_times:
+            if game_time_seconds <= take_time - CONTEST_LEAD_SECONDS:
+                contest_moments[take_time] = (snapshot, position_clues)
         jungle_tracker.update(snapshot)
         ward_tracker.update(snapshot, {})
         is_minute_start = game_time_seconds - game_minute * SECONDS_PER_MINUTE <= (
@@ -407,6 +452,7 @@ def read_recorded_game(recording_path: Path) -> RecordedGame:
         control_wards_seen=ward_tracker.placements(),
         minute_win_features=win_features_by_minute,
         fight_snapshots=fight_snapshots,
+        contest_moments=contest_moments,
     )
 
 
@@ -879,6 +925,64 @@ def score_fights(game: RecordedGame, patch_stats: PatchStats | None) -> Estimato
     )
 
 
+def score_contests(game: RecordedGame, patch_stats: PatchStats | None) -> EstimatorScore | None:
+    """Score the chance of a contest given before each of your team's takes against the truth.
+
+    Args:
+        game: The recorded game.
+        patch_stats: The patch's stats, for the time your team takes.
+
+    Returns:
+        The Brier score; None when the recording has no take that can be scored.
+    """
+    timeline = _game_timeline(game)
+    team_by_id = {
+        participant.participant_id: key[0] for key, participant in _details_participants(game)
+    }
+    if timeline is None or patch_stats is None or not team_by_id:
+        return None
+    squared_errors = [
+        (chance - (1.0 if _was_contested(take, timeline, team_by_id) else 0.0)) ** 2
+        for take in monster_takes(timeline)
+        if take.seconds in game.contest_moments
+        for chance in _contest_chance_before(take, game.contest_moments[take.seconds], patch_stats)
+    ]
+    if not squared_errors:
+        return None
+    return EstimatorScore(
+        estimator="objective contests",
+        sample_count=len(squared_errors),
+        value=sum(squared_errors) / len(squared_errors),
+        measure="contest_brier_score",
+    )
+
+
+def monster_takes(timeline: GameTimeline) -> list[MonsterTake]:
+    """Return the timeline's kills of Dragon, the Elder Dragon and Baron.
+
+    Args:
+        timeline: The match timeline.
+
+    Returns:
+        The takes, oldest first.
+    """
+    return sorted(
+        (
+            MonsterTake(
+                seconds=event.timestamp_milliseconds / MILLISECONDS_PER_SECOND,
+                objective=objective,
+                team_id=event.killer_team_id,
+                position=event.position,
+            )
+            for frame in timeline.frames
+            for event in frame.events
+            if event.event_type == ELITE_MONSTER_KILL_EVENT
+            for objective in _contested_objective(event)
+        ),
+        key=lambda take: take.seconds,
+    )
+
+
 def timeline_fights(timeline: GameTimeline) -> list[TimelineFight]:
     """Return the timeline's fights: kills close in time and place, two or more of them.
 
@@ -982,7 +1086,11 @@ def score_game(game: RecordedGame, patch_stats: PatchStats | None) -> list[Estim
         *score_experience(game),
         *(
             score
-            for score in [score_next_items(game, patch_stats), score_fights(game, patch_stats)]
+            for score in [
+                score_next_items(game, patch_stats),
+                score_fights(game, patch_stats),
+                score_contests(game, patch_stats),
+            ]
             if score is not None
         ),
         *score_backs(game),
@@ -1257,6 +1365,101 @@ def _is_near(trip_seconds: float, other_trips_seconds: tuple[float, ...]) -> boo
     return any(abs(trip_seconds - other) <= TRIP_MATCH_SECONDS for other in other_trips_seconds)
 
 
+def _contested_objective(event: TimelineEvent) -> list[ContestedObjective]:
+    """Return the monster an epic monster's kill on the timeline took, when it is weighed.
+
+    Args:
+        event: The kill.
+
+    Returns:
+        The monster, alone; nothing for the Herald, the Voidgrubs or another.
+    """
+    if event.monster_type == "DRAGON":
+        return ["elder_dragon" if event.monster_sub_type == ELDER_SUB_TYPE else "dragon"]
+    if event.monster_type == "BARON_NASHOR":
+        return ["baron"]
+    return []
+
+
+def _contest_chance_before(
+    take: MonsterTake,
+    moment: tuple[GameSnapshot, Mapping[PlayerKey, list[PositionClue]]],
+    patch_stats: PatchStats,
+) -> list[float]:
+    """Return the chance of a contest the overlay gave before a take of the player's team.
+
+    Args:
+        take: The take.
+        moment: The game's answer before it, and the clues then.
+        patch_stats: The patch's stats.
+
+    Returns:
+        The chance, alone; nothing for the other team's take, or a monster not weighed then.
+    """
+    snapshot, position_clues = moment
+    if TEAM_BY_ID.get(take.team_id) != snapshot.ally_team():
+        return []
+    contests = objective_contests(
+        snapshot,
+        dragon=dragon_timer(snapshot),
+        objectives=objective_timers(snapshot),
+        position_clues=position_clues,
+        patch_stats=patch_stats,
+    )
+    return [contest.contest_chance for contest in contests if contest.objective == take.objective]
+
+
+def _was_contested(
+    take: MonsterTake, timeline: GameTimeline, team_by_id: Mapping[int, str]
+) -> bool:
+    """Return whether the other team fought at a monster as it was taken.
+
+    Args:
+        take: The take.
+        timeline: The match timeline.
+        team_by_id: Each participant's team.
+
+    Returns:
+        Whether a kill close in time and place had one of the other team's champions in it.
+    """
+    taking_team = TEAM_BY_ID.get(take.team_id)
+    return any(
+        any(
+            team_by_id.get(participant_id) not in {None, taking_team}
+            for participant_id in [
+                event.killer_id,
+                event.victim_id,
+                *event.assisting_participant_ids,
+            ]
+        )
+        for frame in timeline.frames
+        for event in frame.events
+        if event.event_type == CHAMPION_KILL_EVENT
+        and -CONTEST_BEFORE_SECONDS
+        <= event.timestamp_milliseconds / MILLISECONDS_PER_SECOND - take.seconds
+        <= CONTEST_AFTER_SECONDS
+        and _is_within_units(event.position, take.position, CONTEST_RADIUS_UNITS)
+    )
+
+
+def _is_within_units(
+    place: TimelinePosition | None, other_place: TimelinePosition | None, units: float
+) -> bool:
+    """Return whether two places are close; a place not known is taken to be.
+
+    Args:
+        place: One place.
+        other_place: The other.
+        units: How close, in game units.
+
+    Returns:
+        Whether they are within that distance.
+    """
+    if place is None or other_place is None:
+        return True
+    return math.dist((place.x, place.y), (other_place.x, other_place.y)) <= units
+
+
 def _is_same_fight(cluster: list[TimelineEvent], kill: TimelineEvent) -> bool:
     """Return whether a kill belongs to a fight: soon after its last kill, near its first.
 
@@ -1270,14 +1473,9 @@ def _is_same_fight(cluster: list[TimelineEvent], kill: TimelineEvent) -> bool:
     gap_seconds = (
         kill.timestamp_milliseconds - cluster[-1].timestamp_milliseconds
     ) / MILLISECONDS_PER_SECOND
-    first_place = cluster[0].position
-    place = kill.position
-    is_near = (
-        first_place is None
-        or place is None
-        or math.dist((first_place.x, first_place.y), (place.x, place.y)) <= FIGHT_RADIUS_UNITS
+    return gap_seconds <= FIGHT_GAP_SECONDS and _is_within_units(
+        cluster[0].position, kill.position, FIGHT_RADIUS_UNITS
     )
-    return gap_seconds <= FIGHT_GAP_SECONDS and is_near
 
 
 def _fight_squared_error(

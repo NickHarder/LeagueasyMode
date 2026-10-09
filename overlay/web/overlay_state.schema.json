@@ -655,6 +655,58 @@
       "title": "NumbersWindow",
       "type": "object"
     },
+    "ObjectiveContest": {
+      "additionalProperties": false,
+      "description": "A monster up or soon: how long the player's team takes, and whether the enemy can come.\n\nAn estimate (`inference/contests.py`): the monster's health over the living team's damage,\nagainst each enemy's chance to reach its pit before it dies.",
+      "properties": {
+        "objective": {
+          "enum": [
+            "dragon",
+            "elder_dragon",
+            "baron"
+          ],
+          "title": "Objective",
+          "type": "string"
+        },
+        "kill_seconds": {
+          "title": "Kill Seconds",
+          "type": "number"
+        },
+        "ally_fighters": {
+          "title": "Ally Fighters",
+          "type": "integer"
+        },
+        "contest_chance": {
+          "title": "Contest Chance",
+          "type": "number"
+        },
+        "likeliest_contester": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Likeliest Contester"
+        },
+        "likeliest_chance": {
+          "title": "Likeliest Chance",
+          "type": "number"
+        }
+      },
+      "required": [
+        "objective",
+        "kill_seconds",
+        "ally_fighters",
+        "contest_chance",
+        "likeliest_contester",
+        "likeliest_chance"
+      ],
+      "title": "ObjectiveContest",
+      "type": "object"
+    },
     "ObjectiveTimer": {
       "additionalProperties": false,
       "description": "The next spawn of an epic monster other than the dragons.\n\n`is_rule_verified` is false while its spawn rule is not yet confirmed for this season, so the\nwidget can mark the timer as provisional.",
@@ -1410,6 +1462,13 @@
         }
       ],
       "default": null
+    },
+    "contests": {
+      "items": {
+        "$ref": "#/$defs/ObjectiveContest"
+      },
+      "title": "Contests",
+      "type": "array"
     },
     "callouts": {
       "items": {

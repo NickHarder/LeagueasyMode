@@ -120,25 +120,16 @@ def position_estimate(
     since_seconds = max(
         0.0, game_time_seconds - (last_clue.game_time_seconds if last_clue is not None else 0.0)
     )
-    nearest_start = {
-        name: min(RIFT_MAP.distances_from(start).get(name, math.inf) for start in start_points)
-        for name in RIFT_MAP.points
-    }
-    reach_units = move_speed * rules.moving_share * since_seconds
-    reachable_weights = {
-        name: _region_weight(role, player.team, RIFT_MAP.points[name].region)
-        for name, distance in nearest_start.items()
-        if distance <= reach_units
-    }
-    point_weights = (
-        reachable_weights
-        if sum(reachable_weights.values()) > 0
-        else dict.fromkeys(start_points, 1.0)
-    )
-    total_weight = sum(point_weights.values())
     chance_by_region: defaultdict[str, float] = defaultdict(float)
-    for name, weight in point_weights.items():
-        chance_by_region[RIFT_MAP.points[name].region] += weight / total_weight
+    for name, chance in point_chances(
+        player.team,
+        role,
+        clues,
+        move_speed=move_speed,
+        game_time_seconds=game_time_seconds,
+        rules=rules,
+    ).items():
+        chance_by_region[RIFT_MAP.points[name].region] += chance
     home_regions = {
         _team_region(region, player.team) for region in HOME_REGIONS.get(role, frozenset())
     }
@@ -164,6 +155,52 @@ def position_estimate(
         reach_mid_seconds=_reach_seconds(start_points, "mid", move_speed, since_seconds),
         reach_bot_seconds=_reach_seconds(start_points, "bot", move_speed, since_seconds),
     )
+
+
+def point_chances(
+    team: str,
+    role: str,
+    clues: Sequence[PositionClue],
+    *,
+    move_speed: float,
+    game_time_seconds: float,
+    rules: PositionRules = POSITION_RULES,
+) -> dict[str, float]:
+    """Return the chance a living player is at each of the map's points now.
+
+    Args:
+        team: Their team.
+        role: Their role, given or worked out; empty when unknown.
+        clues: Their clues so far, oldest first.
+        move_speed: Their move speed, in game units a second.
+        game_time_seconds: The game's clock.
+        rules: How much of the time a champion moves.
+
+    Returns:
+        The chances by point name, adding up to 1; a point they cannot be at is left out.
+    """
+    last_clue = clues[-1] if clues else None
+    start_points = _start_points(team, last_clue)
+    since_seconds = max(
+        0.0, game_time_seconds - (last_clue.game_time_seconds if last_clue is not None else 0.0)
+    )
+    nearest_start = {
+        name: min(RIFT_MAP.distances_from(start).get(name, math.inf) for start in start_points)
+        for name in RIFT_MAP.points
+    }
+    reach_units = move_speed * rules.moving_share * since_seconds
+    reachable_weights = {
+        name: _region_weight(role, team, RIFT_MAP.points[name].region)
+        for name, distance in nearest_start.items()
+        if distance <= reach_units
+    }
+    point_weights = (
+        reachable_weights
+        if sum(reachable_weights.values()) > 0
+        else dict.fromkeys(start_points, 1.0)
+    )
+    total_weight = sum(point_weights.values())
+    return {name: weight / total_weight for name, weight in point_weights.items()}
 
 
 def reach_seconds_of(estimate: PositionEstimate, lane: str) -> float | None:

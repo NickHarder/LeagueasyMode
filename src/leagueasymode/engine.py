@@ -14,6 +14,7 @@ from leagueasymode.inference.backs import BackTracker
 from leagueasymode.inference.callouts import CalloutTracker
 from leagueasymode.inference.clues import ClueTracker
 from leagueasymode.inference.combat_stats import move_speed_of
+from leagueasymode.inference.contests import objective_contests
 from leagueasymode.inference.cooldowns import MarkedSpell, marked_cooldown, running_cooldowns
 from leagueasymode.inference.experience import ExperienceTracker
 from leagueasymode.inference.fights import team_fight
@@ -132,6 +133,7 @@ def compute_overlay_state(
         position_clues=position_clues,
     )
     dragon = dragon_timer(snapshot)
+    objectives = objective_timers(snapshot)
     buffs = buff_timers(snapshot)
     inhibitors = inhibitor_timers(snapshot)
     teams_gold = team_gold(cards)
@@ -140,7 +142,7 @@ def compute_overlay_state(
         is_game_running=True,
         game_time_seconds=snapshot.game_data.game_time_seconds,
         dragon=dragon,
-        objectives=objective_timers(snapshot),
+        objectives=objectives,
         buffs=buffs,
         inhibitors=inhibitors,
         players=cards,
@@ -167,6 +169,13 @@ def compute_overlay_state(
             )
         ),
         fight=team_fight(snapshot, patch_stats),
+        contests=objective_contests(
+            snapshot,
+            dragon=dragon,
+            objectives=objectives,
+            position_clues=position_clues or {},
+            patch_stats=patch_stats,
+        ),
     )
 
 
