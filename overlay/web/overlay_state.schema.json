@@ -850,6 +850,11 @@
           "default": true,
           "title": "Show Suggestions",
           "type": "boolean"
+        },
+        "speak_callouts": {
+          "default": false,
+          "title": "Speak Callouts",
+          "type": "boolean"
         }
       },
       "title": "OverlayPreferences",

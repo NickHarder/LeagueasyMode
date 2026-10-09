@@ -6,6 +6,10 @@ skill has the format.
 
 ## 2026-10-09
 
+- Phase 8.4, spoken callouts: a ninth switch in the settings, "Speak callouts", off unless turned
+  on; with it on, the overlay hands each new callout to the macOS app as it shows, and the app
+  speaks it once in macOS's voice (a browser speaks it itself). The plan's "Callouts: short
+  facts, with optional voice".
 - Phase 8.3, moving the widgets: "Edit layout" in the macOS app's menu makes the overlay take
   clicks and outlines and names each movable widget (the objective strip, the callouts, the enemy
   strip, the You panel; the minimap layer stays over League's); a dragged widget stays where it is

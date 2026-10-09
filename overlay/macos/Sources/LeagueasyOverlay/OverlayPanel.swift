@@ -32,6 +32,8 @@ final class OverlayPanel: NSPanel {
         webView.setValue(false, forKey: "drawsBackground")
         webView.frame = NSRect(origin: .zero, size: screenFrame.size)
         webView.autoresizingMask = [.width, .height]
+        // The page hands its callouts to the app's voice, when the player turned speech on.
+        webView.configuration.userContentController.add(SpeechBridge(), name: SpokenCallout.messageName)
         contentView = webView
     }
 

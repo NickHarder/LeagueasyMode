@@ -217,8 +217,10 @@ is `overlay/web/game_summary.schema.json`, kept current by a test.[^game-summary
 `/settings.html` (`overlay/web/src/settings.ts`), opened by the macOS app's "Settings…", has a
 switch for each part of the overlay: the win chance, the fight chance, the objective contests,
 the You panel, the minimap layer, the enemy estimates (unspent gold, next item, last back, clues,
-likely places, camps down and wards), callouts, and suggestions. Everything shows by default; the
-exact facts of the enemy strip (levels, death timers, items, stats) always do. A change is sent
+likely places, camps down and wards), callouts, and suggestions; and one to speak each new
+callout as it shows, in macOS's voice. Everything shows by default, and nothing is spoken until
+that switch is turned on; the exact facts of the enemy strip (levels, death timers, items, stats)
+always show. A change is sent
 with `PUT /preferences`, only with the header `X-LeagueasyMode-Request: preferences`, which a page
 elsewhere cannot send; the engine sends it with its next state, so the overlay changes at once,
 and keeps it in `preferences.json` in the application's directory (`LEAGUEASYMODE_PREFERENCES`

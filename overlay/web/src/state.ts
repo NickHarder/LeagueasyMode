@@ -320,6 +320,7 @@ export interface OverlayPreferences {
   readonly show_enemy_estimates: boolean;
   readonly show_callouts: boolean;
   readonly show_suggestions: boolean;
+  readonly speak_callouts: boolean;
 }
 
 /** The preferences' names, in the settings page's order. */
@@ -332,6 +333,7 @@ export const PREFERENCE_NAMES = [
   "show_enemy_estimates",
   "show_callouts",
   "show_suggestions",
+  "speak_callouts",
 ] as const satisfies readonly (keyof OverlayPreferences)[];
 
 /** The widgets the player can move; the minimap layer stays over League's minimap. */

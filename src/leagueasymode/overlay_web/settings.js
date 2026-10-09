@@ -18,6 +18,7 @@ const DESCRIPTIONS = {
     ],
     show_callouts: ["Callouts", "Short notices when something happens, such as an enemy reaching level 6."],
     show_suggestions: ["Suggestions", "Callouts that name an action, such as “take it”."],
+    speak_callouts: ["Speak callouts", "Each new callout read aloud in macOS’s voice, as it shows. Off unless turned on."],
 };
 function htmlElement(name, className, text) {
     const element = document.createElement(name);

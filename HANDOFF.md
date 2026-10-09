@@ -21,20 +21,22 @@ without signing as the owner chose, and merged. Phase 8
 ([docs/plans/phase-8-first-test.md](docs/plans/phase-8-first-test.md), a draft) goes past the
 approved plan: 8.1, the status page and the report after a test, is on `feat/status-page` (#34);
 8.2, the overlay over League's own screen and window, on `feat/game-window` (#35); 8.3, moving
-the widgets, on `feat/edit-layout`; then spoken callouts and structures. Each slice goes up as its own pull request into `main` without waiting for
+the widgets, on `feat/edit-layout` (#36); 8.4, spoken callouts, on `feat/spoken-callouts`. Left of
+phase 8: structures (8.5) and the Swift 6 language mode (8.6), both waiting for the test on a
+Mac. Each slice goes up as its own pull request into `main` without waiting for
 the one before to merge.
 
 | Area | State | Proof |
 |---|---|---|
 | Scaffold | ai-kit v0.11.1, Python layer, GitHub CI | `.copier-answers.yml` |
-| Gate | Green: lint, 760 tests (and 35 in Chromium), secrets | `make gate` |
+| Gate | Green: lint, 761 tests (and 37 in Chromium), secrets | `make gate` |
 | Recorder | Records games, the client's patch data and the post-game timeline; anonymized copies | `uv run leagueasymode record`; `tests/test_recorder.py`, `tests/test_anonymize.py` |
 | Replay | A recording served as a stand-in game API | `uv run leagueasymode replay <recording>`; `tests/test_replay.py` |
 | Engine and overlay page | The dragon and Elder timer, from the game's answer to the page | `uv run leagueasymode run`; `tests/test_tracer_bullet.py` |
 | Phase 2 facts | Objective strip, buffs, inhibitors, numbers window, enemy strip, callouts, item catalog and item gold, roles, combat stats | `tests/test_objective_strip.py`, `test_numbers_window.py`, `test_callouts.py`, `test_item_facts.py`, `test_roles.py`, `test_combat_stats.py`; eight browser tests |
 | Patch stats | Each patch's champion and item stats from Data Dragon, fetched once a patch and kept on disk; **never fetched from the real Data Dragon yet** (this environment cannot reach it) | `tests/test_data_dragon.py` against a stand-in |
 | Widgets in a browser | Rendered in Chromium against a replay | `uv run pytest -m browser` (needs Chromium); `tests/test_overlay_page.py` |
-| macOS app | Builds on macOS 15 and passes its 55 unit tests in CI; **never run over League** | `overlay/macos/`; CI job `macos-overlay` |
+| macOS app | Builds on macOS 15 and passes its 58 unit tests in CI; **never run over League** | `overlay/macos/`; CI job `macos-overlay` |
 | App bundle | `LeagueasyMode.app` with the engine inside, signed ad hoc, built by CI, its engine started from an empty home folder; **never opened on a Mac by a person** | `overlay/macos/scripts/build_app.sh`; CI job `macos-app`, which keeps the zip with each run |
 | CI | 11 jobs, the widgets', the macOS app's and the app bundle's included; none may fail | `.github/workflows/ci.yml` |
 | Releases | A tag `v<version>` publishes the zipped app; the app checks for a newer release once a day; **no release published yet** | `.github/workflows/release.yml`; `docs/references/macos-app.md` |

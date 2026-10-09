@@ -32,6 +32,8 @@ sources:
     resource: ../../overlay/macos/Sources/OverlayCore/GameWindow.swift
   - id: layout-editing
     resource: ../../overlay/web/src/layout.ts
+  - id: speech
+    resource: ../../overlay/macos/Sources/LeagueasyOverlay/SpeechBridge.swift
   - id: release-workflow
     resource: ../../.github/workflows/release.yml
 ---
@@ -71,6 +73,11 @@ stays there, kept by the engine in `layout.json` in the application's directory 
 overlay's width and height, so it keeps its place when League's window changes size. Choose
 "Edit layout" again to finish; "Reset layout", in the menu or on the notice at the bottom of the
 overlay while editing, puts every widget back.[^layout-editing]
+
+**Spoken callouts:** with "Speak callouts" turned on in the settings (it is off until then),
+the overlay page hands each new callout to the app as it shows, and the app speaks it once in
+macOS's own voice (`AVSpeechSynthesizer`, the system's default voice).[^speech] In a browser, as
+against a replay, the browser's own speech speaks it instead.
 
 The menu shows whether the engine runs, toggles the overlay and the click-through, and picks the
 window level, since which level stays above League depends on how League draws:[^levels]
@@ -191,6 +198,7 @@ whether `KillerName` holds a game name or a Riot ID, and whether the client serv
 [^engine-command]: `overlay/macos/Sources/OverlayCore/EngineCommand.swift`
 [^game-window]: `overlay/macos/Sources/OverlayCore/GameWindow.swift`
 [^layout-editing]: `overlay/web/src/layout.ts`
+[^speech]: `overlay/macos/Sources/LeagueasyOverlay/SpeechBridge.swift`
 [^bundled-engine]: `overlay/macos/Sources/OverlayCore/BundledEngine.swift`
 [^build-app]: `overlay/macos/scripts/build_app.sh`
 [^smoke-test]: `overlay/macos/scripts/smoke_test_app.sh`
