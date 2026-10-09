@@ -8,6 +8,7 @@ from typing import Final
 from pydantic import JsonValue, ValidationError
 
 from leagueasymode.data_dragon import PatchStats
+from leagueasymode.engine_status import StatusBoard
 from leagueasymode.game_api import GameApiClient
 from leagueasymode.game_state import GameSnapshot
 from leagueasymode.inference.backs import BackTracker
@@ -78,6 +79,7 @@ def compute_overlay_state(
     minimap: MinimapLayout | None = None,
     win_rules: WinChanceRules = WIN_CHANCE_RULES,
     fight_rules: FightRules = FIGHT_RULES,
+    status: StatusBoard | None = None,
 ) -> OverlayState:
     """Return what the overlay shows for one answer of the game's API.
 
@@ -100,6 +102,7 @@ def compute_overlay_state(
         minimap: Where League draws its minimap; None while unknown.
         win_rules: The win chance's weights, hand-set or refit.
         fight_rules: The fight model's, likewise.
+        status: Told whether the answer could be read, and what it held; None to tell nothing.
 
     Returns:
         The overlay's state; no game running when there is no answer or it cannot be read.
@@ -110,7 +113,11 @@ def compute_overlay_state(
         snapshot = GameSnapshot.model_validate(payload)
     except ValidationError as error:
         logger.warning("could not read the game's answer (%d problems)", error.error_count())
+        if status is not None:
+            status.note_unreadable_answer(error)
         return NOT_RUNNING
+    if status is not None:
+        status.note_game(snapshot)
     gold_estimates = (
         gold_tracker.update(snapshot, item_catalog) if gold_tracker is not None else None
     )
@@ -248,6 +255,7 @@ class OverlayEngine:
         minimap_layout: MinimapLayout | None = None,
         model_weights: ModelWeights | None = None,
         preferences: OverlayPreferences | None = None,
+        status: StatusBoard | None = None,
     ) -> None:
         """Keep the game's API, how often to ask it, and where the patch's data comes from.
 
@@ -263,6 +271,8 @@ class OverlayEngine:
                 unknown.
             model_weights: The refit models' weights; None for the hand-set ones.
             preferences: What the player chose to see; None for everything.
+            status: Told what the engine sees, part by part, for the status page; None for a
+                board of its own.
         """
         self.game_api: Final = game_api
         self.poll_interval_seconds: Final = poll_interval_seconds
@@ -271,6 +281,7 @@ class OverlayEngine:
         self.intel_pause_seconds: Final = intel_pause_seconds
         self.minimap_layout: Final = minimap_layout
         self.model_weights: Final = model_weights or ModelWeights()
+        self.status: Final = status or StatusBoard()
         self._item_catalog: ItemCatalog | None = None
         self._patch_stats: PatchStats | None = None
         self._player_records: PlayerRecords | None = None
@@ -372,6 +383,9 @@ class OverlayEngine:
         """
         while not stop_requested.is_set():
             payload = await self.game_api.fetch_all_game_data()
+            no_answer = self.game_api.last_no_answer
+            if payload is None and no_answer is not None:
+                self.status.note_no_answer(no_answer)
             answer_state = compute_overlay_state(
                 payload,
                 self._item_catalog,
@@ -388,6 +402,7 @@ class OverlayEngine:
                 minimap=self.minimap_layout,
                 win_rules=self.model_weights.win_rules,
                 fight_rules=self.model_weights.fight_rules,
+                status=self.status,
             )
             self._last_payload = payload if answer_state.is_game_running else None
             if answer_state.is_game_running and not self._current_state.is_game_running:
@@ -426,13 +441,13 @@ class OverlayEngine:
         download of the stats does not hold back the players.
         """
         client = await self.connect_to_client() if self.connect_to_client is not None else None
-        if client is not None:
-            await self._load_the_item_catalog(client)
+        item_count = await self._load_the_item_catalog(client) if client is not None else None
         game_version = (
             game_version_of(await client.get_json(GAME_VERSION_PATH))
             if client is not None
             else None
         )
+        self._note_the_client(client, item_count, game_version)
         await asyncio.gather(
             self._load_the_patch_stats(game_version), self._load_the_player_records(client)
         )
@@ -444,11 +459,25 @@ class OverlayEngine:
             game_version: The game's version, or None when unknown.
         """
         if self.load_patch_stats is None:
+            self.status.set_part("patch", "off", "Not loaded in this run")
             return
         patch_stats = await self.load_patch_stats(game_version)
-        if patch_stats is not None:
-            self._patch_stats = patch_stats
-            logger.info("loaded patch %s's champion and item stats", patch_stats.version)
+        if patch_stats is None:
+            self.status.set_part(
+                "patch",
+                "problem",
+                f"No stats for game version {game_version or 'unknown'}: Data Dragon was not "
+                "reached, and none are kept",
+            )
+            return
+        self._patch_stats = patch_stats
+        logger.info("loaded patch %s's champion and item stats", patch_stats.version)
+        self.status.set_part(
+            "patch",
+            "ok",
+            f"Patch {patch_stats.version}: {len(patch_stats.champions_by_key)} champions, "
+            f"{len(patch_stats.items_by_id)} items",
+        )
 
     async def _load_the_player_records(self, client: LeagueClient | None) -> None:
         """Ask the League client about each player in the game.
@@ -456,25 +485,75 @@ class OverlayEngine:
         Args:
             client: The League client, or None when it is not running.
         """
+        if self.connect_to_client is None:
+            self.status.set_part("players", "off", "Not looked up in this run")
+            return
         if client is None:
+            self.status.set_part(
+                "players", "problem", "Not looked up: the League client was not found"
+            )
             return
         player_records = await load_player_records(
             client, self._record_cache, self.intel_pause_seconds
         )
         self._player_records = player_records
         logger.info("looked up %d players", len(player_records))
+        ranked_count = sum(
+            1 for game_record in player_records.values() if game_record.record.ranked is not None
+        )
+        self.status.set_part(
+            "players",
+            "ok" if player_records else "problem",
+            f"Looked up {len(player_records)} players; {ranked_count} with a rank",
+        )
 
-    async def _load_the_item_catalog(self, client: LeagueClient) -> None:
+    async def _load_the_item_catalog(self, client: LeagueClient) -> int | None:
         """Ask the League client for the item catalog, and keep it when it has items.
 
         Args:
             client: The League client.
+
+        Returns:
+            How many items it has, or None when the client gave none.
         """
         items_payload = await client.get_json(ITEMS_PATH)
         catalog = ItemCatalog.from_client_items(items_payload) if items_payload else None
-        if catalog is not None and catalog.items_by_id:
-            self._item_catalog = catalog
-            logger.info("loaded the item catalog: %d items", len(catalog.items_by_id))
+        if catalog is None or not catalog.items_by_id:
+            return None
+        self._item_catalog = catalog
+        logger.info("loaded the item catalog: %d items", len(catalog.items_by_id))
+        return len(catalog.items_by_id)
+
+    def _note_the_client(
+        self, client: LeagueClient | None, item_count: int | None, game_version: str | None
+    ) -> None:
+        """Say whether the League client was found when the game started, and what it gave.
+
+        Args:
+            client: The client, or None when it was not found.
+            item_count: How many items its catalog has, or None when it gave none.
+            game_version: The game's version it gave, or None.
+        """
+        if self.connect_to_client is None:
+            self.status.set_part("client", "off", "Not looked for in this run")
+        elif client is None:
+            self.status.set_part(
+                "client",
+                "problem",
+                "Not found when the game started: no lockfile, and no LeagueClientUx process",
+            )
+        elif item_count is None:
+            self.status.set_part(
+                "client",
+                "problem",
+                f"Found, but it gave no item catalog (game version {game_version or 'unknown'})",
+            )
+        else:
+            self.status.set_part(
+                "client",
+                "ok",
+                f"Answering: game version {game_version or 'unknown'}, {item_count} items",
+            )
 
     def _publish(self, new_state: OverlayState) -> None:
         """Put a state in every subscriber's queue, replacing one not yet read.

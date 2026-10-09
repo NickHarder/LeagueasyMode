@@ -54,6 +54,9 @@ WEB_ASSETS: Final = {
     "/summary.css": ("summary.css", "text/css"),
     "/settings.html": ("settings.html", "text/html"),
     "/settings.js": ("settings.js", "text/javascript"),
+    "/status.html": ("status.html", "text/html"),
+    "/status.js": ("status.js", "text/javascript"),
+    "/status_state.js": ("status_state.js", "text/javascript"),
 }
 
 type Handler = Callable[[web.Request], Awaitable[web.StreamResponse]]
@@ -142,6 +145,10 @@ def create_overlay_application(
             await asyncio.to_thread(save_preferences, preferences_path, chosen)
         return web.json_response(text=chosen.model_dump_json())
 
+    async def status(_request: web.Request) -> web.Response:
+        return web.json_response(text=engine.status.report().model_dump_json())
+
+    application.router.add_get("/status", status)
     application.router.add_get("/preferences", preferences)
     application.router.add_put("/preferences", change_preferences)
     application.router.add_get("/summary", summary)

@@ -1,0 +1,149 @@
+{
+  "$defs": {
+    "PartKey": {
+      "enum": [
+        "game",
+        "client",
+        "patch",
+        "players",
+        "recording",
+        "timeline",
+        "scoring",
+        "settings",
+        "models"
+      ],
+      "type": "string"
+    },
+    "PartState": {
+      "enum": [
+        "ok",
+        "waiting",
+        "problem",
+        "off"
+      ],
+      "type": "string"
+    },
+    "SeenEvent": {
+      "additionalProperties": false,
+      "description": "One kind of event in the feed of the game being played, or of the last one.",
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "count": {
+          "title": "Count",
+          "type": "integer"
+        },
+        "is_read": {
+          "title": "Is Read",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "name",
+        "count",
+        "is_read"
+      ],
+      "title": "SeenEvent",
+      "type": "object"
+    },
+    "StatusPart": {
+      "additionalProperties": false,
+      "description": "One part of what the engine sees.",
+      "properties": {
+        "key": {
+          "$ref": "#/$defs/PartKey"
+        },
+        "title": {
+          "title": "Title",
+          "type": "string"
+        },
+        "state": {
+          "$ref": "#/$defs/PartState"
+        },
+        "detail": {
+          "title": "Detail",
+          "type": "string"
+        },
+        "updated_at": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Updated At"
+        }
+      },
+      "required": [
+        "key",
+        "title",
+        "state",
+        "detail",
+        "updated_at"
+      ],
+      "title": "StatusPart",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "The report: what runs where, each part's state, and what the game's answers held.",
+  "properties": {
+    "version": {
+      "title": "Version",
+      "type": "string"
+    },
+    "platform": {
+      "title": "Platform",
+      "type": "string"
+    },
+    "python_version": {
+      "title": "Python Version",
+      "type": "string"
+    },
+    "started_at": {
+      "title": "Started At",
+      "type": "string"
+    },
+    "reported_at": {
+      "title": "Reported At",
+      "type": "string"
+    },
+    "parts": {
+      "items": {
+        "$ref": "#/$defs/StatusPart"
+      },
+      "title": "Parts",
+      "type": "array"
+    },
+    "events": {
+      "items": {
+        "$ref": "#/$defs/SeenEvent"
+      },
+      "title": "Events",
+      "type": "array"
+    },
+    "unreadable_fields": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Unreadable Fields",
+      "type": "array"
+    }
+  },
+  "required": [
+    "version",
+    "platform",
+    "python_version",
+    "started_at",
+    "reported_at",
+    "parts",
+    "events",
+    "unreadable_fields"
+  ],
+  "title": "EngineStatus",
+  "type": "object"
+}

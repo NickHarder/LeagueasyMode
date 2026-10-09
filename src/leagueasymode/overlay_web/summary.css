@@ -362,3 +362,118 @@ body {
 .settings-status[data-state="failed"] {
   color: var(--bad);
 }
+
+/* The status page: one row a part, its state written out as well as colored. */
+.status-parts {
+  margin: 16px 0 0;
+  padding: 4px 16px;
+  list-style: none;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.status-part {
+  display: grid;
+  grid-template-columns: 5.5em 10em 1fr;
+  gap: 4px 12px;
+  align-items: baseline;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--gridline);
+}
+
+.status-part:last-child {
+  border-bottom: none;
+}
+
+.status-badge {
+  justify-self: start;
+  padding: 0 8px;
+  border: 1px solid currentcolor;
+  border-radius: 999px;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.status-part[data-state="ok"] .status-badge {
+  color: var(--good);
+}
+
+.status-part[data-state="problem"] .status-badge {
+  color: var(--bad);
+}
+
+.status-detail {
+  color: var(--text-secondary);
+  overflow-wrap: anywhere;
+}
+
+.status-section h2 {
+  margin: 28px 0 4px;
+  font-size: 16px;
+}
+
+.status-events,
+.status-fields {
+  margin: 8px 0 0;
+  padding-left: 20px;
+  font-variant-numeric: tabular-nums;
+}
+
+.status-unread,
+.status-none {
+  color: var(--text-secondary);
+}
+
+.status-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin: 8px 0;
+}
+
+.status-copy {
+  padding: 6px 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-1);
+  color: var(--text-primary);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.status-copy:hover {
+  border-color: var(--series-1);
+}
+
+.status-copy:focus-visible {
+  outline: 2px solid var(--series-1);
+  outline-offset: 2px;
+}
+
+.status-copied {
+  color: var(--text-secondary);
+}
+
+.status-report {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-1);
+  color: var(--text-primary);
+  font: 12px/1.5 ui-monospace, "SF Mono", Menlo, monospace;
+  resize: vertical;
+}
+
+@media (max-width: 560px) {
+  .status-part {
+    grid-template-columns: 5.5em 1fr;
+  }
+
+  .status-detail {
+    grid-column: 1 / -1;
+  }
+}

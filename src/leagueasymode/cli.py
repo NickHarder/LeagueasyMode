@@ -45,6 +45,7 @@ from leagueasymode.data_dragon import (
     load_patch_stats,
 )
 from leagueasymode.engine import OverlayEngine, PatchStatsLoader
+from leagueasymode.engine_status import StatusBoard
 from leagueasymode.game_api import GameApiClient
 from leagueasymode.game_summary import game_summary
 from leagueasymode.league_client import (
@@ -56,6 +57,7 @@ from leagueasymode.league_client import (
 )
 from leagueasymode.league_settings import DEFAULT_GAME_CONFIG_PATH, read_minimap_layout
 from leagueasymode.overlay_server import create_overlay_application
+from leagueasymode.overlay_state import MinimapLayout
 from leagueasymode.patch_data import GAME_VERSION_PATH, game_version_of
 from leagueasymode.player_intel import PLAYER_LOOKUP_PATH_PREFIXES
 from leagueasymode.preferences import load_preferences
@@ -148,6 +150,22 @@ async def run_overlay(
     # The engine and the recorder both ask about each player; they share the answers.
     shared_answers = SharedAnswers(PLAYER_LOOKUP_PATH_PREFIXES)
     preferences_path = settings.preferences or default_preferences_path()
+    status = StatusBoard()
+    game_config_path = settings.league_game_config or DEFAULT_GAME_CONFIG_PATH
+    minimap_layout = await asyncio.to_thread(read_minimap_layout, game_config_path)
+    await asyncio.to_thread(note_league_settings, status, game_config_path, minimap_layout)
+    model_weights_path = settings.model_weights or default_model_weights_path()
+    model_weights = await asyncio.to_thread(load_model_weights, model_weights_path)
+    status.set_part(
+        "models",
+        "ok",
+        "Hand-set weights: no refit yet"
+        if model_weights is None
+        else f"Refit weights from {status.path_text(model_weights_path)}",
+    )
+    if not settings.record_while_running:
+        for part_key in ("recording", "timeline", "scoring"):
+            status.set_part(part_key, "off", "Off: LEAGUEASYMODE_RECORD_WHILE_RUNNING is false")
     async with aiohttp.ClientSession() as session:
         engine = OverlayEngine(
             _game_api(session, settings),
@@ -155,13 +173,10 @@ async def run_overlay(
             _client_connector(session, settings, shared_answers),
             _patch_stats_loader(session, settings),
             settings.player_lookup_pause_seconds,
-            minimap_layout=await asyncio.to_thread(
-                read_minimap_layout, settings.league_game_config or DEFAULT_GAME_CONFIG_PATH
-            ),
-            model_weights=await asyncio.to_thread(
-                load_model_weights, settings.model_weights or default_model_weights_path()
-            ),
+            minimap_layout=minimap_layout,
+            model_weights=model_weights,
             preferences=await asyncio.to_thread(load_preferences, preferences_path),
+            status=status,
         )
         history_path = settings.accuracy_history or default_accuracy_history_path()
         summary_path = settings.last_game_summary or default_last_game_summary_path()
@@ -182,11 +197,25 @@ async def run_overlay(
         scoring_patch_stats = _patch_stats_loader(session, settings)
 
         async def score_recorded_game(recording_path: Path) -> None:
-            await after_the_game(
-                recording_path,
-                scoring_patch_stats,
-                history_path=history_path,
-                summary_path=summary_path,
+            try:
+                await after_the_game(
+                    recording_path,
+                    scoring_patch_stats,
+                    history_path=history_path,
+                    summary_path=summary_path,
+                )
+            except Exception as error:
+                status.set_part(
+                    "scoring",
+                    "problem",
+                    f"Could not score {recording_path.name}: {type(error).__name__}",
+                )
+                raise
+            status.set_part(
+                "scoring",
+                "ok",
+                f"Scored {recording_path.name}: the last game's window and the accuracy "
+                "history are up to date",
             )
 
         async def record_in_background() -> None:
@@ -200,6 +229,7 @@ async def run_overlay(
                 ),
                 stop_requested,
                 on_recorded=score_recorded_game,
+                status=status,
             )
 
         background_tasks = [asyncio.create_task(engine.run(stop_requested))]
@@ -209,6 +239,32 @@ async def run_overlay(
             await asyncio.gather(*background_tasks)
         finally:
             await runner.cleanup()
+
+
+def note_league_settings(
+    status: StatusBoard, game_config_path: Path, minimap_layout: MinimapLayout
+) -> None:
+    """Say whether League's settings file was read, and where it puts the minimap.
+
+    Args:
+        status: The status board.
+        game_config_path: League's `game.cfg`.
+        minimap_layout: What was read from it, or the default.
+    """
+    shown_path = status.path_text(game_config_path)
+    if not game_config_path.is_file():
+        status.set_part(
+            "settings",
+            "waiting",
+            f"Not found at {shown_path}: the minimap layer takes its default place",
+        )
+        return
+    flipped_text = ", flipped" if minimap_layout.is_flipped else ""
+    status.set_part(
+        "settings",
+        "ok",
+        f"Read {shown_path}: minimap scale {minimap_layout.scale:g}{flipped_text}",
+    )
 
 
 async def record_until_stopped(

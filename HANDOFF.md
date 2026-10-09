@@ -3,8 +3,8 @@
 If you are picking this work up, human or model: read this file top to bottom first. The `handoff` skill
 refreshes it; it describes the current state.
 
-Last updated: 2026-10-09, on branch `feat/releases`. `main` holds phases 0 to 6 and 7.1 (pull
-requests #2 to #30, merged).
+Last updated: 2026-10-09, on branch `feat/status-page`. `main` holds phases 0 to 7 (pull requests
+#2 to #33, merged).
 
 ## Where things stand
 
@@ -17,15 +17,17 @@ built but for structures, left out until the first recordings. Phases 3 to 6 are
 [phase 6](docs/plans/phase-6-post-game.md), drafts built on their best guesses); phase 5's models
 are hand-set and phase 6's thresholds empty until 20 recorded games exist. Phase 7
 ([docs/plans/phase-7-packaging.md](docs/plans/phase-7-packaging.md), a draft) is under way,
-without signing as the owner chose: 7.1, settings, is merged; 7.2, the app bundle, is on
-`feat/app-bundle` (#32); 7.3, releases, the update check and open at login, on `feat/releases`.
-Phase 7 is built. Each slice goes up as its own pull request into `main` without waiting for the
-one before to merge.
+without signing as the owner chose, and merged. Phase 8
+([docs/plans/phase-8-first-test.md](docs/plans/phase-8-first-test.md), a draft) goes past the
+approved plan: 8.1, the status page and the report after a test, is on `feat/status-page`; then
+what v2's picture still promises (moving the widgets, spoken callouts, League's own screen and
+window, structures). Each slice goes up as its own pull request into `main` without waiting for
+the one before to merge.
 
 | Area | State | Proof |
 |---|---|---|
 | Scaffold | ai-kit v0.11.1, Python layer, GitHub CI | `.copier-answers.yml` |
-| Gate | Green: lint, 735 tests (and 29 in Chromium), secrets | `make gate` |
+| Gate | Green: lint, 754 tests (and 32 in Chromium), secrets | `make gate` |
 | Recorder | Records games, the client's patch data and the post-game timeline; anonymized copies | `uv run leagueasymode record`; `tests/test_recorder.py`, `tests/test_anonymize.py` |
 | Replay | A recording served as a stand-in game API | `uv run leagueasymode replay <recording>`; `tests/test_replay.py` |
 | Engine and overlay page | The dragon and Elder timer, from the game's answer to the page | `uv run leagueasymode run`; `tests/test_tracer_bullet.py` |
@@ -62,7 +64,9 @@ In `AGENTS.md`, this project's own included: every session reads that file.
    app, play a Practice Tool game in each display mode, and record a game or two. The recordings
    (anonymized) become the test data every estimator needs. With 7.2 the app needs no clone: the
    `macos-app` job of a pull request's CI run keeps `LeagueasyMode-<version>.zip` (Apple silicon),
-   and the reference says how to open an unsigned app the first time.
+   and the reference says how to open an unsigned app the first time. After the game, "Status…"
+   in the menu, then "Copy report", gives a report to paste back: it says what worked and names
+   no player.
 3. **Compare Riot's root certificate** once with Riot's own `riotgames.pem`: the SHA-256
    fingerprint is in `src/leagueasymode/riot_tls.py`.
 4. **The kit's gate skills** (`kickoff`, `audit-codebase`, `define-personas`, `plan-architecture`,
@@ -92,10 +96,12 @@ In `AGENTS.md`, this project's own included: every session reads that file.
 10. **Phase 7's plan** ([docs/plans/phase-7-packaging.md](docs/plans/phase-7-packaging.md)), a
     draft: its order, and its proposals (the update check on, once a day, off from the menu; the
     eight switches of the settings page).
-11. **The first release**: when the app has been tried on a Mac, tag `v0.1.0` on `main` and push
+11. **Phase 8's plan** ([docs/plans/phase-8-first-test.md](docs/plans/phase-8-first-test.md)), a
+    draft: its order, what the report holds, and spoken callouts off unless turned on.
+12. **The first release**: when the app has been tried on a Mac, tag `v0.1.0` on `main` and push
     the tag (`docs/references/macos-app.md`, "Releases, updates and opening at login"). Publishing
     is the owner's call; no session tags a release unasked.
-12. **Documents waiting for approval** (`make docs-status`): the approved plan v2 and phase 2's
+13. **Documents waiting for approval** (`make docs-status`): the approved plan v2 and phase 2's
    plan, the retrospective, and the references on recordings, the engine and the macOS app, all
    drafts. Phase 3's plan is approved.
 

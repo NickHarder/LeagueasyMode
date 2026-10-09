@@ -57,10 +57,11 @@ Quitting the app asks the engine to stop; the engine closes the game it is recor
 The menu shows whether the engine runs, toggles the overlay and the click-through, and picks the
 window level, since which level stays above League depends on how League draws:[^levels]
 Floating, Status bar, Screen saver, and Above a captured display (one above the level a game that
-captures the display draws at). "Last game…" opens the post-game window and "Settings…" the
-settings page in the default browser, normal windows rather than the click-through overlay: the
-engine's pages `summary.html` and `settings.html` beside the overlay's (`EnginePage` in
-`OverlayCore` builds their addresses); both wait until the engine has announced its address.
+captures the display draws at). "Last game…" opens the post-game window, "Settings…" the
+settings page and "Status…" what the engine sees, in the default browser, normal windows rather
+than the click-through overlay: the engine's pages `summary.html`, `settings.html` and
+`status.html` beside the overlay's (`EnginePage` in `OverlayCore` builds their addresses); each
+waits until the engine has announced its address.
 
 `OverlayCore` holds what the app decides without AppKit (which engine to run, its command and
 search path,[^engine-command] reading its output, finding the bundled engine or the clone) and has
@@ -150,7 +151,11 @@ The question it answers: does macOS let the overlay draw over League cleanly?
    - whether ⌃⌥⌘L hides and shows it;
    - whether a mark (⌃⌥3 then ⌃⌥F) puts "F 5:00" on the mid laner's row, and whether League
      ignores the keys.
-4. Quit the app from the menu. The game's recording is in
+4. After the game, and a few minutes on the client's end-of-game screen while the timeline
+   comes, open "Status…" from the menu, choose "Copy report" and paste the report into a
+   message: it says which parts worked, and names no player. Do the same mid-game if something
+   looks wrong.
+5. Quit the app from the menu. The game's recording is in
    `~/Library/Application Support/LeagueasyMode/recordings/`; run
    `uv run leagueasymode anonymize <recording>` on it.
 
