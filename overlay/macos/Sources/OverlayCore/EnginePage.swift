@@ -6,12 +6,15 @@ public enum EnginePage: String, CaseIterable, Sendable {
     case lastGame = "summary.html"
     /// What the overlay shows.
     case settings = "settings.html"
+    /// What the engine sees, part by part, and the report to send after a test.
+    case status = "status.html"
 
     /// The menu item that opens the page.
     public var menuTitle: String {
         switch self {
         case .lastGame: "Last game\u{2026}"
         case .settings: "Settings\u{2026}"
+        case .status: "Status\u{2026}"
         }
     }
 

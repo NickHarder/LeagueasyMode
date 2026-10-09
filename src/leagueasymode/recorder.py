@@ -18,6 +18,7 @@ from typing import Final
 from pydantic import JsonValue
 
 from leagueasymode import __version__
+from leagueasymode.engine_status import PartKey, PartState, StatusBoard, duration_text
 from leagueasymode.game_api import GameApiClient
 from leagueasymode.league_client import GAMEFLOW_SESSION_PATH, ClientConnector, LeagueClient
 from leagueasymode.patch_data import CHAMPION_SUMMARY_PATH, GAME_VERSION_PATH, ITEMS_PATH
@@ -76,15 +77,19 @@ class RecorderTimings:
 class _SharedRecording:
     """One open recording, written from more than one task, one line at a time."""
 
-    def __init__(self, writer: RecordingWriter, client: LeagueClient | None) -> None:
+    def __init__(
+        self, writer: RecordingWriter, client: LeagueClient | None, status: StatusBoard | None
+    ) -> None:
         """Keep the writer and the client of one game.
 
         Args:
             writer: The recording's writer.
             client: The League client, or None when it is not running.
+            status: Told how the recording and the timeline stand; None to tell nothing.
         """
         self.writer: Final = writer
         self.client: Final = client
+        self.status: Final = status
         self.started_at_monotonic: Final = time.monotonic()
         self._lock: Final = asyncio.Lock()
 
@@ -95,6 +100,17 @@ class _SharedRecording:
             Seconds since the recording started.
         """
         return time.monotonic() - self.started_at_monotonic
+
+    def note(self, key: PartKey, state: PartState, detail: str) -> None:
+        """Tell the status board how a part stands, when there is one.
+
+        Args:
+            key: The part: the recording or the timeline.
+            state: How it stands.
+            detail: Why.
+        """
+        if self.status is not None:
+            self.status.set_part(key, state, detail)
 
     async def write_snapshot(self, payload: JsonValue) -> None:
         """Write one answer of the game's API.
@@ -148,6 +164,7 @@ async def record_one_game(
     stop_requested: asyncio.Event | None = None,
     *,
     on_recorded: RecordingHandler | None = None,
+    status: StatusBoard | None = None,
 ) -> Path | None:
     """Wait for a game, record it, wait for its timeline, and return the recording's path.
 
@@ -158,13 +175,14 @@ async def record_one_game(
         timings: How often to ask and how long to wait.
         stop_requested: Set to stop: a game being recorded is closed with what it has.
         on_recorded: Given the recording once it is closed, to score it; None for nothing.
+        status: Told how the recording and the timeline stand; None to tell nothing.
 
     Returns:
         The recording's path, or None when the stop came before any game.
     """
     stop_event = stop_requested if stop_requested is not None else asyncio.Event()
     game_over = await _record_until_game_over(
-        game_api, connect_to_client, recordings_directory, timings, stop_event
+        game_api, connect_to_client, recordings_directory, timings, stop_event, status=status
     )
     if game_over is None:
         return None
@@ -179,6 +197,7 @@ async def record_games(
     stop_requested: asyncio.Event,
     *,
     on_recorded: RecordingHandler | None = None,
+    status: StatusBoard | None = None,
 ) -> list[Path]:
     """Record every game until stopped; a game's timeline is waited for while the next is awaited.
 
@@ -189,6 +208,7 @@ async def record_games(
         timings: How often to ask and how long to wait.
         stop_requested: Set to stop.
         on_recorded: Given each recording once it is closed, to score it; None for nothing.
+        status: Told how the recording and the timeline stand; None to tell nothing.
 
     Returns:
         The paths of the recordings made.
@@ -196,7 +216,12 @@ async def record_games(
     finishing_tasks: list[asyncio.Task[Path]] = []
     while not stop_requested.is_set():
         game_over = await _record_until_game_over(
-            game_api, connect_to_client, recordings_directory, timings, stop_requested
+            game_api,
+            connect_to_client,
+            recordings_directory,
+            timings,
+            stop_requested,
+            status=status,
         )
         if game_over is None:
             break
@@ -212,6 +237,8 @@ async def _record_until_game_over(
     recordings_directory: Path,
     timings: RecorderTimings,
     stop_requested: asyncio.Event,
+    *,
+    status: StatusBoard | None,
 ) -> _GameOver | None:
     """Wait for a game and record it until it is over or a stop is requested.
 
@@ -221,6 +248,7 @@ async def _record_until_game_over(
         recordings_directory: Where recordings are kept.
         timings: How often to ask and how long to wait.
         stop_requested: Set to stop.
+        status: Told how the recording stands; None to tell nothing.
 
     Returns:
         The finished game's recording, still open, or None when the stop came before any game.
@@ -234,8 +262,9 @@ async def _record_until_game_over(
     await asyncio.to_thread(
         writer.write_started, started_at, __version__, timings.poll_interval_seconds
     )
-    recording = _SharedRecording(writer, await connect_to_client())
+    recording = _SharedRecording(writer, await connect_to_client(), status)
     logger.info("recording a game to %s", recording_path)
+    recording.note("recording", "ok", f"Recording this game to {recording_path.name}")
     await recording.write_snapshot(first_payload)
     start_task = asyncio.create_task(
         _record_client_data_at_start(recording, first_payload, timings.lookup_pause_seconds)
@@ -373,11 +402,40 @@ async def _finish_after_game(
     recording = game_over.recording
     client = recording.client
     is_worth_waiting = game_over.reason in {REASON_GAME_ENDED, REASON_GAME_STOPPED_ANSWERING}
-    if client is not None and game_over.game_id is not None and is_worth_waiting:
+    if client is None:
+        recording.note(
+            "timeline",
+            "problem",
+            "Not asked for: the League client was not found when the game started",
+        )
+    elif game_over.game_id is None:
+        recording.note(
+            "timeline", "problem", "Not asked for: the League client did not give the game's id"
+        )
+    elif not is_worth_waiting:
+        recording.note(
+            "timeline", "waiting", "Not asked for: the recording stopped before the game ended"
+        )
+    else:
         await _record_client_resource(recording, client, END_OF_GAME_STATS_PATH)
-        await _wait_for_timeline(recording, client, game_over.game_id, timings, stop_requested)
+        recording.note(
+            "timeline", "waiting", "Asking the League client for the last game's timeline"
+        )
+        has_timeline = await _wait_for_timeline(
+            recording, client, game_over.game_id, timings, stop_requested
+        )
+        if has_timeline:
+            recording.note("timeline", "ok", "Saved the timeline of the last game")
+        else:
+            recording.note(
+                "timeline",
+                "problem",
+                "The timeline of the last game did not come within "
+                f"{duration_text(timings.timeline_wait_seconds)}; the game is scored without it",
+            )
     recording_path = await recording.finish(game_over.reason)
     logger.info("recorded a game: %s (%s)", recording_path, game_over.reason)
+    recording.note("recording", "ok", f"Recorded {recording_path.name} ({game_over.reason})")
     if on_recorded is not None:
         try:
             await on_recorded(recording_path)
@@ -392,7 +450,7 @@ async def _wait_for_timeline(
     game_id: int,
     timings: RecorderTimings,
     stop_requested: asyncio.Event,
-) -> None:
+) -> bool:
     """Ask the client for the match timeline until it has it, then for the game's details.
 
     Args:
@@ -401,6 +459,9 @@ async def _wait_for_timeline(
         game_id: The game's id.
         timings: How long to wait, and how often to ask.
         stop_requested: Set to stop waiting.
+
+    Returns:
+        Whether the timeline came.
     """
     deadline_seconds = recording.elapsed_seconds() + timings.timeline_wait_seconds
     timeline_path = TIMELINE_PATH_TEMPLATE.format(game_id=game_id)
@@ -411,9 +472,10 @@ async def _wait_for_timeline(
                 recording, client, GAME_DETAILS_PATH_TEMPLATE.format(game_id=game_id)
             )
             logger.info("saved the match timeline of game %d", game_id)
-            return
+            return True
         await _sleep_unless_stopped(timings.timeline_retry_seconds, stop_requested)
     logger.warning("the match timeline of game %d did not come; recording without it", game_id)
+    return False
 
 
 async def _record_client_resource(

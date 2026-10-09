@@ -72,6 +72,8 @@ sources:
     resource: ../../src/leagueasymode/cli.py
   - id: widgets
     resource: ../../overlay/web/src/overlay.ts
+  - id: engine-status
+    resource: ../../src/leagueasymode/engine_status.py
 ---
 
 # The path of one answer
@@ -226,6 +228,29 @@ The engine's own settings come from the repository's `.env` in a clone. An insta
 has no clone, reads `settings.env` in the application's directory instead; where both exist, the
 repository's wins, and a real environment variable wins over either.
 
+# Status, and the report after a test
+
+`/status.html` (`overlay/web/src/status.ts`), opened by the macOS app's "Status…", shows what the
+engine sees, part by part, each with its state written out (OK, Waiting, Problem, Off) and a
+sentence saying why:[^engine-status]
+
+- **The game:** answering (its mode, map, clock and player count), loading, nothing listening, or
+  a problem: an HTTP error, an answer that is not JSON, or a certificate Riot's root does not
+  verify, with the reason the check gave. An answer whose fields cannot be read is a problem too,
+  and each field is listed by its place in the answer (`allPlayers.3.scores.kills: int_parsing`),
+  never by its value.
+- **The League client, patch stats, player lookups:** found or not when the game started, the
+  game's version and the number of items, the patch loaded, how many players were looked up.
+- **Recording, match timeline, after the game:** the file being written, the timeline saved or
+  not come in time, the game scored.
+- **League's settings and the models:** `game.cfg` read or not, hand-set or refit weights.
+
+It also lists each kind of event in the game's feed, marking those no estimator reads, which is
+how an event new this patch shows. "Copy report" copies all of it as text, to paste into a message
+after a test. Neither the page nor the report names a player, and a path starts at `~`. The page
+asks `/status` every two seconds while it is open; its contract is
+`overlay/web/engine_status.schema.json`, kept current by a test.
+
 # The post-game window
 
 `/summary.html`, a page of its own (`overlay/web/src/summary.ts`), opened by the macOS app's
@@ -290,3 +315,4 @@ Chromium against a replay (Chromium from `uv run playwright install chromium`, o
 [^you]: `src/leagueasymode/inference/you.py`
 [^game-summary]: `src/leagueasymode/game_summary.py`
 [^preferences]: `src/leagueasymode/preferences.py`
+[^engine-status]: `src/leagueasymode/engine_status.py`

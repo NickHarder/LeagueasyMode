@@ -6,6 +6,14 @@ skill has the format.
 
 ## 2026-10-09
 
+- Phase 8.1, status and the report after a test: "Status…" in the macOS app opens `/status.html`,
+  what the engine sees part by part (the game's API, the League client, patch stats, player
+  lookups, the recording, the match timeline, the scoring, League's settings, the models), each
+  OK, Waiting, Problem or Off with why; the feed's event names, marking those no estimator reads;
+  and the fields of the game's answer that could not be read. "Copy report" copies it as text
+  without any player's name. Phase 8's plan, a draft: after the approved plan's seven phases, the
+  status page first, for the owner's test that evening ("keep building, whats next after phase
+  7. i might do a test later tonight"), then what v2's picture still promises.
 - Phase 7.3, releases and updates: a tag `v<version>` (the version in `pyproject.toml`) builds
   the app, checks it as CI does, and publishes a GitHub release with the zip and its SHA-256
   (`.github/workflows/release.yml`). The bundled app asks GitHub for the latest release at most
