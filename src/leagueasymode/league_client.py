@@ -32,9 +32,9 @@ APP_PORT_PATTERN: Final = re.compile(r"--app-port=(\d+)")
 AUTH_TOKEN_PATTERN: Final = re.compile(r"--remoting-auth-token=([\w-]+)")
 CLIENT_PROCESS_NAME: Final = "LeagueClientUx"
 DEFAULT_REQUEST_TIMEOUT_SECONDS: Final = 5.0
-# The shared answers kept: a game's ten ranked stats and ten match histories, and the past
-# timelines of up to six likely junglers, five each.
-DEFAULT_KEPT_ANSWER_COUNT: Final = 50
+# The shared answers kept at most: a game's ten ranked stats and ten match histories, and up to
+# five past timelines for each player, with room to spare.
+DEFAULT_KEPT_ANSWER_COUNT: Final = 80
 # The game the client is in: its id and each team's players.
 GAMEFLOW_SESSION_PATH: Final = "/lol-gameflow/v1/session"
 
@@ -137,9 +137,9 @@ class SharedAnswers:
 
     The engine and the recorder both ask about each player in a game; sharing the answers means
     the client, and Riot behind it, is asked once. Only the questions under the given path
-    prefixes are shared, and an answer that did not come is not kept, so it is asked again. Only
-    the latest answers are kept, enough for a game's players, so that a long session's match
-    timelines do not pile up.
+    prefixes are shared, and an answer that did not come is not kept, so it is asked again. An
+    answer every sharer has had is forgotten, and only the latest answers are kept in any case,
+    so that a long session's match timelines do not pile up.
     """
 
     def __init__(
@@ -147,16 +147,21 @@ class SharedAnswers:
         shared_path_prefixes: tuple[str, ...],
         *,
         kept_answer_count: int = DEFAULT_KEPT_ANSWER_COUNT,
+        sharer_count: int = 2,
     ) -> None:
         """Keep which questions are shared.
 
         Args:
             shared_path_prefixes: The paths whose answers are shared start with one of these.
             kept_answer_count: How many of the latest answers are kept.
+            sharer_count: How many ask each question: an answer every one of them has had is
+                forgotten.
         """
         self.shared_path_prefixes: Final = shared_path_prefixes
         self.kept_answer_count: Final = kept_answer_count
+        self.sharer_count: Final = sharer_count
         self._answers: Final[dict[str, asyncio.Task[JsonValue | None]]] = {}
+        self._handed_out: Final[dict[str, int]] = {}
 
     def is_shared(self, path: str) -> bool:
         """Return whether a question's answer is shared.
@@ -187,9 +192,14 @@ class SharedAnswers:
             self._answers[path] = asyncio.ensure_future(ask())
             for oldest_path in list(self._answers)[: -self.kept_answer_count]:
                 del self._answers[oldest_path]
+                self._handed_out.pop(oldest_path, None)
         answer = await self._answers[path]
-        if answer is None:
+        handed_out = self._handed_out.get(path, 0) + 1
+        if answer is None or handed_out >= self.sharer_count:
             self._answers.pop(path, None)
+            self._handed_out.pop(path, None)
+        else:
+            self._handed_out[path] = handed_out
         return answer
 
 

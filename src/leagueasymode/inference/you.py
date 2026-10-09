@@ -9,9 +9,11 @@
   about a component and a ward, a first guess.
 - **Creep score pace:** yours a minute this game, against yours a minute over your recent games
   on Summoner's Rift, from the League client.
+- **Your lane opponent:** until 10:00, the enemy in your role and their usual creep score and gold
+  at 10:00 in it, from their recent games' timelines, beside your own pace.
 """
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from typing import Final, Literal
 
 from pydantic import BaseModel, ConfigDict
@@ -21,7 +23,13 @@ from leagueasymode.game_state import GameSnapshot
 from leagueasymode.inference.combat_stats import combat_stats_of
 from leagueasymode.inference.fights import fighter_damage, fighter_of
 from leagueasymode.inference.gold import NEW_GAME_SLACK_SECONDS, player_key
-from leagueasymode.overlay_state import CombatStats, DefenseValue, YouPanel
+from leagueasymode.overlay_state import (
+    CombatStats,
+    DefenseValue,
+    LaneOpponent,
+    PlayerCard,
+    YouPanel,
+)
 from leagueasymode.patch_data import ItemCatalog
 from leagueasymode.player_intel import PlayerRecord, PlayerRecords
 
@@ -49,6 +57,8 @@ class YouRules(BaseModel):
     holding_gold_threshold: float = 1300.0
     # Creep score a minute is shown from this time; before it, too little has died.
     creep_pace_from_seconds: float = 180.0
+    # Your lane opponent's usual numbers at 10:00 are shown until then.
+    lane_opponent_until_seconds: float = 600.0
     # Gold a point: Cloth Armor 300 for 15, Null-Magic Mantle 450 for 25, Ruby Crystal 400 for
     # 150, as in recent seasons.
     gold_per_armor: float = 20.0
@@ -155,6 +165,43 @@ def usual_creep_score_per_minute(record: PlayerRecord) -> float | None:
     return sum(game.creep_score for game in record.recent_games) / minutes
 
 
+def lane_opponent(cards: Sequence[PlayerCard]) -> LaneOpponent | None:
+    """Return the enemy in your role, and their usual creep score and gold at 10:00 in it.
+
+    Args:
+        cards: Every player's card.
+
+    Returns:
+        The opponent; None when your role or theirs is a guess, or their games read have no
+        numbers at 10:00.
+    """
+    you = next((card for card in cards if card.is_you), None)
+    if you is None or you.role_confidence == "guess":
+        return None
+    opponent = next(
+        (
+            card
+            for card in cards
+            if card.side == "enemy" and card.role == you.role and card.role_confidence != "guess"
+        ),
+        None,
+    )
+    intel = opponent.intel if opponent is not None else None
+    if (
+        opponent is None
+        or intel is None
+        or intel.ten_minute_creep_score is None
+        or intel.ten_minute_gold is None
+    ):
+        return None
+    return LaneOpponent(
+        champion_name=opponent.champion_name,
+        ten_minute_creep_score=intel.ten_minute_creep_score,
+        ten_minute_gold=intel.ten_minute_gold,
+        ten_minute_games=intel.ten_minute_games,
+    )
+
+
 class YouTracker:
     """Follows how long you have held your gold, one answer of the game's API after another.
 
@@ -210,6 +257,7 @@ def you_panel(
     item_catalog: ItemCatalog | None,
     patch_stats: PatchStats | None,
     player_records: PlayerRecords | None,
+    cards: Sequence[PlayerCard] = (),
     rules: YouRules = YOU_RULES,
 ) -> YouPanel | None:
     """Return the facts about your build and pace.
@@ -220,6 +268,7 @@ def you_panel(
         item_catalog: The patch's items; None while unknown.
         patch_stats: The patch's stats, for the enemy's damage; None while unknown.
         player_records: Each player's record from the League client; None while unknown.
+        cards: Every player's card, for your lane opponent.
         rules: The thresholds.
 
     Returns:
@@ -249,6 +298,9 @@ def you_panel(
         ),
         usual_creep_score_per_minute=(
             usual_creep_score_per_minute(your_record.record) if your_record is not None else None
+        ),
+        lane_opponent=(
+            lane_opponent(cards) if game_time_seconds < rules.lane_opponent_until_seconds else None
         ),
     )
 

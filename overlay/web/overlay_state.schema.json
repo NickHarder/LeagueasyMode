@@ -517,6 +517,36 @@
       "title": "JunglePath",
       "type": "object"
     },
+    "LaneOpponent": {
+      "additionalProperties": false,
+      "description": "The enemy in your role, and their usual creep score and gold at 10:00 in it.\n\nThe mean of their recent games in that role, from the timelines the League client keeps of\nthem (`player_intel.py`).",
+      "properties": {
+        "champion_name": {
+          "title": "Champion Name",
+          "type": "string"
+        },
+        "ten_minute_creep_score": {
+          "title": "Ten Minute Creep Score",
+          "type": "number"
+        },
+        "ten_minute_gold": {
+          "title": "Ten Minute Gold",
+          "type": "number"
+        },
+        "ten_minute_games": {
+          "title": "Ten Minute Games",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "champion_name",
+        "ten_minute_creep_score",
+        "ten_minute_gold",
+        "ten_minute_games"
+      ],
+      "title": "LaneOpponent",
+      "type": "object"
+    },
     "LaneStructures": {
       "additionalProperties": false,
       "description": "One side's lane: how many of its three turrets are down, and whether its inhibitor is open.\n\nExact: it restates the feed's turret and inhibitor announcements.",
@@ -1209,6 +1239,35 @@
           "default": false,
           "title": "Is One Trick",
           "type": "boolean"
+        },
+        "ten_minute_creep_score": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ten Minute Creep Score"
+        },
+        "ten_minute_gold": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ten Minute Gold"
+        },
+        "ten_minute_games": {
+          "default": 0,
+          "title": "Ten Minute Games",
+          "type": "integer"
         }
       },
       "required": [
@@ -1626,6 +1685,17 @@
             }
           ],
           "title": "Usual Creep Score Per Minute"
+        },
+        "lane_opponent": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/LaneOpponent"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         }
       },
       "required": [

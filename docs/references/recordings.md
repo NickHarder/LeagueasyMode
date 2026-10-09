@@ -4,7 +4,7 @@ title: Recordings
 description: What a recording of a game holds, how it is written and read, what is asked of the League client and when, and how a copy is anonymized before it may enter the repository.
 tags: [recording, data, privacy]
 status: draft
-generated: { by: claude-code/cloud, at: 2026-10-09T04:00:00Z }
+generated: { by: claude-code/cloud, at: 2026-10-09T05:13:00Z }
 sources:
   - id: file-format
     resource: ../../src/leagueasymode/recording/file_format.py
@@ -131,12 +131,12 @@ compressed one is complete.
   or `LEAGUEASYMODE_LEAGUE_CLIENT_LOCKFILE`) or, failing that, the arguments of its `LeagueClientUx`
   process.[^league-client] At the start of a game: the gameflow session (which holds the game's id),
   the game version, and the patch's items, champion summary, summoner spells, runes and rune styles,
-  then each champion in the game, then each player's ranked stats and last 20 games, and for a
-  likely jungler the timelines of up to five of their recent jungle games, one request at a time
-  (`LEAGUEASYMODE_PLAYER_LOOKUP_PAUSE_SECONDS` apart); while `leagueasymode run` also
-  shows the overlay, the engine and the recorder share those answers, so each player is asked
-  about once (the latest 50 answers are kept, so that past timelines do not pile up over a long
-  session). After the game: the end-of-game stats, then the match timeline
+  then each champion in the game, then each player's ranked stats and last 20 games, and the
+  timelines of each player's newest five games and, for a likely jungler, of up to five of their
+  recent jungle games, one request at a time (`LEAGUEASYMODE_PLAYER_LOOKUP_PAUSE_SECONDS` apart);
+  while `leagueasymode run` also shows the overlay, the engine and the recorder share those
+  answers, so each player is asked about once (an answer is forgotten once both have had it, and
+  at most the latest 80 are kept, so that past timelines do not pile up over a long session). After the game: the end-of-game stats, then the match timeline
   every 15 seconds for up to 10 minutes, and the game's details once the timeline has come. The
   scoring finds this game's timeline and details by the session's game id, never a past game's. A path
   the client does not have is skipped. Without the client, the game is recorded alone.

@@ -3,8 +3,9 @@
 If you are picking this work up, human or model: read this file top to bottom first. The `handoff` skill
 refreshes it; it describes the current state.
 
-Last updated: 2026-10-09, on branch `feat/tuning`. `main` holds phases 0 to 8, phase 9 but for
-9.4, the Data Dragon growth fix and the plans' approval (pull requests #2 to #47, merged).
+Last updated: 2026-10-09, on branch `feat/ten-minute-leads`, stacked on `feat/tuning` (pull
+request #48). `main` holds phases 0 to 8, phase 9 but for 9.4, the Data Dragon growth fix and the
+plans' approval (pull requests #2 to #47, merged).
 
 ## Where things stand
 
@@ -24,14 +25,15 @@ are merged (#34 to #39). None waits for the test on a Mac, which confirms them. 
 Phase 9 ([docs/plans/phase-9-scouting.md](docs/plans/phase-9-scouting.md), approved) reads the
 players' past games: 9.1 to 9.3, 9.5 and 9.6 (where the enemy jungler usually starts and is at
 4:00, champion pools, the usual start as a prior for the jungle path, scouting scored after the
-game) and 9.7 (the 4:00 habit in the positions) are merged (#40 to #45); 9.4, which the owner
-said yes to on 2026-10-09, is next. Each slice goes up as its own pull request into `main`
-without waiting for the one before to merge.
+game) and 9.7 (the 4:00 habit in the positions) are merged (#40 to #45); 9.4 (each player's
+creep score and gold at 10:00, which the owner said yes to on 2026-10-09) is built on
+`feat/ten-minute-leads`, after one `tuning.json` for the hand-set thresholds (#48). Each slice
+goes up as its own pull request into `main` without waiting for the one before to merge.
 
 | Area | State | Proof |
 |---|---|---|
 | Scaffold | ai-kit v0.11.1, Python layer, GitHub CI | `.copier-answers.yml` |
-| Gate | Green: lint, 832 tests (and 38 in Chromium), secrets | `make gate` |
+| Gate | Green: lint, 839 tests (and 39 in Chromium), secrets | `make gate` |
 | Recorder | Records games, the client's patch data and the post-game timeline; anonymized copies | `uv run leagueasymode record`; `tests/test_recorder.py`, `tests/test_anonymize.py` |
 | Replay | A recording served as a stand-in game API | `uv run leagueasymode replay <recording>`; `tests/test_replay.py` |
 | Engine and overlay page | The dragon and Elder timer, from the game's answer to the page | `uv run leagueasymode run`; `tests/test_tracer_bullet.py` |
@@ -133,6 +135,10 @@ In `AGENTS.md`. Also: a raw recording (it holds other players' names); only `ano
 - The hand-set thresholds are tweaked as games show what they should be, in one file anyone can
   edit: `tuning.json` (the owner, 2026-10-09: "we will tweak as needed. make sure there is an
   easy way to update them"; `docs/references/engine-and-overlay.md`, "Tuning").
+- Reading each player's newest five timelines for their numbers at 10:00 (9.4): about 70
+  requests a game at most, through the client's own session (the owner, 2026-10-09: "I am fine
+  with this if the free developer key can handle this"; no developer key is used, and the pace
+  would fit one's limits).
 
 ## Known limitations
 
@@ -154,8 +160,8 @@ In `AGENTS.md`. Also: a raw recording (it holds other players' names); only `ano
   describe; no real answer has been seen. If the client does not answer for other players, or
   answers in another shape, the line under each enemy stays empty until the first recording shows
   what to read. The same holds for the past games' timelines that say where a jungler starts
-  (9.1): the path is the one the post-game timeline uses, and whether the client serves other
-  players' games there is first seen in a recording.
+  (9.1, 9.4): the path is the one the post-game timeline uses, and whether the client serves
+  other players' games there is first seen in a recording.
 - Combat stats leave out runes, passives, stacks and buffs, so an estimate runs low for a champion
   that has them. Data Dragon's item stats leave out some stats (ability haste, lethality, magic
   penetration), which the overlay does not show anyway. The Data Dragon test files are

@@ -5,7 +5,7 @@ from typing import Final
 import pytest
 
 from data_dragon_fixtures import FIXTURE_FILES, fixture_patch_stats
-from game_payloads import DEFAULT_PLAYERS, PastGame, all_game_data, match_history
+from game_payloads import CHAMPION_IDS, DEFAULT_PLAYERS, PastGame, all_game_data, match_history
 from leagueasymode.data_dragon import PatchStats
 from leagueasymode.engine import compute_overlay_state
 from leagueasymode.game_state import GameSnapshot
@@ -16,9 +16,9 @@ from leagueasymode.inference.you import (
     gold_per_point,
     usual_creep_score_per_minute,
 )
-from leagueasymode.overlay_state import CombatStats
+from leagueasymode.overlay_state import CombatStats, LaneOpponent
 from leagueasymode.patch_data import ItemCatalog
-from leagueasymode.player_intel import PlayerRecord, recent_games_of
+from leagueasymode.player_intel import EarlyGame, GamePlayerRecord, PlayerRecord, recent_games_of
 
 YOUR_STATS: Final = CombatStats(
     source="exact",
@@ -155,3 +155,50 @@ def test_the_overlay_shows_your_panel() -> None:
     assert state.you.enemy_physical_share is not None
     assert 0.0 <= state.you.enemy_physical_share <= 1.0
     assert compute_overlay_state(all_game_data(600.0)).you is None
+
+
+def zed_with_early_games() -> dict[tuple[str, str], GamePlayerRecord]:
+    # Two games in mid, the position Zed is in, and one in top that is not counted.
+    record = PlayerRecord(
+        ranked=None,
+        recent_games=(),
+        early_games=(
+            EarlyGame(position="MIDDLE", creep_score=80, gold=3600),
+            EarlyGame(position="MIDDLE", creep_score=76, gold=3400),
+            EarlyGame(position="TOP", creep_score=120, gold=5000),
+        ),
+    )
+    return {("CHAOS", "zed"): GamePlayerRecord(champion_id=CHAMPION_IDS["Zed"], record=record)}
+
+
+def test_before_ten_minutes_the_panel_has_your_lane_opponents_usual_numbers() -> None:
+    def lane_opponent_at(game_time_seconds: float) -> LaneOpponent | None:
+        state = compute_overlay_state(
+            all_game_data(game_time_seconds),
+            player_records=zed_with_early_games(),
+            you_tracker=YouTracker(),
+        )
+        assert state.you is not None
+        return state.you.lane_opponent
+
+    # Your Ahri is in mid against Zed.
+    assert lane_opponent_at(300.0) == LaneOpponent(
+        champion_name="Zed", ten_minute_creep_score=78.0, ten_minute_gold=3500.0, ten_minute_games=2
+    )
+    # From 10:00 the numbers are past.
+    assert lane_opponent_at(600.0) is None
+
+
+def test_without_their_early_games_or_a_sure_role_there_is_no_lane_opponent() -> None:
+    state = compute_overlay_state(all_game_data(300.0), you_tracker=YouTracker())
+    assert state.you is not None
+    assert state.you.lane_opponent is None
+    # In a queue that names no positions, two minutes in, the roles are guesses from the spells.
+    players = tuple(dataclasses.replace(seed, position="") for seed in DEFAULT_PLAYERS)
+    unsure_state = compute_overlay_state(
+        all_game_data(120.0, players=players),
+        player_records=zed_with_early_games(),
+        you_tracker=YouTracker(),
+    )
+    assert unsure_state.you is not None
+    assert unsure_state.you.lane_opponent is None

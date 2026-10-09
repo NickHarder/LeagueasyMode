@@ -37,6 +37,7 @@ from game_payloads import (
     past_game_id,
     puuid_of,
     ranked_stats,
+    ten_minute_timeline,
     turret_killed_event,
 )
 from leagueasymode.cli import run_overlay
@@ -50,6 +51,7 @@ from leagueasymode.preferences import save_preferences
 from leagueasymode.recording.writer import RecordingWriter
 from leagueasymode.replay import RecordingReplay, create_replay_application
 from local_servers import serve
+from test_player_intel import ZED_FIRST_GAME_ID, ZED_TEN_MINUTES
 
 pytestmark = pytest.mark.browser
 
@@ -131,6 +133,7 @@ def write_recording(
     vi_farms_at_seconds: tuple[float, ...] = (),
     vi_wards_at_seconds: float | None = None,
     turret_kills: tuple[tuple[int, float, str], ...] = (),
+    first_game_time_seconds: float = 1395.0,
 ) -> Path:
     writer = RecordingWriter(directory / "game.jsonl", keyframe_interval_seconds=60.0)
     writer.write_started(
@@ -151,7 +154,7 @@ def write_recording(
             received_at_seconds=0.0, path=client_path, payload=client_payload
         )
     for index in range(snapshot_count):
-        game_time_seconds = 1395.0 + index * 0.5
+        game_time_seconds = first_game_time_seconds + index * 0.5
         events: list[dict[str, JsonValue]] = [
             game_start_event(),
             dragon_kill_event(1, 400.0, ENEMY_JUNGLER, "Fire"),
@@ -180,7 +183,10 @@ def write_recording(
         writer.write_snapshot(
             received_at_seconds=index * 0.5,
             payload=all_game_data(
-                game_time_seconds, events, players=players, map_terrain="Infernal"
+                game_time_seconds,
+                [event for event in events if has_happened(event, game_time_seconds)],
+                players=players,
+                map_terrain="Infernal",
             ),
         )
     writer.write_ended(received_at_seconds=snapshot_count * 0.5, reason="game ended")
@@ -190,8 +196,8 @@ def write_recording(
 def looked_up_players() -> list[tuple[str, JsonValue]]:
     """The client's answers about each player.
 
-    Zed has a record and Vi has four games in the jungle, three of them started at red buff;
-    everyone else has a bare rank.
+    Zed has a record, with his creep score and gold at 10:00 in each game, and Vi has four games
+    in the jungle, three of them started at red buff; everyone else has a bare rank.
     """
     zed = DEFAULT_PLAYERS[7]
     zed_id = CHAMPION_IDS["Zed"]
@@ -199,6 +205,13 @@ def looked_up_players() -> list[tuple[str, JsonValue]]:
         (GAMEFLOW_SESSION_PATH, gameflow_session()),
         (CHAMPION_SUMMARY_PATH, champion_summary()),
         *vis_jungle_starts(),
+        *(
+            (
+                f"/lol-match-history/v1/game-timelines/{game_id}",
+                ten_minute_timeline(creep_score, gold),
+            )
+            for game_id, (creep_score, gold) in ZED_TEN_MINUTES.items()
+        ),
     ]
     for seed in DEFAULT_PLAYERS:
         is_zed = seed is zed
@@ -224,10 +237,16 @@ def looked_up_players() -> list[tuple[str, JsonValue]]:
         answers.append(
             (
                 MATCH_HISTORY_PATH_TEMPLATE.format(puuid=puuid_of(seed)),
-                match_history(puuid_of(seed), past_games),
+                match_history(puuid_of(seed), past_games, ZED_FIRST_GAME_ID if is_zed else None),
             )
         )
     return answers
+
+
+def has_happened(event: dict[str, JsonValue], game_time_seconds: float) -> bool:
+    """Whether an event is in the feed by a time: a replay that starts early has not had all."""
+    event_time = event["EventTime"]
+    return isinstance(event_time, int | float) and event_time <= game_time_seconds
 
 
 def vis_jungle_starts() -> list[tuple[str, JsonValue]]:
@@ -263,6 +282,7 @@ async def open_overlay(
     preferences: OverlayPreferences | None = None,
     init_script: str | None = None,
     turret_kills: tuple[tuple[int, float, str], ...] = (),
+    first_game_time_seconds: float = 1395.0,
 ) -> AsyncIterator[Page]:
     if preferences is not None:
         save_preferences(tmp_path / "preferences.json", preferences)
@@ -277,6 +297,7 @@ async def open_overlay(
             vi_farms_at_seconds,
             vi_wards_at_seconds,
             turret_kills,
+            first_game_time_seconds,
         ),
         speed=speed,
     )
@@ -671,6 +692,18 @@ async def test_the_you_panel_shows_what_to_build_and_your_pace(tmp_path: Path) -
         await keep_screenshot(page, "you-panel")
 
 
+async def test_before_ten_minutes_the_you_panel_shows_your_lane_opponent(tmp_path: Path) -> None:
+    async with open_overlay(
+        tmp_path, snapshot_count=60, speed=1.0, first_game_time_seconds=300.0
+    ) as page:
+        # Zed, in mid against your Ahri, has 76.4 creep score and 3,440 gold at 10:00 in their
+        # games; your Ahri has none yet, five minutes in.
+        await expect(page.locator("#you-panel .you-opponent")).to_have_text(
+            "Zed at 10:00 ~76 CS 3.4k \u00b7 you ~0", timeout=5000
+        )
+        await keep_screenshot(page, "you-panel-lane-opponent")
+
+
 async def test_what_the_player_turned_off_does_not_show(tmp_path: Path) -> None:
     preferences = OverlayPreferences(
         show_win_chance=False, show_you_panel=False, show_enemy_estimates=False
@@ -692,9 +725,9 @@ async def test_the_enemy_strip_shows_each_enemys_rank_and_record(tmp_path: Path)
     async with open_overlay(tmp_path, snapshot_count=60, speed=1.0) as page:
         zed_intel = page.locator("#enemy-strip .enemy-row", has_text="Zed").locator(".enemy-intel")
         # Platinum IV; 3 wins and 2 losses lately, the last three in a row, all three on Zed, the
-        # champion they played most.
+        # champion they played most; 76.4 creep score and 3,440 gold at 10:00 in their five games.
         await expect(zed_intel).to_have_text(
-            f"P4 · 3{EN_DASH}2 W3 · 3 on champ (main)", timeout=5000
+            f"P4 · 3{EN_DASH}2 W3 · 3 on champ (main) · 10:00 76 CS 3.4k", timeout=5000
         )
         await expect(zed_intel).to_have_attribute("data-off-role", "false")
         caitlyn_intel = page.locator("#enemy-strip .enemy-row", has_text="Caitlyn").locator(

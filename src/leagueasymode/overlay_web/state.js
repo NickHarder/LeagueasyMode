@@ -157,7 +157,10 @@ export function isPlayerIntel(value) {
         typeof value["four_minute_games"] === "number" &&
         typeof value["champion_pool_size"] === "number" &&
         typeof value["is_main_champion"] === "boolean" &&
-        typeof value["is_one_trick"] === "boolean");
+        typeof value["is_one_trick"] === "boolean" &&
+        isNumberOrNull(value["ten_minute_creep_score"]) &&
+        isNumberOrNull(value["ten_minute_gold"]) &&
+        typeof value["ten_minute_games"] === "number");
 }
 /** Return whether a value is a player's gold as the engine sends it. */
 export function isGoldEstimate(value) {
@@ -363,7 +366,15 @@ export function isYouPanel(value) {
         typeof value["unspent_gold"] === "number" &&
         isNumberOrNull(value["holding_gold_seconds"]) &&
         isNumberOrNull(value["creep_score_per_minute"]) &&
-        isNumberOrNull(value["usual_creep_score_per_minute"]));
+        isNumberOrNull(value["usual_creep_score_per_minute"]) &&
+        (value["lane_opponent"] === null || isLaneOpponent(value["lane_opponent"])));
+}
+function isLaneOpponent(value) {
+    return (isRecord(value) &&
+        typeof value["champion_name"] === "string" &&
+        typeof value["ten_minute_creep_score"] === "number" &&
+        typeof value["ten_minute_gold"] === "number" &&
+        typeof value["ten_minute_games"] === "number");
 }
 /** Return whether a value is the player's preferences as the engine sends them. */
 export function isOverlayPreferences(value) {

@@ -217,6 +217,7 @@ def compute_overlay_state(
                 item_catalog=item_catalog,
                 patch_stats=patch_stats,
                 player_records=player_records,
+                cards=cards,
                 rules=tuning.you,
             )
             if you_tracker is not None

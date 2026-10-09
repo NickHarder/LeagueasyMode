@@ -19,6 +19,7 @@ from game_payloads import (
     past_game_id,
     puuid_of,
     ranked_stats,
+    ten_minute_timeline,
 )
 from leagueasymode.cli import run_overlay
 from leagueasymode.config import Settings
@@ -31,15 +32,18 @@ from leagueasymode.league_client import LeagueClient
 from leagueasymode.overlay_state import OverlayState, RankedStanding
 from leagueasymode.player_intel import (
     PLAYER_LOOKUP_PATH_PREFIXES,
+    EarlyGame,
     LookupRules,
     PlayerRecord,
     RecentGame,
     history_position,
     jungle_timeline_paths,
     load_player_records,
+    player_record,
     ranked_standing_of,
     recent_games_of,
     recorded_player_records,
+    timeline_paths,
 )
 from local_servers import serve
 
@@ -49,6 +53,16 @@ AHRI_ID: Final = CHAMPION_IDS["Ahri"]
 VI_SEED: Final = DEFAULT_PLAYERS[6]
 VI_ID: Final = CHAMPION_IDS["Vi"]
 FIRST_GAME_ID: Final = past_game_id(0)
+# Zed's past games have ids of their own, and a timeline each with his creep score and gold at
+# 10:00, newest first.
+ZED_FIRST_GAME_ID: Final = 6000000000
+ZED_TEN_MINUTES: Final = {
+    ZED_FIRST_GAME_ID: (80, 3600),
+    ZED_FIRST_GAME_ID + 1: (76, 3400),
+    ZED_FIRST_GAME_ID + 2: (84, 3700),
+    ZED_FIRST_GAME_ID + 3: (70, 3200),
+    ZED_FIRST_GAME_ID + 4: (72, 3300),
+}
 # Where Vi was at 2:00 in each of her four jungle games, by game id: red, red, blue, red.
 VI_START_POINTS: Final = {
     FIRST_GAME_ID: "order_red_buff",
@@ -77,6 +91,7 @@ def zed_history() -> JsonValue:
             PastGame(AHRI_ID, "MIDDLE", "SOLO", is_win=False),
             PastGame(AHRI_ID, "MIDDLE", "SOLO", is_win=False),
         ],
+        first_game_id=ZED_FIRST_GAME_ID,
     )
 
 
@@ -118,7 +133,7 @@ def test_history_gives_each_game_newest_first_with_its_champion_position_and_res
         position="MIDDLE",
         is_win=True,
         duration_seconds=1800,
-        game_id=FIRST_GAME_ID,
+        game_id=ZED_FIRST_GAME_ID,
         team_id=100,
         participant_id=1,
     )
@@ -349,8 +364,8 @@ async def test_a_junglers_usual_start_is_read_from_their_past_games() -> None:
     vi_record = records[("CHAOS", "vi")]
     assert vi_record.record.jungle_starts == JungleStarts(blue_count=1, red_count=3)
     assert records[("CHAOS", "zed")].record.jungle_starts is None
-    timeline_paths = [path for path in requested_paths if "game-timelines" in path]
-    assert len(timeline_paths) == 4
+    # Her four jungle games are among her newest five, each read once.
+    assert len(vi_timeline_requests(requested_paths)) == 5
 
 
 def test_the_intel_says_where_a_jungler_usually_is_at_four_minutes() -> None:
@@ -385,8 +400,8 @@ async def test_where_a_jungler_usually_is_at_four_minutes_is_read_from_the_same_
     vi_record = records[("CHAOS", "vi")].record
     assert vi_record.four_minute_sides == FourMinuteSides(blue_count=3, red_count=0, mid_count=1)
     assert records[("CHAOS", "zed")].record.four_minute_sides is None
-    # No more questions than for the starts: the same four timelines.
-    assert len([path for path in requested_paths if "game-timelines" in path]) == 4
+    # No more questions than for the starts: the same timelines.
+    assert len(vi_timeline_requests(requested_paths)) == 5
 
 
 def test_a_recordings_answers_give_the_records_the_engine_had() -> None:
@@ -415,6 +430,94 @@ def test_a_recordings_answers_give_the_records_the_engine_had() -> None:
     )
     # A player the recording holds nothing about has no record.
     assert ("ORDER", "garen") not in records
+
+
+def vi_timeline_requests(requested_paths: list[str]) -> list[str]:
+    return [
+        path
+        for path in requested_paths
+        if path.startswith("/lol-match-history/v1/game-timelines/")
+        and int(path.rsplit("/", 1)[1]) < ZED_FIRST_GAME_ID
+    ]
+
+
+def test_each_players_newest_games_have_their_timelines_read() -> None:
+    zed_games = recent_games_of(zed_history(), puuid_of(ZED))
+    assert timeline_paths(zed_games) == [
+        f"/lol-match-history/v1/game-timelines/{ZED_FIRST_GAME_ID + index}" for index in range(5)
+    ]
+    # Vi's four jungle games are among her newest five: five timelines, not nine.
+    vi_games = recent_games_of(vi_history(), puuid_of(VI_SEED))
+    assert timeline_paths(vi_games) == [
+        f"/lol-match-history/v1/game-timelines/{FIRST_GAME_ID + index}" for index in range(5)
+    ]
+    assert timeline_paths(zed_games, LookupRules(laner_games_read=0)) == []
+
+
+async def test_creep_score_and_gold_at_ten_minutes_are_read_from_each_players_games() -> None:
+    requested_paths: list[str] = []
+    async with (
+        serve(fake_league_client(requested_paths, set())) as client_url,
+        aiohttp.ClientSession() as session,
+    ):
+        client = LeagueClient(session, client_url, password="", tls_context=None)
+        records = await load_player_records(client, {}, pause_seconds=0.0)
+    zed_record = records[("CHAOS", "zed")].record
+    assert zed_record.early_games == tuple(
+        EarlyGame(position="MIDDLE", creep_score=creep_score, gold=gold)
+        for creep_score, gold in ZED_TEN_MINUTES.values()
+    )
+    assert len([path for path in requested_paths if "game-timelines" in path]) == 5
+
+
+def test_a_ten_minute_frame_without_gold_is_left_out() -> None:
+    history = match_history(puuid_of(ZED), [PastGame(ZED_ID, "MIDDLE", "SOLO", is_win=True)] * 2)
+    # The first game's frame at 10:00 has a position but none of the numbers: no real game has
+    # earned nothing by then, so the shape is not the one read.
+    shapeless: JsonValue = {
+        "frames": [
+            {
+                "timestamp": 600_025,
+                "participantFrames": {
+                    "1": {"participantId": 1, "position": {"x": 7000, "y": 7000}}
+                },
+            }
+        ]
+    }
+    record = player_record(
+        puuid_of(ZED),
+        None,
+        history,
+        {
+            f"/lol-match-history/v1/game-timelines/{past_game_id(0)}": shapeless,
+            f"/lol-match-history/v1/game-timelines/{past_game_id(1)}": ten_minute_timeline(
+                80, 3600
+            ),
+        },
+    )
+    assert record is not None
+    assert record.early_games == (EarlyGame(position="MIDDLE", creep_score=80, gold=3600),)
+
+
+def test_the_intel_says_a_players_usual_creep_score_and_gold_at_ten_minutes() -> None:
+    record = PlayerRecord(
+        ranked=None,
+        recent_games=(),
+        early_games=(
+            EarlyGame(position="MIDDLE", creep_score=80, gold=3600),
+            EarlyGame(position="MIDDLE", creep_score=76, gold=3400),
+            EarlyGame(position="TOP", creep_score=60, gold=3000),
+        ),
+    )
+    intel = player_intel(record, ZED_ID, "MIDDLE")
+    assert (intel.ten_minute_creep_score, intel.ten_minute_gold, intel.ten_minute_games) == (
+        78.0,
+        3500.0,
+        2,
+    )
+    # With this game's position unknown, every game counts; with none in it, nothing shows.
+    assert player_intel(record, ZED_ID, "").ten_minute_games == 3
+    assert player_intel(record, ZED_ID, "BOTTOM").ten_minute_creep_score is None
 
 
 def fake_league_client(
@@ -453,6 +556,8 @@ def fake_league_client(
     async def timeline_route(request: web.Request) -> web.Response:
         requested_paths.append(request.path_qs)
         game_id = int(request.match_info["game_id"])
+        if game_id in ZED_TEN_MINUTES:
+            return web.json_response(ten_minute_timeline(*ZED_TEN_MINUTES[game_id]))
         point_name = VI_START_POINTS.get(game_id)
         if point_name is None:
             return web.json_response({"message": "not found"}, status=404)
@@ -474,8 +579,9 @@ async def test_each_player_is_looked_up_once_and_kept_for_the_next_game() -> Non
         first = await load_player_records(client, cache, pause_seconds=0.0)
         paths_after_the_first = list(requested_paths)
         second = await load_player_records(client, cache, pause_seconds=0.0)
-    # Two questions per player, ten players, and nothing more the second time.
-    assert len(paths_after_the_first) == 20
+    # Two questions per player, ten players, Zed's five timelines (the other players have no past
+    # games), and nothing more the second time.
+    assert len(paths_after_the_first) == 25
     assert requested_paths == paths_after_the_first
     assert f"/lol-ranked/v1/ranked-stats/{puuid_of(ZED)}" in requested_paths
     assert (
@@ -572,7 +678,8 @@ async def test_the_engine_looks_the_players_up_when_a_game_starts() -> None:
     zed_card = next(card for card in engine.current_state.players if card.champion_name == "Zed")
     assert zed_card.intel is not None
     assert zed_card.intel.champion_game_count == 3
-    assert len(requested_paths) == 20
+    # Two questions for each of the ten players, and Zed's five timelines.
+    assert len(requested_paths) == 25
 
 
 async def test_running_and_recording_together_ask_about_each_player_once(tmp_path: Path) -> None:
@@ -611,12 +718,12 @@ async def test_running_and_recording_together_ask_about_each_player_once(tmp_pat
                 continue
             async with session.get(overlay_urls[0] + "state") as response:
                 state = OverlayState.model_validate(await response.json())
-            if len(requested_paths) >= 20 and any(card.intel for card in state.players):
+            if len(requested_paths) >= 25 and any(card.intel for card in state.players):
                 break
         # Give the slower of the two time to ask, had it not shared the answers.
         await asyncio.sleep(0.3)
         stop_requested.set()
         await overlay_task
     assert any(card.intel for card in state.players)
-    assert len(requested_paths) == 20
-    assert len(set(requested_paths)) == 20
+    assert len(requested_paths) == 25
+    assert len(set(requested_paths)) == 25

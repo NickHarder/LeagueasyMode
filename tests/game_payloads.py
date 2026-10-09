@@ -334,7 +334,10 @@ class PastGame:
     team_id: int = 100
 
 
-def match_history(puuid: str, past_games: list[PastGame]) -> JsonValue:
+def match_history(
+    puuid: str, past_games: list[PastGame], first_game_id: int | None = None
+) -> JsonValue:
+    """A player's recent games, newest first; their ids count up from `first_game_id`."""
     return {
         "accountId": 9000001,
         "platformId": "NA1",
@@ -342,7 +345,7 @@ def match_history(puuid: str, past_games: list[PastGame]) -> JsonValue:
             "gameCount": len(past_games),
             "games": [
                 {
-                    "gameId": past_game_id(index),
+                    "gameId": past_game_id(index, first_game_id),
                     "gameCreation": 1790000000000 - index * 3600000,
                     "gameDuration": past_game.duration_seconds,
                     "gameMode": "CLASSIC",
@@ -377,9 +380,33 @@ def match_history(puuid: str, past_games: list[PastGame]) -> JsonValue:
     }
 
 
-def past_game_id(index: int) -> int:
+FIRST_PAST_GAME_ID: Final = 5000000000
+
+
+def past_game_id(index: int, first_game_id: int | None = None) -> int:
     """The id `match_history` gives a player's past game, by its place in their history."""
-    return 5000000000 + index
+    return (first_game_id if first_game_id is not None else FIRST_PAST_GAME_ID) + index
+
+
+def ten_minute_timeline(creep_score: int, gold: int, participant_id: int = 1) -> JsonValue:
+    """A past game's timeline with a participant's creep score and gold at 10:00."""
+    return {
+        "frames": [
+            {"timestamp": 0, "participantFrames": {}},
+            {
+                "timestamp": 600_025,
+                "participantFrames": {
+                    str(participant_id): {
+                        "participantId": participant_id,
+                        "minionsKilled": creep_score - 4,
+                        "jungleMinionsKilled": 4,
+                        "totalGold": gold,
+                        "currentGold": 250,
+                    }
+                },
+            },
+        ]
+    }
 
 
 def jungle_start_timeline(

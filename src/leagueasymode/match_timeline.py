@@ -3,10 +3,13 @@
 `/lol-match-history/v1/game-timelines/<game id>` holds a frame about once a minute, each with every
 participant's position, gold and experience, and the events between frames: purchases, kills,
 wards, epic monsters. The scoring harness reads the game's own as its ground truth; the player
-lookups read past games' to see where a jungler started.
+lookups read past games' to see where a jungler started, and each player's creep score and gold
+at 10:00.
 """
 
-from pydantic import Field, field_validator
+from typing import Final
+
+from pydantic import Field, JsonValue, ValidationError, field_validator
 
 from leagueasymode.game_state import RiotPayloadModel
 
@@ -26,6 +29,13 @@ class TimelineParticipantFrame(RiotPayloadModel):
     current_gold: int = Field(default=0, alias="currentGold")
     total_gold: int = Field(default=0, alias="totalGold")
     experience: int = Field(default=0, alias="xp")
+    minions_killed: int = Field(default=0, alias="minionsKilled")
+    jungle_minions_killed: int = Field(default=0, alias="jungleMinionsKilled")
+
+    @property
+    def creep_score(self) -> int:
+        """Lane minions and jungle monsters killed, as the scoreboard counts them."""
+        return self.minions_killed + self.jungle_minions_killed
 
 
 class TimelineEvent(RiotPayloadModel):
@@ -80,3 +90,45 @@ class GameTimeline(RiotPayloadModel):
     """The match timeline from the League client, after the game."""
 
     frames: list[TimelineFrame] = Field(default_factory=list)
+
+
+# A frame within this of a time stands for it: frames come about once a minute.
+FRAME_TOLERANCE_MILLISECONDS: Final = 30_000
+
+
+def participant_frame_at(
+    timeline_payload: JsonValue | None, participant_id: int, at_milliseconds: int
+) -> TimelineParticipantFrame | None:
+    """Return a participant's frame nearest a time of a match timeline.
+
+    Args:
+        timeline_payload: The game's match timeline, as the League client serves it.
+        participant_id: The participant.
+        at_milliseconds: The time, from the game's start.
+
+    Returns:
+        The frame; None when the timeline cannot be read, has no frame within half a minute of
+        the time, or does not hold the participant there.
+    """
+    try:
+        timeline = GameTimeline.model_validate(timeline_payload)
+    except ValidationError:
+        return None
+    frames_near = [
+        frame
+        for frame in timeline.frames
+        if abs(frame.timestamp_milliseconds - at_milliseconds) <= FRAME_TOLERANCE_MILLISECONDS
+    ]
+    if not frames_near:
+        return None
+    nearest_frame = min(
+        frames_near, key=lambda frame: abs(frame.timestamp_milliseconds - at_milliseconds)
+    )
+    return next(
+        (
+            participant_frame
+            for participant_frame in nearest_frame.participant_frames
+            if participant_frame.participant_id == participant_id
+        ),
+        None,
+    )

@@ -33,9 +33,9 @@ from leagueasymode.player_intel import (
     MATCH_HISTORY_PATH_TEMPLATE,
     RANKED_STATS_PATH_TEMPLATE,
     LookupRules,
-    jungle_timeline_paths,
     puuids_in_game,
     recent_games_of,
+    timeline_paths,
 )
 from leagueasymode.recording.file_format import PLAIN_SUFFIX
 from leagueasymode.recording.writer import DEFAULT_KEYFRAME_INTERVAL_SECONDS, RecordingWriter
@@ -367,8 +367,8 @@ async def _record_client_data_at_start(
     """Write what the League client knows at the start of a game, and return the game's id.
 
     That is the gameflow session, the patch's data, each champion's details, and each player's
-    ranked stats and recent games, and a likely jungler's recent jungle games' timelines: the
-    answers the engine's loading-screen intel reads.
+    ranked stats and recent games, and their newest games' timelines (and a likely jungler's
+    jungle games'): the answers the engine's loading-screen intel reads.
 
     Args:
         recording: The open recording.
@@ -401,7 +401,7 @@ async def _record_client_data_at_start(
             recording, client, MATCH_HISTORY_PATH_TEMPLATE.format(puuid=puuid)
         )
         await asyncio.sleep(lookup_pause_seconds)
-        for timeline_path in jungle_timeline_paths(recent_games_of(history, puuid), lookup_rules):
+        for timeline_path in timeline_paths(recent_games_of(history, puuid), lookup_rules):
             await _record_client_resource(recording, client, timeline_path)
             await asyncio.sleep(lookup_pause_seconds)
     return game_id_of(session)

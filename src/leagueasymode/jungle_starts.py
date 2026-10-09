@@ -13,19 +13,18 @@ usually plays the first minutes: scouting facts the overlay shows before they ha
 from dataclasses import dataclass
 from typing import Final, Literal
 
-from pydantic import JsonValue, ValidationError
+from pydantic import JsonValue
 
 from leagueasymode.inference.rift_map import RIFT_MAP, TEAM_PREFIX
-from leagueasymode.match_timeline import GameTimeline, TimelinePosition
+from leagueasymode.match_timeline import TimelinePosition, participant_frame_at
 
 type StartSide = Literal["blue", "red"]
 type FourMinuteSide = Literal["blue", "red", "mid"]
 type MapHalf = Literal["top", "bot"]
 
-# The frames read: 2:00 and 4:00, each give or take half a minute.
+# The frames read: 2:00 and 4:00, each give or take half a minute (`match_timeline.py`).
 START_FRAME_MILLISECONDS: Final = 120_000
 FOUR_MINUTE_FRAME_MILLISECONDS: Final = 240_000
-FRAME_TOLERANCE_MILLISECONDS: Final = 30_000
 # The half of the map each of the map's regions is in; the bases are in none.
 MAP_HALF_BY_REGION: Final[dict[str, MapHalf | Literal["mid"]]] = {
     "top_lane": "top",
@@ -225,25 +224,5 @@ def _position_at(
         The position; None when the timeline cannot be read, has no frame within half a minute
         of the time, or does not place the participant there.
     """
-    try:
-        timeline = GameTimeline.model_validate(timeline_payload)
-    except ValidationError:
-        return None
-    frames_near = [
-        frame
-        for frame in timeline.frames
-        if abs(frame.timestamp_milliseconds - at_milliseconds) <= FRAME_TOLERANCE_MILLISECONDS
-    ]
-    if not frames_near:
-        return None
-    nearest_frame = min(
-        frames_near, key=lambda frame: abs(frame.timestamp_milliseconds - at_milliseconds)
-    )
-    return next(
-        (
-            participant_frame.position
-            for participant_frame in nearest_frame.participant_frames
-            if participant_frame.participant_id == participant_id
-        ),
-        None,
-    )
+    participant_frame = participant_frame_at(timeline_payload, participant_id, at_milliseconds)
+    return participant_frame.position if participant_frame is not None else None

@@ -174,3 +174,18 @@ async def test_only_the_latest_shared_answers_are_kept() -> None:
     # The third answer pushed out the first, which is asked again; the third is still kept.
     assert requested_paths.count("/lol-ranked/v1/ranked-stats/puuid-1") == 2
     assert requested_paths.count("/lol-ranked/v1/ranked-stats/puuid-3") == 1
+
+
+async def test_a_shared_answer_is_forgotten_once_every_sharer_has_had_it() -> None:
+    requested_paths: list[str] = []
+    shared_answers = SharedAnswers(("/lol-ranked/",), sharer_count=2)
+    async with (
+        serve(counting_client_application(requested_paths)) as base_url,
+        aiohttp.ClientSession() as session,
+    ):
+        engines_client = LeagueClient(session, base_url, "", None, shared_answers=shared_answers)
+        recorders_client = LeagueClient(session, base_url, "", None, shared_answers=shared_answers)
+        for client in (engines_client, recorders_client, recorders_client):
+            await client.get_json("/lol-ranked/v1/ranked-stats/puuid-1")
+    # Asked once for the two, then again: the answer is not kept once both have it.
+    assert requested_paths.count("/lol-ranked/v1/ranked-stats/puuid-1") == 2

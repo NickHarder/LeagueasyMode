@@ -27,6 +27,7 @@ from leagueasymode.jungle_starts import (
     start_side,
 )
 from leagueasymode.league_client import GAMEFLOW_SESSION_PATH, LeagueClient
+from leagueasymode.match_timeline import participant_frame_at
 from leagueasymode.overlay_state import RankedStanding
 from leagueasymode.patch_data import CHAMPION_SUMMARY_PATH
 
@@ -70,6 +71,7 @@ POSITIONS: Final = frozenset({"TOP", "JUNGLE", "MIDDLE", "BOTTOM", "UTILITY"})
 TEAM_ONE: Final = "ORDER"
 TEAM_TWO: Final = "CHAOS"
 JUNGLE_POSITION: Final = "JUNGLE"
+TEN_MINUTES_MILLISECONDS: Final = 600_000
 
 logger = logging.getLogger(__name__)
 
@@ -84,6 +86,9 @@ class LookupRules(BaseModel):
     # start and are at 4:00.
     jungler_games_read: int = 5
     fewest_jungle_games: int = 2
+    # Each player's newest this many games have their timelines read, for their creep score and
+    # gold at 10:00; 0 reads none. About fifty requests a game, one at a time.
+    laner_games_read: int = 5
 
 
 LOOKUP_RULES: Final = LookupRules()
@@ -266,6 +271,15 @@ class RecentGame:
 
 
 @dataclass(frozen=True)
+class EarlyGame:
+    """One of a player's recent games at 10:00: their position, creep score and gold earned."""
+
+    position: str
+    creep_score: int
+    gold: int
+
+
+@dataclass(frozen=True)
 class PlayerRecord:
     """A player's rank and recent games, newest first, and where they start in the jungle."""
 
@@ -275,6 +289,8 @@ class PlayerRecord:
     # None when they rarely jungle or no game said.
     jungle_starts: JungleStarts | None = None
     four_minute_sides: FourMinuteSides | None = None
+    # Their newest games at 10:00, newest first; a game whose timeline did not say is left out.
+    early_games: tuple[EarlyGame, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -357,6 +373,26 @@ def recent_games_of(payload: JsonValue | None, puuid: str) -> list[RecentGame]:
         )
         for game, line in newest_first
     ]
+
+
+def timeline_paths(
+    recent_games: Sequence[RecentGame], rules: LookupRules = LOOKUP_RULES
+) -> list[str]:
+    """Return the timelines to read for a player: their newest games', and a jungler's.
+
+    Args:
+        recent_games: Their recent games, newest first.
+        rules: What the lookups read.
+
+    Returns:
+        The client's path of each game to read, each once, newest first.
+    """
+    newest_games = [game for game in recent_games[: rules.laner_games_read] if game.game_id > 0]
+    paths = [
+        *(f"{GAME_TIMELINE_PATH_PREFIX}{game.game_id}" for game in newest_games),
+        *jungle_timeline_paths(recent_games, rules),
+    ]
+    return list(dict.fromkeys(paths))
 
 
 def jungle_timeline_paths(
@@ -497,7 +533,7 @@ def recorded_player_records(
             history_payload,
             {
                 timeline_path: client_resources.get(timeline_path)
-                for timeline_path in jungle_timeline_paths(
+                for timeline_path in timeline_paths(
                     recent_games_of(history_payload, player.puuid), rules
                 )
             },
@@ -535,7 +571,43 @@ def player_record(
         recent_games=tuple(recent_games),
         jungle_starts=jungle_starts,
         four_minute_sides=four_minute_sides,
+        early_games=_early_games(recent_games, timeline_payloads, rules),
     )
+
+
+def _early_games(
+    recent_games: Sequence[RecentGame],
+    timeline_payloads: Mapping[str, JsonValue | None],
+    rules: LookupRules,
+) -> tuple[EarlyGame, ...]:
+    """Return a player's newest games at 10:00, from their timelines.
+
+    Args:
+        recent_games: Their recent games, newest first.
+        timeline_payloads: The answer for each of those games' timelines, by path.
+        rules: What the lookups read.
+
+    Returns:
+        Each game's position, creep score and gold at 10:00; a game whose timeline has no frame
+        near 10:00 for them, or one without their gold, is left out: no one has earned nothing
+        by then, so such a frame is not in the shape read.
+    """
+    early_games = []
+    for game in recent_games[: rules.laner_games_read]:
+        participant_frame = participant_frame_at(
+            timeline_payloads.get(f"{GAME_TIMELINE_PATH_PREFIX}{game.game_id}"),
+            game.participant_id,
+            TEN_MINUTES_MILLISECONDS,
+        )
+        if participant_frame is not None and participant_frame.total_gold > 0:
+            early_games.append(
+                EarlyGame(
+                    position=game.position,
+                    creep_score=participant_frame.creep_score,
+                    gold=participant_frame.total_gold,
+                )
+            )
+    return tuple(early_games)
 
 
 async def _look_up(
@@ -560,7 +632,7 @@ async def _look_up(
         logger.info("the League client did not answer for one player; asking again next game")
         return None
     timeline_payloads: dict[str, JsonValue | None] = {}
-    for timeline_path in jungle_timeline_paths(recent_games_of(history_payload, puuid), rules):
+    for timeline_path in timeline_paths(recent_games_of(history_payload, puuid), rules):
         timeline_payloads[timeline_path] = await client.get_json(timeline_path)
         await asyncio.sleep(pause_seconds)
     return player_record(puuid, ranked_payload, history_payload, timeline_payloads, rules)

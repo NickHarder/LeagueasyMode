@@ -601,6 +601,11 @@ export function formatIntel(intel: PlayerIntel): string {
       `4:00 ${intel.four_minute_half} ${String(intel.four_minute_count)}/${String(intel.four_minute_games)}`,
     );
   }
+  if (intel.ten_minute_creep_score !== null && intel.ten_minute_gold !== null) {
+    parts.push(
+      `10:00 ${String(Math.round(intel.ten_minute_creep_score))} CS ${formatThousands(intel.ten_minute_gold)}`,
+    );
+  }
   return parts.join(" \u00b7 ");
 }
 
@@ -741,6 +746,8 @@ const DEFENSIVE_STAT_NAMES: Readonly<Record<YouPanel["defenses"][number]["stat"]
 };
 // Gold held this long, or longer, is shown.
 const HOLDING_SHOWN_SECONDS = 30;
+// The player's creep score a minute, kept up until 10:00, gives their creep score then.
+const MINUTES_TO_TEN = 10;
 
 /** Return which defensive stat buys the most against their damage: "Armor 1.8× MR · their damage 70% physical". */
 export function formatDefenses(panel: YouPanel): string | null {
@@ -777,7 +784,21 @@ export function formatCreepPace(panel: YouPanel): string | null {
   return `CS ${pace.toFixed(1)}/min${usualText}`;
 }
 
-/** Draw the You panel: what to build against them, gold held, and creep score pace. */
+/**
+ * Return the lane opponent's usual numbers at 10:00 beside the player's pace for then:
+ * "Zed at 10:00 ~78 CS 3.5k · you ~72".
+ */
+export function formatLaneOpponent(panel: YouPanel): string | null {
+  const opponent = panel.lane_opponent;
+  if (opponent === null) {
+    return null;
+  }
+  const pace = panel.creep_score_per_minute;
+  const paceText = pace === null ? "" : ` \u00b7 you ~${String(Math.round(pace * MINUTES_TO_TEN))}`;
+  return `${opponent.champion_name} at 10:00 ~${String(Math.round(opponent.ten_minute_creep_score))} CS ${formatThousands(opponent.ten_minute_gold)}${paceText}`;
+}
+
+/** Draw the You panel: what to build against them, gold held, creep score pace, the opponent. */
 function renderYouPanel(): void {
   const panelElement = requireElement("you-panel");
   const received = latestReceivedState;
@@ -792,6 +813,7 @@ function renderYouPanel(): void {
           ["you-defenses", formatDefenses(panel)],
           ["you-holding", formatHolding(panel)],
           ["you-pace", formatCreepPace(panel)],
+          ["you-opponent", formatLaneOpponent(panel)],
         ];
   const shownLines = lines.filter((line): line is [string, string] => line[1] !== null);
   panelElement.hidden = shownLines.length === 0;
