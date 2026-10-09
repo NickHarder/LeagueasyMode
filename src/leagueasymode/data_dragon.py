@@ -13,7 +13,7 @@ import os
 import re
 import ssl
 import tempfile
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Final
 
@@ -27,6 +27,13 @@ DEFAULT_DATA_DRAGON_BASE_URL: Final = "https://ddragon.leagueoflegends.com"
 VERSIONS_PATH: Final = "/api/versions.json"
 # championFull.json holds each champion's base stats and spells.
 CHAMPIONS_FILE_NAME: Final = "championFull.json"
+# champion.json holds each champion's base stats without the spells: the smaller file to read an
+# older patch's attack damage growth from.
+CHAMPION_SUMMARY_FILE_NAME: Final = "champion.json"
+# Since 16.5.1, Data Dragon gives every champion an attack damage growth of 0, while the game's
+# own data still has it (Ahri's 3 a level); a patch without any is given the newest older patch's,
+# kept beside it on disk as `attack-damage-growth-<version>.json`.
+GROWTH_FILE_PREFIX: Final = "attack-damage-growth-"
 ITEMS_FILE_NAME: Final = "item.json"
 SUMMONERS_FILE_NAME: Final = "summoner.json"
 # How an item's description states its haste: "<attention>20</attention> Ability Haste".
@@ -153,11 +160,54 @@ NO_HASTE: Final = ItemHaste(ability_haste=0.0, summoner_spell_haste=0.0)
 
 @dataclass(frozen=True)
 class PatchFiles:
-    """One patch's three files from Data Dragon, as they came."""
+    """One patch's three files from Data Dragon, as they came, and any growth borrowed."""
 
     champions: bytes
     items: bytes
     summoners: bytes
+    # An older patch's `champion.json`, for the attack damage growth this patch leaves out, and
+    # that patch's version; None when this patch has its own.
+    growth_champions: bytes | None = None
+    growth_version: str | None = None
+
+
+class GrowthStats(RiotPayloadModel):
+    """The one stat read from an older patch: what attack damage grows by per level."""
+
+    attack_damage_per_level: float = Field(default=0.0, alias="attackdamageperlevel")
+
+
+class GrowthChampion(RiotPayloadModel):
+    """One champion of a `champion.json` or `championFull.json`, for its growth."""
+
+    stats: GrowthStats = Field(default_factory=GrowthStats)
+
+
+class GrowthChampions(RiotPayloadModel):
+    """Every champion's growth, by Data Dragon's id."""
+
+    data: dict[str, GrowthChampion] = Field(default_factory=dict)
+
+
+def attack_damage_growths(champions_bytes: bytes) -> dict[str, float]:
+    """Return each champion's attack damage growth from a champions file, when any has one.
+
+    Args:
+        champions_bytes: A `champion.json` or `championFull.json`.
+
+    Returns:
+        The growth by Data Dragon's champion id; empty when the file cannot be read or gives every
+        champion 0, as Data Dragon's do since 16.5.1.
+    """
+    try:
+        champions = GrowthChampions.model_validate_json(champions_bytes)
+    except ValidationError:
+        return {}
+    growths = {
+        champion_id: champion.stats.attack_damage_per_level
+        for champion_id, champion in champions.data.items()
+    }
+    return growths if any(growths.values()) else {}
 
 
 class DataDragonItems(RiotPayloadModel):
@@ -175,6 +225,7 @@ class PatchStats:
         champions: list[DataDragonChampion],
         items_by_id: dict[int, DataDragonItem],
         summoner_spells: list[DataDragonSummonerSpell],
+        growth_version: str | None = None,
     ) -> None:
         """Index the champions by id and by name, both without case.
 
@@ -183,8 +234,11 @@ class PatchStats:
             champions: Every champion.
             items_by_id: Every item.
             summoner_spells: Every summoner spell.
+            growth_version: The older patch the champions' attack damage growth is from, when
+                this one leaves it out; None when it is this patch's own.
         """
         self.version: Final = version
+        self.growth_version: Final = growth_version
         self.champions_by_key: Final = {
             key.casefold(): champion
             for champion in champions
@@ -217,12 +271,35 @@ class PatchStats:
             return None
         if not champions.data:
             return None
+        borrowed_growths = (
+            attack_damage_growths(patch_files.growth_champions)
+            if patch_files.growth_champions is not None
+            and not attack_damage_growths(patch_files.champions)
+            else {}
+        )
         return cls(
             version,
-            list(champions.data.values()),
+            [
+                champion.model_copy(
+                    update={
+                        "stats": champion.stats.model_copy(
+                            update={"attack_damage_per_level": borrowed_growths[champion_id]}
+                        )
+                    }
+                )
+                if champion_id in borrowed_growths
+                else champion
+                for champion_id, champion in champions.data.items()
+            ],
             {int(item_id): item for item_id, item in items.data.items() if item_id.isdecimal()},
             list(summoner_spells.data.values()),
+            growth_version=patch_files.growth_version if borrowed_growths else None,
         )
+
+    @property
+    def champion_count(self) -> int:
+        """The number of champions."""
+        return len({champion.champion_id for champion in self.champions_by_key.values()})
 
     def champion_base_stats(
         self, raw_champion_name: str, champion_name: str
@@ -388,15 +465,44 @@ class PatchStatsStore:
         if not DATA_DRAGON_VERSION_PATTERN.match(version):
             return None
         patch_directory = self.directory / version
+        growth_version = self._growth_version(patch_directory)
         try:
             patch_files = PatchFiles(
                 champions=(patch_directory / CHAMPIONS_FILE_NAME).read_bytes(),
                 items=(patch_directory / ITEMS_FILE_NAME).read_bytes(),
                 summoners=(patch_directory / SUMMONERS_FILE_NAME).read_bytes(),
+                growth_champions=(
+                    (patch_directory / f"{GROWTH_FILE_PREFIX}{growth_version}.json").read_bytes()
+                    if growth_version is not None
+                    else None
+                ),
+                growth_version=growth_version,
             )
         except OSError:
             return None
         return PatchStats.from_data_dragon(version, patch_files)
+
+    @staticmethod
+    def _growth_version(patch_directory: Path) -> str | None:
+        """Return the version of the attack damage growth kept beside a patch, if any.
+
+        Args:
+            patch_directory: The patch's directory.
+
+        Returns:
+            The newest such version; None without one.
+        """
+        if not patch_directory.is_dir():
+            return None
+        versions = [
+            entry.name.removeprefix(GROWTH_FILE_PREFIX).removesuffix(".json")
+            for entry in patch_directory.iterdir()
+            if entry.name.startswith(GROWTH_FILE_PREFIX) and entry.name.endswith(".json")
+        ]
+        valid_versions = [
+            version for version in versions if DATA_DRAGON_VERSION_PATTERN.match(version)
+        ]
+        return max(valid_versions, key=_version_numbers) if valid_versions else None
 
     def save(self, version: str, patch_files: PatchFiles) -> None:
         """Keep a patch's files on disk, each written whole or not at all.
@@ -419,6 +525,16 @@ class PatchStatsStore:
             (SUMMONERS_FILE_NAME, patch_files.summoners),
         ):
             _write_whole(patch_directory / file_name, file_bytes)
+        growth_version = patch_files.growth_version
+        if (
+            patch_files.growth_champions is not None
+            and growth_version is not None
+            and DATA_DRAGON_VERSION_PATTERN.match(growth_version)
+        ):
+            _write_whole(
+                patch_directory / f"{GROWTH_FILE_PREFIX}{growth_version}.json",
+                patch_files.growth_champions,
+            )
 
 
 def create_system_tls_context() -> ssl.SSLContext:
@@ -493,6 +609,19 @@ class DataDragonClient:
         if summoners_bytes is None:
             return None
         return PatchFiles(champions=champions_bytes, items=items_bytes, summoners=summoners_bytes)
+
+    async def champion_summary(self, version: str) -> bytes | None:
+        """Return a patch's `champion.json`: each champion's base stats, without the spells.
+
+        Args:
+            version: The patch's Data Dragon version.
+
+        Returns:
+            The file, or None when it cannot be had.
+        """
+        return await self.get_bytes(
+            f"/cdn/{version}/data/{DATA_DRAGON_LOCALE}/{CHAMPION_SUMMARY_FILE_NAME}"
+        )
 
     async def get_bytes(self, path: str) -> bytes | None:
         """Return one file of Data Dragon.
@@ -578,15 +707,73 @@ async def _fetch_and_keep(
     cached_stats = store.load(version)
     if cached_stats is not None:
         return cached_stats
-    patch_files = await client.patch_files(version)
-    if patch_files is None:
+    fetched_files = await client.patch_files(version)
+    if fetched_files is None:
         return None
+    borrowed_growth = (
+        None
+        if attack_damage_growths(fetched_files.champions)
+        else await _newest_growth(client, versions[versions.index(version) + 1 :])
+    )
+    patch_files = (
+        replace(
+            fetched_files,
+            growth_version=borrowed_growth[0],
+            growth_champions=borrowed_growth[1],
+        )
+        if borrowed_growth is not None
+        else fetched_files
+    )
     stats = PatchStats.from_data_dragon(version, patch_files)
     if stats is None:
         return None
     store.save(version, patch_files)
     logger.info("fetched and kept patch %s's stats from Data Dragon", version)
     return stats
+
+
+async def _newest_growth(
+    client: DataDragonClient, older_versions: list[str]
+) -> tuple[str, bytes] | None:
+    """Find the newest older patch whose champions still have their attack damage growth.
+
+    Data Dragon's champions had it up to some patch and not since, so the older patches are
+    halved rather than each asked for: about ten requests for every patch there is.
+
+    Args:
+        client: Data Dragon.
+        older_versions: The patches older than the game's, newest first.
+
+    Returns:
+        That patch's version and its `champion.json`; None when no older patch has the growth.
+    """
+    checked: dict[int, bytes | None] = {}
+
+    async def growth_file_at(index: int) -> bytes | None:
+        if index not in checked:
+            file_bytes = await client.champion_summary(older_versions[index])
+            checked[index] = (
+                file_bytes if file_bytes is not None and attack_damage_growths(file_bytes) else None
+            )
+        return checked[index]
+
+    if not older_versions:
+        return None
+    low_index, high_index = 0, len(older_versions) - 1
+    while low_index < high_index:
+        middle_index = (low_index + high_index) // 2
+        if await growth_file_at(middle_index) is not None:
+            high_index = middle_index
+        else:
+            low_index = middle_index + 1
+    growth_file = await growth_file_at(low_index)
+    if growth_file is None:
+        return None
+    logger.info(
+        "Data Dragon leaves out attack damage growth; using patch %s's",
+        older_versions[low_index],
+    )
+    return older_versions[low_index], growth_file
 
 
 def _patch_of_game_version(game_version: str | None) -> Patch | None:
