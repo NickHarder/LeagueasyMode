@@ -6,6 +6,12 @@ skill has the format.
 
 ## 2026-10-09
 
+- Phase 9.5, the usual start in the jungle path: estimator 8 weighs a jungler's first camp, when
+  finished by 2:00, by their share of past starts on its side of their jungle (9.1's counts, a
+  game added on each side), where one burst of creep score at 1:42 could not tell the two buffs
+  apart; an overlay started later does not take its first camp seen for a start. An even record
+  weighs nothing. A red-side clear and its blue-side mirror fit the bursts about as well, so a
+  habit can turn the whole early path, as it should. Post-game scoring runs without it for now.
 - Phase 9.3, champion pools: from the match history the engine already reads, how many
   champions a player's recent games were on, and whether this game's is their main (more games
   than any other, at least three) or they are a one-trick on it (at least 70% of at least eight).

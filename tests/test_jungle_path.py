@@ -3,14 +3,18 @@ from typing import Final
 
 import pytest
 
-from game_payloads import DEFAULT_PLAYERS, all_game_data
+from game_payloads import CHAMPION_IDS, DEFAULT_PLAYERS, all_game_data
 from leagueasymode.engine import compute_overlay_state
 from leagueasymode.game_state import GameSnapshot
 from leagueasymode.inference.jungle_path import CAMP_RULES, JunglePathTracker, travel_seconds
+from leagueasymode.jungle_starts import JungleStarts
 from leagueasymode.overlay_state import CampTimer, JunglePath
+from leagueasymode.player_intel import GamePlayerRecord, PlayerRecord
 
 MOVE_SPEED: Final = CAMP_RULES.default_move_speed
 CLEAR_SECONDS: Final = CAMP_RULES.clear_seconds
+# Vi, on the red team, as the engine and the records know her.
+VI_KEY: Final = ("CHAOS", "vi")
 
 
 def snapshot_with_vi_at(game_time_seconds: float, creep_score: int) -> GameSnapshot:
@@ -104,6 +108,93 @@ def test_rises_close_together_are_one_camp() -> None:
     )
     # One camp, not two; which buff it was, one burst alone cannot tell.
     assert len(vi_path(paths).recent_camps) == 1
+
+
+def one_buff_burst() -> list[tuple[float, int]]:
+    """Vi takes one camp of a buff's time as the camps spawn: either buff, or the krugs."""
+    buff_done = CAMP_RULES.first_spawn_seconds + CLEAR_SECONDS["red_buff"]
+    return [(80.0, 0), (buff_done, 4), (buff_done + 10.0, 4)]
+
+
+def first_camp_with_start(jungle_starts: JungleStarts) -> str:
+    tracker = JunglePathTracker()
+    paths: list[JunglePath] = []
+    for game_time_seconds, creep_score in one_buff_burst():
+        paths, _ = tracker.update(
+            snapshot_with_vi_at(game_time_seconds, creep_score),
+            jungle_starts={VI_KEY: jungle_starts},
+        )
+    return vi_path(paths).recent_camps[0]
+
+
+def test_a_junglers_usual_start_decides_a_first_camp_the_burst_alone_cannot() -> None:
+    assert first_camp_with_start(JungleStarts(blue_count=4, red_count=0)) == "their blue"
+    assert first_camp_with_start(JungleStarts(blue_count=0, red_count=4)) in {
+        "their red",
+        "their krugs",
+    }
+
+
+def test_a_first_camp_seen_late_in_the_game_is_not_weighed_as_a_start() -> None:
+    # The overlay started at 3:20: the first burst it sees is not the game's first clear. Before
+    # the scuttles spawn, a buff's side would otherwise decide it.
+    late_burst = [(200.0, 10), (210.0, 14), (220.0, 14)]
+
+    def first_camp(jungle_starts: JungleStarts | None) -> str:
+        tracker = JunglePathTracker()
+        paths: list[JunglePath] = []
+        for game_time_seconds, creep_score in late_burst:
+            paths, _ = tracker.update(
+                snapshot_with_vi_at(game_time_seconds, creep_score),
+                jungle_starts={VI_KEY: jungle_starts} if jungle_starts is not None else None,
+            )
+        return vi_path(paths).recent_camps[0]
+
+    assert first_camp(JungleStarts(blue_count=0, red_count=4)) == first_camp(None)
+
+
+def test_an_even_record_of_starts_weighs_nothing() -> None:
+    # Red, krugs and raptors decode as they do without a record.
+    tracker = JunglePathTracker()
+    paths: list[JunglePath] = []
+    for game_time_seconds, creep_score in red_krugs_raptors():
+        paths, _ = tracker.update(
+            snapshot_with_vi_at(game_time_seconds, creep_score),
+            jungle_starts={VI_KEY: JungleStarts(blue_count=2, red_count=2)},
+        )
+    assert vi_path(paths).recent_camps == ["their red", "their krugs", "their raptors"]
+
+
+def test_the_engine_hands_the_tracker_each_junglers_usual_start() -> None:
+    vi_seed = next(seed for seed in DEFAULT_PLAYERS if seed.champion_name == "Vi")
+    records = {
+        VI_KEY: GamePlayerRecord(
+            champion_id=CHAMPION_IDS["Vi"],
+            record=PlayerRecord(
+                ranked=None,
+                recent_games=(),
+                jungle_starts=JungleStarts(blue_count=0, red_count=4),
+            ),
+        )
+    }
+    tracker = JunglePathTracker()
+    states = [
+        compute_overlay_state(
+            all_game_data(
+                game_time_seconds,
+                players=tuple(
+                    dataclasses.replace(seed, creep_score=creep_score) if seed is vi_seed else seed
+                    for seed in DEFAULT_PLAYERS
+                ),
+            ),
+            player_records=records,
+            jungle_tracker=tracker,
+        )
+        for game_time_seconds, creep_score in one_buff_burst()
+    ]
+    # Without her habit, the burst alone decodes as her blue buff.
+    vi_jungler = next(path for path in states[-1].jungle_paths if path.champion_name == "Vi")
+    assert vi_jungler.recent_camps[0] in {"their red", "their krugs"}
 
 
 def test_a_camp_cleared_is_not_cleared_again_before_it_is_back() -> None:
