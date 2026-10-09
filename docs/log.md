@@ -6,6 +6,14 @@ skill has the format.
 
 ## 2026-10-09
 
+- Phase 7.1, settings: a settings page (`/settings.html`, the macOS app's "Settings…") with a
+  switch for each part of the overlay, saved at once through `PUT /preferences` (only with the
+  app's header) into `preferences.json`, and sent with the overlay's state so the change shows at
+  once. An installed app reads the engine's settings from `settings.env` in the application's
+  directory. The Swift `PostGameWindow` became `EnginePage`, for both pages.
+- Phase 7's plan, a draft: settings, the app bundle and releases, unsigned as the owner chose on
+  2026-10-09 ("keep building phase 7, skip signing for now"). Phase 6's pull requests (#26 to
+  #29) are merged.
 - Phase 6.4, the post-game window: `/summary.html` shows the last game reconstructed, the win
   chance and the gold lead (estimated against the timeline) as charts with a crosshair, keyboard
   readout and table, the swings and moments, and each estimator's score against its last ten

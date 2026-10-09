@@ -217,7 +217,7 @@ function stripPills(state, gameTimeSeconds) {
         ...state.objectives.map((timer) => objectivePill(timer, gameTimeSeconds)),
         ...state.buffs.map((timer) => buffPill(timer, gameTimeSeconds)),
         ...state.inhibitors.map((timer) => inhibitorPill(timer, gameTimeSeconds)),
-        ...state.contests.map(contestPill),
+        ...(state.preferences.show_contests ? state.contests.map(contestPill) : []),
     ];
     return candidatePills.filter((pill) => pill !== null);
 }
@@ -400,13 +400,13 @@ export function formatFight(fight) {
  */
 function leadElements(state) {
     const headers = [];
-    const winChance = state.win_chance;
+    const winChance = state.preferences.show_win_chance ? state.win_chance : null;
     if (winChance !== null) {
         // Colored by side like a lead: "ally" above an even chance.
         const leaning = Math.round((winChance.ally_chance - EVEN_CHANCE) * PERCENT);
         headers.push(leadElement("win-chance", "Win", leaning, formatWinChance(winChance)));
     }
-    const fight = state.fight;
+    const fight = state.preferences.show_fight_chance ? state.fight : null;
     if (fight !== null) {
         const fightLeaning = Math.round((fight.ally_chance - EVEN_CHANCE) * PERCENT);
         headers.push(leadElement("fight-chance", "Fight now", fightLeaning, formatFight(fight)));
@@ -636,7 +636,9 @@ export function formatCreepPace(panel) {
 function renderYouPanel() {
     const panelElement = requireElement("you-panel");
     const received = latestReceivedState;
-    const panel = received !== null && received.state.is_game_running ? received.state.you : null;
+    const panel = received !== null && received.state.is_game_running && received.state.preferences.show_you_panel
+        ? received.state.you
+        : null;
     const lines = panel === null
         ? []
         : [
@@ -653,6 +655,10 @@ function renderYouPanel() {
         return lineElement;
     }));
 }
+/** Return a card without the estimates the player chose not to see; the exact facts stay. */
+function withoutEstimates(card) {
+    return { ...card, gold: null, level_estimate: null, last_back: null, next_item: null, last_clue: null, location: null };
+}
 /** Draw the enemy strip: each enemy's champion, level and death timer. */
 function renderEnemyStrip(nowMilliseconds) {
     const strip = requireElement("enemy-strip");
@@ -663,10 +669,15 @@ function renderEnemyStrip(nowMilliseconds) {
         strip.replaceChildren();
         return;
     }
-    const enemyCards = [...received.state.players.filter((card) => card.side === "enemy")].sort((first, second) => roleRank(first) - roleRank(second));
+    const areEstimatesShown = received.state.preferences.show_enemy_estimates;
+    const enemyCards = [...received.state.players.filter((card) => card.side === "enemy")]
+        .sort((first, second) => roleRank(first) - roleRank(second))
+        .map((card) => (areEstimatesShown ? card : withoutEstimates(card)));
     strip.hidden = enemyCards.length === 0;
-    const rows = enemyCards.map((card) => enemyRowElement(card, gameTimeSeconds, received.state.cooldowns, received.state.jungle_paths));
-    const campTimersText = formatCampTimers(received.state.camp_timers, gameTimeSeconds);
+    const rows = enemyCards.map((card) => enemyRowElement(card, gameTimeSeconds, received.state.cooldowns, areEstimatesShown ? received.state.jungle_paths : []));
+    const campTimersText = areEstimatesShown
+        ? formatCampTimers(received.state.camp_timers, gameTimeSeconds)
+        : null;
     const campElements = [];
     if (campTimersText !== null) {
         const campElement = document.createElement("div");
@@ -674,7 +685,9 @@ function renderEnemyStrip(nowMilliseconds) {
         campElement.textContent = campTimersText;
         campElements.push(campElement);
     }
-    const wardsText = formatEnemyWards(received.state.control_wards, gameTimeSeconds);
+    const wardsText = areEstimatesShown
+        ? formatEnemyWards(received.state.control_wards, gameTimeSeconds)
+        : null;
     if (wardsText !== null) {
         const wardsElement = document.createElement("div");
         wardsElement.className = "camp-timers ward-list";
@@ -702,7 +715,9 @@ function renderCallouts(nowMilliseconds) {
     const gameTimeSeconds = received === null ? null : currentGameTimeSeconds(received, nowMilliseconds);
     const shownCallouts = received === null || gameTimeSeconds === null || !received.state.is_game_running
         ? []
-        : received.state.callouts.filter((callout) => callout.shown_until_game_time_seconds > gameTimeSeconds);
+        : received.state.callouts.filter((callout) => callout.shown_until_game_time_seconds > gameTimeSeconds &&
+            received.state.preferences.show_callouts &&
+            (callout.kind !== "suggestion" || received.state.preferences.show_suggestions));
     const shownIds = new Set(shownCallouts.map((callout) => callout.callout_id));
     for (const child of Array.from(list.children)) {
         if (child instanceof HTMLElement && !shownIds.has(child.dataset["calloutId"] ?? "")) {
@@ -770,6 +785,11 @@ function renderMinimap(nowMilliseconds) {
         return;
     }
     const state = received.state;
+    if (!state.preferences.show_minimap) {
+        minimap.hidden = true;
+        minimap.replaceChildren();
+        return;
+    }
     const layout = state.minimap ?? { scale: 1, is_flipped: false };
     minimap.style.setProperty("--minimap-scale", String(layout.scale));
     minimap.dataset["side"] = layout.is_flipped ? "left" : "right";

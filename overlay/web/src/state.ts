@@ -310,6 +310,30 @@ export interface WinChance {
   readonly reasons: readonly WinReason[];
 }
 
+/** What the player chose to see, from the settings page; everything shows by default. */
+export interface OverlayPreferences {
+  readonly show_win_chance: boolean;
+  readonly show_fight_chance: boolean;
+  readonly show_contests: boolean;
+  readonly show_you_panel: boolean;
+  readonly show_minimap: boolean;
+  readonly show_enemy_estimates: boolean;
+  readonly show_callouts: boolean;
+  readonly show_suggestions: boolean;
+}
+
+/** The preferences' names, in the settings page's order. */
+export const PREFERENCE_NAMES = [
+  "show_win_chance",
+  "show_fight_chance",
+  "show_contests",
+  "show_you_panel",
+  "show_minimap",
+  "show_enemy_estimates",
+  "show_callouts",
+  "show_suggestions",
+] as const satisfies readonly (keyof OverlayPreferences)[];
+
 /** Everything the overlay shows at one moment. */
 export interface OverlayState {
   readonly is_game_running: boolean;
@@ -331,6 +355,7 @@ export interface OverlayState {
   readonly fight: FightEstimate | null;
   readonly contests: readonly ObjectiveContest[];
   readonly you: YouPanel | null;
+  readonly preferences: OverlayPreferences;
   readonly callouts: readonly Callout[];
 }
 
@@ -751,6 +776,11 @@ export function isYouPanel(value: unknown): value is YouPanel {
   );
 }
 
+/** Return whether a value is the player's preferences as the engine sends them. */
+export function isOverlayPreferences(value: unknown): value is OverlayPreferences {
+  return isRecord(value) && PREFERENCE_NAMES.every((name) => typeof value[name] === "boolean");
+}
+
 /** Return whether a value is an overlay state as the engine sends it. */
 export function isOverlayState(value: unknown): value is OverlayState {
   if (!isRecord(value)) {
@@ -777,6 +807,7 @@ export function isOverlayState(value: unknown): value is OverlayState {
     (value["fight"] === null || isFightEstimate(value["fight"])) &&
     isArrayOf(value["contests"], isObjectiveContest) &&
     (value["you"] === null || isYouPanel(value["you"])) &&
+    isOverlayPreferences(value["preferences"]) &&
     isArrayOf(value["callouts"], isCallout)
   );
 }

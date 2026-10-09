@@ -196,14 +196,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         levelItem.submenu = makeLevelMenu()
         menu.addItem(levelItem)
         menu.addItem(.separator())
-        if overlayURL != nil {
-            let lastGameItem = NSMenuItem(
-                title: "Last game\u{2026}", action: #selector(openLastGame(_:)), keyEquivalent: ""
-            )
-            lastGameItem.target = self
-            menu.addItem(lastGameItem)
-        } else {
-            menu.addItem(Self.disabledItem("Last game\u{2026}"))
+        for page in EnginePage.allCases {
+            if overlayURL != nil {
+                let pageItem = NSMenuItem(
+                    title: page.menuTitle, action: #selector(openEnginePage(_:)), keyEquivalent: ""
+                )
+                pageItem.target = self
+                pageItem.representedObject = page.rawValue
+                menu.addItem(pageItem)
+            } else {
+                menu.addItem(Self.disabledItem(page.menuTitle))
+            }
         }
         menu.addItem(.separator())
         let quitItem = NSMenuItem(
@@ -267,9 +270,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         statusItem?.menu = makeMenu()
     }
 
-    /// Opens the post-game window in the default browser: a normal window, unlike the overlay.
-    @objc private func openLastGame(_ sender: NSMenuItem) {
-        guard let overlayURL, let pageURL = PostGameWindow.pageURL(overlayURL: overlayURL) else {
+    /// Opens one of the engine's pages in the default browser: a normal window, unlike the overlay.
+    @objc private func openEnginePage(_ sender: NSMenuItem) {
+        guard
+            let rawValue = sender.representedObject as? String,
+            let page = EnginePage(rawValue: rawValue),
+            let overlayURL,
+            let pageURL = page.url(overlayURL: overlayURL)
+        else {
             return
         }
         NSWorkspace.shared.open(pageURL)

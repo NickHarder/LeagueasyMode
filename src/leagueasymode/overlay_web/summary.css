@@ -316,3 +316,49 @@ body {
 .sparkline-dot {
   fill: var(--series-1);
 }
+
+/* The settings page shares the post-game window's look. */
+.settings-form {
+  margin-top: 16px;
+  padding: 8px 16px;
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.settings-row {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--gridline);
+  cursor: pointer;
+}
+
+.settings-row:last-child {
+  border-bottom: none;
+}
+
+.settings-row input {
+  margin-top: 3px;
+  accent-color: var(--series-1);
+}
+
+.settings-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.settings-description {
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.settings-status {
+  min-height: 1.45em;
+  color: var(--text-secondary);
+}
+
+.settings-status[data-state="failed"] {
+  color: var(--bad);
+}

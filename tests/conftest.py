@@ -11,6 +11,7 @@ APPLICATION_FILE_SETTINGS: Final = {
     "LEAGUEASYMODE_ACCURACY_HISTORY": "accuracy-history.jsonl",
     "LEAGUEASYMODE_LAST_GAME_SUMMARY": "last-game.json",
     "LEAGUEASYMODE_MODEL_WEIGHTS": "model-weights.json",
+    "LEAGUEASYMODE_PREFERENCES": "preferences.json",
 }
 
 
