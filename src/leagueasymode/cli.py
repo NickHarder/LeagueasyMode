@@ -31,6 +31,7 @@ from leagueasymode.config import (
     REPOSITORY_ROOT,
     Settings,
     default_accuracy_history_path,
+    default_last_game_summary_path,
     default_model_weights_path,
     default_patch_data_directory,
     default_recordings_directory,
@@ -44,6 +45,7 @@ from leagueasymode.data_dragon import (
 )
 from leagueasymode.engine import OverlayEngine, PatchStatsLoader
 from leagueasymode.game_api import GameApiClient
+from leagueasymode.game_summary import game_summary
 from leagueasymode.league_client import (
     DEFAULT_LOCKFILE_PATHS,
     ClientConnector,
@@ -157,7 +159,11 @@ async def run_overlay(
                 load_model_weights, settings.model_weights or default_model_weights_path()
             ),
         )
-        runner = web.AppRunner(create_overlay_application(engine))
+        history_path = settings.accuracy_history or default_accuracy_history_path()
+        summary_path = settings.last_game_summary or default_last_game_summary_path()
+        runner = web.AppRunner(
+            create_overlay_application(engine, summary_path=summary_path, history_path=history_path)
+        )
         await runner.setup()
         site = web.TCPSite(runner, LOCAL_HOST, settings.overlay_port)
         await site.start()
@@ -165,10 +171,14 @@ async def run_overlay(
         announce_url(f"http://{LOCAL_HOST}:{bound_port}/")
 
         scoring_patch_stats = _patch_stats_loader(session, settings)
-        history_path = settings.accuracy_history or default_accuracy_history_path()
 
         async def score_recorded_game(recording_path: Path) -> None:
-            await keep_the_accuracy_of(recording_path, scoring_patch_stats, history_path)
+            await after_the_game(
+                recording_path,
+                scoring_patch_stats,
+                history_path=history_path,
+                summary_path=summary_path,
+            )
 
         async def record_in_background() -> None:
             await record_games(
@@ -416,15 +426,20 @@ def _history(settings: Settings, last_games: int) -> int:
     return EXIT_SUCCESS
 
 
-async def keep_the_accuracy_of(
-    recording_path: Path, load_patch_stats: PatchStatsLoader, history_path: Path
+async def after_the_game(
+    recording_path: Path,
+    load_patch_stats: PatchStatsLoader,
+    *,
+    history_path: Path,
+    summary_path: Path,
 ) -> None:
-    """Score a recorded game, and add its scores to the accuracy history.
+    """Score a recorded game, add its scores to the accuracy history, and write its summary.
 
     Args:
         recording_path: The recording, closed.
         load_patch_stats: Returns the stats of the game's patch.
         history_path: The accuracy history.
+        summary_path: The last game's summary, for the post-game window.
     """
     game = await asyncio.to_thread(read_recorded_game, recording_path)
     patch_stats = await load_patch_stats(
@@ -436,7 +451,22 @@ async def keep_the_accuracy_of(
         history_path,
         game_accuracy_of(recording_path, game, scores, _now_text()),
     )
+    summary = await asyncio.to_thread(game_summary, recording_path.name, game, scores)
+    await asyncio.to_thread(_write_whole, summary_path, summary.model_dump_json())
     logger.info("scored %s: %d estimators", recording_path.name, len(scores))
+
+
+def _write_whole(file_path: Path, file_text: str) -> None:
+    """Write a file whole: to a partial file first, then into place.
+
+    Args:
+        file_path: The file.
+        file_text: Its text.
+    """
+    file_path.parent.mkdir(parents=True, exist_ok=True)
+    partial_path = file_path.with_suffix(".partial")
+    partial_path.write_text(file_text)
+    partial_path.replace(file_path)
 
 
 def _now_text() -> str:

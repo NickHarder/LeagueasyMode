@@ -13,12 +13,14 @@ from pydantic import JsonValue
 
 from data_dragon_fixtures import fixture_patch_stats
 from game_payloads import DEFAULT_PLAYERS, all_game_data, dragon_kill_event, game_start_event
+from leagueasymode.accuracy_history import GameAccuracy, append_game_accuracy
 from leagueasymode.data_dragon import PatchStats
 from leagueasymode.engine import OverlayEngine, compute_overlay_state
 from leagueasymode.game_api import GameApiClient
 from leagueasymode.league_client import LeagueClient
 from leagueasymode.overlay_server import create_overlay_application
 from leagueasymode.overlay_state import OverlayState
+from leagueasymode.scoring import EstimatorScore
 from local_servers import serve, unused_local_url
 
 ENEMY_JUNGLER: Final = DEFAULT_PLAYERS[6].riot_id_game_name
@@ -417,3 +419,36 @@ async def test_a_mark_that_names_nothing_is_refused() -> None:
             overlay_url + "/marks", data=b"not json", headers=headers
         ) as garbled_response:
             assert garbled_response.status == 400
+
+
+async def test_the_last_games_summary_and_the_accuracy_history_are_served(tmp_path: Path) -> None:
+    summary_path = tmp_path / "last-game.json"
+    history_path = tmp_path / "accuracy-history.jsonl"
+    async with aiohttp.ClientSession() as session:
+        engine = OverlayEngine(
+            GameApiClient(session, unused_local_url(), tls_context=None), poll_interval_seconds=1
+        )
+        application = create_overlay_application(
+            engine, summary_path=summary_path, history_path=history_path
+        )
+        async with serve(application) as overlay_url:
+            async with session.get(overlay_url + "/summary") as no_game_response:
+                no_game_status = no_game_response.status
+            summary_path.write_text('{"recording_name": "game.jsonl.xz"}')
+            append_game_accuracy(
+                history_path,
+                GameAccuracy(
+                    recording_name="game.jsonl.xz",
+                    game_id=None,
+                    game_version=None,
+                    scored_at="2026-10-09T00:00:00+00:00",
+                    scores=(EstimatorScore("roles", 10, 0.9, "share_correct"),),
+                ),
+            )
+            async with session.get(overlay_url + "/summary") as summary_response:
+                summary = await summary_response.json()
+            async with session.get(overlay_url + "/history") as history_response:
+                history = await history_response.json()
+    assert no_game_status == 404
+    assert summary == {"recording_name": "game.jsonl.xz"}
+    assert history["games"][0]["scores"][0]["estimator"] == "roles"

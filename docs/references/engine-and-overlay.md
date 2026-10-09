@@ -58,6 +58,8 @@ sources:
     resource: ../../src/leagueasymode/inference/contests.py
   - id: you
     resource: ../../src/leagueasymode/inference/you.py
+  - id: game-summary
+    resource: ../../src/leagueasymode/game_summary.py
   - id: overlay-state
     resource: ../../src/leagueasymode/overlay_state.py
   - id: overlay-server
@@ -191,7 +193,20 @@ comment every 15 seconds. It takes marks at `POST /marks`, `{"enemy_slot": 1-5, 
 "flash" | "summoner" | "ultimate"}`, only with the header `X-LeagueasyMode-Request: mark`, which a
 web page elsewhere cannot send without a preflight the server never answers. When the server shuts
 down, open streams end at once, so quitting does not wait on a page that is still
-listening.[^overlay-server]
+listening.[^overlay-server] It also serves the last game's summary (`/summary`, 404 until a game
+is recorded) and the accuracy history (`/history`, `{"games": [...]}`), for the post-game window.
+
+# After a game
+
+Once `leagueasymode run` has recorded a game and its timeline has come, the game is scored, its
+scores are added to the accuracy history, and its summary is written to `last-game.json` in the
+application's directory (`LEAGUEASYMODE_LAST_GAME_SUMMARY` moves it), all off the engine's loop.
+The summary is the game reconstructed: the result, your champion and the game's length; your
+team's win chance at the start of each minute; the gold lead each minute as the overlay estimated
+it and as the timeline has it; the feed's kills, monsters, turrets and inhibitors in words from
+your side ("Zed killed Ahri", "your team took their top outer turret"); the three minutes that
+moved the win chance most, with what happened in each; and every estimator's score. Its contract
+is `overlay/web/game_summary.schema.json`, kept current by a test.[^game-summary]
 
 # The widgets
 
@@ -242,3 +257,4 @@ Chromium against a replay (Chromium from `uv run playwright install chromium`, o
 [^fights]: `src/leagueasymode/inference/fights.py`
 [^contests]: `src/leagueasymode/inference/contests.py`
 [^you]: `src/leagueasymode/inference/you.py`
+[^game-summary]: `src/leagueasymode/game_summary.py`
