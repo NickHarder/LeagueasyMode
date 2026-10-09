@@ -31,7 +31,7 @@ one before to merge.
 | Phase 2 facts | Objective strip, buffs, inhibitors, numbers window, enemy strip, callouts, item catalog and item gold, roles, combat stats | `tests/test_objective_strip.py`, `test_numbers_window.py`, `test_callouts.py`, `test_item_facts.py`, `test_roles.py`, `test_combat_stats.py`; eight browser tests |
 | Patch stats | Each patch's champion and item stats from Data Dragon, fetched once a patch and kept on disk; **never fetched from the real Data Dragon yet** (this environment cannot reach it) | `tests/test_data_dragon.py` against a stand-in |
 | Widgets in a browser | Rendered in Chromium against a replay | `uv run pytest -m browser` (needs Chromium); `tests/test_overlay_page.py` |
-| macOS app | Builds on macOS 15 and passes its 30 unit tests in CI; **never run over League** | `overlay/macos/`; CI job `macos-overlay` |
+| macOS app | Builds on macOS 15 and passes its 29 unit tests in CI; **never run over League** | `overlay/macos/`; CI job `macos-overlay` |
 | App bundle | `LeagueasyMode.app` with the engine inside, signed ad hoc, built by CI, its engine started from an empty home folder; **never opened on a Mac by a person** | `overlay/macos/scripts/build_app.sh`; CI job `macos-app`, which keeps the zip with each run |
 | CI | 11 jobs, the widgets', the macOS app's and the app bundle's included; none may fail | `.github/workflows/ci.yml` |
 | Real game data | **None yet**: every test uses built payloads in the API's documented shape | `tests/game_payloads.py` |
