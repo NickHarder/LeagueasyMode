@@ -86,3 +86,15 @@ def test_the_apps_settings_file_is_read(tmp_path: Path) -> None:
     settings_file = tmp_path / "settings.env"
     settings_file.write_text("LEAGUEASYMODE_RECORD_WHILE_RUNNING=false\n")
     assert not Settings(_env_file=(settings_file, tmp_path / "missing.env")).record_while_running
+
+
+def test_no_test_writes_to_the_players_own_files() -> None:
+    settings = Settings()
+    for file_path in (
+        settings.accuracy_history,
+        settings.last_game_summary,
+        settings.model_weights,
+        settings.preferences,
+    ):
+        assert file_path is not None
+        assert "application" in file_path.parts
