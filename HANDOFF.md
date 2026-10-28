@@ -3,10 +3,16 @@
 If you are picking this work up, human or model: read this file top to bottom first. The `handoff` skill
 refreshes it; it describes the current state.
 
-Last updated: 2026-10-09, on branch `feat/ten-minute-leads` (pull request #49). `main` holds
-phases 0 to 8, phase 9 but for 9.4, the Data Dragon growth fix, the plans' approval and
-`tuning.json` (pull requests #2 to #48, merged); the estimators' priors in `tuning.json` were
-pushed to #48 after it merged and ride with #49.
+Last updated: 2026-10-28, on branch `feat/install-updates` (pull request #59). `main` holds
+everything to #49. Open and stacked, each on the one before, from the first tests on the owner's
+Mac: #50 (the overlay never holds the mouse or keyboard), #51 (no minimap circle for an enemy in
+sight), #52 (games sent to the private `NickHarder/LeagueasyMode-recordings`), #53 (the engine
+keeps running through errors; crash reports), #54 (the phase 10 plan,
+`docs/plans/phase-10-field-testing.md`), #55 (10.1, 10.2: build numbers, the engine's log), #57
+(10.3: Report a problem; the engine restarted when it stops), #58 (10.4, 10.5: How to use; the
+Rift's widgets hidden on other maps), #59 (10.6: each green main published as a prerelease, and
+"Install update" in the app). Merging them in that order keeps each diff to its own commits. #56
+is another session's plan (roasts), not part of this stack.
 
 ## Where things stand
 
@@ -92,10 +98,20 @@ In `AGENTS.md`, this project's own included: every session reads that file.
    screenshot.
 7. **The first release**: when the app has been tried on a Mac, tag `v0.1.0` on `main` and push
    the tag (`docs/references/macos-app.md`, "Releases, updates and opening at login"). Publishing
-   is the owner's call; no session tags a release unasked.
+   is the owner's call; no session tags a release unasked. The prereleases `build-<n>` are CI's,
+   from each green push to main, as the owner allowed on 2026-10-28 (10.6).
 8. **Documents waiting for approval** (`make docs-status`): the retrospective, and the references
    on recordings, the engine and the macOS app, all drafts. Every plan is approved (phase 3's on
    2026-10-08, the rest on 2026-10-09).
+9. **Auto-merge (10.7)**, approved by the owner on 2026-10-28, needs two settings only the owner
+   can change: Settings → General → Pull Requests → "Allow auto-merge", and a branch rule on
+   `main` (Settings → Rules) requiring CI's checks. Claude's pull requests then merge themselves
+   once green, and with 10.6 each merge reaches the app as "Install update".
+10. **The daily check (10.8)** runs as a scheduled cloud session at 13:52 UTC: it reads what
+   arrived in the recordings repository (games, crash reports, problem reports) and opens pull
+   requests for what they show.
+11. **Advanced opponent tracking**: whether the minimap's circles should first show only the
+   jungler and laners likely away from lane, with a setting; not yet answered.
 
 ## Where everything is
 
