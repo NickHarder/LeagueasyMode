@@ -15,6 +15,11 @@ skill has the format.
   the overlay is hidden. The menu now says whether the overlay page loaded in the overlay's
   window, and why not when it did not, and the app's Info.plist allows its web view to load the
   page from 127.0.0.1 over plain HTTP, in case App Transport Security stopped it.
+- The second try showed the overlay over League (windowed, 1920 × 925; "Overlay: page loaded"),
+  but League's keys did nothing until the overlay was hidden and shown again with ⌃⌥⌘L, without
+  edit mode having been used. So the overlay held the keyboard by a path not yet known. It now
+  hands the keyboard back by itself whenever it finds itself key outside edit mode (hiding and
+  showing itself, as the owner's ⌃⌥⌘L did), and on leaving edit mode, and the menu counts it.
 
 ## 2026-10-09
 

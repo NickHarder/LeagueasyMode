@@ -153,8 +153,10 @@ In `AGENTS.md`. Also: a raw recording (it holds other players' names); only `ano
   windowed): the overlay showed nothing, and with "Let clicks through" turned off and "Edit
   layout" on, its invisible layer caught every click until the app was stopped. The menu item is
   gone, edit mode is tinted and ends on Escape, ⌃⌥⌘L or after two minutes, and the menu says
-  whether the overlay page loaded. Why nothing showed is not known yet: the menu's "Overlay:" line
-  and the status page's report say where it stops.
+  whether the overlay page loaded. The second try (that build) showed the overlay over the game,
+  but League's keys did nothing until ⌃⌥⌘L hid and showed it: the overlay held the keyboard
+  without edit mode, by a path not yet known. It now hands the keyboard back by itself and the
+  menu counts it; the next try says whether that was the path.
 - Edit mode (8.3) makes the overlay's panel key so its widgets take drags; that a
   non-activating panel takes them without bringing the app forward is seen on a Mac.
 - The test item catalog (`tests/fixtures/client/items.json`) is hand-written: its prices are not

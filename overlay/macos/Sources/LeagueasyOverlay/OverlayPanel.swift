@@ -12,10 +12,15 @@ import WebKit
 final class OverlayPanel: NSPanel, WKNavigationDelegate {
     private let webView = WKWebView(frame: .zero, configuration: WKWebViewConfiguration())
     private var isEditingLayout = false
+    // When the panel last gave the keyboard back; at most once a second, so that a panel AppKit
+    // made key again on showing could never hide and show itself without end.
+    private var lastKeyboardHandBack: Date?
     /// Called when the player presses Escape in edit mode.
     var onEscape: (@MainActor () -> Void)?
     /// Called when the page starts loading, has loaded, or did not load.
     var onPageStateChange: (@MainActor (OverlayPageState) -> Void)?
+    /// Called when the panel found itself holding the keyboard outside edit mode and gave it back.
+    var onKeyboardHandedBack: (@MainActor () -> Void)?
 
     /// Creates the panel over a screen, hidden until `showOverlay` is called.
     ///
@@ -83,6 +88,41 @@ final class OverlayPanel: NSPanel, WKNavigationDelegate {
         if isEditing {
             // A non-activating panel becomes key without bringing the app forward.
             makeKeyAndOrderFront(nil)
+        } else if isKeyWindow {
+            releaseKeyboard()
+        }
+    }
+
+    /// Outside edit mode the keyboard is the game's. On the first try on a Mac the panel held it
+    /// without edit mode, by a path not yet known, and hiding and showing it gave it back; so it
+    /// does that itself, once AppKit has finished making it key.
+    override func becomeKey() {
+        super.becomeKey()
+        if !isEditingLayout {
+            perform(#selector(handKeyboardBack), with: nil, afterDelay: 0)
+        }
+    }
+
+    @objc private func handKeyboardBack() {
+        let now = Date()
+        guard
+            isKeyWindow,
+            !isEditingLayout,
+            lastKeyboardHandBack.map({ now.timeIntervalSince($0) >= 1 }) ?? true
+        else {
+            return
+        }
+        lastKeyboardHandBack = now
+        releaseKeyboard()
+        onKeyboardHandedBack?()
+    }
+
+    /// Hides the panel and shows it again, which leaves the keyboard to the window below it.
+    private func releaseKeyboard() {
+        let wasVisible = isVisible
+        orderOut(nil)
+        if wasVisible {
+            orderFrontRegardless()
         }
     }
 

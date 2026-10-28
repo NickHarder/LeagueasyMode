@@ -587,6 +587,14 @@ final class LayoutEditingTests: XCTestCase {
     }
 }
 
+final class KeyboardHandBackTests: XCTestCase {
+    func testTheMenuSaysHowOftenTheKeyboardWasHandedBack() {
+        XCTAssertNil(KeyboardHandBack.menuText(handBackCount: 0))
+        XCTAssertEqual(KeyboardHandBack.menuText(handBackCount: 1), "Keyboard: handed back to the game once")
+        XCTAssertEqual(KeyboardHandBack.menuText(handBackCount: 3), "Keyboard: handed back to the game 3 times")
+    }
+}
+
 final class OverlayPageStateTests: XCTestCase {
     func testTheMenuSaysWhetherTheOverlayPageLoaded() {
         XCTAssertEqual(OverlayPageState.waiting.menuText, "Overlay: waiting for the engine")

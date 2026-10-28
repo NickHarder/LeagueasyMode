@@ -47,6 +47,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var editingStartedAt: Date?
     private var engineStatusText = "Engine: starting…"
     private var pageState = OverlayPageState.waiting
+    // How many times the overlay found itself holding the keyboard and gave it back to the game.
+    private var keyboardHandBackCount = 0
     private var availableRelease: AvailableRelease?
     private var updateTimer: Timer?
     private var gamePlacement: GamePlacement?
@@ -61,6 +63,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         panel.onPageStateChange = { [weak self] pageState in
             self?.pageStateDidChange(pageState)
+        }
+        panel.onKeyboardHandedBack = { [weak self] in
+            self?.keyboardWasHandedBack()
         }
         overlayPanel = panel
         gamePlacement = placement
@@ -158,6 +163,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func pageStateDidChange(_ newPageState: OverlayPageState) {
         pageState = newPageState
+        statusItem?.menu = makeMenu()
+    }
+
+    private func keyboardWasHandedBack() {
+        keyboardHandBackCount += 1
+        NSLog("LeagueasyMode: the overlay held the keyboard outside edit mode; handed it back")
         statusItem?.menu = makeMenu()
     }
 
@@ -317,6 +328,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(Self.disabledItem("LeagueasyMode"))
         menu.addItem(Self.disabledItem(engineStatusText))
         menu.addItem(Self.disabledItem(pageState.menuText))
+        if let keyboardText = KeyboardHandBack.menuText(handBackCount: keyboardHandBackCount) {
+            menu.addItem(Self.disabledItem(keyboardText))
+        }
         if let gamePlacement {
             menu.addItem(Self.disabledItem(gamePlacement.menuText))
         }

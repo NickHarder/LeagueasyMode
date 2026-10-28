@@ -48,6 +48,9 @@ page in a window over League:[^panel]
 - transparent, borderless, without a shadow, and with every click passing through to the game
   outside edit mode, with no setting to change that;
 - never key or main, and its panel does not activate the app, so League keeps the keyboard;
+  should it find itself key outside edit mode anyway, as on the first try on a Mac, it hides and
+  shows itself at once (at most once a second), which leaves the keyboard to League, and the menu
+  counts it ("Keyboard: handed back to the game once");
 - on every Space, full-screen ones included, at the "Screen saver" window level by default;
 - over the screen League is on, or over League's window below its title bar when it is windowed,
   so the minimap layer lines up there too; over the main screen when no game window is on
