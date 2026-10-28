@@ -4,6 +4,16 @@ What changed in this project and why, newest first. A commit shows the differenc
 gives the reason. The `handoff` skill adds to it at every checkpoint, and the `write-okf-concept`
 skill has the format.
 
+## 2026-10-28
+
+- A plan for phase 10, roasts with receipts ([the plan](/plans/phase-10-roasts.md)), at the
+  owner's request: "is there any way to put this in leagueasymode overlay so i can have ammo to
+  tease my friends". It brings nothingsmyfault's cited case file into the post-game window, for
+  anyone in the game. It adds short moments about friends during the game, copied with one
+  shortcut and never posted. The first recording in LeagueasyMode-recordings is a Practice Tool
+  game cancelled at 0:00, so the client's post-game answers are still unseen; one real game
+  recorded to the end comes first. The plan waits for the owner's approval and decisions.
+
 ## 2026-10-09
 
 - Phase 9.4, early leads in lane: the player lookups now also read the timelines of each player's
