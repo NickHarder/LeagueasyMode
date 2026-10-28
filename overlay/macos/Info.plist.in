@@ -9,6 +9,8 @@
 	<string>LeagueasyMode</string>
 	<key>CFBundleExecutable</key>
 	<string>LeagueasyOverlay</string>
+	<key>CFBundleIconFile</key>
+	<string>AppIcon</string>
 	<key>CFBundleIdentifier</key>
 	<string>io.github.nickharder.leagueasymode</string>
 	<key>CFBundleInfoDictionaryVersion</key>

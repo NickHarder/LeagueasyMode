@@ -33,6 +33,8 @@ skill has the format.
   shortcut and never posted. The first recording in LeagueasyMode-recordings is a Practice Tool
   game cancelled at 0:00, so the client's post-game answers are still unseen; one real game
   recorded to the end comes first. The plan waits for the owner's approval and decisions.
+- The app has an icon: a gold scope over a faint minimap, on a dark blue body, drawn here with no
+  game's artwork. Asked for by the owner; before, Finder and the Dock showed macOS's blank app.
 - Updates install themselves. The owner asked whether the app could pull updates down by itself:
   it now checks for a new build of main at every start and every hour, and installs it without
   asking once no game window of League's is on screen ("Install updates automatically", on unless
