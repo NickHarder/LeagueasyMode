@@ -14,6 +14,25 @@ skill has the format.
   length are in `tuning.json` under `roast`. The chat line drops the exhibit letters and the
   site's signature unless asked, and the Mutual Defense Pact is off by default. Nothing shows yet:
   11.2 builds a game's exhibits from the client's answers.
+- The roast plan is now phase 11, its slices 11.0 to 11.8: phase 10 on main became testing
+  on the Mac, with slices of its own, while the roast plan waited. Nothing else in it changed.
+- The owner approved phase 11's plan again, with slice 11.8 ("approved, keep building 10.2").
+- Phase 11's plan adds slice 11.8, Claude's take: lines reworded by the `claude` command on the
+  Mac in a style the owner sets, numbers still filled from exhibits and every line checked again,
+  the approved line used whenever one fails. At the owner's word, "yes add it as 10.8"; the plan
+  waits for approval again.
+- The owner approved phase 11's plan ("approved, start building phase 10").
+- Phase 11's plan now ports nothingsmyfault's engine into this project instead of depending on it,
+  at the owner's question "why do you want to make it public? can you build off of leagues mode?".
+  This repository must stay public for the app's update check, so depending on the private
+  project would need a token; most of nothingsmyfault besides its engine duplicates what is here.
+- A plan for phase 11, roasts with receipts ([the plan](/plans/phase-11-roasts.md)), at the
+  owner's request: "is there any way to put this in leagueasymode overlay so i can have ammo to
+  tease my friends". It brings nothingsmyfault's cited case file into the post-game window, for
+  anyone in the game. It adds short moments about friends during the game, copied with one
+  shortcut and never posted. The first recording in LeagueasyMode-recordings is a Practice Tool
+  game cancelled at 0:00, so the client's post-game answers are still unseen; one real game
+  recorded to the end comes first. The plan waits for the owner's approval and decisions.
 - Updates install themselves. The owner asked whether the app could pull updates down by itself:
   it now checks for a new build of main at every start and every hour, and installs it without
   asking once no game window of League's is on screen ("Install updates automatically", on unless
