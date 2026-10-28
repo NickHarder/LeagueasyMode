@@ -971,7 +971,10 @@ function enemyMarks(card: PlayerCard): SVGElement[] {
   return [circle, label];
 }
 
-/** Draw the minimap layer where League's minimap is: each enemy's likely region, camps, wards. */
+/**
+ * Draw the minimap layer where League's minimap is: each unseen enemy's likely region, camps and
+ * wards.
+ */
 function renderMinimap(nowMilliseconds: number): void {
   const minimap = requireElement("minimap");
   const received = latestReceivedState;
@@ -1015,7 +1018,9 @@ function renderMinimap(nowMilliseconds: number): void {
         transform: `rotate(45 ${String(ward.x_position)} ${mapY(ward.y_position)})`,
       }),
     );
-  drawing.replaceChildren(...camps, ...wards, ...enemyCards.flatMap(enemyMarks));
+  // An enemy in sight is on League's own minimap: no likely place is drawn for them.
+  const unseenEnemyCards = enemyCards.filter((card) => !card.is_seen);
+  drawing.replaceChildren(...camps, ...wards, ...unseenEnemyCards.flatMap(enemyMarks));
   minimap.hidden = drawing.childElementCount === 0;
   minimap.replaceChildren(drawing);
 }

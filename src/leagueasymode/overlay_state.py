@@ -329,6 +329,10 @@ class PlayerCard(BaseModel):
     last_clue: PositionClue | None = None
     # Where they likely are; None while dead, or while positions are not estimated.
     location: PositionEstimate | None = None
+    # For an enemy: how long since your team last saw them (`inference/sightings.py`), and whether
+    # that is recent enough that they are taken to be in sight; None and False before a sighting.
+    seen_seconds_ago: float | None = None
+    is_seen: bool = False
 
 
 class TeamItemGold(BaseModel):

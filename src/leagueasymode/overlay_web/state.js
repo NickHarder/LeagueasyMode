@@ -246,7 +246,9 @@ export function isPlayerCard(value) {
         (value["last_back"] === null || isBackEstimate(value["last_back"])) &&
         (value["next_item"] === null || isNextItemEstimate(value["next_item"])) &&
         (value["last_clue"] === null || isPositionClue(value["last_clue"])) &&
-        (value["location"] === null || isPositionEstimate(value["location"])));
+        (value["location"] === null || isPositionEstimate(value["location"])) &&
+        isNumberOrNull(value["seen_seconds_ago"]) &&
+        typeof value["is_seen"] === "boolean");
 }
 /** Return whether a value is each team's item gold as the engine sends it. */
 export function isTeamItemGold(value) {

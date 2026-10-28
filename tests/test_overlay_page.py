@@ -601,6 +601,20 @@ async def test_the_minimap_layer_marks_where_each_enemy_likely_is(tmp_path: Path
         await keep_screenshot(page, "minimap")
 
 
+async def test_an_enemy_in_sight_has_no_mark_on_the_minimap(tmp_path: Path) -> None:
+    # Vi's creep score rises at 23:20, which the game shows only while your team sees her.
+    async with open_overlay(
+        tmp_path, snapshot_count=40, speed=1.0, vi_farms_at_seconds=(1400.0,)
+    ) as page:
+        minimap = page.locator("#minimap")
+        vi_mark = minimap.locator('circle[data-champion="Vi"]')
+        await expect(vi_mark).to_have_count(0, timeout=10000)
+        await expect(minimap.locator('circle[data-champion="Zed"]')).to_have_count(1)
+        await keep_screenshot(page, "minimap-enemy-in-sight")
+        # Three seconds on, unseen again, she has her mark back.
+        await expect(vi_mark).to_have_count(1, timeout=10000)
+
+
 async def test_the_enemy_strip_shows_item_gold_and_the_lead(tmp_path: Path) -> None:
     async with open_overlay(tmp_path, snapshot_count=60, speed=1.0) as page:
         lead = page.locator("#enemy-strip .item-lead.items")

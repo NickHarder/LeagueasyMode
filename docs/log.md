@@ -20,6 +20,15 @@ skill has the format.
   edit mode having been used. So the overlay held the keyboard by a path not yet known. It now
   hands the keyboard back by itself whenever it finds itself key outside edit mode (hiding and
   showing itself, as the owner's ⌃⌥⌘L did), and on leaving edit mode, and the menu counts it.
+- Enemies in sight keep their likely place off the minimap. The owner, on the first try over a
+  game: "dont show the potential character circle if they are already on the map (aka we have
+  vision of htem)". The game's API gives no vision, and the owner ruled out reading the screen
+  ("i just dont thin screen recording and camera vision is allowed"), so, on the owner's idea, an
+  enemy counts as seen when their creep score, items or level change while alive, which League's
+  scoreboard is taken to show only in sight, or when a champion kill with your team puts them in
+  sight. For 3 seconds after (`positions.seen_for_seconds` in `tuning.json`) their card says so
+  and the minimap draws no circle for them. Whether the scoreboard hides those numbers in the fog
+  is unconfirmed until a recording shows it.
 
 ## 2026-10-09
 

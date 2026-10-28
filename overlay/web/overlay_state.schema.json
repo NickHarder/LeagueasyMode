@@ -1101,6 +1101,23 @@
             }
           ],
           "default": null
+        },
+        "seen_seconds_ago": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Seen Seconds Ago"
+        },
+        "is_seen": {
+          "default": false,
+          "title": "Is Seen",
+          "type": "boolean"
         }
       },
       "required": [
