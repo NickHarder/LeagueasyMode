@@ -354,12 +354,14 @@ body {
   font-size: 13px;
 }
 
-.settings-status {
+.settings-status,
+.settings-friends-status {
   min-height: 1.45em;
   color: var(--text-secondary);
 }
 
-.settings-status[data-state="failed"] {
+.settings-status[data-state="failed"],
+.settings-friends-status[data-state="failed"] {
   color: var(--bad);
 }
 
@@ -706,4 +708,45 @@ body {
   .case-board td:nth-child(5) {
     display: none;
   }
+}
+
+/* The friends list on the settings page (phase 11.5). */
+.settings-friends {
+  margin-top: 24px;
+}
+
+.settings-friends h2 {
+  margin: 0 0 4px;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.settings-friends-box {
+  box-sizing: border-box;
+  width: 100%;
+  margin-top: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-1);
+  color: var(--text-primary);
+  font: 13px/1.5 ui-monospace, "SF Mono", Menlo, monospace;
+  resize: vertical;
+}
+
+.settings-friends-box:focus-visible,
+.settings-friends-save:focus-visible {
+  outline: 2px solid var(--series-1);
+  outline-offset: 2px;
+}
+
+.settings-friends-save {
+  margin-top: 8px;
+  padding: 4px 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--page);
+  color: var(--text-primary);
+  font: inherit;
+  cursor: pointer;
 }

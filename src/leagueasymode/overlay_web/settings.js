@@ -1,11 +1,14 @@
 /**
- * The settings page: what the overlay shows. Each change is saved at once and reaches the overlay
- * with its next state; the engine keeps it in `preferences.json` for the next run.
+ * The settings page: what the overlay shows, and the friends list. Each change of what shows is
+ * saved at once and reaches the overlay with its next state; the engine keeps it in
+ * `preferences.json` for the next run. The friends' Riot IDs are saved with their own button and
+ * kept in `friends.json`; the overlay and the post-game case mark those players (phase 11.5).
  */
 import { PREFERENCE_NAMES, isOverlayPreferences } from "./state.js";
 // The header the server asks of a change, which a page elsewhere cannot send.
 const REQUEST_HEADER = "X-LeagueasyMode-Request";
 const REQUEST_VALUE = "preferences";
+const FRIENDS_REQUEST_VALUE = "friends";
 const DESCRIPTIONS = {
     show_win_chance: ["Win chance", "Your team's chance to win, and what moves it most, at the top of the enemy strip."],
     show_fight_chance: ["Fight chance", "The chance your team wins an even fight now, and how much of their damage is physical."],
@@ -56,8 +59,73 @@ async function save(form, status) {
         status.dataset["state"] = "failed";
     }
 }
-/** Draw the form, one switch for each preference. */
-export function renderSettings(root, preferences) {
+/** Return the Riot IDs typed in the friends box, one a line, blank lines left out. */
+export function riotIdsOf(text) {
+    return text
+        .split("\n")
+        .map((line) => line.trim())
+        .filter((line) => line !== "");
+}
+function isFriendsList(value) {
+    return (typeof value === "object" &&
+        value !== null &&
+        Array.isArray(value["riot_ids"]) &&
+        value["riot_ids"].every((item) => typeof item === "string"));
+}
+async function saveFriends(box, status) {
+    status.textContent = "Saving…";
+    status.dataset["state"] = "saving";
+    try {
+        const response = await fetch("/friends", {
+            method: "PUT",
+            headers: { "Content-Type": "application/json", [REQUEST_HEADER]: FRIENDS_REQUEST_VALUE },
+            body: JSON.stringify({ riot_ids: riotIdsOf(box.value) }),
+        });
+        const answer = await response.json();
+        if (response.ok && isFriendsList(answer)) {
+            box.value = answer.riot_ids.join("\n");
+            status.textContent = `Saved: ${String(answer.riot_ids.length)} friends`;
+            status.dataset["state"] = "saved";
+            return;
+        }
+        const message = typeof answer === "object" && answer !== null && typeof answer["message"] === "string"
+            ? String(answer["message"])
+            : `the engine answered ${String(response.status)}`;
+        status.textContent = `Not saved: ${message}`;
+        status.dataset["state"] = "failed";
+    }
+    catch {
+        status.textContent = "Not saved: the engine is not running";
+        status.dataset["state"] = "failed";
+    }
+}
+/** Draw the friends list: a box of Riot IDs, one a line, and its button. */
+function friendsElement(riotIds) {
+    const section = htmlElement("section", "settings-friends");
+    const heading = htmlElement("h2", "", "Friends");
+    heading.id = "friends-title";
+    const description = htmlElement("p", "settings-description", "Their Riot IDs, one a line, as name#tag. The overlay marks them in a game and in the post-game case. Kept on this Mac only.");
+    description.id = "friends-description";
+    const box = htmlElement("textarea", "settings-friends-box");
+    box.name = "friends";
+    box.rows = 6;
+    box.placeholder = "Name#TAG";
+    box.spellcheck = false;
+    box.value = riotIds.join("\n");
+    box.setAttribute("aria-labelledby", heading.id);
+    box.setAttribute("aria-describedby", description.id);
+    const button = htmlElement("button", "settings-friends-save", "Save friends");
+    button.type = "button";
+    const status = htmlElement("p", "settings-friends-status");
+    status.setAttribute("role", "status");
+    button.addEventListener("click", () => {
+        void saveFriends(box, status);
+    });
+    section.append(heading, description, box, button, status);
+    return section;
+}
+/** Draw the form, one switch for each preference, and the friends list. */
+export function renderSettings(root, preferences, friendRiotIds = []) {
     const form = htmlElement("form", "settings-form");
     const status = htmlElement("p", "settings-status");
     status.setAttribute("role", "status");
@@ -83,7 +151,7 @@ export function renderSettings(root, preferences) {
         label.append(input, text);
         form.append(label);
     }
-    root.replaceChildren(htmlElement("h1", "summary-result", "What the overlay shows"), htmlElement("p", "summary-detail", "Each change shows at once, and is kept for the next game."), form, status);
+    root.replaceChildren(htmlElement("h1", "summary-result", "What the overlay shows"), htmlElement("p", "summary-detail", "Each change shows at once, and is kept for the next game."), form, status, friendsElement(friendRiotIds));
 }
 async function start() {
     const root = document.getElementById("settings");
@@ -91,10 +159,11 @@ async function start() {
         return;
     }
     try {
-        const response = await fetch("/preferences");
+        const [response, friendsResponse] = await Promise.all([fetch("/preferences"), fetch("/friends")]);
         const preferences = response.ok ? await response.json() : null;
+        const friends = friendsResponse.ok ? await friendsResponse.json() : null;
         if (isOverlayPreferences(preferences)) {
-            renderSettings(root, preferences);
+            renderSettings(root, preferences, isFriendsList(friends) ? friends.riot_ids : []);
             return;
         }
     }

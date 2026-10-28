@@ -956,6 +956,11 @@
           "title": "Is You",
           "type": "boolean"
         },
+        "is_friend": {
+          "default": false,
+          "title": "Is Friend",
+          "type": "boolean"
+        },
         "position": {
           "title": "Position",
           "type": "string"

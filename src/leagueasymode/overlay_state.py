@@ -301,6 +301,8 @@ class PlayerCard(BaseModel):
     side: Literal["ally", "enemy"]
     # Whether this is the player on this machine.
     is_you: bool = False
+    # Whether their Riot ID is on the owner's friends list (phase 11.5); never their name.
+    is_friend: bool = False
     # As the game names it ("TOP", "JUNGLE", "MIDDLE", "BOTTOM", "UTILITY"); empty when the queue
     # assigns none.
     position: str

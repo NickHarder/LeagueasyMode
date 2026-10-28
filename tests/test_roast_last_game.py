@@ -15,13 +15,16 @@ from game_payloads import ACTIVE_PLAYER_INDEX, DEFAULT_PLAYERS, all_game_data
 from leagueasymode.cli import after_the_game
 from leagueasymode.data_dragon import PatchStats
 from leagueasymode.engine import OverlayEngine
+from leagueasymode.friends import FriendsList
 from leagueasymode.game_api import GameApiClient
 from leagueasymode.game_state import GameSnapshot
 from leagueasymode.overlay_server import create_overlay_application
 from leagueasymode.patch_data import CHAMPION_SUMMARY_PATH
 from leagueasymode.recorder import GAME_DETAILS_PATH_TEMPLATE, TIMELINE_PATH_TEMPLATE
+from leagueasymode.roast.case import CaseOptions
+from leagueasymode.roast.case_view import case_view
 from leagueasymode.roast.last_game import LastGameRoast, last_game_roast, roast_path_beside
-from leagueasymode.roast.rules import LaneRules
+from leagueasymode.roast.rules import LaneRules, RoastRules
 from leagueasymode.scoring import read_recorded_game
 from local_servers import serve, unused_local_url
 from recorded_games import game_details, game_timeline, players_at, write_scored_recording
@@ -273,3 +276,27 @@ async def test_during_a_game_the_last_games_line_is_not_copied(tmp_path: Path) -
             await engine_task
     assert status == 409
     assert "during a game" in message
+
+
+async def test_after_a_game_the_case_marks_the_friends(tmp_path: Path) -> None:
+    summary_path = tmp_path / "history" / "last-game.json"
+    recording = write_scored_recording(
+        tmp_path,
+        players_at(are_positions_given=True),
+        timeline=timeline_payload(),
+        details=details_payload(),
+        client_answers={CHAMPION_SUMMARY_PATH: summary_payload()},
+    )
+    await after_the_game(
+        recording,
+        no_patch_stats,
+        history_path=tmp_path / "history" / "accuracy-history.jsonl",
+        summary_path=summary_path,
+        friend_riot_ids=FriendsList(riot_ids=("PLAYER 4#test",)).riot_id_keys,
+    )
+    kept = LastGameRoast.model_validate_json(roast_path_beside(summary_path).read_text())
+    assert [player.participant_id for player in kept.game.players if player.is_friend] == [4]
+    view = case_view(kept, CaseOptions(), RoastRules())
+    assert [player.champion for player in view.players if player.is_friend] == ["Jinx"]
+    # The kept file marks the friend, and still names no one.
+    assert "#" not in roast_path_beside(summary_path).read_text()

@@ -627,6 +627,15 @@ function enemyRowElement(
   const nameElement = document.createElement("span");
   nameElement.className = "enemy-name";
   nameElement.textContent = card.champion_name;
+  if (card.is_friend) {
+    // A friend on the other team (phase 11.5): marked, never named.
+    const friendElement = document.createElement("span");
+    friendElement.className = "enemy-friend";
+    friendElement.textContent = "★";
+    friendElement.title = "On your friends list";
+    friendElement.setAttribute("aria-label", "friend");
+    nameElement.append(friendElement);
+  }
   const levelElement = document.createElement("span");
   levelElement.className = "enemy-level";
   levelElement.textContent = String(card.level);

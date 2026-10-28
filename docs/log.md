@@ -6,6 +6,14 @@ skill has the format.
 
 ## 2026-10-28
 
+- Phase 11.5, the friends list. The settings page has a Friends box: Riot IDs, one a line, checked
+  as name#tag and saved with their own button, at most 50, kept in `friends.json` on the Mac
+  (`LEAGUEASYMODE_FRIENDS` moves it). They are kept apart from the preferences, which go to the
+  overlay with every state: only a flag, `is_friend`, leaves the engine, so friends' names stay
+  out of the overlay's state and the problem reports' status. In a game the cards are matched by
+  the scoreboard's Riot ID in any case, and a friend on the other team gets a ★ on the enemy
+  strip; after the game the case marks them from the game's details, and the post-game window's
+  chips show the ★. The moments about friends (11.6) read the same flag.
 - Phase 11.4, the copy shortcut. After a game, ⌃⌥C copies the closing line the post-game window
   shows, and pressed again within five seconds the next take; a toast near the top of League's
   window says "Copied: …". The app writes the clipboard itself and never sends anything to chat.

@@ -14,6 +14,7 @@ export interface CasePlayer {
   readonly position: string;
   readonly side: CaseSide;
   readonly is_defendant: boolean;
+  readonly is_friend: boolean;
 }
 
 /** A piece of a line; one that states an exhibit's value carries its letter. */
@@ -103,7 +104,8 @@ function isCasePlayer(value: unknown): value is CasePlayer {
     typeof value["position"] === "string" &&
     typeof value["side"] === "string" &&
     SIDES.has(value["side"]) &&
-    typeof value["is_defendant"] === "boolean"
+    typeof value["is_defendant"] === "boolean" &&
+    typeof value["is_friend"] === "boolean"
   );
 }
 

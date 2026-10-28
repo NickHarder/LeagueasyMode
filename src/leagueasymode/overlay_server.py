@@ -17,6 +17,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from leagueasymode.accuracy_history import read_accuracy_history
 from leagueasymode.engine import OverlayEngine
+from leagueasymode.friends import FriendsList, save_friends
 from leagueasymode.overlay_state import OverlayLayout, OverlayPreferences, OverlayState
 from leagueasymode.preferences import save_layout, save_preferences
 from leagueasymode.roast.case import CaseOptions
@@ -29,6 +30,8 @@ MARK_REQUEST_HEADER: Final = "X-LeagueasyMode-Request"
 MARK_REQUEST_VALUE: Final = "mark"
 # The same header's value for a change of preferences, from the settings page.
 PREFERENCES_REQUEST_VALUE: Final = "preferences"
+# And for a change of the friends list, also from the settings page.
+FRIENDS_REQUEST_VALUE: Final = "friends"
 # And for a round of sending games, from the status page.
 SEND_GAMES_REQUEST_VALUE: Final = "send-games"
 # And for a problem report, from the macOS app.
@@ -95,6 +98,7 @@ def create_overlay_application(
     history_path: Path | None = None,
     preferences_path: Path | None = None,
     layout_path: Path | None = None,
+    friends_path: Path | None = None,
     send_games: Callable[[], Awaitable[None]] | None = None,
     make_report: Callable[[str, dict[str, str]], Awaitable[str]] | None = None,
 ) -> web.Application:
@@ -107,6 +111,7 @@ def create_overlay_application(
         history_path: The accuracy history, served at `/history`; None to serve none.
         preferences_path: Where a change of preferences is kept; None to keep it for this run.
         layout_path: Where a move of the widgets is kept; None to keep it for this run.
+        friends_path: Where a change of the friends list is kept; None to keep it for this run.
         send_games: Sends the recorded games not yet sent (`recording/sender.py`), which the
             status page asks for at `POST /games/send`; None when games are not sent.
         make_report: Makes a problem report from the player's note and the app's lines and
@@ -167,7 +172,11 @@ def create_overlay_application(
 
     application.router.add_get("/status", status)
     _add_the_players_choices(
-        application, engine, preferences_path=preferences_path, layout_path=layout_path
+        application,
+        engine,
+        preferences_path=preferences_path,
+        layout_path=layout_path,
+        friends_path=friends_path,
     )
     application.router.add_get("/summary", summary)
     _add_the_last_games_case(application, engine, summary_path)
@@ -293,6 +302,7 @@ def _add_the_players_choices(
     *,
     preferences_path: Path | None,
     layout_path: Path | None,
+    friends_path: Path | None,
 ) -> None:
     """Serve and take the player's choices: what the overlay shows, and where its widgets are.
 
@@ -301,6 +311,7 @@ def _add_the_players_choices(
         engine: The engine, which sends the choices with its state.
         preferences_path: Where a change of preferences is kept; None to keep it for this run.
         layout_path: Where a move of the widgets is kept; None to keep it for this run.
+        friends_path: Where a change of the friends list is kept; None to keep it for this run.
     """
 
     async def preferences(_request: web.Request) -> web.Response:
@@ -338,6 +349,28 @@ def _add_the_players_choices(
             await asyncio.to_thread(save_layout, layout_path, moved)
         return web.json_response(text=moved.model_dump_json())
 
+    async def friends(_request: web.Request) -> web.Response:
+        return web.json_response(text=engine.friends.model_dump_json())
+
+    async def change_friends(request: web.Request) -> web.Response:
+        # As with preferences: only the settings page, served from here, can send this header.
+        if request.headers.get(MARK_REQUEST_HEADER) != FRIENDS_REQUEST_VALUE:
+            return web.json_response({"message": "friends come from the settings page"}, status=403)
+        try:
+            chosen = FriendsList.model_validate_json(await request.read())
+        except ValidationError as error:
+            # Pydantic writes "Value error, " before the validator's own words.
+            reasons = "; ".join(
+                str(problem["msg"]).removeprefix("Value error, ") for problem in error.errors()
+            )
+            return web.json_response({"message": reasons}, status=400)
+        engine.set_friends(chosen)
+        if friends_path is not None:
+            await asyncio.to_thread(save_friends, friends_path, chosen)
+        return web.json_response(text=chosen.model_dump_json())
+
+    application.router.add_get("/friends", friends)
+    application.router.add_put("/friends", change_friends)
     application.router.add_get("/layout", layout)
     application.router.add_put("/layout", change_layout)
     application.router.add_get("/preferences", preferences)

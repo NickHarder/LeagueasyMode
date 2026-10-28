@@ -60,9 +60,10 @@ function htmlElement<Name extends keyof HTMLElementTagNameMap>(
   return element;
 }
 
-/** Return a target's chip text for a player: their champion, and "(you)" for the defendant. */
+/** Return a target's chip text for a player: their champion, "(you)" for the defendant, ★ for a friend. */
 export function playerChipText(player: CasePlayer): string {
-  return player.is_defendant ? `${player.champion} (you)` : player.champion;
+  const champion = player.is_friend ? `${player.champion} ★` : player.champion;
+  return player.is_defendant ? `${champion} (you)` : champion;
 }
 
 /** A chip for one value of a choice: a target ("data-target") or a spice level ("data-spice"). */

@@ -193,6 +193,8 @@ export interface PlayerCard {
   readonly champion_name: string;
   readonly side: Side;
   readonly is_you: boolean;
+  // On the owner's friends list (phase 11.5).
+  readonly is_friend: boolean;
   readonly position: string;
   readonly role: string;
   readonly role_confidence: "given" | "likely" | "guess" | "unknown";
@@ -691,6 +693,7 @@ export function isPlayerCard(value: unknown): value is PlayerCard {
     typeof value["champion_name"] === "string" &&
     isOneOf(value["side"], SIDES) &&
     typeof value["is_you"] === "boolean" &&
+    typeof value["is_friend"] === "boolean" &&
     typeof value["position"] === "string" &&
     typeof value["role"] === "string" &&
     isOneOf(value["role_confidence"], ROLE_CONFIDENCES) &&
