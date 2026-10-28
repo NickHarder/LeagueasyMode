@@ -6,6 +6,10 @@ skill has the format.
 
 ## 2026-10-28
 
+- Off the Rift, the estimates set for the Rift are hidden too: unspent gold, level timing, backs
+  and the win chance assumed Summoner's Rift's starting gold, income and fountain, and ARAM starts
+  richer and higher. The owner: "yes hide them in aram until tuned". They come back for ARAM once
+  its recorded games, which are sent by themselves, score them.
 - The app has an icon: a gold scope over a faint minimap, on a dark blue body, drawn here with no
   game's artwork. Asked for by the owner; before, Finder and the Dock showed macOS's blank app.
 - Updates install themselves. The owner asked whether the app could pull updates down by itself:
