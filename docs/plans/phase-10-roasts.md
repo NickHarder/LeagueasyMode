@@ -4,7 +4,7 @@ title: "Phase 10: roasts with receipts, after the game and in it"
 description: How the overlay gets nothingsmyfault's cited roasts, a case file for anyone in the game in the post-game window and short moments about friends during it, both copied for chat with one shortcut and never posted, in a proposed build order with what each needs and where the owner decides.
 tags: [plan, phase-10, roasts, post-game]
 status: stable
-generated: { by: claude-code/cloud, at: 2026-10-28T20:30:33Z }
+generated: { by: claude-code/cloud, at: 2026-10-28T20:44:41Z }
 sources:
   - id: owner-2026-10-28
     resource: "The owner's messages of 2026-10-28, in the session that built nothingsmyfault"
@@ -72,11 +72,12 @@ The owner's answers so far:[^owner-2026-10-28]
 | 10.4 | The copy shortcut | ⌃⌥C copies the roast that is up: after a game, the closing line; during one, the newest moment (10.6). Pressed again within 5 seconds, it copies the next take, or the moment before. A toast says what was copied ("Copied: …"). Nothing is ever sent to chat | The overlay's Carbon hot keys,[^global-hot-key] which work while League has focus with no Accessibility permission; the clipboard written from Swift, not the page |
 | 10.5 | The friends list | A setting of the friends' Riot IDs. The overlay marks which players in the game are friends, from the Riot IDs the game's API already sends | The settings page |
 | 10.6 | Moments about friends | A short notice, of its own kind beside the callouts,[^callouts] when a friend's game hands over ammo, from exact facts only. See "The moments" below | 10.5; the scoreboard and kill feed the engine already reads |
+| 10.8 | Claude's take | With its setting on, each line that passed the checks is reworded by the `claude` command on the Mac, with the owner's own Claude login, in the style the owner sets. See "Claude's take (10.8)" below. Off by default; the approved lines stay the default | `claude` installed and signed in on the Mac; 10.3 and 10.4 |
 | 10.7 | A quick scoreboard case | Right after the game, before the timeline comes, a case from the end-of-game stats: scoreboard lines, no lane verdict. The full case replaces it when the timeline arrives | 10.0's shape of the end-of-game stats; built only if they hold enough |
 
 The tracer bullet is 10.2 to 10.4 on one recorded game: a case in the post-game window, its
-closing line copied by the shortcut. 10.5 and 10.6 come next, then 10.7 if the end-of-game stats
-are worth it.
+closing line copied by the shortcut. 10.5 and 10.6 come next, then 10.8, then 10.7 if the
+end-of-game stats are worth it.
 
 ## The moments (10.6)
 
@@ -108,6 +109,31 @@ timeline.
 The cost is a second copy of the engine while nothingsmyfault keeps its own; it is parked, and the
 line above ends that if it comes back. The roast lines become public with this repository, as they
 would with any option that ships them in the overlay.
+
+## Claude's take (10.8)
+
+The owner, 2026-10-28: "coudl leaguse mode interface with claude local cli so it can add some
+variety and custom spice to roasts", and, to adding it here, "yes add it as 10.8".[^owner-2026-10-28]
+
+- **Claude writes the words, never the numbers.** It gets a line that passed the checks, with its
+  slots (`{gold_behind_14}`), and the style. It answers with a reworded line that keeps the slots,
+  and the engine fills them from the exhibits. The validator then checks the result like any other
+  line. A digit outside a slot, a champion not in the game, a floor term, or no answer at all, and
+  the approved line is used instead.
+- **The style is a setting:** free text ("pirate", "sports commentator"), and optional running jokes
+  per friend ("always on Yasuo"), about gameplay only. Before any model writes text, the safety
+  floor gains an established list of slurs, as nothingsmyfault's floor already says it must.
+- **Marked as Claude's.** Its lines show as Claude's take beside the approved ones, since the owner
+  has not approved their words. The shortcut copies whichever is up.
+- **Speed.** A call takes seconds. After a game the lines are reworded while the window opens. During
+  one, a moment is reworded when it fires, so it is ready when the shortcut is pressed. The
+  approved line stays ready meanwhile.
+- **What is sent:** champions, positions, numbers and the style. Never a Riot ID or a friend's name;
+  the per-friend jokes go out as written, so they stay about gameplay.
+- **Usage:** each call counts against the owner's Claude plan. Proposed: a fast model, one call per
+  case and one per moment.
+- **Tests** never call Claude: a stand-in `claude` answers with canned text, good and bad, to show
+  the fallback works.
 
 ## What changes from nothingsmyfault's site
 
@@ -160,7 +186,9 @@ would with any option that ships them in the overlay.
 4. **The Pact, the spice and the signature.** Proposed: the Pact off, spice 2 (Salty) by default,
    no signature.
 5. **Speech.** Proposed: roasts and moments never spoken unless their own setting is on.
-6. **The thresholds (10.6).** Proposed starting points in `tuning.json`, to tweak as games show:
+6. **Claude's take (10.8).** Proposed: off until turned on; a fast model; the style and the jokes
+   in the settings.
+7. **The thresholds (10.6).** Proposed starting points in `tuning.json`, to tweak as games show:
    - a second solo death;
    - a death within 60 seconds of the enemy's objective;
    - 20 creep score behind at 10:00, 30 at 14:00.

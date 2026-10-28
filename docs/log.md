@@ -6,6 +6,10 @@ skill has the format.
 
 ## 2026-10-28
 
+- Phase 10's plan adds slice 10.8, Claude's take: lines reworded by the `claude` command on the
+  Mac in a style the owner sets, numbers still filled from exhibits and every line checked again,
+  the approved line used whenever one fails. At the owner's word, "yes add it as 10.8"; the plan
+  waits for approval again.
 - The owner approved phase 10's plan ("approved, start building phase 10").
 - Phase 10's plan now ports nothingsmyfault's engine into this project instead of depending on it,
   at the owner's question "why do you want to make it public? can you build off of leagues mode?".
