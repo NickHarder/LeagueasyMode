@@ -22,17 +22,20 @@ enum UpdateInstaller {
             case let .download(statusCode): "the download failed (HTTP \(statusCode))"
             case .checksum: "the download does not match its checksum"
             case .notTheApp: "the download is not LeagueasyMode"
-            case .notWritable: "the app's folder cannot be written; download it from the release page"
+            case .notWritable:
+                "the app's folder cannot be written: move LeagueasyMode to Applications with Finder, "
+                    + "or download it from the release page"
             case let .tool(name, exitStatus): "\(name) failed (exit \(exitStatus))"
             }
         }
     }
 
-    /// Downloads, checks and unpacks a build, then puts it where the running app is.
+    /// Downloads, checks and unpacks a build, then puts it where the app goes (`UpdateTarget`).
     ///
     /// - Parameters:
     ///   - build: The build.
-    ///   - appURL: The running app, which the build replaces.
+    ///   - appURL: Where the build goes: the running app, which it replaces, or Applications'
+    ///     LeagueasyMode.app for an app run from macOS's read-only copy, which may not be there yet.
     /// - Throws: An `InstallError`, or the error of a download or of a file operation; the running
     ///   app is left as it was unless the last step, the replacement, succeeded.
     static func install(_ build: AvailableBuild, over appURL: URL) async throws {
@@ -52,7 +55,10 @@ enum UpdateInstaller {
         }
         // On the app's own volume, so that the replacement is a move.
         let workDirectory = try FileManager.default.url(
-            for: .itemReplacementDirectory, in: .userDomainMask, appropriateFor: appURL, create: true
+            for: .itemReplacementDirectory,
+            in: .userDomainMask,
+            appropriateFor: appURL.deletingLastPathComponent(),
+            create: true
         )
         defer { try? FileManager.default.removeItem(at: workDirectory) }
         let archiveURL = workDirectory.appendingPathComponent(archiveName)
@@ -67,7 +73,11 @@ enum UpdateInstaller {
             throw InstallError.notTheApp
         }
         try run("/usr/bin/codesign", ["--verify", "--strict", "--deep", newAppURL.path])
-        _ = try FileManager.default.replaceItemAt(appURL, withItemAt: newAppURL)
+        if FileManager.default.fileExists(atPath: appURL.path) {
+            _ = try FileManager.default.replaceItemAt(appURL, withItemAt: newAppURL)
+        } else {
+            try FileManager.default.moveItem(at: newAppURL, to: appURL)
+        }
     }
 
     /// Starts the app at an address a moment from now, once this one has quit.
