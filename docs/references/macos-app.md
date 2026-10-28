@@ -4,7 +4,7 @@ title: The macOS overlay app
 description: What the menu bar app does, how to run it from a clone, how to build, release and open the app that carries its own engine, its update check and open at login, and the steps for the tracer bullet's test on a Mac over League in each display mode.
 tags: [macos, overlay, tracer-bullet]
 status: draft
-generated: { by: claude-code/cloud, at: 2026-10-28T23:20:00Z }
+generated: { by: claude-code/cloud, at: 2026-10-28T23:55:00Z }
 sources:
   - id: build-update
     resource: ../../overlay/macos/Sources/OverlayCore/BuildUpdate.swift
@@ -232,7 +232,12 @@ tried again by itself. Otherwise the menu item, once confirmed, downloads the zi
 release, checks one against the other, unpacks the app with `ditto`, checks it is LeagueasyMode
 and that its signature holds, puts it in place of the running app, starts it and quits
 (`UpdateInstaller`). A file the app downloads itself is not marked as from the internet, so the
-new build opens without "Open Anyway"; that is first seen on the Mac. A folder the app cannot
+new build opens without "Open Anyway"; that is first seen on the Mac. An app the browser
+downloaded and that was opened where it was unzipped runs from a read-only copy macOS makes for
+it (App Translocation), which nothing can replace: the first try on the Mac said "the app's folder
+cannot be written". Such an app now puts the build in Applications instead (`UpdateTarget`), from
+where it runs without the mark; by hand, moving the app to Applications with Finder and
+`xattr -dr com.apple.quarantine /Applications/LeagueasyMode.app` does the same. A folder the app cannot
 write to, or any failed step, leaves the app as it was and says why in the menu ("Update: not
 installed (…)"). "Check for updates now" asks at once. "Check for updates" in the menu turns the
 checks off; they are the app's only requests beyond this Mac, League's servers, Data Dragon
