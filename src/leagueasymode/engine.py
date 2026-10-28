@@ -128,17 +128,23 @@ def compute_overlay_state(
         return NOT_RUNNING
     if status is not None:
         status.note_game(snapshot)
-    # Off the Rift, its dragons, jungle, lanes and minimap mean nothing, so none is worked out.
+    # Off the Rift, its dragons, jungle, lanes and minimap mean nothing, so none is worked out;
+    # nor are the gold, experience and backs models and the win chance, which were set for the
+    # Rift's income, levels and fountain, until they are tuned on other maps' games.
     on_the_rift = snapshot.game_data.is_summoners_rift
     gold_estimates = (
-        gold_tracker.update(snapshot, item_catalog) if gold_tracker is not None else None
+        gold_tracker.update(snapshot, item_catalog)
+        if gold_tracker is not None and on_the_rift
+        else None
     )
     level_estimates = (
-        experience_tracker.update(snapshot) if experience_tracker is not None else None
+        experience_tracker.update(snapshot)
+        if experience_tracker is not None and on_the_rift
+        else None
     )
     last_backs = (
         back_tracker.update(snapshot, item_catalog, patch_stats)
-        if back_tracker is not None
+        if back_tracker is not None and on_the_rift
         else None
     )
     position_clues = (
@@ -202,7 +208,9 @@ def compute_overlay_state(
             else []
         ),
         minimap=minimap,
-        win_chance=win_chance(
+        win_chance=None
+        if not on_the_rift
+        else win_chance(
             win_features(
                 snapshot,
                 team_gold=teams_gold,
