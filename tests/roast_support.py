@@ -1,6 +1,6 @@
 """Built games for the roast's tests: players and exhibits as the families will make them.
 
-Slice 10.2's families build these from the client's answers; until then a test states a game's
+Slice 11.2's families build these from the client's answers; until then a test states a game's
 lanes and scoreboard and gets the same exhibits, sourced the same way.
 """
 

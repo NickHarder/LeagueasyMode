@@ -39,6 +39,8 @@ jobs:
             exit 1
           fi
       - run: overlay/macos/scripts/build_app.sh "$RUNNER_TEMP/app"
+        env:
+          BUILD_NUMBER: ${{ github.run_number }}
       - run: overlay/macos/scripts/smoke_test_app.sh "$RUNNER_TEMP/app/LeagueasyMode.app"
       - name: Publish the release
         working-directory: ${{ runner.temp }}/app

@@ -3,10 +3,16 @@
 If you are picking this work up, human or model: read this file top to bottom first. The `handoff` skill
 refreshes it; it describes the current state.
 
-Last updated: 2026-10-09, on branch `feat/ten-minute-leads` (pull request #49). `main` holds
-phases 0 to 8, phase 9 but for 9.4, the Data Dragon growth fix, the plans' approval and
-`tuning.json` (pull requests #2 to #48, merged); the estimators' priors in `tuning.json` were
-pushed to #48 after it merged and ride with #49.
+Last updated: 2026-10-28, on branch `feat/install-updates` (pull request #59). `main` holds
+everything to #49. Open and stacked, each on the one before, from the first tests on the owner's
+Mac: #50 (the overlay never holds the mouse or keyboard), #51 (no minimap circle for an enemy in
+sight), #52 (games sent to the private `NickHarder/LeagueasyMode-recordings`), #53 (the engine
+keeps running through errors; crash reports), #54 (the phase 10 plan,
+`docs/plans/phase-10-field-testing.md`), #55 (10.1, 10.2: build numbers, the engine's log), #57
+(10.3: Report a problem; the engine restarted when it stops), #58 (10.4, 10.5: How to use; the
+Rift's widgets hidden on other maps), #59 (10.6: each green main published as a prerelease, and
+"Install update" in the app). Merging them in that order keeps each diff to its own commits. #56
+is another session's plan (roasts), not part of this stack.
 
 ## Where things stand
 
@@ -34,7 +40,7 @@ up as its own pull request into `main` without waiting for the one before to mer
 | Area | State | Proof |
 |---|---|---|
 | Scaffold | ai-kit v0.11.1, Python layer, GitHub CI | `.copier-answers.yml` |
-| Gate | Green: lint, 839 tests (and 39 in Chromium), secrets | `make gate` |
+| Gate | Green: lint, 872 tests (and 42 in Chromium), secrets | `make gate` |
 | Recorder | Records games, the client's patch data and the post-game timeline; anonymized copies | `uv run leagueasymode record`; `tests/test_recorder.py`, `tests/test_anonymize.py` |
 | Replay | A recording served as a stand-in game API | `uv run leagueasymode replay <recording>`; `tests/test_replay.py` |
 | Engine and overlay page | The dragon and Elder timer, from the game's answer to the page | `uv run leagueasymode run`; `tests/test_tracer_bullet.py` |
@@ -92,10 +98,20 @@ In `AGENTS.md`, this project's own included: every session reads that file.
    screenshot.
 7. **The first release**: when the app has been tried on a Mac, tag `v0.1.0` on `main` and push
    the tag (`docs/references/macos-app.md`, "Releases, updates and opening at login"). Publishing
-   is the owner's call; no session tags a release unasked.
+   is the owner's call; no session tags a release unasked. The prereleases `build-<n>` are CI's,
+   from each green push to main, as the owner allowed on 2026-10-28 (10.6).
 8. **Documents waiting for approval** (`make docs-status`): the retrospective, and the references
    on recordings, the engine and the macOS app, all drafts. Every plan is approved (phase 3's on
    2026-10-08, the rest on 2026-10-09).
+9. **Auto-merge (10.7)**, approved by the owner on 2026-10-28, needs two settings only the owner
+   can change: Settings → General → Pull Requests → "Allow auto-merge", and a branch rule on
+   `main` (Settings → Rules) requiring CI's checks. Claude's pull requests then merge themselves
+   once green, and with 10.6 each merge reaches the app as "Install update".
+10. **The daily check (10.8)** runs as a scheduled cloud session at 13:52 UTC: it reads what
+   arrived in the recordings repository (games, crash reports, problem reports) and opens pull
+   requests for what they show.
+11. **Advanced opponent tracking**: whether the minimap's circles should first show only the
+   jungler and laners likely away from lane, with a setting; not yet answered.
 
 ## Where everything is
 
@@ -141,7 +157,15 @@ In `AGENTS.md`. Also: a raw recording (it holds other players' names); only `ano
   with this if the free developer key can handle this"; no developer key is used, and the pace
   would fit one's limits).
 
+- Recorded games go, anonymized, to the owner's private repository
+  `NickHarder/LeagueasyMode-recordings`, by themselves once a token is in the Keychain (the
+  owner, 2026-10-28: "i want it automated if possible"; a private repository over a branch of the
+  public one). Setup: `docs/references/recordings.md`, "Sending games".
+
 ## Known limitations
+
+- On the third try on a Mac (ARAM, 2026-10-28) the engine stopped with exit 1, cause unknown;
+  the crash reports the engine now writes and sends say where the next error happens.
 
 - Nothing has met a real game: field names, the `KillerName` form, the lockfile path, the
   certificate check and the timeline endpoint are from documentation and libraries, not seen.
@@ -149,6 +173,18 @@ In `AGENTS.md`. Also: a raw recording (it holds other players' names); only `ano
   values, not yet checked against a recording of this season.
 - The overlay follows League's window (8.2) on the guess that the game's window is owned by
   "League of Legends" and has a title bar when windowed; the test on a Mac confirms both.
+- The first try on a Mac (the owner, 2026-10-28, an Apple silicon MacBook Pro, League
+  windowed): the overlay showed nothing, and with "Let clicks through" turned off and "Edit
+  layout" on, its invisible layer caught every click until the app was stopped. The menu item is
+  gone, edit mode is tinted and ends on Escape, ⌃⌥⌘L or after two minutes, and the menu says
+  whether the overlay page loaded. The second try (that build) showed the overlay over the game,
+  but League's keys did nothing until ⌃⌥⌘L hid and showed it: the overlay held the keyboard
+  without edit mode, by a path not yet known. It now hands the keyboard back by itself and the
+  menu counts it; the next try says whether that was the path.
+- Sightings (an enemy in sight has no circle on the minimap) rest on League's scoreboard
+  showing an enemy's creep score, items and level only while your team sees them; if the game
+  gives them through the fog, an enemy farming out of sight loses their circle for 3 seconds at
+  a time. The first recording settles it. The owner ruled out reading the screen (2026-10-28).
 - Edit mode (8.3) makes the overlay's panel key so its widgets take drags; that a
   non-activating panel takes them without bringing the app forward is seen on a Mac.
 - The test item catalog (`tests/fixtures/client/items.json`) is hand-written: its prices are not

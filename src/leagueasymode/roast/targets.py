@@ -1,6 +1,6 @@
 """Whom a case roasts: the whole team, one lane, one player, or the enemy team.
 
-Any of the game's ten players can be a target after the game (phase 10.3), friends or not.
+Any of the game's ten players can be a target after the game (phase 11.3), friends or not.
 """
 
 from typing import Final, Literal
