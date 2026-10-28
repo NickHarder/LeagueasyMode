@@ -3,8 +3,9 @@
  *
  * A page of its own (`/summary.html`), opened from the macOS app's menu in a normal window, not
  * the click-through overlay. It reads the last game from `/summary` and the accuracy history from
- * `/history`, once.
+ * `/history`, once; the case file under the result asks `/case` for each target the player picks.
  */
+import { caseSectionElement } from "./case_file.js";
 import { accuracyGamesOf, isGameSummary, } from "./summary_state.js";
 const SVG_NAMESPACE = "http://www.w3.org/2000/svg";
 const SECONDS_PER_MINUTE = 60;
@@ -357,7 +358,7 @@ export function renderSummary(root, summary, history) {
             : []),
     ];
     const ticks = goldTicks(goldSeries.flatMap((series) => series.points.map((point) => point.value)));
-    root.replaceChildren(headerElement(summary), sectionElement("Your win chance", lineChartElement({
+    root.replaceChildren(headerElement(summary), caseSectionElement(fetchJson), sectionElement("Your win chance", lineChartElement({
         label: "Your team's win chance at the start of each minute",
         series: [winSeries],
         lowest: 0,

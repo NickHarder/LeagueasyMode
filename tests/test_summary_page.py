@@ -14,6 +14,7 @@ import aiohttp
 import pytest
 from playwright.async_api import Page, async_playwright, expect
 
+from client_game_payloads import details_payload, summary_payload, timeline_payload
 from data_dragon_fixtures import fixture_patch_stats
 from game_payloads import DEFAULT_PLAYERS, champion_kill_event, turret_killed_event
 from leagueasymode.accuracy_history import (
@@ -25,9 +26,12 @@ from leagueasymode.engine import OverlayEngine
 from leagueasymode.game_api import GameApiClient
 from leagueasymode.game_summary import game_summary
 from leagueasymode.overlay_server import create_overlay_application
+from leagueasymode.patch_data import CHAMPION_SUMMARY_PATH
+from leagueasymode.roast.last_game import last_game_roast, roast_path_beside
+from leagueasymode.roast.rules import LaneRules
 from leagueasymode.scoring import read_recorded_game, score_game
 from local_servers import serve, unused_local_url
-from recorded_games import game_timeline, write_scored_recording
+from recorded_games import game_timeline, players_at, write_scored_recording
 
 pytestmark = pytest.mark.browser
 
@@ -144,3 +148,74 @@ async def test_each_estimator_shows_this_game_and_the_last_games(tmp_path: Path)
 async def test_before_any_game_the_window_says_so(tmp_path: Path) -> None:
     async with open_summary(tmp_path / "none.json", tmp_path / "none.jsonl") as page:
         await expect(page.locator(".summary-result")).to_have_text("No game yet", timeout=5000)
+
+
+def write_last_game_roast(tmp_path: Path, summary_path: Path) -> None:
+    """Keep a case beside the summary, from a game whose details have the whole scoreboard."""
+    directory = tmp_path / "roasted"
+    directory.mkdir()
+    recording = write_scored_recording(
+        directory,
+        players_at(are_positions_given=True),
+        timeline=timeline_payload(),
+        details=details_payload(),
+        client_answers={CHAMPION_SUMMARY_PATH: summary_payload()},
+    )
+    game = read_recorded_game(recording)
+    roast = last_game_roast(
+        game.client_resources, game.minute_snapshots[-1], lane_rules=LaneRules()
+    )
+    assert roast is not None
+    roast_path_beside(summary_path).write_text(roast.model_dump_json())
+
+
+async def test_the_case_file_shows_under_the_result(tmp_path: Path) -> None:
+    summary_path, history_path = write_summary_and_history(tmp_path)
+    write_last_game_roast(tmp_path, summary_path)
+    async with open_summary(summary_path, history_path) as page:
+        case_file = page.locator(".case-file")
+        await expect(case_file.locator(".case-stamp")).not_to_be_empty(timeout=5000)
+        await expect(case_file.locator(".case-board tr[data-outcome]")).to_have_count(5)
+        await expect(case_file.locator(".case-board tr", has_text="Mid")).to_contain_text(
+            re.compile(r"Ahri\s*LeBlanc\s*-1,400[A-Z]+\s*-14\s*lost")
+        )
+        assert await case_file.locator(".case-lines li").count() > 0
+        await expect(case_file.locator(".case-closing-line")).not_to_be_empty()
+        await expect(case_file.locator(".case-closing-caption")).to_contain_text("/ 140 characters")
+        await expect(case_file.locator(".case-chip[aria-pressed=true]")).to_have_text(
+            ["Our team", "2 Salty"]
+        )
+        await expect(case_file.locator(".case-chip-row[aria-label=Ours] .case-chip")).to_have_text(
+            ["Jax", "Lee Sin", "Ahri (you)", "Jinx", "Lulu"]
+        )
+        await expect(case_file.locator(".case-risk")).to_have_count(0)
+        await keep_screenshot(page, "post-game-case-file")
+
+
+async def test_any_of_the_ten_can_be_put_on_trial(tmp_path: Path) -> None:
+    summary_path, history_path = write_summary_and_history(tmp_path)
+    write_last_game_roast(tmp_path, summary_path)
+    async with open_summary(summary_path, history_path) as page:
+        case_file = page.locator(".case-file")
+        leblanc = case_file.locator(".case-chip", has_text="LeBlanc")
+        await leblanc.click(timeout=5000)
+        await expect(leblanc).to_have_attribute("aria-pressed", "true")
+        await expect(case_file.locator(".case-lines")).to_contain_text("LeBlanc")
+        await case_file.locator(".case-chip", has_text="Tilted").click()
+        await expect(case_file.locator(".case-risk")).to_contain_text("Instant Feedback System")
+        await expect(case_file.locator(".case-chip[aria-pressed=true]")).to_have_text(
+            ["LeBlanc", "3 Tilted"]
+        )
+        # A letter opens the exhibits at the one it cites.
+        letter = case_file.locator(".case-letter").first
+        letter_text = await letter.text_content()
+        await letter.click()
+        await expect(page.locator(f"#case-exhibit-{letter_text}")).to_be_visible()
+
+
+async def test_a_game_without_a_case_says_so(tmp_path: Path) -> None:
+    summary_path, history_path = write_summary_and_history(tmp_path)
+    async with open_summary(summary_path, history_path) as page:
+        await expect(page.locator(".case-file .case-empty")).to_contain_text(
+            "No case for this game", timeout=5000
+        )

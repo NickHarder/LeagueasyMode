@@ -105,6 +105,25 @@ def participant_id_of(details_payload: JsonValue | None, puuid: str) -> int | No
     return None
 
 
+def participant_id_by_riot_id(details_payload: JsonValue | None, riot_id: str) -> int | None:
+    """Return the participant id of a player in a game, by their Riot ID.
+
+    Args:
+        details_payload: The game's details.
+        riot_id: The player, as "name#tag" in any case.
+
+    Returns:
+        Their participant id, or None when the details do not name them.
+    """
+    wanted = riot_id.lower()
+    if not wanted:
+        return None
+    riot_ids = _riot_ids(as_object(details_payload) or {})
+    return next(
+        (participant_id for participant_id, known in riot_ids.items() if known == wanted), None
+    )
+
+
 def read_client_game(
     details_payload: JsonValue | None,
     timeline_payload: JsonValue | None,

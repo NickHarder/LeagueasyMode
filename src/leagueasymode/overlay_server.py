@@ -19,6 +19,8 @@ from leagueasymode.accuracy_history import read_accuracy_history
 from leagueasymode.engine import OverlayEngine
 from leagueasymode.overlay_state import OverlayLayout, OverlayPreferences, OverlayState
 from leagueasymode.preferences import save_layout, save_preferences
+from leagueasymode.roast.case_view import case_options_of, case_view
+from leagueasymode.roast.last_game import LastGameRoast, roast_path_beside
 
 ALLOWED_HOST_NAMES: Final = frozenset({"127.0.0.1", "localhost"})
 # The header the macOS app sends with a mark.
@@ -72,6 +74,8 @@ WEB_ASSETS: Final = {
     "/summary.js": ("summary.js", "text/javascript"),
     "/summary_state.js": ("summary_state.js", "text/javascript"),
     "/summary.css": ("summary.css", "text/css"),
+    "/case_file.js": ("case_file.js", "text/javascript"),
+    "/case_state.js": ("case_state.js", "text/javascript"),
     "/settings.html": ("settings.html", "text/html"),
     "/settings.js": ("settings.js", "text/javascript"),
     "/status.html": ("status.html", "text/html"),
@@ -97,7 +101,8 @@ def create_overlay_application(
 
     Args:
         engine: The engine whose state is served.
-        summary_path: The last game's summary, served at `/summary`; None to serve none.
+        summary_path: The last game's summary, served at `/summary`; None to serve none. Its
+            case is built at `/case` from the file beside it (`roast_path_beside`).
         history_path: The accuracy history, served at `/history`; None to serve none.
         preferences_path: Where a change of preferences is kept; None to keep it for this run.
         layout_path: Where a move of the widgets is kept; None to keep it for this run.
@@ -148,6 +153,23 @@ def create_overlay_application(
             return web.json_response({"message": "no game recorded yet"}, status=404)
         return web.json_response(text=summary_text)
 
+    async def case(request: web.Request) -> web.Response:
+        try:
+            options = case_options_of(request.query)
+        except ValueError as error:
+            return web.json_response({"message": str(error)}, status=400)
+        last_game = await asyncio.to_thread(
+            _last_game_roast_or_none,
+            roast_path_beside(summary_path) if summary_path is not None else None,
+        )
+        if last_game is None:
+            return web.json_response(
+                {"message": "no case yet: no game recorded, or its details have not come"},
+                status=404,
+            )
+        view = await asyncio.to_thread(case_view, last_game, options, engine.tuning.roast)
+        return web.json_response(text=view.model_dump_json())
+
     async def history(_request: web.Request) -> web.Response:
         games = (
             await asyncio.to_thread(read_accuracy_history, history_path)
@@ -164,6 +186,7 @@ def create_overlay_application(
         application, engine, preferences_path=preferences_path, layout_path=layout_path
     )
     application.router.add_get("/summary", summary)
+    application.router.add_get("/case", case)
     application.router.add_get("/history", history)
     application.router.add_get("/state", state)
     application.router.add_get("/events", events)
@@ -369,6 +392,24 @@ def _event_bytes(state: OverlayState) -> bytes:
         The event's bytes.
     """
     return b"data: " + state.model_dump_json().encode() + b"\n\n"
+
+
+def _last_game_roast_or_none(roast_path: Path | None) -> LastGameRoast | None:
+    """Return what the last game's case is built from.
+
+    Args:
+        roast_path: The file it is kept in; None for none.
+
+    Returns:
+        It; None when there is no file, or one written by another version that cannot be read.
+    """
+    roast_text = _text_or_none(roast_path)
+    if roast_text is None:
+        return None
+    try:
+        return LastGameRoast.model_validate_json(roast_text)
+    except ValidationError:
+        return None
 
 
 def _text_or_none(file_path: Path | None) -> str | None:
