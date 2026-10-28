@@ -21,6 +21,11 @@ public struct BuildInfo: Equatable, Sendable {
         commit = infoDictionary?[Self.commitKey] as? String
     }
 
+    /// CI's run number, which orders builds; nil for a build CI did not number.
+    public var ciBuildNumber: Int? {
+        buildNumber.flatMap { Int($0) }
+    }
+
     /// The build in words: "0.1.0 (build 62, b0d63a8)", or "from source" without a version.
     public var label: String {
         guard let version else {

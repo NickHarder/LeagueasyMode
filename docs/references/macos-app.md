@@ -4,8 +4,10 @@ title: The macOS overlay app
 description: What the menu bar app does, how to run it from a clone, how to build, release and open the app that carries its own engine, its update check and open at login, and the steps for the tracer bullet's test on a Mac over League in each display mode.
 tags: [macos, overlay, tracer-bullet]
 status: draft
-generated: { by: claude-code/cloud, at: 2026-10-28T22:40:00Z }
+generated: { by: claude-code/cloud, at: 2026-10-28T23:05:00Z }
 sources:
+  - id: build-update
+    resource: ../../overlay/macos/Sources/OverlayCore/BuildUpdate.swift
   - id: panel
     resource: ../../overlay/macos/Sources/LeagueasyOverlay/OverlayPanel.swift
   - id: delegate
@@ -178,14 +180,27 @@ SHA-256 (`.github/workflows/release.yml`).[^release-workflow] The tag must be th
 (`uv version --bump minor`), merge, then `git tag v0.2.0 origin/main && git push origin v0.2.0`.
 The workflow builds and checks the app as CI's `macos-app` job does before it publishes.
 
+**Builds of main.** Each push to `main` whose checks pass is published as a prerelease, tagged
+`build-<run number>`, with `LeagueasyMode-<version>-build-<run number>.zip` and its SHA-256 (CI's
+`prerelease` job). The run number is CI's, the one every build carries in its Info.plist, so a pull
+request's test build and the builds of main are ordered alike. The owner allowed this on
+2026-10-28 ("Auto-published builds"); full releases stay the owner's tags.[^build-update]
+
 **The update check.** Once a day at most, the bundled app asks GitHub's API for the repository's
 latest release, without a token; a draft, a prerelease, or a version not newer than the app's is
 ignored.[^update-check] A newer one adds "LeagueasyMode 0.2.0 is out…" to the menu, which opens the
 release's page; the page's address is always built from the tag on this repository, whatever
-GitHub's answer says. Installing it is by hand: download, unzip, replace the app in
-Applications. "Check for updates daily" in the menu turns the check off; it is the app's only
-request beyond this Mac, League's servers and Data Dragon. An app run from a clone has no version
-and does not check.
+GitHub's answer says. The same check, and one at every start, asks for the newest builds of main:
+one with a higher build number and a version no lower than the app's adds "Install update: build
+75 (0.1.0)…", which, once confirmed, downloads the zip and its checksum from this repository's
+release, checks one against the other, unpacks the app with `ditto`, checks it is LeagueasyMode
+and that its signature holds, puts it in place of the running app, starts it and quits
+(`UpdateInstaller`). A file the app downloads itself is not marked as from the internet, so the
+new build opens without "Open Anyway"; that is first seen on the Mac. A folder the app cannot
+write to, or any failed step, leaves the app as it was and says why in the menu ("Update: not
+installed (…)"). "Check for updates now" asks at once. "Check for updates daily" in the menu turns
+the checks off; they are the app's only requests beyond this Mac, League's servers, Data Dragon
+and the games' repository. An app run from a clone has no version and does not check.
 
 **Open at login.** The menu's "Open at login" asks macOS to open the app when the player logs in
 (`SMAppService`, macOS 13 and later).[^login-item] macOS may ask the player to allow it in System
@@ -237,4 +252,5 @@ whether `KillerName` holds a game name or a Riot ID, and whether the client serv
 [^smoke-test]: `overlay/macos/scripts/smoke_test_app.sh`
 [^release-workflow]: `.github/workflows/release.yml`
 [^update-check]: `overlay/macos/Sources/OverlayCore/UpdateCheck.swift`
+[^build-update]: `overlay/macos/Sources/OverlayCore/BuildUpdate.swift`
 [^login-item]: `overlay/macos/Sources/OverlayCore/LoginItemState.swift`

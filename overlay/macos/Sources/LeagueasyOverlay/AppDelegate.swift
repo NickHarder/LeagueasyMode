@@ -61,6 +61,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // How many times the overlay found itself holding the keyboard and gave it back to the game.
     private var keyboardHandBackCount = 0
     private var availableRelease: AvailableRelease?
+    // A newer build CI published from main, which "Install update" puts in place.
+    private var availableBuild: AvailableBuild?
+    // What became of the last install, for the menu; nil before the first.
+    private var updateStatusText: String?
+    private var isInstallingUpdate = false
     private var updateTimer: Timer?
     private var gamePlacement: GamePlacement?
     private var gameWindowTimer: Timer?
@@ -115,7 +120,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         )
         startEngine()
         UserDefaults.standard.register(defaults: [Self.checksForUpdatesKey: true])
-        checkForUpdatesIfDue()
+        // At each start, whatever the last check: a fix is usually waiting when the app is opened.
+        checkForUpdates(isForced: true)
         updateTimer = Timer.scheduledTimer(
             timeInterval: Self.updateTimerSeconds,
             target: self,
@@ -263,17 +269,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         UserDefaults.standard.bool(forKey: Self.checksForUpdatesKey)
     }
 
-    /// Asks GitHub for the latest release, when the player allows it and a day has passed since the
-    /// last time. A failed request waits for the next day like any other.
     private func checkForUpdatesIfDue() {
+        checkForUpdates(isForced: false)
+    }
+
+    /// Asks GitHub for the latest release and the newest build, when the player allows it and a
+    /// day has passed since the last time, or at once when forced; the player asking from the menu
+    /// is allowed even with the daily check off. A failed request waits for the next check.
+    private func checkForUpdates(isForced: Bool, isAskedFor: Bool = false) {
         let lastCheckedAt = UserDefaults.standard.object(forKey: Self.lastUpdateCheckKey) as? Date
         guard
-            checksForUpdates,
+            checksForUpdates || isAskedFor,
             let appVersion = Self.appVersion,
-            UpdateCheck.isDue(lastCheckedAt: lastCheckedAt, now: Date())
+            isForced || UpdateCheck.isDue(lastCheckedAt: lastCheckedAt, now: Date())
         else {
             return
         }
+        checkForBuilds(appVersion: appVersion)
         UserDefaults.standard.set(Date(), forKey: Self.lastUpdateCheckKey)
         let request = UpdateCheck.request(appVersion: appVersion)
         // On the main actor, as this method is; the request itself waits without holding it.
@@ -288,6 +300,87 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 NSLog("LeagueasyMode: the update check did not reach GitHub: %@", error.localizedDescription)
             }
         }
+    }
+
+    /// Asks GitHub for the builds CI published from main, for "Install update".
+    private func checkForBuilds(appVersion: ReleaseVersion) {
+        let request = BuildUpdateCheck.request(appVersion: appVersion)
+        let appBuildNumber = buildInfo.ciBuildNumber
+        Task { [weak self] in
+            do {
+                let (data, response) = try await URLSession.shared.data(for: request)
+                guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+                    self?.buildCheckDidFail()
+                    return
+                }
+                self?.didFindBuild(
+                    BuildUpdateCheck.newerBuild(answer: data, appVersion: appVersion, appBuildNumber: appBuildNumber)
+                )
+            } catch {
+                NSLog("LeagueasyMode: the build check did not reach GitHub: %@", error.localizedDescription)
+                self?.buildCheckDidFail()
+            }
+        }
+    }
+
+    private func didFindBuild(_ build: AvailableBuild?) {
+        availableBuild = build
+        if !isInstallingUpdate {
+            let checkedAt = Date().formatted(date: .omitted, time: .shortened)
+            updateStatusText = build == nil ? "Update: this is the newest build (checked \(checkedAt))" : nil
+        }
+        statusItem?.menu = makeMenu()
+    }
+
+    private func buildCheckDidFail() {
+        if !isInstallingUpdate {
+            updateStatusText = "Update: GitHub could not be asked; the next check tries again"
+        }
+        statusItem?.menu = makeMenu()
+    }
+
+    @objc private func checkForUpdatesNow(_ sender: NSMenuItem) {
+        updateStatusText = "Update: checking…"
+        checkForUpdates(isForced: true, isAskedFor: true)
+        statusItem?.menu = makeMenu()
+    }
+
+    /// Asks, then downloads the newer build, puts it in place of this app, starts it and quits.
+    @objc private func installUpdate(_ sender: NSMenuItem) {
+        guard let build = availableBuild, !isInstallingUpdate else {
+            return
+        }
+        let alert = NSAlert()
+        alert.messageText = "Install build \(build.buildNumber)?"
+        alert.informativeText =
+            "LeagueasyMode downloads it, replaces itself and starts again. A game keeps running; "
+            + "the overlay is back a few seconds later."
+        alert.addButton(withTitle: "Install")
+        alert.addButton(withTitle: "Cancel")
+        NSApp.activate(ignoringOtherApps: true)
+        guard alert.runModal() == .alertFirstButtonReturn else {
+            return
+        }
+        isInstallingUpdate = true
+        updateStatusText = "Update: downloading build \(build.buildNumber)…"
+        statusItem?.menu = makeMenu()
+        let appURL = Bundle.main.bundleURL
+        Task { [weak self] in
+            do {
+                try await UpdateInstaller.install(build, over: appURL)
+                try UpdateInstaller.startAgain(appURL)
+                NSApp.terminate(nil)
+            } catch {
+                self?.updateDidFail(error)
+            }
+        }
+    }
+
+    private func updateDidFail(_ error: any Error) {
+        isInstallingUpdate = false
+        updateStatusText = "Update: not installed (\(error.localizedDescription))"
+        NSLog("LeagueasyMode: the update was not installed: %@", error.localizedDescription)
+        statusItem?.menu = makeMenu()
     }
 
     private func didFindRelease(_ release: AvailableRelease?) {
@@ -561,6 +654,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         guard Self.isBundledApp else {
             return
         }
+        if let updateStatusText {
+            menu.addItem(Self.disabledItem(updateStatusText))
+        }
+        if let availableBuild, !isInstallingUpdate {
+            let buildItem = NSMenuItem(
+                title: availableBuild.menuTitle, action: #selector(installUpdate(_:)), keyEquivalent: ""
+            )
+            buildItem.target = self
+            menu.addItem(buildItem)
+        }
         if let availableRelease {
             let releaseItem = NSMenuItem(
                 title: availableRelease.menuTitle, action: #selector(openReleasePage(_:)), keyEquivalent: ""
@@ -568,6 +671,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             releaseItem.target = self
             menu.addItem(releaseItem)
         }
+        let checkNowItem = NSMenuItem(
+            title: "Check for updates now", action: #selector(checkForUpdatesNow(_:)), keyEquivalent: ""
+        )
+        checkNowItem.target = self
+        menu.addItem(checkNowItem)
         let updateItem = NSMenuItem(
             title: "Check for updates daily", action: #selector(toggleUpdateCheck(_:)), keyEquivalent: ""
         )

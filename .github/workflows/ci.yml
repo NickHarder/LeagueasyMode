@@ -1,10 +1,11 @@
 # CI for LeagueasyMode.
 #
 # Every pull request runs every check, whatever it changed: a green run is the proof, with no path
-# filter to second-guess. The jobs do not wait for one another. No job is allowed to fail.
+# filter to second-guess. The checks do not wait for one another. No job is allowed to fail.
 #
-# Runs for pull requests, version tags and manual runs, never for a plain push: the same checks run on
-# the laptop first, through `make gate`.
+# Runs for pull requests, version tags, manual runs and each push to main, where a green run is
+# published as a prerelease the app installs ("Install update"); never for a push to another branch,
+# whose checks run on the laptop first, through `make gate`.
 #
 # Every action is named by its commit, with the version beside it. A tag can be moved to other code
 # by whoever owns the action, and a commit cannot. To move to a newer version, change both.
@@ -13,6 +14,7 @@ name: CI
 on:
   pull_request:
   push:
+    branches: [main]
     tags: ["v*"]
   workflow_dispatch:
 
@@ -50,8 +52,8 @@ jobs:
       - run: scripts/okf_bundle.py check docs --repository .
 
 
-  # Secrets in the commits this pull request adds (scripts/secrets_scan.sh). Tag and manual runs have
-  # no new commits to scan: every commit reached the default branch through a pull request.
+  # Secrets in the commits this pull request adds (scripts/secrets_scan.sh). Push, tag and manual runs
+  # have no new commits to scan: every commit reached the default branch through a pull request.
   gitleaks:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
@@ -206,3 +208,40 @@ jobs:
           archive: false
           if-no-files-found: error
           retention-days: 14
+
+  # Each push to main whose checks pass is published as a prerelease, tagged build-<run number>,
+  # with the zipped app and its SHA-256, which the app's update check finds and "Install update"
+  # puts in place (OverlayCore's BuildUpdateCheck). The run number is the one every CI build
+  # carries, so a pull request's test build and main's builds are ordered alike. The app is built
+  # again here rather than taken from macos-app, so that only this job, on main, holds a token that
+  # can write.
+  # Full releases stay the owner's, from a version tag (release.yml).
+  prerelease:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [skills, okf-bundle, ruff, mypy, python-rules, pytest, pip-audit, widgets, macos-overlay]
+    runs-on: macos-15
+    timeout-minutes: 30
+    permissions:
+      # To create the prerelease and upload the app to it.
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7  # v10.2.0
+      - run: overlay/macos/scripts/build_app.sh "$RUNNER_TEMP/app"
+        env:
+          BUILD_NUMBER: ${{ github.run_number }}
+      - run: overlay/macos/scripts/smoke_test_app.sh "$RUNNER_TEMP/app/LeagueasyMode.app"
+      - name: Publish the prerelease
+        working-directory: ${{ runner.temp }}/app
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version=$(cd "$GITHUB_WORKSPACE" && uv version --short --frozen)
+          tag="build-$GITHUB_RUN_NUMBER"
+          archive="LeagueasyMode-$version-build-$GITHUB_RUN_NUMBER.zip"
+          mv "LeagueasyMode-$version.zip" "$archive"
+          shasum -a 256 "$archive" > "$archive.sha256"
+          gh release create "$tag" "$archive" "$archive.sha256" \
+            --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --prerelease \
+            --title "LeagueasyMode $version (build $GITHUB_RUN_NUMBER)" \
+            --notes "A build of main at $GITHUB_SHA, for the app's Install update."

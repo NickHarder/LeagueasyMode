@@ -6,6 +6,11 @@ skill has the format.
 
 ## 2026-10-28
 
+- Phase 10.6: builds that come to the app. Each round of testing took a merge, a new link, a
+  download, an unzip and "Open Anyway". With the owner's approval ("Auto-published builds"), each
+  push to main whose checks pass is now published as a prerelease, `build-<run number>`, and the
+  app checks for one at every start: "Install update" downloads it, checks its SHA-256 and
+  signature, replaces the app and starts it again. Full releases stay the owner's tags.
 - Phase 10.5 and 10.4: off the Rift, and How to use. The owner's ARAM Mayhem game showed the
   Rift's timers for a map that has none; on any map but Summoner's Rift, the engine now leaves out
   the dragon, objectives, jungle, turrets per lane, positions and the minimap layer, and keeps the

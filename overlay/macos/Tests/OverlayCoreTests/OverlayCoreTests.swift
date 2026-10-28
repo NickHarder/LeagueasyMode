@@ -636,11 +636,109 @@ final class BuildInfoTests: XCTestCase {
             "LeagueasyModeCommit": "b0d63a8",
         ])
         XCTAssertEqual(info.label, "0.1.0 (build 62, b0d63a8)")
+        XCTAssertEqual(info.ciBuildNumber, 62)
     }
 
     func testAnAppRunFromItsSourceSaysSo() {
         XCTAssertEqual(BuildInfo(infoDictionary: nil).label, "from source")
         XCTAssertEqual(BuildInfo(infoDictionary: ["CFBundleShortVersionString": "0.1.0"]).label, "0.1.0")
+        let unnumbered = BuildInfo(infoDictionary: ["CFBundleShortVersionString": "0.1.0", "CFBundleVersion": "0.1.0"])
+        XCTAssertNil(unnumbered.ciBuildNumber)
+    }
+}
+
+final class BuildUpdateCheckTests: XCTestCase {
+    private let appVersion = ReleaseVersion("0.1.0")!
+
+    private func build(_ number: Int, version: String = "0.1.0", prerelease: Bool = true) -> [String: Any] {
+        let archive = "LeagueasyMode-\(version)-build-\(number).zip"
+        return [
+            "tag_name": "build-\(number)", "draft": false, "prerelease": prerelease,
+            "assets": [
+                ["name": archive, "browser_download_url": "https://example.com/\(archive)"],
+                ["name": archive + ".sha256"],
+            ],
+        ]
+    }
+
+    private func answer(_ releases: [[String: Any]]) throws -> Data {
+        try JSONSerialization.data(withJSONObject: releases)
+    }
+
+    func testTheRequestAsksForTheNewestReleases() {
+        XCTAssertEqual(
+            BuildUpdateCheck.request(appVersion: appVersion).url?.absoluteString,
+            "https://api.github.com/repos/NickHarder/LeagueasyMode/releases?per_page=30"
+        )
+    }
+
+    func testTheNewestLaterBuildIsOfferedFromThisRepository() throws {
+        let offered = try XCTUnwrap(
+            BuildUpdateCheck.newerBuild(
+                answer: try answer([build(70), build(75), build(62), ["tag_name": "v0.1.0", "assets": []]]),
+                appVersion: appVersion,
+                appBuildNumber: 62
+            )
+        )
+        XCTAssertEqual(offered.buildNumber, 75)
+        XCTAssertEqual(offered.version, ReleaseVersion("0.1.0"))
+        XCTAssertEqual(
+            offered.archiveURL.absoluteString,
+            "https://github.com/NickHarder/LeagueasyMode/releases/download/build-75/LeagueasyMode-0.1.0-build-75.zip"
+        )
+        XCTAssertEqual(offered.checksumURL.lastPathComponent, "LeagueasyMode-0.1.0-build-75.zip.sha256")
+        XCTAssertEqual(offered.menuTitle, "Install update: build 75 (0.1.0)\u{2026}")
+    }
+
+    func testNoBuildIsOfferedThatIsNotNewer() throws {
+        XCTAssertNil(
+            BuildUpdateCheck.newerBuild(answer: try answer([build(62), build(50)]), appVersion: appVersion, appBuildNumber: 62)
+        )
+        // A build of an older version, as after the owner's full release, is not offered either.
+        XCTAssertNil(
+            BuildUpdateCheck.newerBuild(
+                answer: try answer([build(90)]), appVersion: ReleaseVersion("0.2.0")!, appBuildNumber: 3
+            )
+        )
+    }
+
+    func testOnlyAPrereleaseWithItsZipAndChecksumIsABuild() throws {
+        var withoutChecksum = build(80)
+        withoutChecksum["assets"] = [["name": "LeagueasyMode-0.1.0-build-80.zip"]]
+        XCTAssertNil(
+            BuildUpdateCheck.newerBuild(
+                answer: try answer([build(81, prerelease: false), withoutChecksum, ["tag_name": "build-x", "assets": []]]),
+                appVersion: appVersion,
+                appBuildNumber: 62
+            )
+        )
+        XCTAssertNil(BuildUpdateCheck.newerBuild(answer: Data("{}".utf8), appVersion: appVersion, appBuildNumber: 62))
+    }
+
+    func testAnUnnumberedAppIsOfferedAnyBuild() throws {
+        let offered = BuildUpdateCheck.newerBuild(answer: try answer([build(5)]), appVersion: appVersion, appBuildNumber: nil)
+        XCTAssertEqual(offered?.buildNumber, 5)
+    }
+}
+
+final class ArchiveChecksumTests: XCTestCase {
+    func testTheDigestIsTheOneForTheArchive() {
+        let digest = String(repeating: "ab", count: 32)
+        XCTAssertEqual(
+            ArchiveChecksum.expectedDigest(
+                checksumFile: "\(digest)  LeagueasyMode-0.1.0-build-75.zip\n", archiveName: "LeagueasyMode-0.1.0-build-75.zip"
+            ),
+            digest
+        )
+        XCTAssertNil(ArchiveChecksum.expectedDigest(checksumFile: "\(digest)  other.zip\n", archiveName: "a.zip"))
+        XCTAssertNil(ArchiveChecksum.expectedDigest(checksumFile: "short  a.zip\n", archiveName: "a.zip"))
+    }
+
+    func testTheDigestOfBytesIsSHA256() {
+        XCTAssertEqual(
+            ArchiveChecksum.sha256Hex(of: Data("abc".utf8)),
+            "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+        )
     }
 }
 
