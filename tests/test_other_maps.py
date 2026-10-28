@@ -12,7 +12,10 @@ from game_payloads import (
     turret_killed_event,
 )
 from leagueasymode.engine import compute_overlay_state
+from leagueasymode.inference.backs import BackTracker
 from leagueasymode.inference.clues import ClueTracker
+from leagueasymode.inference.experience import ExperienceTracker
+from leagueasymode.inference.gold import GoldTracker
 from leagueasymode.inference.jungle_path import JunglePathTracker
 from leagueasymode.inference.wards import WardTracker
 from leagueasymode.overlay_state import OverlayState
@@ -36,6 +39,9 @@ def state_of(map_number: int, game_mode: str) -> OverlayState:
         clue_tracker=ClueTracker(),
         jungle_tracker=JunglePathTracker(),
         ward_tracker=WardTracker(),
+        gold_tracker=GoldTracker(),
+        experience_tracker=ExperienceTracker(),
+        back_tracker=BackTracker(),
     )
 
 
@@ -45,6 +51,10 @@ def test_on_the_rift_its_widgets_are_there() -> None:
     assert state.dragon is not None
     assert state.objectives
     assert state.structures
+    assert all(card.gold is not None for card in state.players)
+    assert all(card.level_estimate is not None for card in state.players)
+    assert state.team_gold is not None
+    assert state.win_chance is not None
 
 
 def test_off_the_rift_only_what_holds_everywhere_is_shown() -> None:
@@ -61,9 +71,15 @@ def test_off_the_rift_only_what_holds_everywhere_is_shown() -> None:
     assert state.control_wards == []
     assert state.contests == []
     assert all(card.location is None for card in state.players)
-    # The players and the win chance hold on any map.
+    # The players hold on any map. The gold, experience and backs models and the win chance
+    # were set for the Rift's income, levels and fountain, so they stay hidden until tuned on
+    # ARAM's games (the owner, 2026-10-28: "yes hide them in aram until tuned").
     assert len(state.players) == len(DEFAULT_PLAYERS)
-    assert state.win_chance is not None
+    assert all(card.gold is None for card in state.players)
+    assert all(card.level_estimate is None for card in state.players)
+    assert all(card.last_back is None for card in state.players)
+    assert state.team_gold is None
+    assert state.win_chance is None
 
 
 def test_an_answer_without_a_map_counts_as_the_rift() -> None:
