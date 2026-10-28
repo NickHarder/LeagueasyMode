@@ -175,7 +175,7 @@ async def test_a_game_that_would_leak_a_name_is_withheld(tmp_path: Path) -> None
     await send_with(github, recordings, TOKEN, board)
     assert set(github.puts) == {"games/game-1-anonymized.jsonl.xz"}
     sent_log = json.loads((recordings / SENT_LOG_NAME).read_text())
-    assert sent_log == {"sent": ["game-1"], "withheld": ["game-2"]}
+    assert sent_log == {"sent": ["game-1"], "withheld": ["game-2"], "crash_reports": []}
     assert sending_part(board) == (
         "problem",
         f"Sent 1 game to {REPOSITORY}; 1 sent in all; 1 withheld: no safe anonymized copy",
@@ -244,3 +244,25 @@ async def test_the_status_page_can_ask_for_a_round_and_nothing_else_can() -> Non
             unavailable_status = unavailable.status
     assert (refused_status, accepted_status, unavailable_status) == (403, 202, 404)
     assert rounds == ["sent"]
+
+
+async def test_crash_reports_go_with_the_games_once(tmp_path: Path) -> None:
+    recordings = tmp_path / "recordings"
+    write_games(recordings, ["game-1"])
+    reports = recordings / "crash-reports"
+    reports.mkdir()
+    (reports / "crash-2026-10-28T02-30-00Z-1.json").write_text('{"error_type": "KeyError"}\n')
+    github = FakeGitHub()
+    board = StatusBoard(home_directory=tmp_path)
+    await send_with(github, recordings, TOKEN, board)
+    assert set(github.puts) == {
+        "games/game-1-anonymized.jsonl.xz",
+        "crash-reports/crash-2026-10-28T02-30-00Z-1.json",
+    }
+    assert sending_part(board) == (
+        "ok",
+        f"Sent 1 game to {REPOSITORY}; 1 sent in all; 1 crash reports sent",
+    )
+    github.puts.clear()
+    await send_with(github, recordings, TOKEN, board)
+    assert github.puts == {}

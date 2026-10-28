@@ -12,7 +12,8 @@
         "settings",
         "models",
         "tuning",
-        "sending"
+        "sending",
+        "errors"
       ],
       "type": "string"
     },

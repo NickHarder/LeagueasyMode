@@ -29,6 +29,14 @@ skill has the format.
   sight. For 3 seconds after (`positions.seen_for_seconds` in `tuning.json`) their card says so
   and the minimap draws no circle for them. Whether the scoreboard hides those numbers in the fog
   is unconfirmed until a recording shows it.
+- The engine no longer stops on an error. In an ARAM game the overlay showed nothing, and after
+  League's client was closed the menu read "Engine: stopped (exit 1)": the engine had stopped on
+  an error, and the app keeps none of the engine's output, so nothing said which. The same game
+  and a client that disappears, run here, did not stop it. Now an error in one answer costs that
+  answer, an error in recording or loading a game's data starts that job again, and every error is
+  counted on the status page and written once as a crash report that names the code but not the
+  game, which goes to the games' repository with the games. A recording a stop left open is
+  finished when the engine starts again, so it is sent too: the ARAM game was likely one.
 - Games are sent by themselves. The owner, asked how recordings would reach the cloud: "can you do
   option two and have it automatically push to github? i want it automated if possible", and,
   asked where, a new private repository. `leagueasymode run` now sends every finished recording,

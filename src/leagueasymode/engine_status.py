@@ -39,6 +39,7 @@ type PartKey = Literal[
     "models",
     "tuning",
     "sending",
+    "errors",
 ]
 
 # Each part, in the order the page shows them, with what it says before anything happens.
@@ -54,6 +55,7 @@ PART_TITLES: Final[dict[PartKey, str]] = {
     "models": "Models",
     "tuning": "Tuning",
     "sending": "Sending games",
+    "errors": "Errors",
 }
 FIRST_DETAILS: Final[dict[PartKey, str]] = {
     "game": "No answer yet",
@@ -67,6 +69,7 @@ FIRST_DETAILS: Final[dict[PartKey, str]] = {
     "models": "Not loaded yet",
     "tuning": "Read when the engine starts",
     "sending": "After each recorded game, once a GitHub token is set up",
+    "errors": "None so far",
 }
 # The feed's events some estimator reads; a test holds this to the estimators' own names.
 READ_EVENT_NAMES: Final = frozenset(

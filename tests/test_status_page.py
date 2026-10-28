@@ -101,8 +101,8 @@ async def test_each_part_shows_its_state_in_words() -> None:
             "Answering: CLASSIC on map 11, 12:34 in, 10 players"
         )
         # The game, the client, the patch, the lookups, the recording, the timeline, the scoring,
-        # League's settings, the models, the tuning and the sending of games.
-        await expect(page.locator(".status-part")).to_have_count(11)
+        # League's settings, the models, the tuning, the sending of games and the errors.
+        await expect(page.locator(".status-part")).to_have_count(12)
         await expect(page.locator(".status-part[data-key='tuning'] .status-detail")).to_have_text(
             "Read when the engine starts"
         )
