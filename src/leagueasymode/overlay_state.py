@@ -339,6 +339,9 @@ class PlayerCard(BaseModel):
     # For an enemy: the spells a "flash" and a "summoner" mark name, in that order; empty for an
     # ally. An enemy without Flash has their first spell marked as "flash".
     marked_spell_names: list[str] = Field(default_factory=list)
+    # The rank of their ultimate from their level: 0 before it is learned; None while the patch's
+    # files are unknown, or for an ultimate that ranks like a basic ability.
+    ultimate_rank: int | None = None
 
 
 class TeamItemGold(BaseModel):
