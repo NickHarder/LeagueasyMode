@@ -1,8 +1,9 @@
 /**
  * Moving the widgets. In edit mode, which the macOS app turns on from its menu ("Edit layout"),
  * each movable widget is outlined and named, even an empty one, and can be dragged; where it is
- * dropped goes to the engine, which keeps it and sends it back with every state. Out of edit mode
- * the overlay lets clicks through to the game, and nothing moves.
+ * dropped goes to the engine, which keeps it and sends it back with every state. Escape, the
+ * show/hide shortcut or two minutes end it. Out of edit mode the overlay lets every click through
+ * to the game, and nothing moves.
  *
  * A widget's place is kept as shares of the overlay's width and height, so it stays put when the
  * overlay changes size, as when League's window does.
@@ -140,7 +141,7 @@ export function startLayoutEditing(): void {
   const notice = document.createElement("div");
   notice.className = "layout-editor";
   const noticeText = document.createElement("span");
-  noticeText.textContent = "Drag a widget to move it. Choose Edit layout in the menu again when done.";
+  noticeText.textContent = "Drag a widget to move it. Press Esc when done; editing ends by itself after 2 minutes.";
   const resetButton = document.createElement("button");
   resetButton.type = "button";
   resetButton.textContent = "Reset layout";

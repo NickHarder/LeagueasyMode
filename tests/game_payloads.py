@@ -178,6 +178,8 @@ def all_game_data(
     active_player_index: int = ACTIVE_PLAYER_INDEX,
     map_terrain: str = "Default",
     current_gold: float = 500.0,
+    map_number: int = 11,
+    game_mode: str = "CLASSIC",
 ) -> JsonValue:
     active_seed = players[active_player_index]
     return {
@@ -226,10 +228,10 @@ def all_game_data(
             "Events": list[JsonValue](events if events is not None else [game_start_event()])
         },
         "gameData": {
-            "gameMode": "CLASSIC",
+            "gameMode": game_mode,
             "gameTime": game_time_seconds,
-            "mapName": "Map11",
-            "mapNumber": 11,
+            "mapName": f"Map{map_number}",
+            "mapNumber": map_number,
             "mapTerrain": map_terrain,
         },
     }

@@ -6,6 +6,69 @@ skill has the format.
 
 ## 2026-10-28
 
+- Phase 10.6: builds that come to the app. Each round of testing took a merge, a new link, a
+  download, an unzip and "Open Anyway". With the owner's approval ("Auto-published builds"), each
+  push to main whose checks pass is now published as a prerelease, `build-<run number>`, and the
+  app checks for one at every start: "Install update" downloads it, checks its SHA-256 and
+  signature, replaces the app and starts it again. Full releases stay the owner's tags.
+- Phase 10.5 and 10.4: off the Rift, and How to use. The owner's ARAM Mayhem game showed the
+  Rift's timers for a map that has none; on any map but Summoner's Rift, the engine now leaves out
+  the dragon, objectives, jungle, turrets per lane, positions and the minimap layer, and keeps the
+  enemies, the fight and the win chance. The owner asked how anyone learns the shortcuts: "How to
+  use…" in the menu, opened once by itself on the first start, lists each shortcut in Mac and
+  Windows-keyboard names, what each widget means and what to do when the mouse or keyboard acts
+  up; a test fails when the app registers a key the page does not list.
+- Phase 10.3: "Report a problem…". Each problem after the first tests took rounds of describing,
+  screenshots and guesses; the owner asked for "a snap shot way to upload issues for you easily".
+  The menu item, or ⌃⌥⌘R in a game, has the engine write a report (the app's menu lines, the status
+  page's report, the end of the engine's log and the last run's, the game so far, anonymized, with
+  names and the home folder scrubbed) and send it to the games' repository at once. An engine that
+  stops is started again, at most five times in ten minutes, so "Engine: stopped (exit 1)" no
+  longer leaves the overlay empty until the app is opened again.
+- Phase 10.1 and 10.2: each build is told apart and the engine's log is kept. Every build was
+  "0.1.0", and the engine's output went nowhere when the app was opened from Finder, so neither
+  "which build was that" nor "why exit 1" had an answer. The menu now names the build ("0.1.0
+  (build 62, b0d63a8)"), the engine, its status page and crash reports carry it, and the engine's
+  output goes to `~/Library/Logs/LeagueasyMode/engine.log`, the last three runs kept.
+- The overlay can no longer hold the mouse. On the first try on a Mac the overlay showed nothing,
+  and the owner, trying to make it work, turned "Let clicks through" off and "Edit layout" on:
+  either makes the overlay's invisible full-screen layer catch every click, and with nothing
+  drawn there was no sign of it and no way out short of stopping the app, which cost a game.
+  "Let clicks through" is removed, since nothing outside edit mode needs the overlay to take
+  clicks. Edit mode tints the overlay, ends on Escape, on ⌃⌥⌘L or after two minutes, and ends when
+  the overlay is hidden. The menu now says whether the overlay page loaded in the overlay's
+  window, and why not when it did not, and the app's Info.plist allows its web view to load the
+  page from 127.0.0.1 over plain HTTP, in case App Transport Security stopped it.
+- The second try showed the overlay over League (windowed, 1920 × 925; "Overlay: page loaded"),
+  but League's keys did nothing until the overlay was hidden and shown again with ⌃⌥⌘L, without
+  edit mode having been used. So the overlay held the keyboard by a path not yet known. It now
+  hands the keyboard back by itself whenever it finds itself key outside edit mode (hiding and
+  showing itself, as the owner's ⌃⌥⌘L did), and on leaving edit mode, and the menu counts it.
+- Enemies in sight keep their likely place off the minimap. The owner, on the first try over a
+  game: "dont show the potential character circle if they are already on the map (aka we have
+  vision of htem)". The game's API gives no vision, and the owner ruled out reading the screen
+  ("i just dont thin screen recording and camera vision is allowed"), so, on the owner's idea, an
+  enemy counts as seen when their creep score, items or level change while alive, which League's
+  scoreboard is taken to show only in sight, or when a champion kill with your team puts them in
+  sight. For 3 seconds after (`positions.seen_for_seconds` in `tuning.json`) their card says so
+  and the minimap draws no circle for them. Whether the scoreboard hides those numbers in the fog
+  is unconfirmed until a recording shows it.
+- The engine no longer stops on an error. In an ARAM game the overlay showed nothing, and after
+  League's client was closed the menu read "Engine: stopped (exit 1)": the engine had stopped on
+  an error, and the app keeps none of the engine's output, so nothing said which. The same game
+  and a client that disappears, run here, did not stop it. Now an error in one answer costs that
+  answer, an error in recording or loading a game's data starts that job again, and every error is
+  counted on the status page and written once as a crash report that names the code but not the
+  game, which goes to the games' repository with the games. A recording a stop left open is
+  finished when the engine starts again, so it is sent too: the ARAM game was likely one.
+- Games are sent by themselves. The owner, asked how recordings would reach the cloud: "can you do
+  option two and have it automatically push to github? i want it automated if possible", and,
+  asked where, a new private repository. `leagueasymode run` now sends every finished recording,
+  anonymized and never otherwise, to `NickHarder/LeagueasyMode-recordings` when it starts and
+  after each game, once a GitHub token limited to that repository is in the Keychain; the status
+  page shows how it went and has "Send games now". The repository could not be created from here
+  (GitHub refused the integration), so the owner creates it. The button is on the status page
+  rather than the menu, so as not to collide with the menu's rework in pull request #50.
 - Phase 10 planned in [plans/phase-10-field-testing.md](plans/phase-10-field-testing.md): a
   review of the first evening of tests on the owner's Mac, and what takes the owner out of the
   loop. The owner: "can you do a review and try to figure out some next steps and QoL improvements

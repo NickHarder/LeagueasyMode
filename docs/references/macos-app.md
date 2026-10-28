@@ -4,8 +4,10 @@ title: The macOS overlay app
 description: What the menu bar app does, how to run it from a clone, how to build, release and open the app that carries its own engine, its update check and open at login, and the steps for the tracer bullet's test on a Mac over League in each display mode.
 tags: [macos, overlay, tracer-bullet]
 status: draft
-generated: { by: claude-code/cloud, at: 2026-10-09T01:37:17Z }
+generated: { by: claude-code/cloud, at: 2026-10-28T23:05:00Z }
 sources:
+  - id: build-update
+    resource: ../../overlay/macos/Sources/OverlayCore/BuildUpdate.swift
   - id: panel
     resource: ../../overlay/macos/Sources/LeagueasyOverlay/OverlayPanel.swift
   - id: delegate
@@ -45,8 +47,12 @@ bundle carries or else the one in the clone it was built from (`uv run --project
 leagueasymode run`), reads the overlay's address from the line the engine prints, and shows that
 page in a window over League:[^panel]
 
-- transparent, borderless, without a shadow, and with clicks passing through to the game;
+- transparent, borderless, without a shadow, and with every click passing through to the game
+  outside edit mode, with no setting to change that;
 - never key or main, and its panel does not activate the app, so League keeps the keyboard;
+  should it find itself key outside edit mode anyway, as on the first try on a Mac, it hides and
+  shows itself at once (at most once a second), which leaves the keyboard to League, and the menu
+  counts it ("Keyboard: handed back to the game once");
 - on every Space, full-screen ones included, at the "Screen saver" window level by default;
 - over the screen League is on, or over League's window below its title bar when it is windowed,
   so the minimap layer lines up there too; over the main screen when no game window is on
@@ -66,27 +72,55 @@ uses. The app posts the mark to the engine's `/marks`, which starts the timer sh
 enemy's row.[^cooldown-marking]
 Quitting the app asks the engine to stop; the engine closes the game it is recording first.
 
-**Moving the widgets:** "Edit layout" in the menu makes the overlay take clicks and outlines
-each movable widget with its name, an empty one too: the objective strip, the callouts, the enemy
-strip and the You panel (the minimap layer stays over League's minimap). Drag one and drop it; it
-stays there, kept by the engine in `layout.json` in the application's directory as shares of the
-overlay's width and height, so it keeps its place when League's window changes size. Choose
-"Edit layout" again to finish; "Reset layout", in the menu or on the notice at the bottom of the
-overlay while editing, puts every widget back.[^layout-editing]
+**Moving the widgets:** "Edit layout (Esc to finish)" in the menu makes the overlay take clicks,
+tints the whole overlay so that the layer catching them shows even when the page shows nothing,
+and outlines each movable widget with its name, an empty one too: the objective strip, the
+callouts, the enemy strip and the You panel (the minimap layer stays over League's minimap). Drag
+one and drop it; it stays there, kept by the engine in `layout.json` in the application's
+directory as shares of the overlay's width and height, so it keeps its place when League's window
+changes size. Escape, ⌃⌥⌘L, the menu item again, hiding the overlay, or two minutes end it, and
+every click goes to the game again; "Reset layout", in the menu or on the notice at the bottom of
+the overlay while editing, puts every widget back.[^layout-editing]
 
 **Spoken callouts:** with "Speak callouts" turned on in the settings (it is off until then),
 the overlay page hands each new callout to the app as it shows, and the app speaks it once in
 macOS's own voice (`AVSpeechSynthesizer`, the system's default voice).[^speech] In a browser, as
 against a replay, the browser's own speech speaks it instead.
 
-The menu shows whether the engine runs, toggles the overlay and the click-through, and picks the
-window level, since which level stays above League depends on how League draws:[^levels]
+**Which build, and the engine's log.** The menu's first line names the build: "LeagueasyMode
+0.1.0 (build 62, b0d63a8)", its version, CI's run number and the commit (`BuildInfo`; "from source"
+under `swift run`). The app hands the same words to the engine in `LEAGUEASYMODE_BUILD`, so the
+status page, its report and each crash report name the build too. The engine's output, which an app
+opened from Finder has nowhere to show, goes to `~/Library/Logs/LeagueasyMode/engine.log`, a new
+one each start with the last three runs' kept (`EngineLog`); "Open engine log" in the menu opens
+it.
+
+**Report a problem, and an engine that stops.** "Report a problem…" in the menu asks for an
+optional note and has the engine make a report: the app's own menu lines (the build, the engine,
+the overlay page, League's window, the keyboard, the window level, macOS's version), the status
+page's report, the end of this run's and the last run's engine log, the crash reports' names and
+the game so far, anonymized, with every player's name and the home folder taken out. The engine
+writes it to `reports/` beside the recordings and sends it to the games' repository at once
+(`recordings.md`); ⌃⌥⌘R sends one without a note, from inside a game. The menu then says
+"Report: made at 21:40, being sent", or why it could not be made (`ProblemReportRequest`;
+`problem_report.py`). An engine that stops is started again three seconds later, with a new log,
+at most five times in ten minutes; after that the menu says "Engine: stopped (exit 1) after
+repeated restarts" (`EngineRestartPolicy`).
+
+The menu shows whether the engine runs and whether the overlay page loaded in the overlay's
+window ("Overlay: page loaded", or "Overlay: the page did not load (…)" with the web view's
+reason; a page whose process stops is loaded again), toggles the overlay, and picks the window
+level, since which level stays above League depends on how League draws:[^levels]
 Floating, Status bar, Screen saver, and Above a captured display (one above the level a game that
-captures the display draws at). "Last game…" opens the post-game window, "Settings…" the
-settings page and "Status…" what the engine sees, in the default browser, normal windows rather
-than the click-through overlay: the engine's pages `summary.html`, `settings.html` and
+captures the display draws at). "How to use…" opens the shortcuts, in Mac and Windows-keyboard
+names (⌃⌥⌘L is Ctrl + Alt + Windows + L), what each widget and minimap mark means, the menu, and
+what to do when the mouse or keyboard acts up; the app opens it by itself once, the first time
+the engine is up. "Last game…" opens the post-game window, "Settings…" the settings page and
+"Status…" what the engine sees, in the default browser, normal windows rather than the
+click-through overlay: the engine's pages `how-to-use.html`, `summary.html`, `settings.html` and
 `status.html` beside the overlay's (`EnginePage` in `OverlayCore` builds their addresses); each
-waits until the engine has announced its address.
+waits until the engine has announced its address. A test checks that each key the app registers
+is on the How to use page (`tests/test_how_to_use_page.py`).
 
 `OverlayCore` holds what the app decides without AppKit (which engine to run, its command and
 search path,[^engine-command] reading its output, finding the bundled engine or the clone) and has
@@ -146,14 +180,27 @@ SHA-256 (`.github/workflows/release.yml`).[^release-workflow] The tag must be th
 (`uv version --bump minor`), merge, then `git tag v0.2.0 origin/main && git push origin v0.2.0`.
 The workflow builds and checks the app as CI's `macos-app` job does before it publishes.
 
+**Builds of main.** Each push to `main` whose checks pass is published as a prerelease, tagged
+`build-<run number>`, with `LeagueasyMode-<version>-build-<run number>.zip` and its SHA-256 (CI's
+`prerelease` job). The run number is CI's, the one every build carries in its Info.plist, so a pull
+request's test build and the builds of main are ordered alike. The owner allowed this on
+2026-10-28 ("Auto-published builds"); full releases stay the owner's tags.[^build-update]
+
 **The update check.** Once a day at most, the bundled app asks GitHub's API for the repository's
 latest release, without a token; a draft, a prerelease, or a version not newer than the app's is
 ignored.[^update-check] A newer one adds "LeagueasyMode 0.2.0 is out…" to the menu, which opens the
 release's page; the page's address is always built from the tag on this repository, whatever
-GitHub's answer says. Installing it is by hand: download, unzip, replace the app in
-Applications. "Check for updates daily" in the menu turns the check off; it is the app's only
-request beyond this Mac, League's servers and Data Dragon. An app run from a clone has no version
-and does not check.
+GitHub's answer says. The same check, and one at every start, asks for the newest builds of main:
+one with a higher build number and a version no lower than the app's adds "Install update: build
+75 (0.1.0)…", which, once confirmed, downloads the zip and its checksum from this repository's
+release, checks one against the other, unpacks the app with `ditto`, checks it is LeagueasyMode
+and that its signature holds, puts it in place of the running app, starts it and quits
+(`UpdateInstaller`). A file the app downloads itself is not marked as from the internet, so the
+new build opens without "Open Anyway"; that is first seen on the Mac. A folder the app cannot
+write to, or any failed step, leaves the app as it was and says why in the menu ("Update: not
+installed (…)"). "Check for updates now" asks at once. "Check for updates daily" in the menu turns
+the checks off; they are the app's only requests beyond this Mac, League's servers, Data Dragon
+and the games' repository. An app run from a clone has no version and does not check.
 
 **Open at login.** The menu's "Open at login" asks macOS to open the app when the player logs in
 (`SMAppService`, macOS 13 and later).[^login-item] macOS may ask the player to allow it in System
@@ -205,4 +252,5 @@ whether `KillerName` holds a game name or a Riot ID, and whether the client serv
 [^smoke-test]: `overlay/macos/scripts/smoke_test_app.sh`
 [^release-workflow]: `.github/workflows/release.yml`
 [^update-check]: `overlay/macos/Sources/OverlayCore/UpdateCheck.swift`
+[^build-update]: `overlay/macos/Sources/OverlayCore/BuildUpdate.swift`
 [^login-item]: `overlay/macos/Sources/OverlayCore/LoginItemState.swift`
