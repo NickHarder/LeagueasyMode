@@ -31,6 +31,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     ]
     // The update check: whether the player wants it (on unless turned off), and when it last asked.
     private static let checksForUpdatesKey = "checksForUpdates"
+    // Whether a newer build is installed without asking, once no game is on screen (on unless
+    // turned off), and the build an install started, to say so after the restart.
+    private static let installsUpdatesKey = "installsUpdatesAutomatically"
+    private static let installingBuildKey = "installingBuild"
     private static let lastUpdateCheckKey = "lastUpdateCheck"
     // Whether the How to use page was opened by itself once, on the first start.
     private static let hasShownHowToUseKey = "hasShownHowToUse"
@@ -66,6 +70,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // What became of the last install, for the menu; nil before the first.
     private var updateStatusText: String?
     private var isInstallingUpdate = false
+    // A build whose automatic install failed is not tried again by itself; the menu still offers it.
+    private var failedBuildNumber: Int?
     private var updateTimer: Timer?
     private var gamePlacement: GamePlacement?
     private var gameWindowTimer: Timer?
@@ -119,7 +125,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             object: nil
         )
         startEngine()
-        UserDefaults.standard.register(defaults: [Self.checksForUpdatesKey: true])
+        UserDefaults.standard.register(defaults: [Self.checksForUpdatesKey: true, Self.installsUpdatesKey: true])
+        sayWhetherAnUpdateWasInstalled()
         // At each start, whatever the last check: a fix is usually waiting when the app is opened.
         checkForUpdates(isForced: true)
         updateTimer = Timer.scheduledTimer(
@@ -325,11 +332,55 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func didFindBuild(_ build: AvailableBuild?) {
         availableBuild = build
-        if !isInstallingUpdate {
+        // A line saying a build was just installed stays until the player checks again.
+        let saysInstalled = updateStatusText?.hasSuffix(" installed") == true
+        if !isInstallingUpdate && !(saysInstalled && build == nil) {
             let checkedAt = Date().formatted(date: .omitted, time: .shortened)
             updateStatusText = build == nil ? "Update: this is the newest build (checked \(checkedAt))" : nil
         }
         statusItem?.menu = makeMenu()
+        installAutomaticallyIfPossible()
+    }
+
+    private var installsUpdatesAutomatically: Bool {
+        UserDefaults.standard.bool(forKey: Self.installsUpdatesKey)
+    }
+
+    /// Installs the newer build without asking, when the player allows it and no game is on screen
+    /// (`AutomaticUpdate`); otherwise it waits, and the game window's timer asks again.
+    private func installAutomaticallyIfPossible() {
+        guard
+            let build = availableBuild,
+            build.buildNumber != failedBuildNumber,
+            AutomaticUpdate.canInstallNow(
+                isOn: installsUpdatesAutomatically,
+                placement: gamePlacement,
+                isEditingLayout: isEditingLayout,
+                isInstalling: isInstallingUpdate
+            )
+        else {
+            return
+        }
+        startInstalling(build)
+    }
+
+    /// After a restart, says which build an install put in place, or that it did not take.
+    private func sayWhetherAnUpdateWasInstalled() {
+        let installingBuild = UserDefaults.standard.object(forKey: Self.installingBuildKey) as? Int
+        guard let installingBuild else {
+            return
+        }
+        UserDefaults.standard.removeObject(forKey: Self.installingBuildKey)
+        updateStatusText =
+            installingBuild == buildInfo.ciBuildNumber
+            ? "Update: build \(installingBuild) installed"
+            : "Update: build \(installingBuild) did not start; this is build \(buildInfo.ciBuildNumber.map(String.init) ?? "?")"
+    }
+
+    @objc private func toggleAutomaticInstall(_ sender: NSMenuItem) {
+        UserDefaults.standard.set(!installsUpdatesAutomatically, forKey: Self.installsUpdatesKey)
+        statusItem?.menu = makeMenu()
+        installAutomaticallyIfPossible()
     }
 
     private func buildCheckDidFail() {
@@ -361,6 +412,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         guard alert.runModal() == .alertFirstButtonReturn else {
             return
         }
+        startInstalling(build)
+    }
+
+    /// Downloads a build, puts it in place of this app, starts it and quits.
+    private func startInstalling(_ build: AvailableBuild) {
         isInstallingUpdate = true
         updateStatusText = "Update: downloading build \(build.buildNumber)…"
         statusItem?.menu = makeMenu()
@@ -368,16 +424,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         Task { [weak self] in
             do {
                 try await UpdateInstaller.install(build, over: appURL)
+                UserDefaults.standard.set(build.buildNumber, forKey: Self.installingBuildKey)
                 try UpdateInstaller.startAgain(appURL)
                 NSApp.terminate(nil)
             } catch {
-                self?.updateDidFail(error)
+                self?.updateDidFail(error, buildNumber: build.buildNumber)
             }
         }
     }
 
-    private func updateDidFail(_ error: any Error) {
+    private func updateDidFail(_ error: any Error, buildNumber: Int) {
         isInstallingUpdate = false
+        failedBuildNumber = buildNumber
         updateStatusText = "Update: not installed (\(error.localizedDescription))"
         NSLog("LeagueasyMode: the update was not installed: %@", error.localizedDescription)
         statusItem?.menu = makeMenu()
@@ -388,8 +446,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         statusItem?.menu = makeMenu()
     }
 
+    /// Every hour: the release check when a day has passed, and the builds of main, which come
+    /// with every merge.
     @objc private func updateTimerFired(_ timer: Timer) {
-        checkForUpdatesIfDue()
+        if checksForUpdates, UpdateCheck.isDue(
+            lastCheckedAt: UserDefaults.standard.object(forKey: Self.lastUpdateCheckKey) as? Date, now: Date()
+        ) {
+            checkForUpdatesIfDue()
+        } else if checksForUpdates, let appVersion = Self.appVersion {
+            checkForBuilds(appVersion: appVersion)
+        }
     }
 
     @objc private func toggleUpdateCheck(_ sender: NSMenuItem) {
@@ -677,11 +743,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         checkNowItem.target = self
         menu.addItem(checkNowItem)
         let updateItem = NSMenuItem(
-            title: "Check for updates daily", action: #selector(toggleUpdateCheck(_:)), keyEquivalent: ""
+            title: "Check for updates", action: #selector(toggleUpdateCheck(_:)), keyEquivalent: ""
         )
         updateItem.target = self
         updateItem.state = checksForUpdates ? .on : .off
         menu.addItem(updateItem)
+        let automaticItem = NSMenuItem(
+            title: "Install updates automatically (not during a game)",
+            action: #selector(toggleAutomaticInstall(_:)),
+            keyEquivalent: ""
+        )
+        automaticItem.target = self
+        automaticItem.state = installsUpdatesAutomatically ? .on : .off
+        menu.addItem(automaticItem)
         let loginState = loginItemState
         if loginState != .unavailable {
             let loginItem = NSMenuItem(
@@ -811,6 +885,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func gameWindowTimerFired(_ timer: Timer) {
         followGameWindow()
+        installAutomaticallyIfPossible()
         if let editingStartedAt, LayoutEditing.hasRunOut(startedAt: editingStartedAt, now: Date()) {
             endEditingLayout()
         }

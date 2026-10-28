@@ -6,6 +6,12 @@ skill has the format.
 
 ## 2026-10-28
 
+- Updates install themselves. The owner asked whether the app could pull updates down by itself:
+  it now checks for a new build of main at every start and every hour, and installs it without
+  asking once no game window of League's is on screen ("Install updates automatically", on unless
+  turned off). Restarting the app in a game would blank the overlay, so it waits. A release
+  without the zipped app, as the repository's old v1.0.0, is no longer offered: it led to an
+  empty page.
 - Phase 10.6: builds that come to the app. Each round of testing took a merge, a new link, a
   download, an unzip and "Open Anyway". With the owner's approval ("Auto-published builds"), each
   push to main whose checks pass is now published as a prerelease, `build-<run number>`, and the
