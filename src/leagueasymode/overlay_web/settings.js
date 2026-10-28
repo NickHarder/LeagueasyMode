@@ -9,6 +9,22 @@ import { PREFERENCE_NAMES, isOverlayPreferences } from "./state.js";
 const REQUEST_HEADER = "X-LeagueasyMode-Request";
 const REQUEST_VALUE = "preferences";
 const FRIENDS_REQUEST_VALUE = "friends";
+const CLAUDE_TAKE_REQUEST_VALUE = "claude-take";
+function isClaudeTakeAnswer(value) {
+    if (typeof value !== "object" || value === null) {
+        return false;
+    }
+    const record = value;
+    const settings = record["settings"];
+    if (typeof settings !== "object" || settings === null) {
+        return false;
+    }
+    const settingsRecord = settings;
+    return (typeof record["is_available"] === "boolean" &&
+        typeof settingsRecord["enabled"] === "boolean" &&
+        typeof settingsRecord["style"] === "string" &&
+        typeof settingsRecord["model"] === "string");
+}
 const DESCRIPTIONS = {
     show_win_chance: ["Win chance", "Your team's chance to win, and what moves it most, at the top of the enemy strip."],
     show_fight_chance: ["Fight chance", "The chance your team wins an even fight now, and how much of their damage is physical."],
@@ -136,8 +152,73 @@ function friendsElement(riotIds) {
     section.append(heading, description, box, button, status);
     return section;
 }
-/** Draw the form, one switch for each preference, and the friends list. */
-export function renderSettings(root, preferences, friendRiotIds = []) {
+function claudeTakeAvailabilityText(isAvailable) {
+    return isAvailable
+        ? "The claude command was found on this Mac."
+        : "The claude command was not found on this Mac: install Claude Code and sign in, or set LEAGUEASYMODE_CLAUDE_COMMAND.";
+}
+async function saveClaudeTake(enabled, style, model, status) {
+    status.textContent = "Saving…";
+    status.dataset["state"] = "saving";
+    try {
+        const response = await fetch("/claude-take", {
+            method: "PUT",
+            headers: { "Content-Type": "application/json", [REQUEST_HEADER]: CLAUDE_TAKE_REQUEST_VALUE },
+            body: JSON.stringify({ enabled: enabled.checked, style: style.value.trim(), model: model.value.trim() }),
+        });
+        const answer = await response.json();
+        if (response.ok && isClaudeTakeAnswer(answer)) {
+            status.textContent = `Saved. ${claudeTakeAvailabilityText(answer.is_available)}`;
+            status.dataset["state"] = "saved";
+            return;
+        }
+        status.textContent = `Not saved: the engine answered ${String(response.status)}`;
+        status.dataset["state"] = "failed";
+    }
+    catch {
+        status.textContent = "Not saved: the engine is not running";
+        status.dataset["state"] = "failed";
+    }
+}
+function claudeFieldElement(labelText, input) {
+    const label = htmlElement("label", "settings-claude-field");
+    label.append(htmlElement("span", "", labelText), input);
+    return label;
+}
+/** Draw Claude's take's settings: on or off, the style, the model, and its button. */
+function claudeTakeElement(answer) {
+    const section = htmlElement("section", "settings-claude");
+    const description = htmlElement("p", "settings-description", "Rewords the lines ⌃⌥C copies with the claude command on this Mac and your own Claude login, in your style. Only the wording and the style are sent: numbers and champions are filled back in here, and every line is checked again. Each line uses your Claude plan. Off unless turned on.");
+    const enabled = htmlElement("input", "");
+    enabled.type = "checkbox";
+    enabled.name = "claude_take_enabled";
+    enabled.checked = answer.settings.enabled;
+    const enabledLabel = htmlElement("label", "settings-claude-field settings-claude-switch");
+    enabledLabel.append(enabled, document.createTextNode(" Reword with Claude"));
+    const style = htmlElement("input", "");
+    style.type = "text";
+    style.name = "claude_take_style";
+    style.maxLength = 200;
+    style.placeholder = "pirate, sports commentator, …";
+    style.value = answer.settings.style;
+    const model = htmlElement("input", "");
+    model.type = "text";
+    model.name = "claude_take_model";
+    model.maxLength = 80;
+    model.placeholder = "the claude command's default";
+    model.value = answer.settings.model;
+    const button = htmlElement("button", "settings-friends-save", "Save Claude's take");
+    button.type = "button";
+    const status = htmlElement("p", "settings-claude-status", claudeTakeAvailabilityText(answer.is_available));
+    status.setAttribute("role", "status");
+    button.addEventListener("click", () => {
+        void saveClaudeTake(enabled, style, model, status);
+    });
+    section.append(htmlElement("h2", "", "Claude's take"), description, enabledLabel, claudeFieldElement("Style", style), claudeFieldElement("Model", model), button, status);
+    return section;
+}
+/** Draw the form, one switch for each preference, the friends list and Claude's take. */
+export function renderSettings(root, preferences, friendRiotIds = [], claudeTake = null) {
     const form = htmlElement("form", "settings-form");
     const status = htmlElement("p", "settings-status");
     status.setAttribute("role", "status");
@@ -163,7 +244,7 @@ export function renderSettings(root, preferences, friendRiotIds = []) {
         label.append(input, text);
         form.append(label);
     }
-    root.replaceChildren(htmlElement("h1", "summary-result", "What the overlay shows"), htmlElement("p", "summary-detail", "Each change shows at once, and is kept for the next game."), form, status, friendsElement(friendRiotIds));
+    root.replaceChildren(htmlElement("h1", "summary-result", "What the overlay shows"), htmlElement("p", "summary-detail", "Each change shows at once, and is kept for the next game."), form, status, friendsElement(friendRiotIds), ...(claudeTake === null ? [] : [claudeTakeElement(claudeTake)]));
 }
 async function start() {
     const root = document.getElementById("settings");
@@ -171,11 +252,16 @@ async function start() {
         return;
     }
     try {
-        const [response, friendsResponse] = await Promise.all([fetch("/preferences"), fetch("/friends")]);
+        const [response, friendsResponse, claudeResponse] = await Promise.all([
+            fetch("/preferences"),
+            fetch("/friends"),
+            fetch("/claude-take"),
+        ]);
         const preferences = response.ok ? await response.json() : null;
         const friends = friendsResponse.ok ? await friendsResponse.json() : null;
+        const claudeTake = claudeResponse.ok ? await claudeResponse.json() : null;
         if (isOverlayPreferences(preferences)) {
-            renderSettings(root, preferences, isFriendsList(friends) ? friends.riot_ids : []);
+            renderSettings(root, preferences, isFriendsList(friends) ? friends.riot_ids : [], isClaudeTakeAnswer(claudeTake) ? claudeTake : null);
             return;
         }
     }

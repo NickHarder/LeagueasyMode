@@ -355,13 +355,15 @@ body {
 }
 
 .settings-status,
-.settings-friends-status {
+.settings-friends-status,
+.settings-claude-status {
   min-height: 1.45em;
   color: var(--text-secondary);
 }
 
 .settings-status[data-state="failed"],
-.settings-friends-status[data-state="failed"] {
+.settings-friends-status[data-state="failed"],
+.settings-claude-status[data-state="failed"] {
   color: var(--bad);
 }
 
@@ -749,4 +751,52 @@ body {
   color: var(--text-primary);
   font: inherit;
   cursor: pointer;
+}
+
+/* Claude's take of the closing line (phase 11.8): marked as not one of the approved lines. */
+.case-claude-take {
+  margin: 0 0 12px;
+}
+
+.case-claude-take-label {
+  margin: 0 0 4px;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.case-claude-take .case-closing-line {
+  border-left-color: var(--series-2);
+}
+
+/* Claude's take's settings on the settings page (phase 11.8). */
+.settings-claude {
+  margin-top: 24px;
+}
+
+.settings-claude h2 {
+  margin: 0 0 4px;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.settings-claude-field {
+  display: grid;
+  gap: 4px;
+  margin-top: 8px;
+}
+
+.settings-claude-field input[type="text"] {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-1);
+  color: var(--text-primary);
+  font: inherit;
+}
+
+.settings-claude-field input:focus-visible {
+  outline: 2px solid var(--series-1);
+  outline-offset: 2px;
 }

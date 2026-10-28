@@ -6,6 +6,7 @@ Run with `uv run pytest -m browser`. Set OVERLAY_SCREENSHOT_DIRECTORY to keep a 
 import contextlib
 import os
 import re
+import sys
 from collections.abc import AsyncIterator
 from pathlib import Path
 from typing import Final
@@ -27,6 +28,7 @@ from leagueasymode.game_api import GameApiClient
 from leagueasymode.game_summary import game_summary
 from leagueasymode.overlay_server import create_overlay_application
 from leagueasymode.patch_data import CHAMPION_SUMMARY_PATH
+from leagueasymode.roast.claude_take import ClaudeTake, ClaudeTakeSettings
 from leagueasymode.roast.last_game import last_game_roast, roast_path_beside
 from leagueasymode.roast.rules import LaneRules
 from leagueasymode.scoring import read_recorded_game, score_game
@@ -66,10 +68,14 @@ def write_summary_and_history(tmp_path: Path) -> tuple[Path, Path]:
 
 
 @contextlib.asynccontextmanager
-async def open_summary(summary_path: Path, history_path: Path) -> AsyncIterator[Page]:
+async def open_summary(
+    summary_path: Path, history_path: Path, claude_take: ClaudeTake | None = None
+) -> AsyncIterator[Page]:
     async with aiohttp.ClientSession() as session:
         engine = OverlayEngine(
-            GameApiClient(session, unused_local_url(), tls_context=None), poll_interval_seconds=1
+            GameApiClient(session, unused_local_url(), tls_context=None),
+            poll_interval_seconds=1,
+            claude_take=claude_take,
         )
         application = create_overlay_application(
             engine, summary_path=summary_path, history_path=history_path
@@ -219,3 +225,27 @@ async def test_a_game_without_a_case_says_so(tmp_path: Path) -> None:
         await expect(page.locator(".case-file .case-empty")).to_contain_text(
             "No case for this game", timeout=5000
         )
+
+
+async def test_claudes_take_shows_under_the_closing_line(tmp_path: Path) -> None:
+    summary_path, history_path = write_summary_and_history(tmp_path)
+    write_last_game_roast(tmp_path, summary_path)
+    # A stand-in `claude` that answers with the line it was sent, slots and all, after "Yarr! ".
+    command = tmp_path / "claude"
+    command.write_text(
+        f"#!{sys.executable}\n"
+        "import sys\n"
+        "line = sys.stdin.read().split('Line:', 1)[1].strip()\n"
+        "sys.stdout.write('Yarr! ' + line)\n"
+    )
+    command.chmod(0o755)
+    take = ClaudeTake(ClaudeTakeSettings(enabled=True, style="pirate"), command)
+    async with open_summary(summary_path, history_path, take) as page:
+        claude_take = page.locator(".case-claude-take")
+        await expect(claude_take.locator(".case-closing-line")).to_have_text(
+            re.compile(r"^Yarr! gg\."), timeout=8000
+        )
+        await expect(claude_take).to_contain_text("not one of your approved lines")
+        closing = await page.locator(".case-closing > .case-closing-line").text_content()
+        await expect(claude_take.locator(".case-closing-line")).to_have_text(f"Yarr! {closing}")
+        await keep_screenshot(page, "post-game-claudes-take")

@@ -116,6 +116,10 @@ class CaseView(BaseModel):
     closing_line_limit: int
     risk_warning: str | None
     exhibits: tuple[ViewExhibit, ...]
+    # Claude's take of the closing line (phase 11.8): the take when it is ready, and whether one
+    # is still being written; None and false while the setting is off.
+    claude_take: str | None = None
+    claude_take_pending: bool = False
 
 
 def case_options_of(query: Mapping[str, str]) -> CaseOptions:

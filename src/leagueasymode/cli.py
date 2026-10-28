@@ -32,6 +32,7 @@ from leagueasymode.config import (
     REPOSITORY_ROOT,
     Settings,
     default_accuracy_history_path,
+    default_claude_take_path,
     default_friends_path,
     default_last_game_summary_path,
     default_layout_path,
@@ -86,6 +87,11 @@ from leagueasymode.refit import (
 )
 from leagueasymode.replay import DEFAULT_REPLAY_PORT, RecordingReplay, create_replay_application
 from leagueasymode.riot_tls import create_riot_tls_context
+from leagueasymode.roast.claude_take import (
+    ClaudeTake,
+    find_claude_command,
+    load_claude_take_settings,
+)
 from leagueasymode.roast.last_game import last_game_roast, roast_path_beside
 from leagueasymode.scoring import (
     RecordedGame,
@@ -208,6 +214,10 @@ async def run_overlay(
             preferences=await asyncio.to_thread(load_preferences, preferences_path),
             layout=await asyncio.to_thread(load_layout, layout_path),
             friends=await asyncio.to_thread(load_friends, _friends_path(settings)),
+            claude_take=ClaudeTake(
+                await asyncio.to_thread(load_claude_take_settings, _claude_take_path(settings)),
+                command=await asyncio.to_thread(find_claude_command, settings.claude_command),
+            ),
             status=status,
             tuning=tuning,
             on_error=reporter.report,
@@ -223,6 +233,7 @@ async def run_overlay(
                 preferences_path=preferences_path,
                 layout_path=layout_path,
                 friends_path=_friends_path(settings),
+                claude_take_path=_claude_take_path(settings),
                 send_games=game_sender.send_unsent,
                 make_report=_report_maker(engine, status, game_sender, settings),
             )
@@ -726,6 +737,18 @@ def _tuning_of(settings: Settings) -> Tuning:
     if problem is not None:
         logger.warning("could not read %s (%s); the hand-set values stand", tuning_path, problem)
     return tuning
+
+
+def _claude_take_path(settings: Settings) -> Path:
+    """Return where Claude's take's settings are kept.
+
+    Args:
+        settings: The settings, which can move them.
+
+    Returns:
+        The file.
+    """
+    return settings.claude_take or default_claude_take_path()
 
 
 def _friends_path(settings: Settings) -> Path:

@@ -18,6 +18,7 @@ from leagueasymode.game_api import GameApiClient
 from leagueasymode.overlay_server import create_overlay_application
 from leagueasymode.overlay_state import OverlayPreferences
 from leagueasymode.preferences import load_preferences
+from leagueasymode.roast.claude_take import ClaudeTakeSettings, load_claude_take_settings
 from local_servers import serve, unused_local_url
 
 pytestmark = pytest.mark.browser
@@ -25,7 +26,7 @@ pytestmark = pytest.mark.browser
 
 @contextlib.asynccontextmanager
 async def open_settings(
-    preferences_path: Path, friends_path: Path | None = None
+    preferences_path: Path, friends_path: Path | None = None, claude_take_path: Path | None = None
 ) -> AsyncIterator[tuple[Page, OverlayEngine]]:
     async with aiohttp.ClientSession() as session:
         engine = OverlayEngine(
@@ -35,7 +36,10 @@ async def open_settings(
             friends=load_friends(friends_path) if friends_path is not None else None,
         )
         application = create_overlay_application(
-            engine, preferences_path=preferences_path, friends_path=friends_path
+            engine,
+            preferences_path=preferences_path,
+            friends_path=friends_path,
+            claude_take_path=claude_take_path,
         )
         async with serve(application) as overlay_url, async_playwright() as playwright:
             browser = await playwright.chromium.launch(
@@ -103,3 +107,23 @@ async def test_the_friends_list_is_saved_and_a_wrong_line_is_explained(tmp_path:
         await expect(status).to_have_text("Saved: 2 friends")
         await expect(box).to_have_value("Zed Main#NA1\nLux Enjoyer#EUW")
     assert load_friends(friends_path) == FriendsList(riot_ids=("Zed Main#NA1", "Lux Enjoyer#EUW"))
+
+
+async def test_claudes_take_is_turned_on_with_a_style(tmp_path: Path) -> None:
+    claude_take_path = tmp_path / "claude-take.json"
+    async with open_settings(tmp_path / "preferences.json", claude_take_path=claude_take_path) as (
+        page,
+        engine,
+    ):
+        section = page.locator(".settings-claude")
+        status = section.locator(".settings-claude-status")
+        # The engine here has no claude command, and says so.
+        await expect(status).to_contain_text("was not found", timeout=5000)
+        await section.get_by_label("Reword with Claude").check()
+        await section.get_by_label("Style").fill("pirate")
+        await section.get_by_role("button", name="Save Claude's take").click()
+        await expect(status).to_contain_text("Saved.")
+        assert engine.claude_take.settings == ClaudeTakeSettings(enabled=True, style="pirate")
+    assert load_claude_take_settings(claude_take_path) == ClaudeTakeSettings(
+        enabled=True, style="pirate"
+    )

@@ -73,7 +73,9 @@ export function isCaseView(value) {
         typeof value["closing_line"] === "string" &&
         typeof value["closing_line_limit"] === "number" &&
         isTextOrNull(value["risk_warning"]) &&
-        isArrayOf(value["exhibits"], isViewExhibit));
+        isArrayOf(value["exhibits"], isViewExhibit) &&
+        isTextOrNull(value["claude_take"]) &&
+        typeof value["claude_take_pending"] === "boolean");
 }
 /** Return the path that asks `/case` for a choice. */
 export function casePath(choice) {
