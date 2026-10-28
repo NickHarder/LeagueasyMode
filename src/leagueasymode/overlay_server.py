@@ -26,6 +26,8 @@ MARK_REQUEST_HEADER: Final = "X-LeagueasyMode-Request"
 MARK_REQUEST_VALUE: Final = "mark"
 # The same header's value for a change of preferences, from the settings page.
 PREFERENCES_REQUEST_VALUE: Final = "preferences"
+# And for a round of sending games, from the status page.
+SEND_GAMES_REQUEST_VALUE: Final = "send-games"
 # And for a move of the widgets, from the overlay page in edit mode.
 LAYOUT_REQUEST_VALUE: Final = "layout"
 ENEMY_SLOT_COUNT: Final = 5
@@ -73,6 +75,7 @@ def create_overlay_application(
     history_path: Path | None = None,
     preferences_path: Path | None = None,
     layout_path: Path | None = None,
+    send_games: Callable[[], Awaitable[None]] | None = None,
 ) -> web.Application:
     """Return the overlay's web application.
 
@@ -82,6 +85,8 @@ def create_overlay_application(
         history_path: The accuracy history, served at `/history`; None to serve none.
         preferences_path: Where a change of preferences is kept; None to keep it for this run.
         layout_path: Where a move of the widgets is kept; None to keep it for this run.
+        send_games: Sends the recorded games not yet sent (`recording/sender.py`), which the
+            status page asks for at `POST /games/send`; None when games are not sent.
 
     Returns:
         The application.
@@ -146,7 +151,33 @@ def create_overlay_application(
     application.router.add_post("/marks", mark)
     for route_path, (file_name, content_type) in WEB_ASSETS.items():
         application.router.add_get(route_path, _asset_handler(file_name, content_type))
+    _add_game_sending(application, send_games)
     return application
+
+
+def _add_game_sending(
+    application: web.Application, send_games: Callable[[], Awaitable[None]] | None
+) -> None:
+    """Add `POST /games/send`, where the status page asks for a round of sending games.
+
+    Args:
+        application: The overlay's application.
+        send_games: Sends the recorded games not yet sent; None when games are not sent.
+    """
+    sending_rounds: set[asyncio.Future[None]] = set()
+
+    async def send_games_now(request: web.Request) -> web.Response:
+        if request.headers.get(MARK_REQUEST_HEADER) != SEND_GAMES_REQUEST_VALUE:
+            return web.json_response({"message": "a round comes from the status page"}, status=403)
+        if send_games is None:
+            return web.json_response({"message": "games are not sent"}, status=404)
+        # The round runs on after the answer; the status page shows how it goes.
+        sending_round: asyncio.Future[None] = asyncio.ensure_future(send_games())
+        sending_rounds.add(sending_round)
+        sending_round.add_done_callback(sending_rounds.discard)
+        return web.json_response({"message": "sending"}, status=202)
+
+    application.router.add_post("/games/send", send_games_now)
 
 
 def _add_the_players_choices(

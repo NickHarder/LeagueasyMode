@@ -11,7 +11,8 @@
         "scoring",
         "settings",
         "models",
-        "tuning"
+        "tuning",
+        "sending"
       ],
       "type": "string"
     },

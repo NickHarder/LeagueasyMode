@@ -34,7 +34,7 @@ up as its own pull request into `main` without waiting for the one before to mer
 | Area | State | Proof |
 |---|---|---|
 | Scaffold | ai-kit v0.11.1, Python layer, GitHub CI | `.copier-answers.yml` |
-| Gate | Green: lint, 846 tests (and 40 in Chromium), secrets | `make gate` |
+| Gate | Green: lint, 854 tests (and 41 in Chromium), secrets | `make gate` |
 | Recorder | Records games, the client's patch data and the post-game timeline; anonymized copies | `uv run leagueasymode record`; `tests/test_recorder.py`, `tests/test_anonymize.py` |
 | Replay | A recording served as a stand-in game API | `uv run leagueasymode replay <recording>`; `tests/test_replay.py` |
 | Engine and overlay page | The dragon and Elder timer, from the game's answer to the page | `uv run leagueasymode run`; `tests/test_tracer_bullet.py` |
@@ -140,6 +140,11 @@ In `AGENTS.md`. Also: a raw recording (it holds other players' names); only `ano
   requests a game at most, through the client's own session (the owner, 2026-10-09: "I am fine
   with this if the free developer key can handle this"; no developer key is used, and the pace
   would fit one's limits).
+
+- Recorded games go, anonymized, to the owner's private repository
+  `NickHarder/LeagueasyMode-recordings`, by themselves once a token is in the Keychain (the
+  owner, 2026-10-28: "i want it automated if possible"; a private repository over a branch of the
+  public one). Setup: `docs/references/recordings.md`, "Sending games".
 
 ## Known limitations
 
