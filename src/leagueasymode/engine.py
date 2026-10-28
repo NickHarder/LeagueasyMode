@@ -56,6 +56,7 @@ from leagueasymode.player_intel import (
     jungle_starts_of,
     load_player_records,
 )
+from leagueasymode.problem_report import player_identities
 from leagueasymode.refit import ModelWeights
 from leagueasymode.tuning import DEFAULT_TUNING, Tuning
 
@@ -301,6 +302,8 @@ class OverlayEngine:
         """
         self.game_api: Final = game_api
         self.on_error: Final = on_error
+        # Every name a game's answer gave this run, which a problem report scrubs.
+        self.seen_identities: Final[set[str]] = set()
         self.tuning: Final = tuning
         self.poll_interval_seconds: Final = poll_interval_seconds
         self.connect_to_client: Final = connect_to_client
@@ -446,6 +449,7 @@ class OverlayEngine:
     async def _take_one_answer(self) -> None:
         """Ask the game once, and publish the overlay's state if it changed."""
         payload = await self.game_api.fetch_all_game_data()
+        self.seen_identities.update(player_identities(payload))
         no_answer = self.game_api.last_no_answer
         if payload is None and no_answer is not None:
             self.status.note_no_answer(no_answer)

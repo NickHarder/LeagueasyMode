@@ -7,7 +7,7 @@ import logging
 import signal
 import sys
 from collections import Counter
-from collections.abc import Callable, Coroutine, Sequence
+from collections.abc import Awaitable, Callable, Coroutine, Sequence
 from pathlib import Path
 from typing import Final
 
@@ -27,6 +27,7 @@ from leagueasymode.accuracy_thresholds import (
     save_thresholds,
     stricter_thresholds,
 )
+from leagueasymode.build_info import engine_log_path
 from leagueasymode.config import (
     REPOSITORY_ROOT,
     Settings,
@@ -64,6 +65,7 @@ from leagueasymode.overlay_state import MinimapLayout
 from leagueasymode.patch_data import GAME_VERSION_PATH, game_version_of
 from leagueasymode.player_intel import PLAYER_LOOKUP_PATH_PREFIXES
 from leagueasymode.preferences import load_layout, load_preferences
+from leagueasymode.problem_report import make_problem_report
 from leagueasymode.recorder import RecorderTimings, record_games
 from leagueasymode.recording.anonymize import IdentityLeakError, anonymize_recording
 from leagueasymode.recording.file_format import COMPRESSED_SUFFIX, PLAIN_SUFFIX
@@ -211,6 +213,7 @@ async def run_overlay(
                 preferences_path=preferences_path,
                 layout_path=layout_path,
                 send_games=game_sender.send_unsent,
+                make_report=_report_maker(engine, status, game_sender, settings),
             )
         )
         await runner.setup()
@@ -281,6 +284,44 @@ async def run_overlay(
             await asyncio.gather(*background_tasks)
         finally:
             await runner.cleanup()
+
+
+def _report_maker(
+    engine: OverlayEngine, status: StatusBoard, game_sender: GameSender, settings: Settings
+) -> Callable[[str, dict[str, str]], Awaitable[str]]:
+    """Return what makes a problem report when the app asks, and sends it at once.
+
+    Args:
+        engine: The engine, for the names it has seen.
+        status: The status board, whose report goes in.
+        game_sender: Sends the report with the games.
+        settings: Where the recordings, and so the reports, are.
+
+    Returns:
+        A function making a report from the player's note and the app's lines, returning its name.
+    """
+    sending_rounds: set[asyncio.Future[None]] = set()
+
+    async def make_report(note: str, app_facts: dict[str, str]) -> str:
+        report_directory = await asyncio.to_thread(
+            lambda: make_problem_report(
+                recordings_directory=settings.recordings_directory
+                or default_recordings_directory(),
+                note=note,
+                app_facts=app_facts,
+                status_report=status.report(),
+                engine_log=engine_log_path(),
+                identities=set(engine.seen_identities),
+                home_directory=Path.home(),
+                now=datetime.datetime.now(datetime.UTC),
+            )
+        )
+        sending_round: asyncio.Future[None] = asyncio.ensure_future(game_sender.send_unsent())
+        sending_rounds.add(sending_round)
+        sending_round.add_done_callback(sending_rounds.discard)
+        return report_directory.name
+
+    return make_report
 
 
 def _game_sender(

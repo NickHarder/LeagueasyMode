@@ -33,6 +33,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from leagueasymode.crash_reports import CRASH_REPORTS_FOLDER
 from leagueasymode.engine_status import PartState, StatusBoard
+from leagueasymode.problem_report import REPORTS_FOLDER
 from leagueasymode.recording.anonymize import IdentityLeakError, anonymize_recording
 from leagueasymode.recording.file_format import COMPRESSED_SUFFIX, PLAIN_SUFFIX
 
@@ -65,6 +66,8 @@ class SentLog(BaseModel):
     withheld: list[str] = Field(default_factory=list)
     # The crash reports sent (`crash_reports.py`), by file name.
     crash_reports: list[str] = Field(default_factory=list)
+    # The problem reports' files sent (`problem_report.py`), as `report-<time>/<file>`.
+    reports: list[str] = Field(default_factory=list)
 
 
 def _run_command(arguments: list[str]) -> subprocess.CompletedProcess[str]:
@@ -246,11 +249,37 @@ class GameSender:
                 sent_log.crash_reports.append(report_path.name)
                 reports_now.append(report_path.name)
                 await asyncio.to_thread(_write_sent_log, log_path, sent_log)
+            for report_file in await asyncio.to_thread(self._unsent_report_files, sent_log):
+                relative_name = f"{report_file.parent.name}/{report_file.name}"
+                file_bytes = await asyncio.to_thread(report_file.read_bytes)
+                await self._put(f"{REPORTS_FOLDER}/{relative_name}", file_bytes, token)
+                sent_log.reports.append(relative_name)
+                reports_now.append(relative_name)
+                await asyncio.to_thread(_write_sent_log, log_path, sent_log)
         except SendRefusedError as refusal:
             self._note("problem", str(refusal))
             return
         self._note_round(
             len(sent_now), len(withheld_now), len(sent_log.sent), report_count=len(reports_now)
+        )
+
+    def _unsent_report_files(self, sent_log: SentLog) -> list[Path]:
+        """Return the problem reports' files not yet sent, oldest report first.
+
+        Args:
+            sent_log: What was sent.
+
+        Returns:
+            The files.
+        """
+        reports_directory = self.recordings_directory / REPORTS_FOLDER
+        if not reports_directory.is_dir():
+            return []
+        sent_names = set(sent_log.reports)
+        return sorted(
+            path
+            for path in reports_directory.glob("*/*")
+            if path.is_file() and f"{path.parent.name}/{path.name}" not in sent_names
         )
 
     def _unsent_crash_reports(self, sent_log: SentLog) -> list[Path]:
@@ -355,12 +384,12 @@ class GameSender:
             sent_count: Games sent this round.
             withheld_count: Games withheld this round.
             total_sent: Games sent in all.
-            report_count: Crash reports sent this round.
+            report_count: Crash and problem report files sent this round.
         """
-        reports_text = f"; {report_count} crash reports sent" if report_count else ""
+        reports_text = f"; {report_count} report files sent" if report_count else ""
         if sent_count == 0 and withheld_count == 0:
             if report_count:
-                self._note("ok", f"Nothing new to send but crash reports{reports_text}")
+                self._note("ok", f"No new games{reports_text}")
                 return
             self._note("ok", f"Nothing new to send; {total_sent} sent to {self.repository} in all")
             return

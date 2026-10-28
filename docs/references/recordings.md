@@ -4,7 +4,7 @@ title: Recordings
 description: What a recording of a game holds, how it is written and read, what is asked of the League client and when, and how a copy is anonymized before it may enter the repository.
 tags: [recording, data, privacy]
 status: draft
-generated: { by: claude-code/cloud, at: 2026-10-28T02:26:00Z }
+generated: { by: claude-code/cloud, at: 2026-10-28T22:10:00Z }
 sources:
   - id: file-format
     resource: ../../src/leagueasymode/recording/file_format.py
@@ -188,7 +188,10 @@ It needs a GitHub token that may write to that repository, once:
 A recording the engine stopped in the middle of, which stays plain without its end, is compressed
 when the engine starts again and sent like the others; the reader skips its last line if a crash
 cut it off. The engine's crash reports, in `crash-reports/` beside the recordings, go to the same
-repository's `crash-reports/` (`crash_reports.py`).
+repository's `crash-reports/` (`crash_reports.py`), and each problem report the app asks for, in
+`reports/report-<time>/`, to its `reports/` (`problem_report.py`; `macos-app.md`): `report.json`,
+the end of the engine's log and the last run's, and the game so far, anonymized. A name the engine
+saw in a game's answer, and the home folder, are taken out of the note and the logs.
 
 The token is read from the Keychain for each round (`LEAGUEASYMODE_GITHUB_TOKEN` is read instead,
 off a Mac), and is never written anywhere, shown or logged. Sending is the app's only request

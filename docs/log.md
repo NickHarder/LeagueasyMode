@@ -6,6 +6,13 @@ skill has the format.
 
 ## 2026-10-28
 
+- Phase 10.3: "Report a problem…". Each problem after the first tests took rounds of describing,
+  screenshots and guesses; the owner asked for "a snap shot way to upload issues for you easily".
+  The menu item, or ⌃⌥⌘R in a game, has the engine write a report (the app's menu lines, the status
+  page's report, the end of the engine's log and the last run's, the game so far, anonymized, with
+  names and the home folder scrubbed) and send it to the games' repository at once. An engine that
+  stops is started again, at most five times in ten minutes, so "Engine: stopped (exit 1)" no
+  longer leaves the overlay empty until the app is opened again.
 - Phase 10.1 and 10.2: each build is told apart and the engine's log is kept. Every build was
   "0.1.0", and the engine's output went nowhere when the app was opened from Finder, so neither
   "which build was that" nor "why exit 1" had an answer. The menu now names the build ("0.1.0

@@ -4,8 +4,8 @@ title: The engine and the overlay page
 description: How the engine turns the game's answers into the overlay's state, how that state reaches the widgets, how the page is built and tested, and how to run it all against a replay.
 tags: [engine, overlay, architecture]
 status: draft
-generated: { by: claude-code/cloud, at: 2026-10-28T00:57:00Z }
-generated: { by: claude-code/cloud, at: 2026-10-28T02:26:00Z }
+generated: { by: claude-code/cloud, at: 2026-10-28T22:10:00Z }
+generated: { by: claude-code/cloud, at: 2026-10-28T22:10:00Z }
 sources:
   - id: engine
     resource: ../../src/leagueasymode/engine.py
@@ -63,6 +63,8 @@ sources:
     resource: ../../src/leagueasymode/inference/sightings.py
   - id: crash-reports
     resource: ../../src/leagueasymode/crash_reports.py
+  - id: problem-report
+    resource: ../../src/leagueasymode/problem_report.py
   - id: game-summary
     resource: ../../src/leagueasymode/game_summary.py
   - id: preferences
@@ -326,6 +328,9 @@ sentence saying why:[^engine-status]
   is written once as a crash report, beside the recordings, and sent with the games: its kind, the
   job, and the lines of code it passed through without their folders, never its message, which can
   hold a player's name.[^crash-reports]
+- **Problem reports:** `POST /report`, with the app's header and its JSON (a note and the app's
+  menu lines), makes a report beside the recordings and starts a round of sending; a page cannot
+  ask for one, as it cannot send the header.[^problem-report]
 
 It also lists each kind of event in the game's feed, marking those no estimator reads, which is
 how an event new this patch shows. "Copy report" copies all of it as text, to paste into a message
@@ -397,6 +402,7 @@ Chromium against a replay (Chromium from `uv run playwright install chromium`, o
 [^you]: `src/leagueasymode/inference/you.py`
 [^sightings]: `src/leagueasymode/inference/sightings.py`
 [^crash-reports]: `src/leagueasymode/crash_reports.py`
+[^problem-report]: `src/leagueasymode/problem_report.py`
 [^game-summary]: `src/leagueasymode/game_summary.py`
 [^preferences]: `src/leagueasymode/preferences.py`
 [^engine-status]: `src/leagueasymode/engine_status.py`

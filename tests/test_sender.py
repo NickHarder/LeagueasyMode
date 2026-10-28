@@ -175,7 +175,12 @@ async def test_a_game_that_would_leak_a_name_is_withheld(tmp_path: Path) -> None
     await send_with(github, recordings, TOKEN, board)
     assert set(github.puts) == {"games/game-1-anonymized.jsonl.xz"}
     sent_log = json.loads((recordings / SENT_LOG_NAME).read_text())
-    assert sent_log == {"sent": ["game-1"], "withheld": ["game-2"], "crash_reports": []}
+    assert sent_log == {
+        "sent": ["game-1"],
+        "withheld": ["game-2"],
+        "crash_reports": [],
+        "reports": [],
+    }
     assert sending_part(board) == (
         "problem",
         f"Sent 1 game to {REPOSITORY}; 1 sent in all; 1 withheld: no safe anonymized copy",
@@ -261,7 +266,7 @@ async def test_crash_reports_go_with_the_games_once(tmp_path: Path) -> None:
     }
     assert sending_part(board) == (
         "ok",
-        f"Sent 1 game to {REPOSITORY}; 1 sent in all; 1 crash reports sent",
+        f"Sent 1 game to {REPOSITORY}; 1 sent in all; 1 report files sent",
     )
     github.puts.clear()
     await send_with(github, recordings, TOKEN, board)

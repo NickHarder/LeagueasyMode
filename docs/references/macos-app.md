@@ -4,7 +4,7 @@ title: The macOS overlay app
 description: What the menu bar app does, how to run it from a clone, how to build, release and open the app that carries its own engine, its update check and open at login, and the steps for the tracer bullet's test on a Mac over League in each display mode.
 tags: [macos, overlay, tracer-bullet]
 status: draft
-generated: { by: claude-code/cloud, at: 2026-10-28T20:16:00Z }
+generated: { by: claude-code/cloud, at: 2026-10-28T22:10:00Z }
 sources:
   - id: panel
     resource: ../../overlay/macos/Sources/LeagueasyOverlay/OverlayPanel.swift
@@ -92,6 +92,18 @@ status page, its report and each crash report name the build too. The engine's o
 opened from Finder has nowhere to show, goes to `~/Library/Logs/LeagueasyMode/engine.log`, a new
 one each start with the last three runs' kept (`EngineLog`); "Open engine log" in the menu opens
 it.
+
+**Report a problem, and an engine that stops.** "Report a problem…" in the menu asks for an
+optional note and has the engine make a report: the app's own menu lines (the build, the engine,
+the overlay page, League's window, the keyboard, the window level, macOS's version), the status
+page's report, the end of this run's and the last run's engine log, the crash reports' names and
+the game so far, anonymized, with every player's name and the home folder taken out. The engine
+writes it to `reports/` beside the recordings and sends it to the games' repository at once
+(`recordings.md`); ⌃⌥⌘R sends one without a note, from inside a game. The menu then says
+"Report: made at 21:40, being sent", or why it could not be made (`ProblemReportRequest`;
+`problem_report.py`). An engine that stops is started again three seconds later, with a new log,
+at most five times in ten minutes; after that the menu says "Engine: stopped (exit 1) after
+repeated restarts" (`EngineRestartPolicy`).
 
 The menu shows whether the engine runs and whether the overlay page loaded in the overlay's
 window ("Overlay: page loaded", or "Overlay: the page did not load (…)" with the web view's

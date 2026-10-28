@@ -9,6 +9,10 @@ import ServiceManagement
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private static let toggleShortcutDescription = "⌃⌥⌘L"
     private static let toggleHotKeyIdentifier: UInt32 = 1
+    private static let reportShortcutDescription = "⌃⌥⌘R"
+    private static let reportHotKeyIdentifier: UInt32 = 2
+    // How long the app waits before starting a stopped engine again, so its port is free.
+    private static let engineRestartDelaySeconds: TimeInterval = 3
     // ⌃⌥1 to ⌃⌥5 pick an enemy in role order; ⌃⌥F, ⌃⌥D and ⌃⌥R name the spell they used.
     private static let firstPickHotKeyIdentifier: UInt32 = 10
     private static let firstSpellHotKeyIdentifier: UInt32 = 20
@@ -37,6 +41,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var overlayPanel: OverlayPanel?
     private var engineProcess: EngineProcess?
     private var toggleHotKey: GlobalHotKey?
+    private var reportHotKey: GlobalHotKey?
     private var markHotKeys: [GlobalHotKey] = []
     private var markSequence = MarkSequence()
     private var overlayURL: URL?
@@ -57,6 +62,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var updateTimer: Timer?
     private var gamePlacement: GamePlacement?
     private var gameWindowTimer: Timer?
+    // How often a stopped engine is started again; none once the app is quitting.
+    private var restartPolicy = EngineRestartPolicy()
+    private var isTerminating = false
+    // What became of the last problem report, for the menu; nil before the first.
+    private var reportStatusText: String?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         let placement = Self.currentGamePlacement()
@@ -83,6 +93,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         if toggleHotKey == nil {
             NSLog("LeagueasyMode: the shortcut %@ is taken; use the menu", Self.toggleShortcutDescription)
+        }
+        reportHotKey = GlobalHotKey(
+            identifier: Self.reportHotKeyIdentifier,
+            keyCode: UInt32(kVK_ANSI_R),
+            modifiers: UInt32(cmdKey | optionKey | controlKey)
+        ) { [weak self] in
+            self?.sendProblemReport(note: "")
+        }
+        if reportHotKey == nil {
+            NSLog("LeagueasyMode: the shortcut %@ is taken; use the menu", Self.reportShortcutDescription)
         }
         registerMarkHotKeys()
         NotificationCenter.default.addObserver(
@@ -111,6 +131,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationWillTerminate(_ notification: Notification) {
+        isTerminating = true
         engineProcess?.stop()
     }
 
@@ -135,12 +156,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let process = EngineProcess(
             command: command,
             logURL: engineLogURL,
-            extraEnvironment: ["LEAGUEASYMODE_BUILD": buildInfo.label],
+            extraEnvironment: [
+                "LEAGUEASYMODE_BUILD": buildInfo.label,
+                "LEAGUEASYMODE_ENGINE_LOG": engineLogURL?.path ?? "",
+            ],
             onOverlayURL: { [weak self] overlayURL in
                 self?.engineDidAnnounce(overlayURL)
             },
             onExit: { [weak self] exitStatus in
-                self?.updateEngineStatus("Engine: stopped (exit \(exitStatus))")
+                self?.engineDidStop(exitStatus: exitStatus)
             }
         )
         do {
@@ -162,6 +186,34 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             overlayPanel?.showOverlay()
         }
         updateEngineStatus("Engine: running")
+    }
+
+    /// Starts a stopped engine again after a moment, unless the app is quitting or the engine has
+    /// stopped too often (`EngineRestartPolicy`); its log then holds why, in the previous run's file.
+    private func engineDidStop(exitStatus: Int32) {
+        engineProcess = nil
+        overlayURL = nil
+        guard !isTerminating else {
+            return
+        }
+        guard restartPolicy.shouldRestart(at: Date()) else {
+            updateEngineStatus("Engine: stopped (exit \(exitStatus)) after repeated restarts")
+            return
+        }
+        updateEngineStatus("Engine: stopped (exit \(exitStatus)); starting again…")
+        Timer.scheduledTimer(
+            timeInterval: Self.engineRestartDelaySeconds,
+            target: self,
+            selector: #selector(engineRestartTimerFired(_:)),
+            userInfo: nil,
+            repeats: false
+        )
+    }
+
+    @objc private func engineRestartTimerFired(_ timer: Timer) {
+        if !isTerminating && engineProcess == nil {
+            startEngine()
+        }
     }
 
     private func updateEngineStatus(_ statusText: String) {
@@ -320,6 +372,84 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }.resume()
     }
 
+    // MARK: - Problem reports
+
+    /// Asks the player for an optional note, then for a report.
+    @objc private func reportProblemFromMenu(_ sender: NSMenuItem) {
+        let alert = NSAlert()
+        alert.messageText = "Report a problem"
+        alert.informativeText =
+            "What went wrong? The report takes the engine's log, the status page and the game so far, "
+            + "without anyone's name, and is sent with the games."
+        let noteField = NSTextField(frame: NSRect(x: 0, y: 0, width: 320, height: 64))
+        noteField.placeholderString = "Optional: what you saw"
+        alert.accessoryView = noteField
+        alert.addButton(withTitle: "Send report")
+        alert.addButton(withTitle: "Cancel")
+        NSApp.activate(ignoringOtherApps: true)
+        alert.window.initialFirstResponder = noteField
+        guard alert.runModal() == .alertFirstButtonReturn else {
+            return
+        }
+        sendProblemReport(note: noteField.stringValue)
+    }
+
+    /// Asks the engine for a problem report with the app's own lines, which it then sends.
+    private func sendProblemReport(note: String) {
+        guard let overlayURL else {
+            reportDidFinish("Report: could not be made (the engine is not running)")
+            return
+        }
+        let request: URLRequest
+        do {
+            request = try ProblemReportRequest.make(overlayURL: overlayURL, note: note, appFacts: appFacts)
+        } catch {
+            reportDidFinish("Report: could not be made (\(error.localizedDescription))")
+            return
+        }
+        reportDidFinish("Report: being made…")
+        // On the main actor, as this method is; the request itself waits without holding it.
+        Task { [weak self] in
+            do {
+                let (_, response) = try await URLSession.shared.data(for: request)
+                let statusCode = (response as? HTTPURLResponse)?.statusCode ?? 0
+                if statusCode == 201 {
+                    let sentAt = Date().formatted(date: .omitted, time: .shortened)
+                    self?.reportDidFinish("Report: made at \(sentAt), being sent")
+                } else {
+                    self?.reportDidFinish("Report: could not be made (HTTP \(statusCode))")
+                }
+            } catch {
+                self?.reportDidFinish("Report: could not be made (\(error.localizedDescription))")
+            }
+        }
+    }
+
+    private func reportDidFinish(_ statusText: String) {
+        reportStatusText = statusText
+        statusItem?.menu = makeMenu()
+    }
+
+    /// The app's own lines, which the engine cannot see, for a problem report.
+    private var appFacts: [String: String] {
+        var facts = [
+            "build": buildInfo.label,
+            "engine": engineStatusText,
+            "page": pageState.menuText,
+            "overlay": isOverlayShown ? "shown" : "hidden",
+            "editing layout": isEditingLayout ? "yes" : "no",
+            "window level": levelChoice.menuTitle,
+            "macOS": ProcessInfo.processInfo.operatingSystemVersionString,
+        ]
+        if let gamePlacement {
+            facts["game window"] = gamePlacement.menuText
+        }
+        if let keyboardText = KeyboardHandBack.menuText(handBackCount: keyboardHandBackCount) {
+            facts["keyboard"] = keyboardText
+        }
+        return facts
+    }
+
     // MARK: - The menu
 
     private func makeStatusItem() -> NSStatusItem {
@@ -341,6 +471,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         if let gamePlacement {
             menu.addItem(Self.disabledItem(gamePlacement.menuText))
+        }
+        if let reportStatusText {
+            menu.addItem(Self.disabledItem(reportStatusText))
         }
         menu.addItem(.separator())
         let showItem = NSMenuItem(
@@ -370,6 +503,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         levelItem.submenu = makeLevelMenu()
         menu.addItem(levelItem)
         menu.addItem(.separator())
+        let reportTitle = "Report a problem… (\(Self.reportShortcutDescription) sends one without a note)"
+        if overlayURL != nil {
+            let reportItem = NSMenuItem(
+                title: reportTitle, action: #selector(reportProblemFromMenu(_:)), keyEquivalent: ""
+            )
+            reportItem.target = self
+            menu.addItem(reportItem)
+        } else {
+            menu.addItem(Self.disabledItem(reportTitle))
+        }
         if engineLogURL != nil {
             let logItem = NSMenuItem(title: "Open engine log", action: #selector(openEngineLog(_:)), keyEquivalent: "")
             logItem.target = self

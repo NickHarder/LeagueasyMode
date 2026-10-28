@@ -661,3 +661,34 @@ final class EngineLogTests: XCTestCase {
         XCTAssertEqual(EngineLog.directory(homeDirectory: home).path, "/Users/someone/Library/Logs/LeagueasyMode")
     }
 }
+
+final class ProblemReportRequestTests: XCTestCase {
+    func testAReportCarriesTheNoteAndTheAppsLinesWithTheAppsHeader() throws {
+        let overlayURL = try XCTUnwrap(URL(string: "http://127.0.0.1:52011/"))
+        let request = try ProblemReportRequest.make(
+            overlayURL: overlayURL,
+            note: "keys \"stopped\"",
+            appFacts: ["engine": "Engine: running", "keyboard": "Keyboard: handed back once"]
+        )
+        XCTAssertEqual(request.url?.absoluteString, "http://127.0.0.1:52011/report")
+        XCTAssertEqual(request.httpMethod, "POST")
+        XCTAssertEqual(request.value(forHTTPHeaderField: "X-LeagueasyMode-Request"), "report")
+        let body = try XCTUnwrap(request.httpBody)
+        let decoded = try XCTUnwrap(JSONSerialization.jsonObject(with: body) as? [String: Any])
+        XCTAssertEqual(decoded["note"] as? String, "keys \"stopped\"")
+        XCTAssertEqual((decoded["app"] as? [String: String])?["keyboard"], "Keyboard: handed back once")
+    }
+}
+
+final class EngineRestartPolicyTests: XCTestCase {
+    func testAStoppedEngineIsStartedAgainAtMostFiveTimesInTenMinutes() {
+        var policy = EngineRestartPolicy()
+        let start = Date(timeIntervalSince1970: 1_000)
+        for minute in 0..<5 {
+            XCTAssertTrue(policy.shouldRestart(at: start.addingTimeInterval(Double(minute) * 60)))
+        }
+        XCTAssertFalse(policy.shouldRestart(at: start.addingTimeInterval(5 * 60)))
+        // Ten minutes after the first, there is room again.
+        XCTAssertTrue(policy.shouldRestart(at: start.addingTimeInterval(10 * 60 + 1)))
+    }
+}

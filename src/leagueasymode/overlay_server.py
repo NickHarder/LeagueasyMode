@@ -28,6 +28,20 @@ MARK_REQUEST_VALUE: Final = "mark"
 PREFERENCES_REQUEST_VALUE: Final = "preferences"
 # And for a round of sending games, from the status page.
 SEND_GAMES_REQUEST_VALUE: Final = "send-games"
+# And for a problem report, from the macOS app.
+REPORT_REQUEST_VALUE: Final = "report"
+LONGEST_NOTE: Final = 4000
+
+
+class ReportRequest(BaseModel):
+    """What the macOS app sends with a request for a problem report."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    note: str = Field(default="", max_length=LONGEST_NOTE)
+    app: dict[str, str] = Field(default_factory=dict, max_length=20)
+
+
 # And for a move of the widgets, from the overlay page in edit mode.
 LAYOUT_REQUEST_VALUE: Final = "layout"
 ENEMY_SLOT_COUNT: Final = 5
@@ -76,6 +90,7 @@ def create_overlay_application(
     preferences_path: Path | None = None,
     layout_path: Path | None = None,
     send_games: Callable[[], Awaitable[None]] | None = None,
+    make_report: Callable[[str, dict[str, str]], Awaitable[str]] | None = None,
 ) -> web.Application:
     """Return the overlay's web application.
 
@@ -87,6 +102,9 @@ def create_overlay_application(
         layout_path: Where a move of the widgets is kept; None to keep it for this run.
         send_games: Sends the recorded games not yet sent (`recording/sender.py`), which the
             status page asks for at `POST /games/send`; None when games are not sent.
+        make_report: Makes a problem report from the player's note and the app's lines and
+            returns its name (`problem_report.py`), which the app asks for at `POST /report`;
+            None when reports are not made.
 
     Returns:
         The application.
@@ -152,7 +170,34 @@ def create_overlay_application(
     for route_path, (file_name, content_type) in WEB_ASSETS.items():
         application.router.add_get(route_path, _asset_handler(file_name, content_type))
     _add_game_sending(application, send_games)
+    _add_problem_reports(application, make_report)
     return application
+
+
+def _add_problem_reports(
+    application: web.Application,
+    make_report: Callable[[str, dict[str, str]], Awaitable[str]] | None,
+) -> None:
+    """Add `POST /report`, where the macOS app asks for a problem report.
+
+    Args:
+        application: The overlay's application.
+        make_report: Makes a report and returns its name; None when reports are not made.
+    """
+
+    async def report(request: web.Request) -> web.Response:
+        if request.headers.get(MARK_REQUEST_HEADER) != REPORT_REQUEST_VALUE:
+            return web.json_response({"message": "a report comes from the app"}, status=403)
+        if make_report is None:
+            return web.json_response({"message": "reports are not made"}, status=404)
+        try:
+            report_request = ReportRequest.model_validate_json(await request.read())
+        except ValidationError:
+            return web.json_response({"message": "not a report request"}, status=400)
+        report_name = await make_report(report_request.note, report_request.app)
+        return web.json_response({"report": report_name}, status=201)
+
+    application.router.add_post("/report", report)
 
 
 def _add_game_sending(
