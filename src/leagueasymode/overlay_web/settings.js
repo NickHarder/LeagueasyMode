@@ -25,6 +25,10 @@ const DESCRIPTIONS = {
         "Moments about friends",
         "A notice when a friend's game hands over ammo, such as a second death to their lane opponent. Never spoken; ⌃⌥C copies it.",
     ],
+    show_team_calls: [
+        "Team calls",
+        "Calm calls for the whole team, such as staying alive and warding before a dragon, to paste in team chat. Never spoken; ⌃⌥C copies it.",
+    ],
     speak_callouts: ["Speak callouts", "Each new callout read aloud in macOS’s voice, as it shows. Off unless turned on."],
     click_to_mark: [
         "Click to mark spells",

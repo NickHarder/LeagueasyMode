@@ -4,7 +4,7 @@ title: The macOS overlay app
 description: What the menu bar app does, how to run it from a clone, how to build, release and open the app that carries its own engine, its update check and open at login, and the steps for the tracer bullet's test on a Mac over League in each display mode.
 tags: [macos, overlay, tracer-bullet]
 status: draft
-generated: { by: claude-code/cloud, at: 2026-10-28T23:20:00Z }
+generated: { by: claude-code/cloud, at: 2026-10-28T23:35:06Z }
 sources:
   - id: build-update
     resource: ../../overlay/macos/Sources/OverlayCore/BuildUpdate.swift
@@ -125,8 +125,8 @@ clipboard, for the player to paste in chat themselves; the app never sends anyth
 Pressed again within five seconds of the press before, it copies the next take, then the one
 after (`CopyPresses`). The engine gives the line (`/closing-line`, from the last case the window
 showed, the whole team at Salty before it shows one). During a game it copies the newest moment
-about a friend instead, and pressed again the one before (phase 11.6); with no moment yet, it says
-there is nothing to copy. A toast near the top of League's window says what was copied
+about a friend (phase 11.6) or team call (11.9) instead, and pressed again the one before; with
+none yet, it says there is nothing to copy. A toast near the top of League's window says what was copied
 ("Copied: …", the line cut at 60 characters) or why nothing was. The toast is a borderless panel
 that does not activate the app and lets every click through, so it never takes the mouse or the
 keyboard from League (`ToastPanel`).

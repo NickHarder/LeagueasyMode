@@ -53,11 +53,11 @@ async def test_each_switch_starts_as_its_default_and_a_change_is_kept(tmp_path: 
     preferences_path = tmp_path / "preferences.json"
     async with open_settings(preferences_path) as (page, engine):
         switches = page.locator(".settings-row input")
-        # Eleven switches: "Click to mark spells", beside the app's shortcuts, and "Moments about
-        # friends" (phase 11.6), on by default like the others.
-        await expect(switches).to_have_count(11, timeout=5000)
+        # Twelve switches: "Click to mark spells", beside the app's shortcuts, "Moments about
+        # friends" (phase 11.6) and "Team calls" (11.9), on by default like the others.
+        await expect(switches).to_have_count(12, timeout=5000)
         # Everything shows; speaking the callouts and clicking to mark wait to be turned on.
-        for index in range(9):
+        for index in range(10):
             await expect(switches.nth(index)).to_be_checked()
         await expect(page.get_by_label("Speak callouts")).not_to_be_checked()
         await expect(page.get_by_label("Click to mark spells")).not_to_be_checked()

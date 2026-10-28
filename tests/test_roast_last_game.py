@@ -338,3 +338,41 @@ async def test_during_a_game_the_newest_moment_about_a_friend_is_copied(tmp_path
             await engine_task
     assert copied == {"text": "Ahri gave up first blood at 2:41. Setting the tone.", "take": 0}
     assert "moment" in shown
+
+
+async def test_during_a_game_a_team_call_is_copied_too(tmp_path: Path) -> None:
+    application_of_game = web.Application()
+
+    async def answer(_request: web.Request) -> web.Response:
+        # 3:45: the first dragon is up at 5:00, in 1:15.
+        return web.json_response(all_game_data(225.0))
+
+    application_of_game.router.add_get("/liveclientdata/allgamedata", answer)
+    async with serve(application_of_game) as game_url, aiohttp.ClientSession() as session:
+        engine = OverlayEngine(
+            GameApiClient(session, game_url, tls_context=None), poll_interval_seconds=0.01
+        )
+        stop_requested = asyncio.Event()
+        engine_task = asyncio.create_task(engine.run(stop_requested))
+        for _ in range(200):
+            if engine.lines_to_copy:
+                break
+            await asyncio.sleep(0.01)
+        try:
+            application = create_overlay_application(
+                engine, summary_path=tmp_path / "last-game.json"
+            )
+            async with (
+                serve(application) as overlay_url,
+                session.get(overlay_url + "/closing-line") as response,
+            ):
+                copied = await response.json()
+            shown = [callout.kind for callout in engine.current_state.callouts]
+        finally:
+            stop_requested.set()
+            await engine_task
+    assert copied == {
+        "text": "Dragon in 1:15. Let's not die, ward around it and start moving.",
+        "take": 0,
+    }
+    assert "team_call" in shown

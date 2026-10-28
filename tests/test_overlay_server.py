@@ -197,8 +197,12 @@ async def test_the_engine_adds_a_callout_when_an_enemy_reaches_level_six() -> No
         second_state = await asyncio.wait_for(updates.get(), timeout=2)
         stop_requested.set()
         await engine_task
-    assert first_state.callouts == []
-    assert [callout.text for callout in second_state.callouts] == ["Zed is level 6"]
+    # At 6:40 an objective spawns in about a minute, so a team call (phase 11.9) shows too; this
+    # test is about the level 6 callout, so it leaves team calls out.
+    assert [callout for callout in first_state.callouts if callout.kind != "team_call"] == []
+    assert [callout.text for callout in second_state.callouts if callout.kind != "team_call"] == [
+        "Zed is level 6"
+    ]
 
 
 async def test_the_engine_loads_the_item_catalog_from_the_client_when_a_game_starts() -> None:

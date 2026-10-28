@@ -277,21 +277,23 @@ def _add_the_last_games_case(
 
     async def closing_line(request: web.Request) -> web.Response:
         # The app's ⌃⌥C asks for the line the window shows; pressed again, for the takes after it.
-        # During a game, for the newest moment about a friend, and pressed again, the one before.
+        # During a game, for the newest moment or team call, and pressed again, the one before.
         later_takes_text = request.query.get("next", "0")
         if not later_takes_text.isdigit():
             return web.json_response({"message": "next is a whole number"}, status=400)
         if engine.current_state.is_game_running:
-            # During a game: the newest moment about a friend, then the ones before it (11.6).
-            moments = engine.moments
-            if not moments:
+            # During a game: the newest moment about a friend (11.6) or team call (11.9), then the
+            # ones before it.
+            lines = engine.lines_to_copy
+            if not lines:
                 return web.json_response(
-                    {"message": "nothing to copy during a game until a moment about a friend"},
+                    {"message": "nothing to copy during a game until a moment or a team call"},
                     status=409,
                 )
-            earlier_moments = int(later_takes_text)
-            moment = moments[-1 - earlier_moments % len(moments)]
-            return web.json_response({"text": moment.text, "take": earlier_moments})
+            earlier_lines = int(later_takes_text)
+            return web.json_response(
+                {"text": lines[-1 - earlier_lines % len(lines)], "take": earlier_lines}
+            )
         last_game = await last_game_roast()
         if last_game is None:
             return web.json_response(no_case_answer, status=404)

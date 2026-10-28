@@ -15,6 +15,7 @@ export const PREFERENCE_NAMES = [
     "show_callouts",
     "show_suggestions",
     "show_moments",
+    "show_team_calls",
     "speak_callouts",
     "click_to_mark",
 ];
@@ -44,6 +45,7 @@ const CALLOUT_KINDS = new Set([
     "inhibitor_open",
     "suggestion",
     "moment",
+    "team_call",
 ]);
 const START_SIDES = new Set(["blue", "red"]);
 const MAP_HALVES = new Set(["top", "bot"]);

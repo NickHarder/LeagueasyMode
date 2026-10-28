@@ -6,6 +6,13 @@ skill has the format.
 
 ## 2026-10-28
 
+- Phase 11.9, team calls, as the owner approved them ("approved, keep building 11.9"): on for
+  everyone, with a switch, for team chat. Calm, constructive calls for the whole team, from what
+  the overlay already shows: an objective spawning in a minute or so (stay alive, ward, move), enemies
+  down long enough to take something, a lost fight (reset and group for the next objective), a
+  teammate's death streak (steady, naming no one), and being behind in gold but still winnable. At
+  most one a minute, never spoken; ⌃⌥C copies the newest call or moment. The five lines are drafts
+  for the owner's sign-off.
 - The owner approved the five lines of the moments about friends ("approved"); a test now holds
   them to a fingerprint, as the case's lines are, so a reworded line goes back to the owner.
 - Phase 11.6, moments about friends. During a game the engine notices when a friend's game hands
