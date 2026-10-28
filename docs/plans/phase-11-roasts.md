@@ -1,10 +1,10 @@
 ---
 type: Plan
-title: "Phase 10: roasts with receipts, after the game and in it"
+title: "Phase 11: roasts with receipts, after the game and in it"
 description: How the overlay gets nothingsmyfault's cited roasts, a case file for anyone in the game in the post-game window and short moments about friends during it, both copied for chat with one shortcut and never posted, in a proposed build order with what each needs and where the owner decides.
-tags: [plan, phase-10, roasts, post-game]
+tags: [plan, phase-11, roasts, post-game]
 status: stable
-generated: { by: claude-code/cloud, at: 2026-10-28T20:44:41Z }
+generated: { by: claude-code/cloud, at: 2026-10-28T21:48:02Z }
 sources:
   - id: owner-2026-10-28
     resource: "The owner's messages of 2026-10-28, in the session that built nothingsmyfault"
@@ -34,7 +34,7 @@ verified:
 approved_sha256: fb6be157b45bb1f9193decbee4e6663280f34d4de264868b1a31fb5b6ae9c4f1
 ---
 
-# Phase 10: roasts with receipts, after the game and in it
+# Phase 11: roasts with receipts, after the game and in it
 
 The owner, 2026-10-28: "is there any way to put this in leagueasymode overlay so i can have ammo to
 tease my friends ... it could either read at the end or during the events through the local server
@@ -66,21 +66,21 @@ The owner's answers so far:[^owner-2026-10-28]
 
 | # | Slice | Shows | Needs |
 |---|---|---|---|
-| 10.0 | The client's post-game answers, seen | Nothing. One real matchmade game, recorded through to the end, shows the client's game details, timeline and end-of-game stats as they really are | One game of the owner's with `leagueasymode record` running until the timeline is saved. The only recording so far is a Practice Tool game cancelled at 0:00, before any player loaded, so it holds none of the three[^first-recording] |
-| 10.1 | The roast engine, here | Nothing yet. nothingsmyfault's engine ported into `src/leagueasymode/roast/`: exhibits, the verdict, the composer, the validator, the safety floor and the closing line, with the approved lines word for word. Its thresholds go into `tuning.json`; its checks, the independent "every number cited" scorer included, become tests | Built payloads in the client's shape, since nothingsmyfault's test games are in Riot's web format |
-| 10.2 | A client game as a case | The families read the client's game details and timeline through this project's own models, so every exhibit cites the client's answer (its path in `/lol-match-history/v1/games/<id>` or the timeline) with no converted copy between. A field the client does not send gives no exhibit and no line, never a zero, as nothingsmyfault already does | 10.0's shapes; 10.1 |
-| 10.3 | The case file in the post-game window | A section of the post-game window: the verdict, the lane board, the lines and the closing line. Targets cover anyone in the game: the whole team (the default), the enemy team, any lane, or any one of the ten players. Four spice levels, as on the site | 10.2 |
-| 10.4 | The copy shortcut | ⌃⌥C copies the roast that is up: after a game, the closing line; during one, the newest moment (10.6). Pressed again within 5 seconds, it copies the next take, or the moment before. A toast says what was copied ("Copied: …"). Nothing is ever sent to chat | The overlay's Carbon hot keys,[^global-hot-key] which work while League has focus with no Accessibility permission; the clipboard written from Swift, not the page |
-| 10.5 | The friends list | A setting of the friends' Riot IDs. The overlay marks which players in the game are friends, from the Riot IDs the game's API already sends | The settings page |
-| 10.6 | Moments about friends | A short notice, of its own kind beside the callouts,[^callouts] when a friend's game hands over ammo, from exact facts only. See "The moments" below | 10.5; the scoreboard and kill feed the engine already reads |
-| 10.8 | Claude's take | With its setting on, each line that passed the checks is reworded by the `claude` command on the Mac, with the owner's own Claude login, in the style the owner sets. See "Claude's take (10.8)" below. Off by default; the approved lines stay the default | `claude` installed and signed in on the Mac; 10.3 and 10.4 |
-| 10.7 | A quick scoreboard case | Right after the game, before the timeline comes, a case from the end-of-game stats: scoreboard lines, no lane verdict. The full case replaces it when the timeline arrives | 10.0's shape of the end-of-game stats; built only if they hold enough |
+| 11.0 | The client's post-game answers, seen | Nothing. One real matchmade game, recorded through to the end, shows the client's game details, timeline and end-of-game stats as they really are | One game of the owner's with `leagueasymode record` running until the timeline is saved. The only recording so far is a Practice Tool game cancelled at 0:00, before any player loaded, so it holds none of the three[^first-recording] |
+| 11.1 | The roast engine, here | Nothing yet. nothingsmyfault's engine ported into `src/leagueasymode/roast/`: exhibits, the verdict, the composer, the validator, the safety floor and the closing line, with the approved lines word for word. Its thresholds go into `tuning.json`; its checks, the independent "every number cited" scorer included, become tests | Built payloads in the client's shape, since nothingsmyfault's test games are in Riot's web format |
+| 11.2 | A client game as a case | The families read the client's game details and timeline through this project's own models, so every exhibit cites the client's answer (its path in `/lol-match-history/v1/games/<id>` or the timeline) with no converted copy between. A field the client does not send gives no exhibit and no line, never a zero, as nothingsmyfault already does | 11.0's shapes; 11.1 |
+| 11.3 | The case file in the post-game window | A section of the post-game window: the verdict, the lane board, the lines and the closing line. Targets cover anyone in the game: the whole team (the default), the enemy team, any lane, or any one of the ten players. Four spice levels, as on the site | 11.2 |
+| 11.4 | The copy shortcut | ⌃⌥C copies the roast that is up: after a game, the closing line; during one, the newest moment (11.6). Pressed again within 5 seconds, it copies the next take, or the moment before. A toast says what was copied ("Copied: …"). Nothing is ever sent to chat | The overlay's Carbon hot keys,[^global-hot-key] which work while League has focus with no Accessibility permission; the clipboard written from Swift, not the page |
+| 11.5 | The friends list | A setting of the friends' Riot IDs. The overlay marks which players in the game are friends, from the Riot IDs the game's API already sends | The settings page |
+| 11.6 | Moments about friends | A short notice, of its own kind beside the callouts,[^callouts] when a friend's game hands over ammo, from exact facts only. See "The moments" below | 11.5; the scoreboard and kill feed the engine already reads |
+| 11.8 | Claude's take | With its setting on, each line that passed the checks is reworded by the `claude` command on the Mac, with the owner's own Claude login, in the style the owner sets. See "Claude's take (11.8)" below. Off by default; the approved lines stay the default | `claude` installed and signed in on the Mac; 11.3 and 11.4 |
+| 11.7 | A quick scoreboard case | Right after the game, before the timeline comes, a case from the end-of-game stats: scoreboard lines, no lane verdict. The full case replaces it when the timeline arrives | 11.0's shape of the end-of-game stats; built only if they hold enough |
 
-The tracer bullet is 10.2 to 10.4 on one recorded game: a case in the post-game window, its
-closing line copied by the shortcut. 10.5 and 10.6 come next, then 10.8, then 10.7 if the
+The tracer bullet is 11.2 to 11.4 on one recorded game: a case in the post-game window, its
+closing line copied by the shortcut. 11.5 and 11.6 come next, then 11.8, then 11.7 if the
 end-of-game stats are worth it.
 
-## The moments (10.6)
+## The moments (11.6)
 
 Each is a fact a friend can check on the scoreboard or in the kill feed, so it carries no exhibit
 letters. Each fires once per game per friend and threshold. The thresholds go in `tuning.json` like
@@ -111,10 +111,10 @@ The cost is a second copy of the engine while nothingsmyfault keeps its own; it 
 line above ends that if it comes back. The roast lines become public with this repository, as they
 would with any option that ships them in the overlay.
 
-## Claude's take (10.8)
+## Claude's take (11.8)
 
 The owner, 2026-10-28: "coudl leaguse mode interface with claude local cli so it can add some
-variety and custom spice to roasts", and, to adding it here, "yes add it as 10.8".[^owner-2026-10-28]
+variety and custom spice to roasts", and, to adding it here, "yes add it as 11.8".[^owner-2026-10-28]
 
 - **Claude writes the words, never the numbers.** It gets a line that passed the checks, with its
   slots (`{gold_behind_14}`), and the style. It answers with a reworded line that keeps the slots,
@@ -152,10 +152,10 @@ variety and custom spice to roasts", and, to adding it here, "yes add it as 10.8
 
 - **The client's older match format.** The overlay's models of the client's game details expect
   stats nested under each participant, identities in a list of their own, and a team's result as
-  "Win" or "Fail". That is not the format nothingsmyfault reads now, hence 10.2. Some fields
+  "Win" or "Fail". That is not the format nothingsmyfault reads now, hence 11.2. Some fields
   nothingsmyfault's families read may not exist there: pings, the damage share, the surrender. Their
-  lines go quiet; nothing is guessed. 10.0 settles which ones.
-- **The timeline comes a little after the game.** The case appears when it does. 10.7 would fill the
+  lines go quiet; nothing is guessed. 11.0 settles which ones.
+- **The timeline comes a little after the game.** The case appears when it does. 11.7 would fill the
   wait.
 - **The Mac only.** The overlay roasts games the owner plays. Friends' own games, without the
   owner, would need nothingsmyfault's site and a Riot key.
@@ -164,32 +164,32 @@ variety and custom spice to roasts", and, to adding it here, "yes add it as 10.8
 
 ## How each is verified
 
-- **10.2:** tests on built answers in the client's shape, then on 10.0's recording. nothingsmyfault's
+- **11.2:** tests on built answers in the client's shape, then on 11.0's recording. nothingsmyfault's
   own checks apply to every line: each number equals an exhibit it cites, and an independent
   scorer checks the rendered text again.
-- **10.3:** a Chromium test of the section against a recorded game, as for the post-game window.
-- **10.4:** a Swift unit test of which text the shortcut picks: after a game, during one, and pressed
+- **11.3:** a Chromium test of the section against a recorded game, as for the post-game window.
+- **11.4:** a Swift unit test of which text the shortcut picks: after a game, during one, and pressed
   twice. On the Mac test, the owner checks that:
   - the shortcut works while League has focus;
   - League's chat takes ⌘V, in game and in the post-game lobby;
   - each chat's length limit is what the closing line fits.
-- **10.6:** the engine's tests, one per moment and threshold, including a pairing the roles estimator
+- **11.6:** the engine's tests, one per moment and threshold, including a pairing the roles estimator
   only guesses (no moment).
 
 ## Where the owner decides
 
-1. **Where the engine lives (10.1).** Proposed: ported here, as "Where the engine lives" says.
+1. **Where the engine lives (11.1).** Proposed: ported here, as "Where the engine lives" says.
    The roast lines become public with it. To keep them private instead, the lines file can live
    outside the repository, read from the app's folder, with a test set of lines in the repository.
-2. **The shortcut (10.4).** Proposed: ⌃⌥C. The overlay's own shortcuts are ⌃⌥⌘L, and ⌃⌥ with 1 to
+2. **The shortcut (11.4).** Proposed: ⌃⌥C. The overlay's own shortcuts are ⌃⌥⌘L, and ⌃⌥ with 1 to
    5, F, D and R,[^app-delegate] and League binds Ctrl with the ability keys. It is a setting.
-3. **Who the moments are about (10.6).** Proposed: friends only, with a setting for everyone.
+3. **Who the moments are about (11.6).** Proposed: friends only, with a setting for everyone.
 4. **The Pact, the spice and the signature.** Proposed: the Pact off, spice 2 (Salty) by default,
    no signature.
 5. **Speech.** Proposed: roasts and moments never spoken unless their own setting is on.
-6. **Claude's take (10.8).** Proposed: off until turned on; a fast model; the style and the jokes
+6. **Claude's take (11.8).** Proposed: off until turned on; a fast model; the style and the jokes
    in the settings.
-7. **The thresholds (10.6).** Proposed starting points in `tuning.json`, to tweak as games show:
+7. **The thresholds (11.6).** Proposed starting points in `tuning.json`, to tweak as games show:
    - a second solo death;
    - a death within 60 seconds of the enemy's objective;
    - 20 creep score behind at 10:00, 30 at 14:00.

@@ -9,6 +9,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from leagueasymode.data_dragon import DEFAULT_DATA_DRAGON_BASE_URL
 from leagueasymode.game_api import DEFAULT_GAME_API_BASE_URL
+from leagueasymode.recording.sender import DEFAULT_SEND_GAMES_TO, GITHUB_API_BASE_URL
 
 # This file is <repository root>/src/leagueasymode/config.py.
 REPOSITORY_ROOT: Final = Path(__file__).resolve().parents[2]
@@ -178,6 +179,14 @@ class Settings(BaseSettings):
     # start and `leagueasymode tuning --write` writes; empty for the default
     # (`default_tuning_path`).
     tuning: Path | None = None
+    # The GitHub repository (`owner/name`) each finished game is sent to, anonymized
+    # (`recording/sender.py`); empty sends nothing.
+    send_games_to: str = DEFAULT_SEND_GAMES_TO
+    # The token that lets the app put games in that repository, when it is not in the macOS
+    # Keychain (`security add-generic-password -s LeagueasyMode-GitHub -a recordings -w`).
+    github_token: SecretStr | None = None
+    # GitHub's API, or a stand-in's.
+    github_api_base_url: str = GITHUB_API_BASE_URL
     # The model provider's key, for anything that calls the real model. An empty line in `.env`
     # leaves it unset. To change provider, change this value and the model id; no other place holds
     # a key.

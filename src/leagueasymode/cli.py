@@ -7,7 +7,7 @@ import logging
 import signal
 import sys
 from collections import Counter
-from collections.abc import Callable, Coroutine, Sequence
+from collections.abc import Awaitable, Callable, Coroutine, Sequence
 from pathlib import Path
 from typing import Final
 
@@ -27,6 +27,7 @@ from leagueasymode.accuracy_thresholds import (
     save_thresholds,
     stricter_thresholds,
 )
+from leagueasymode.build_info import engine_log_path
 from leagueasymode.config import (
     REPOSITORY_ROOT,
     Settings,
@@ -39,6 +40,7 @@ from leagueasymode.config import (
     default_recordings_directory,
     default_tuning_path,
 )
+from leagueasymode.crash_reports import CRASH_REPORTS_FOLDER, ErrorReporter, keep_running
 from leagueasymode.data_dragon import (
     DataDragonClient,
     PatchStats,
@@ -63,9 +65,15 @@ from leagueasymode.overlay_state import MinimapLayout
 from leagueasymode.patch_data import GAME_VERSION_PATH, game_version_of
 from leagueasymode.player_intel import PLAYER_LOOKUP_PATH_PREFIXES
 from leagueasymode.preferences import load_layout, load_preferences
+from leagueasymode.problem_report import make_problem_report
 from leagueasymode.recorder import RecorderTimings, record_games
 from leagueasymode.recording.anonymize import IdentityLeakError, anonymize_recording
 from leagueasymode.recording.file_format import COMPRESSED_SUFFIX, PLAIN_SUFFIX
+from leagueasymode.recording.sender import (
+    GameSender,
+    finish_interrupted_recordings,
+    keychain_token,
+)
 from leagueasymode.refit import (
     MIN_GAMES_TO_FIT,
     ModelWeights,
@@ -125,11 +133,7 @@ def main(arguments: Sequence[str] | None = None) -> int:
                 lambda stop_requested: record_until_stopped(settings, stop_requested)
             )
         ),
-        "run": lambda: asyncio.run(
-            _until_interrupted(
-                lambda stop_requested: run_overlay(settings, stop_requested, _announce_overlay_url)
-            )
-        ),
+        "run": lambda: _run_and_report_a_crash(settings),
     }
     if parsed.command in commands:
         return commands[parsed.command]()
@@ -174,6 +178,12 @@ async def run_overlay(
     tuning_path = settings.tuning or default_tuning_path()
     tuning, tuning_problem = await asyncio.to_thread(load_tuning, tuning_path)
     note_tuning(status, tuning_path, tuning, tuning_problem)
+    reporter = ErrorReporter(_crash_reports_directory(settings), status)
+    # A recording the last run stopped in the middle of is finished, and so sent like the others.
+    await asyncio.to_thread(
+        finish_interrupted_recordings,
+        settings.recordings_directory or default_recordings_directory(),
+    )
     if not settings.record_while_running:
         for part_key in ("recording", "timeline", "scoring"):
             status.set_part(part_key, "off", "Off: LEAGUEASYMODE_RECORD_WHILE_RUNNING is false")
@@ -190,9 +200,11 @@ async def run_overlay(
             layout=await asyncio.to_thread(load_layout, layout_path),
             status=status,
             tuning=tuning,
+            on_error=reporter.report,
         )
         history_path = settings.accuracy_history or default_accuracy_history_path()
         summary_path = settings.last_game_summary or default_last_game_summary_path()
+        game_sender = _game_sender(session, settings, status)
         runner = web.AppRunner(
             create_overlay_application(
                 engine,
@@ -200,6 +212,8 @@ async def run_overlay(
                 history_path=history_path,
                 preferences_path=preferences_path,
                 layout_path=layout_path,
+                send_games=game_sender.send_unsent,
+                make_report=_report_maker(engine, status, game_sender, settings),
             )
         )
         await runner.setup()
@@ -226,6 +240,9 @@ async def run_overlay(
                     f"Could not score {recording_path.name}: {type(error).__name__}",
                 )
                 raise
+            finally:
+                # Scored or not, the game goes to the games' repository, anonymized.
+                await game_sender.send_unsent()
             status.set_part(
                 "scoring",
                 "ok",
@@ -248,13 +265,94 @@ async def run_overlay(
                 status=status,
             )
 
-        background_tasks = [asyncio.create_task(engine.run(stop_requested))]
+        background_tasks = [
+            asyncio.create_task(
+                keep_running(
+                    "the engine", lambda: engine.run(stop_requested), reporter, stop_requested
+                )
+            ),
+            # The games recorded before this start, or before a token was set up, go too.
+            asyncio.create_task(game_sender.send_unsent()),
+        ]
         if settings.record_while_running:
-            background_tasks.append(asyncio.create_task(record_in_background()))
+            background_tasks.append(
+                asyncio.create_task(
+                    keep_running("the recorder", record_in_background, reporter, stop_requested)
+                )
+            )
         try:
             await asyncio.gather(*background_tasks)
         finally:
             await runner.cleanup()
+
+
+def _report_maker(
+    engine: OverlayEngine, status: StatusBoard, game_sender: GameSender, settings: Settings
+) -> Callable[[str, dict[str, str]], Awaitable[str]]:
+    """Return what makes a problem report when the app asks, and sends it at once.
+
+    Args:
+        engine: The engine, for the names it has seen.
+        status: The status board, whose report goes in.
+        game_sender: Sends the report with the games.
+        settings: Where the recordings, and so the reports, are.
+
+    Returns:
+        A function making a report from the player's note and the app's lines, returning its name.
+    """
+    sending_rounds: set[asyncio.Future[None]] = set()
+
+    async def make_report(note: str, app_facts: dict[str, str]) -> str:
+        report_directory = await asyncio.to_thread(
+            lambda: make_problem_report(
+                recordings_directory=settings.recordings_directory
+                or default_recordings_directory(),
+                note=note,
+                app_facts=app_facts,
+                status_report=status.report(),
+                engine_log=engine_log_path(),
+                identities=set(engine.seen_identities),
+                home_directory=Path.home(),
+                now=datetime.datetime.now(datetime.UTC),
+            )
+        )
+        sending_round: asyncio.Future[None] = asyncio.ensure_future(game_sender.send_unsent())
+        sending_rounds.add(sending_round)
+        sending_round.add_done_callback(sending_rounds.discard)
+        return report_directory.name
+
+    return make_report
+
+
+def _game_sender(
+    session: aiohttp.ClientSession, settings: Settings, status: StatusBoard
+) -> GameSender:
+    """Return what sends the recorded games, anonymized, to the games' repository.
+
+    Args:
+        session: The HTTP session.
+        settings: The repository, GitHub's address, the token if set there, and where the
+            recordings are.
+        status: The status board, told how sending stands.
+
+    Returns:
+        The sender.
+    """
+    settings_token = settings.github_token
+
+    def token() -> str | None:
+        return settings_token.get_secret_value() if settings_token else keychain_token()
+
+    api_base_url = settings.github_api_base_url
+    return GameSender(
+        session,
+        settings.recordings_directory or default_recordings_directory(),
+        settings.send_games_to,
+        token_source=token,
+        api_base_url=api_base_url,
+        tls_context=create_system_tls_context() if api_base_url.startswith("https") else None,
+        status=status,
+    )
 
 
 def note_league_settings(
@@ -718,6 +816,38 @@ async def _serve_replay(replay: RecordingReplay, port: int, stop_requested: asyn
         await stop_requested.wait()
     finally:
         await runner.cleanup()
+
+
+def _crash_reports_directory(settings: Settings) -> Path:
+    """Return where crash reports are kept: beside the recordings, so that they are sent too.
+
+    Args:
+        settings: Where the recordings are.
+
+    Returns:
+        The folder.
+    """
+    return (settings.recordings_directory or default_recordings_directory()) / CRASH_REPORTS_FOLDER
+
+
+def _run_and_report_a_crash(settings: Settings) -> int:
+    """Run the overlay until stopped; an error that stops it leaves a crash report first.
+
+    Args:
+        settings: The settings.
+
+    Returns:
+        The exit code.
+    """
+    try:
+        return asyncio.run(
+            _until_interrupted(
+                lambda stop_requested: run_overlay(settings, stop_requested, _announce_overlay_url)
+            )
+        )
+    except Exception as error:
+        ErrorReporter(_crash_reports_directory(settings), None).report("running the engine", error)
+        raise
 
 
 async def _until_interrupted(

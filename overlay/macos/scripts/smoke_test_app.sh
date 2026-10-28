@@ -14,7 +14,7 @@
 set -eu
 
 STARTUP_SECONDS=180
-PAGES="/ summary.html settings.html state history preferences"
+PAGES="/ summary.html settings.html how-to-use.html state history preferences"
 
 [ $# -eq 1 ] || { echo "smoke_test_app: usage: overlay/macos/scripts/smoke_test_app.sh <LeagueasyMode.app>" >&2; exit 64; }
 app=$(cd "$1" && pwd)

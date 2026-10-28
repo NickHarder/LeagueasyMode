@@ -329,11 +329,16 @@ final class EnginePageTests: XCTestCase {
             EnginePage.status.url(overlayURL: overlayURL),
             URL(string: "http://127.0.0.1:52011/status.html")
         )
+        XCTAssertEqual(
+            EnginePage.howToUse.url(overlayURL: overlayURL),
+            URL(string: "http://127.0.0.1:52011/how-to-use.html")
+        )
     }
 
     func testEachPageHasItsMenuTitle() {
         XCTAssertEqual(
-            EnginePage.allCases.map(\.menuTitle), ["Last game\u{2026}", "Settings\u{2026}", "Status\u{2026}"]
+            EnginePage.allCases.map(\.menuTitle),
+            ["How to use\u{2026}", "Last game\u{2026}", "Settings\u{2026}", "Status\u{2026}"]
         )
     }
 }
@@ -367,8 +372,11 @@ final class ReleaseVersionTests: XCTestCase {
 final class UpdateCheckTests: XCTestCase {
     private let appVersion = ReleaseVersion("0.1.0")!
 
+    /// A release's answer, with the zipped app attached as a release of the app always has it.
     private func answer(_ fields: [String: Any]) throws -> Data {
-        try JSONSerialization.data(withJSONObject: fields)
+        let appFile: [String: Any] = ["name": "LeagueasyMode-0.2.0.zip"]
+        let withApp = fields.merging(["assets": [appFile, ["name": "LeagueasyMode-0.2.0.zip.sha256"]]]) { given, _ in given }
+        return try JSONSerialization.data(withJSONObject: withApp)
     }
 
     func testTheRequestAsksGitHubForTheLatestRelease() {
@@ -415,6 +423,18 @@ final class UpdateCheckTests: XCTestCase {
         ] {
             XCTAssertNil(UpdateCheck.newerRelease(answer: try answer(fields), appVersion: appVersion))
         }
+    }
+
+    func testAReleaseWithoutTheAppIsNotOffered() throws {
+        // The repository's old v1.0.0 has no files: offering it led to an empty page.
+        for assets: [[String: Any]] in [[], [["name": "notes.txt"]], [["name": "LeagueasyMode-1.0.0.zip.sha256"]]] {
+            XCTAssertNil(
+                UpdateCheck.newerRelease(answer: try answer(["tag_name": "v1.0.0", "assets": assets]), appVersion: appVersion),
+                "\(assets)"
+            )
+        }
+        let noAssetsField = try JSONSerialization.data(withJSONObject: ["tag_name": "v1.0.0"])
+        XCTAssertNil(UpdateCheck.newerRelease(answer: noAssetsField, appVersion: appVersion))
     }
 
     func testThePageIsAlwaysThisRepositorysWhateverTheAnswerSays() throws {
@@ -573,6 +593,38 @@ final class LayoutEditingTests: XCTestCase {
     func testResetPutsTheWidgetsBackInThePage() {
         XCTAssertEqual(LayoutEditing.resetScript, "window.leagueasymodeResetLayout?.();")
     }
+
+    func testEditModeEndsByItselfAfterTwoMinutes() {
+        let startedAt = Date(timeIntervalSince1970: 1_000)
+        XCTAssertFalse(LayoutEditing.hasRunOut(startedAt: startedAt, now: startedAt.addingTimeInterval(119)))
+        XCTAssertTrue(LayoutEditing.hasRunOut(startedAt: startedAt, now: startedAt.addingTimeInterval(120)))
+    }
+
+    func testEscapeEndsEditMode() {
+        // 53 is the Escape key's code on every Mac keyboard layout.
+        XCTAssertTrue(LayoutEditing.endsEditing(keyCode: 53))
+        XCTAssertFalse(LayoutEditing.endsEditing(keyCode: 0))
+    }
+}
+
+final class KeyboardHandBackTests: XCTestCase {
+    func testTheMenuSaysHowOftenTheKeyboardWasHandedBack() {
+        XCTAssertNil(KeyboardHandBack.menuText(handBackCount: 0))
+        XCTAssertEqual(KeyboardHandBack.menuText(handBackCount: 1), "Keyboard: handed back to the game once")
+        XCTAssertEqual(KeyboardHandBack.menuText(handBackCount: 3), "Keyboard: handed back to the game 3 times")
+    }
+}
+
+final class OverlayPageStateTests: XCTestCase {
+    func testTheMenuSaysWhetherTheOverlayPageLoaded() {
+        XCTAssertEqual(OverlayPageState.waiting.menuText, "Overlay: waiting for the engine")
+        XCTAssertEqual(OverlayPageState.loading.menuText, "Overlay: loading the page\u{2026}")
+        XCTAssertEqual(OverlayPageState.loaded.menuText, "Overlay: page loaded")
+        XCTAssertEqual(
+            OverlayPageState.failed("Could not connect to the server.").menuText,
+            "Overlay: the page did not load (Could not connect to the server.)"
+        )
+    }
 }
 
 final class SpokenCalloutTests: XCTestCase {
@@ -588,5 +640,198 @@ final class SpokenCalloutTests: XCTestCase {
 
     func testThePageAndTheAppAgreeOnTheMessagesName() {
         XCTAssertEqual(SpokenCallout.messageName, "leagueasymodeSpeak")
+    }
+}
+
+final class BuildInfoTests: XCTestCase {
+    func testABuildNamesItsVersionRunAndCommit() {
+        let info = BuildInfo(infoDictionary: [
+            "CFBundleShortVersionString": "0.1.0",
+            "CFBundleVersion": "62",
+            "LeagueasyModeCommit": "b0d63a8",
+        ])
+        XCTAssertEqual(info.label, "0.1.0 (build 62, b0d63a8)")
+        XCTAssertEqual(info.ciBuildNumber, 62)
+    }
+
+    func testAnAppRunFromItsSourceSaysSo() {
+        XCTAssertEqual(BuildInfo(infoDictionary: nil).label, "from source")
+        XCTAssertEqual(BuildInfo(infoDictionary: ["CFBundleShortVersionString": "0.1.0"]).label, "0.1.0")
+        let unnumbered = BuildInfo(infoDictionary: ["CFBundleShortVersionString": "0.1.0", "CFBundleVersion": "0.1.0"])
+        XCTAssertNil(unnumbered.ciBuildNumber)
+    }
+}
+
+final class BuildUpdateCheckTests: XCTestCase {
+    private let appVersion = ReleaseVersion("0.1.0")!
+
+    private func build(_ number: Int, version: String = "0.1.0", prerelease: Bool = true) -> [String: Any] {
+        let archive = "LeagueasyMode-\(version)-build-\(number).zip"
+        return [
+            "tag_name": "build-\(number)", "draft": false, "prerelease": prerelease,
+            "assets": [
+                ["name": archive, "browser_download_url": "https://example.com/\(archive)"],
+                ["name": archive + ".sha256"],
+            ],
+        ]
+    }
+
+    private func answer(_ releases: [[String: Any]]) throws -> Data {
+        try JSONSerialization.data(withJSONObject: releases)
+    }
+
+    func testTheRequestAsksForTheNewestReleases() {
+        XCTAssertEqual(
+            BuildUpdateCheck.request(appVersion: appVersion).url?.absoluteString,
+            "https://api.github.com/repos/NickHarder/LeagueasyMode/releases?per_page=30"
+        )
+    }
+
+    func testTheNewestLaterBuildIsOfferedFromThisRepository() throws {
+        let offered = try XCTUnwrap(
+            BuildUpdateCheck.newerBuild(
+                answer: try answer([build(70), build(75), build(62), ["tag_name": "v0.1.0", "assets": []]]),
+                appVersion: appVersion,
+                appBuildNumber: 62
+            )
+        )
+        XCTAssertEqual(offered.buildNumber, 75)
+        XCTAssertEqual(offered.version, ReleaseVersion("0.1.0"))
+        XCTAssertEqual(
+            offered.archiveURL.absoluteString,
+            "https://github.com/NickHarder/LeagueasyMode/releases/download/build-75/LeagueasyMode-0.1.0-build-75.zip"
+        )
+        XCTAssertEqual(offered.checksumURL.lastPathComponent, "LeagueasyMode-0.1.0-build-75.zip.sha256")
+        XCTAssertEqual(offered.menuTitle, "Install update: build 75 (0.1.0)\u{2026}")
+    }
+
+    func testNoBuildIsOfferedThatIsNotNewer() throws {
+        XCTAssertNil(
+            BuildUpdateCheck.newerBuild(answer: try answer([build(62), build(50)]), appVersion: appVersion, appBuildNumber: 62)
+        )
+        // A build of an older version, as after the owner's full release, is not offered either.
+        XCTAssertNil(
+            BuildUpdateCheck.newerBuild(
+                answer: try answer([build(90)]), appVersion: ReleaseVersion("0.2.0")!, appBuildNumber: 3
+            )
+        )
+    }
+
+    func testOnlyAPrereleaseWithItsZipAndChecksumIsABuild() throws {
+        var withoutChecksum = build(80)
+        withoutChecksum["assets"] = [["name": "LeagueasyMode-0.1.0-build-80.zip"]]
+        XCTAssertNil(
+            BuildUpdateCheck.newerBuild(
+                answer: try answer([build(81, prerelease: false), withoutChecksum, ["tag_name": "build-x", "assets": []]]),
+                appVersion: appVersion,
+                appBuildNumber: 62
+            )
+        )
+        XCTAssertNil(BuildUpdateCheck.newerBuild(answer: Data("{}".utf8), appVersion: appVersion, appBuildNumber: 62))
+    }
+
+    func testAnUnnumberedAppIsOfferedAnyBuild() throws {
+        let offered = BuildUpdateCheck.newerBuild(answer: try answer([build(5)]), appVersion: appVersion, appBuildNumber: nil)
+        XCTAssertEqual(offered?.buildNumber, 5)
+    }
+}
+
+final class AutomaticUpdateTests: XCTestCase {
+    private let screen = CGRect(x: 0, y: 0, width: 1920, height: 1080)
+
+    func testABuildIsInstalledOnlyWithNoGameOnScreen() {
+        XCTAssertTrue(
+            AutomaticUpdate.canInstallNow(
+                isOn: true, placement: .mainScreen(screen), isEditingLayout: false, isInstalling: false
+            )
+        )
+        for placement in [GamePlacement.screen(screen), .window(screen)] {
+            XCTAssertFalse(
+                AutomaticUpdate.canInstallNow(isOn: true, placement: placement, isEditingLayout: false, isInstalling: false)
+            )
+        }
+        XCTAssertFalse(AutomaticUpdate.canInstallNow(isOn: true, placement: nil, isEditingLayout: false, isInstalling: false))
+    }
+
+    func testNotWhenOffEditingOrAlreadyInstalling() {
+        let noGame = GamePlacement.mainScreen(screen)
+        XCTAssertFalse(AutomaticUpdate.canInstallNow(isOn: false, placement: noGame, isEditingLayout: false, isInstalling: false))
+        XCTAssertFalse(AutomaticUpdate.canInstallNow(isOn: true, placement: noGame, isEditingLayout: true, isInstalling: false))
+        XCTAssertFalse(AutomaticUpdate.canInstallNow(isOn: true, placement: noGame, isEditingLayout: false, isInstalling: true))
+    }
+}
+
+final class ArchiveChecksumTests: XCTestCase {
+    func testTheDigestIsTheOneForTheArchive() {
+        let digest = String(repeating: "ab", count: 32)
+        XCTAssertEqual(
+            ArchiveChecksum.expectedDigest(
+                checksumFile: "\(digest)  LeagueasyMode-0.1.0-build-75.zip\n", archiveName: "LeagueasyMode-0.1.0-build-75.zip"
+            ),
+            digest
+        )
+        XCTAssertNil(ArchiveChecksum.expectedDigest(checksumFile: "\(digest)  other.zip\n", archiveName: "a.zip"))
+        XCTAssertNil(ArchiveChecksum.expectedDigest(checksumFile: "short  a.zip\n", archiveName: "a.zip"))
+    }
+
+    func testTheDigestOfBytesIsSHA256() {
+        XCTAssertEqual(
+            ArchiveChecksum.sha256Hex(of: Data("abc".utf8)),
+            "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+        )
+    }
+}
+
+final class EngineLogTests: XCTestCase {
+    func testEachStartKeepsTheLastThreeRunsLogs() throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        for run in 1...4 {
+            let logURL = try EngineLog.startNewLog(in: directory)
+            try Data("run \(run)\n".utf8).write(to: logURL)
+        }
+        let names = try FileManager.default.contentsOfDirectory(atPath: directory.path).sorted()
+        XCTAssertEqual(names, ["engine.1.log", "engine.2.log", "engine.log"])
+        let newest = try String(contentsOf: directory.appendingPathComponent("engine.log"), encoding: .utf8)
+        let oldest = try String(contentsOf: directory.appendingPathComponent("engine.2.log"), encoding: .utf8)
+        XCTAssertEqual(newest, "run 4\n")
+        XCTAssertEqual(oldest, "run 2\n")
+    }
+
+    func testTheLogIsKeptWhereMacOSKeepsLogs() {
+        let home = URL(fileURLWithPath: "/Users/someone", isDirectory: true)
+        XCTAssertEqual(EngineLog.directory(homeDirectory: home).path, "/Users/someone/Library/Logs/LeagueasyMode")
+    }
+}
+
+final class ProblemReportRequestTests: XCTestCase {
+    func testAReportCarriesTheNoteAndTheAppsLinesWithTheAppsHeader() throws {
+        let overlayURL = try XCTUnwrap(URL(string: "http://127.0.0.1:52011/"))
+        let request = try ProblemReportRequest.make(
+            overlayURL: overlayURL,
+            note: "keys \"stopped\"",
+            appFacts: ["engine": "Engine: running", "keyboard": "Keyboard: handed back once"]
+        )
+        XCTAssertEqual(request.url?.absoluteString, "http://127.0.0.1:52011/report")
+        XCTAssertEqual(request.httpMethod, "POST")
+        XCTAssertEqual(request.value(forHTTPHeaderField: "X-LeagueasyMode-Request"), "report")
+        let body = try XCTUnwrap(request.httpBody)
+        let decoded = try XCTUnwrap(JSONSerialization.jsonObject(with: body) as? [String: Any])
+        XCTAssertEqual(decoded["note"] as? String, "keys \"stopped\"")
+        XCTAssertEqual((decoded["app"] as? [String: String])?["keyboard"], "Keyboard: handed back once")
+    }
+}
+
+final class EngineRestartPolicyTests: XCTestCase {
+    func testAStoppedEngineIsStartedAgainAtMostFiveTimesInTenMinutes() {
+        var policy = EngineRestartPolicy()
+        let start = Date(timeIntervalSince1970: 1_000)
+        for minute in 0..<5 {
+            XCTAssertTrue(policy.shouldRestart(at: start.addingTimeInterval(Double(minute) * 60)))
+        }
+        XCTAssertFalse(policy.shouldRestart(at: start.addingTimeInterval(5 * 60)))
+        // Ten minutes after the first, there is room again.
+        XCTAssertTrue(policy.shouldRestart(at: start.addingTimeInterval(10 * 60 + 1)))
     }
 }
