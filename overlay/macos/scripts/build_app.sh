@@ -69,7 +69,11 @@ rm -f "$engine_directory/.gitignore"
 cp "$uv_binary" "$contents/Helpers/uv"
 chmod 755 "$contents/Helpers/uv"
 
-sed "s/@VERSION@/$version/g" "$macos_directory/Info.plist.in" > "$contents/Info.plist"
+# CI's run number tells builds of one version apart (BUILD_NUMBER); the commit says what each holds.
+build_number="${BUILD_NUMBER:-$version}"
+commit=$(git -C "$repository_root" rev-parse --short HEAD 2>/dev/null || echo unknown)
+sed -e "s/@VERSION@/$version/g" -e "s/@BUILD_NUMBER@/$build_number/g" -e "s/@COMMIT@/$commit/g" \
+  "$macos_directory/Info.plist.in" > "$contents/Info.plist"
 plutil -lint "$contents/Info.plist"
 
 # Ad hoc: the inner program first, then the app, whose seal covers it and the resources.

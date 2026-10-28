@@ -4,7 +4,7 @@ title: Recordings
 description: What a recording of a game holds, how it is written and read, what is asked of the League client and when, and how a copy is anonymized before it may enter the repository.
 tags: [recording, data, privacy]
 status: draft
-generated: { by: claude-code/cloud, at: 2026-10-09T05:13:00Z }
+generated: { by: claude-code/cloud, at: 2026-10-28T22:10:00Z }
 sources:
   - id: file-format
     resource: ../../src/leagueasymode/recording/file_format.py
@@ -14,6 +14,8 @@ sources:
     resource: ../../src/leagueasymode/recorder.py
   - id: anonymize
     resource: ../../src/leagueasymode/recording/anonymize.py
+  - id: sender
+    resource: ../../src/leagueasymode/recording/sender.py
   - id: riot-tls
     resource: ../../src/leagueasymode/riot_tls.py
   - id: league-client
@@ -162,12 +164,46 @@ A recording holds other players' names, so only an anonymized copy is committed:
 
 `recordings/` and `*.lgrec` are in `.gitignore`.
 
+# Sending games
+
+The owner (2026-10-28) wanted the games played with the overlay to reach the scoring without a step
+of theirs, in a private repository of their own: `NickHarder/LeagueasyMode-recordings`
+(`LEAGUEASYMODE_SEND_GAMES_TO`; empty sends nothing).[^sender] `leagueasymode run` sends every
+finished recording not yet sent when it starts and after each game, and "Send games now" on the
+status page sends a round at once. Only an anonymized copy is sent, as above, to
+`games/<name>-anonymized.jsonl.xz` through GitHub's contents API; a game whose copy cannot be made
+safely is withheld and never tried again. `sent-games.json` beside the recordings lists what was
+sent and what was withheld. The status page's "Sending games" says what happened.
+
+It needs a GitHub token that may write to that repository, once:
+
+1. Create the repository, private, at <https://github.com/new>, named `LeagueasyMode-recordings`.
+2. Make a fine-grained token at <https://github.com/settings/personal-access-tokens/new>:
+   repository access "Only select repositories", that repository alone; permissions, Contents
+   "Read and write"; nothing else.
+3. Keep it in the Keychain: in Terminal, `security add-generic-password -s LeagueasyMode-GitHub -a
+   recordings -w`, which asks for the token twice and keeps it out of the shell's history.
+4. Restart the app: the games already recorded go first.
+
+A recording the engine stopped in the middle of, which stays plain without its end, is compressed
+when the engine starts again and sent like the others; the reader skips its last line if a crash
+cut it off. The engine's crash reports, in `crash-reports/` beside the recordings, go to the same
+repository's `crash-reports/` (`crash_reports.py`), and each problem report the app asks for, in
+`reports/report-<time>/`, to its `reports/` (`problem_report.py`; `macos-app.md`): `report.json`,
+the end of the engine's log and the last run's, and the game so far, anonymized. A name the engine
+saw in a game's answer, and the home folder, are taken out of the note and the logs.
+
+The token is read from the Keychain for each round (`LEAGUEASYMODE_GITHUB_TOKEN` is read instead,
+off a Mac), and is never written anywhere, shown or logged. Sending is the app's only request
+beyond this Mac, League's servers, Data Dragon and the update check.
+
 [^file-format]: `src/leagueasymode/recording/file_format.py`
 [^delta]: `src/leagueasymode/recording/delta.py`
 [^recorder]: `src/leagueasymode/recorder.py`
 [^league-client]: `src/leagueasymode/league_client.py`
 [^riot-tls]: `src/leagueasymode/riot_tls.py`
 [^anonymize]: `src/leagueasymode/recording/anonymize.py`
+[^sender]: `src/leagueasymode/recording/sender.py`
 [^scoring]: `src/leagueasymode/scoring.py`
 [^refit]: `src/leagueasymode/refit.py`
 [^accuracy-history]: `src/leagueasymode/accuracy_history.py`

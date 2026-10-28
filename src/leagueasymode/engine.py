@@ -28,6 +28,7 @@ from leagueasymode.inference.objectives import (
     objective_timers,
 )
 from leagueasymode.inference.players import numbers_window, player_cards, team_item_gold
+from leagueasymode.inference.sightings import SightingTracker
 from leagueasymode.inference.structures import lane_structures
 from leagueasymode.inference.wards import WardTracker
 from leagueasymode.inference.win_chance import (
@@ -55,6 +56,7 @@ from leagueasymode.player_intel import (
     jungle_starts_of,
     load_player_records,
 )
+from leagueasymode.problem_report import player_identities
 from leagueasymode.refit import ModelWeights
 from leagueasymode.tuning import DEFAULT_TUNING, Tuning
 
@@ -77,6 +79,7 @@ def compute_overlay_state(
     experience_tracker: ExperienceTracker | None = None,
     back_tracker: BackTracker | None = None,
     clue_tracker: ClueTracker | None = None,
+    sighting_tracker: SightingTracker | None = None,
     jungle_tracker: JunglePathTracker | None = None,
     ward_tracker: WardTracker | None = None,
     you_tracker: YouTracker | None = None,
@@ -101,6 +104,7 @@ def compute_overlay_state(
         experience_tracker: The same for each player's experience; None to show none.
         back_tracker: The same for each player's trips to base; None to show none.
         clue_tracker: The same for the clues to where each player is; None to show none.
+        sighting_tracker: The same for when your team last saw each enemy; None to follow none.
         jungle_tracker: The same for the junglers' clears; None to show none.
         ward_tracker: The same for the control wards; None to show none.
         you_tracker: The same for how long you have held your gold; None to show no You panel.
@@ -124,6 +128,8 @@ def compute_overlay_state(
         return NOT_RUNNING
     if status is not None:
         status.note_game(snapshot)
+    # Off the Rift, its dragons, jungle, lanes and minimap mean nothing, so none is worked out.
+    on_the_rift = snapshot.game_data.is_summoners_rift
     gold_estimates = (
         gold_tracker.update(snapshot, item_catalog) if gold_tracker is not None else None
     )
@@ -136,7 +142,9 @@ def compute_overlay_state(
         else None
     )
     position_clues = (
-        clue_tracker.update(snapshot, last_backs or {}) if clue_tracker is not None else None
+        clue_tracker.update(snapshot, last_backs or {})
+        if clue_tracker is not None and on_the_rift
+        else None
     )
     jungle_paths, camp_timers = (
         jungle_tracker.update(
@@ -147,7 +155,7 @@ def compute_overlay_state(
             },
             jungle_starts=jungle_starts_of(player_records or {}),
         )
-        if jungle_tracker is not None
+        if jungle_tracker is not None and on_the_rift
         else ([], [])
     )
     cards = player_cards(
@@ -159,24 +167,28 @@ def compute_overlay_state(
         level_estimates=level_estimates,
         last_backs=last_backs,
         position_clues=position_clues,
+        sightings=sighting_tracker.update(snapshot) if sighting_tracker is not None else None,
         intel_rules=tuning.intel,
         position_rules=tuning.positions,
         build_rules=tuning.build_path,
     )
-    dragon = dragon_timer(snapshot, tuning.dragon)
-    objectives = objective_timers(snapshot)
-    buffs = buff_timers(snapshot)
-    inhibitors = inhibitor_timers(snapshot)
+    # The win chance reads the dragons taken, none off the Rift; only the Rift shows the timer.
+    dragons_taken = dragon_timer(snapshot, tuning.dragon)
+    dragon = dragons_taken if on_the_rift else None
+    objectives = objective_timers(snapshot) if on_the_rift else []
+    buffs = buff_timers(snapshot) if on_the_rift else []
+    inhibitors = inhibitor_timers(snapshot) if on_the_rift else []
     teams_gold = team_gold(cards)
     teams_item_gold = team_item_gold(cards)
     return OverlayState(
         is_game_running=True,
+        is_summoners_rift=on_the_rift,
         game_time_seconds=snapshot.game_data.game_time_seconds,
         dragon=dragon,
         objectives=objectives,
         buffs=buffs,
         inhibitors=inhibitors,
-        structures=lane_structures(snapshot),
+        structures=lane_structures(snapshot) if on_the_rift else [],
         players=cards,
         numbers_window=numbers_window(snapshot),
         team_item_gold=teams_item_gold,
@@ -186,7 +198,7 @@ def compute_overlay_state(
         camp_timers=camp_timers,
         control_wards=(
             ward_tracker.update(snapshot, _locations_by_key(snapshot, cards))
-            if ward_tracker is not None
+            if ward_tracker is not None and on_the_rift
             else []
         ),
         minimap=minimap,
@@ -195,20 +207,24 @@ def compute_overlay_state(
                 snapshot,
                 team_gold=teams_gold,
                 team_item_gold=teams_item_gold,
-                dragon=dragon,
+                dragon=dragons_taken,
                 buffs=buffs,
                 inhibitors=inhibitors,
             ),
             win_rules,
         ),
         fight=team_fight(snapshot, patch_stats, fight_rules),
-        contests=objective_contests(
-            snapshot,
-            dragon=dragon,
-            objectives=objectives,
-            position_clues=position_clues or {},
-            patch_stats=patch_stats,
-            rules=tuning.contests,
+        contests=(
+            objective_contests(
+                snapshot,
+                dragon=dragons_taken,
+                objectives=objectives,
+                position_clues=position_clues or {},
+                patch_stats=patch_stats,
+                rules=tuning.contests,
+            )
+            if on_the_rift
+            else []
         ),
         you=(
             you_panel(
@@ -272,6 +288,7 @@ class OverlayEngine:
         layout: OverlayLayout | None = None,
         status: StatusBoard | None = None,
         tuning: Tuning = DEFAULT_TUNING,
+        on_error: Callable[[str, BaseException], None] | None = None,
     ) -> None:
         """Keep the game's API, how often to ask it, and where the patch's data comes from.
 
@@ -291,8 +308,13 @@ class OverlayEngine:
             status: Told what the engine sees, part by part, for the status page; None for a
                 board of its own.
             tuning: The hand-set thresholds, as `tuning.json` sets them.
+            on_error: Told of an error in using one answer of the game, after which the engine
+                goes on to the next (`crash_reports.py`); None to log it only.
         """
         self.game_api: Final = game_api
+        self.on_error: Final = on_error
+        # Every name a game's answer gave this run, which a problem report scrubs.
+        self.seen_identities: Final[set[str]] = set()
         self.tuning: Final = tuning
         self.poll_interval_seconds: Final = poll_interval_seconds
         self.connect_to_client: Final = connect_to_client
@@ -315,6 +337,7 @@ class OverlayEngine:
         self._experience_tracker: Final = ExperienceTracker(rules=tuning.experience)
         self._back_tracker: Final = BackTracker(rules=tuning.backs)
         self._clue_tracker: Final = ClueTracker()
+        self._sighting_tracker: Final = SightingTracker()
         self._jungle_tracker: Final = JunglePathTracker(rules=tuning.jungle_path)
         self._ward_tracker: Final = WardTracker()
         self._you_tracker: Final = YouTracker(rules=tuning.you)
@@ -421,46 +444,59 @@ class OverlayEngine:
             stop_requested: Set to stop.
         """
         while not stop_requested.is_set():
-            payload = await self.game_api.fetch_all_game_data()
-            no_answer = self.game_api.last_no_answer
-            if payload is None and no_answer is not None:
-                self.status.note_no_answer(no_answer)
-            answer_state = compute_overlay_state(
-                payload,
-                self._item_catalog,
-                patch_stats=self._patch_stats,
-                player_records=self._player_records,
-                cooldown_timers=self._cooldown_timers,
-                gold_tracker=self._gold_tracker,
-                experience_tracker=self._experience_tracker,
-                back_tracker=self._back_tracker,
-                clue_tracker=self._clue_tracker,
-                jungle_tracker=self._jungle_tracker,
-                ward_tracker=self._ward_tracker,
-                you_tracker=self._you_tracker,
-                minimap=self.minimap_layout,
-                win_rules=self.model_weights.win_rules,
-                fight_rules=self.model_weights.fight_rules,
-                status=self.status,
-                tuning=self.tuning,
-            )
-            self._last_payload = payload if answer_state.is_game_running else None
-            if answer_state.is_game_running and not self._current_state.is_game_running:
-                self._start_loading_the_games_data()
-            new_state = answer_state.model_copy(
-                update={
-                    "callouts": self._callouts.update(answer_state),
-                    "preferences": self._preferences,
-                    "layout": self._layout,
-                }
-            )
-            if new_state != self._current_state:
-                self._current_state = new_state
-                self._publish(new_state)
+            try:
+                await self._take_one_answer()
+            except Exception as error:
+                # One answer the engine could not use costs that answer, never the engine.
+                if self.on_error is not None:
+                    self.on_error("the engine", error)
+                else:
+                    logger.exception("could not use one answer of the game")
             try:
                 await asyncio.wait_for(stop_requested.wait(), timeout=self.poll_interval_seconds)
             except TimeoutError:
                 continue
+
+    async def _take_one_answer(self) -> None:
+        """Ask the game once, and publish the overlay's state if it changed."""
+        payload = await self.game_api.fetch_all_game_data()
+        self.seen_identities.update(player_identities(payload))
+        no_answer = self.game_api.last_no_answer
+        if payload is None and no_answer is not None:
+            self.status.note_no_answer(no_answer)
+        answer_state = compute_overlay_state(
+            payload,
+            self._item_catalog,
+            patch_stats=self._patch_stats,
+            player_records=self._player_records,
+            cooldown_timers=self._cooldown_timers,
+            gold_tracker=self._gold_tracker,
+            experience_tracker=self._experience_tracker,
+            back_tracker=self._back_tracker,
+            clue_tracker=self._clue_tracker,
+            sighting_tracker=self._sighting_tracker,
+            jungle_tracker=self._jungle_tracker,
+            ward_tracker=self._ward_tracker,
+            you_tracker=self._you_tracker,
+            minimap=self.minimap_layout,
+            win_rules=self.model_weights.win_rules,
+            fight_rules=self.model_weights.fight_rules,
+            status=self.status,
+            tuning=self.tuning,
+        )
+        self._last_payload = payload if answer_state.is_game_running else None
+        if answer_state.is_game_running and not self._current_state.is_game_running:
+            self._start_loading_the_games_data()
+        new_state = answer_state.model_copy(
+            update={
+                "callouts": self._callouts.update(answer_state),
+                "preferences": self._preferences,
+                "layout": self._layout,
+            }
+        )
+        if new_state != self._current_state:
+            self._current_state = new_state
+            self._publish(new_state)
 
     def _start_loading_the_games_data(self) -> None:
         """Load the patch's data and the players' records in the background, once per game start.
@@ -473,7 +509,17 @@ class OverlayEngine:
         is_loading = self._game_data_task is not None and not self._game_data_task.done()
         if is_loading:
             return
-        self._game_data_task = asyncio.create_task(self._load_the_games_data())
+        self._game_data_task = asyncio.create_task(self._load_the_games_data_safely())
+
+    async def _load_the_games_data_safely(self) -> None:
+        """Load the game's data; an error costs that data, never the engine, and is reported."""
+        try:
+            await self._load_the_games_data()
+        except Exception as error:
+            if self.on_error is not None:
+                self.on_error("loading the game's data", error)
+            else:
+                logger.exception("could not load the game's data")
 
     async def _load_the_games_data(self) -> None:
         """Ask the client for the items and the game's version, then the stats and the players.

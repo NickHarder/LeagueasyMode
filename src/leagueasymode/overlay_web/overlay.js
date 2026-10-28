@@ -828,7 +828,10 @@ function enemyMarks(card) {
     label.textContent = card.champion_name.slice(0, MARK_LABEL_LENGTH);
     return [circle, label];
 }
-/** Draw the minimap layer where League's minimap is: each enemy's likely region, camps, wards. */
+/**
+ * Draw the minimap layer where League's minimap is: each unseen enemy's likely region, camps and
+ * wards.
+ */
 function renderMinimap(nowMilliseconds) {
     const minimap = requireElement("minimap");
     const received = latestReceivedState;
@@ -839,7 +842,8 @@ function renderMinimap(nowMilliseconds) {
         return;
     }
     const state = received.state;
-    if (!state.preferences.show_minimap) {
+    // League's minimap off the Rift is another map, which the layer's places do not fit.
+    if (!state.preferences.show_minimap || !state.is_summoners_rift) {
         minimap.hidden = true;
         minimap.replaceChildren();
         return;
@@ -870,7 +874,9 @@ function renderMinimap(nowMilliseconds) {
         class: "minimap-ward",
         transform: `rotate(45 ${String(ward.x_position)} ${mapY(ward.y_position)})`,
     }));
-    drawing.replaceChildren(...camps, ...wards, ...enemyCards.flatMap(enemyMarks));
+    // An enemy in sight is on League's own minimap: no likely place is drawn for them.
+    const unseenEnemyCards = enemyCards.filter((card) => !card.is_seen);
+    drawing.replaceChildren(...camps, ...wards, ...unseenEnemyCards.flatMap(enemyMarks));
     minimap.hidden = drawing.childElementCount === 0;
     minimap.replaceChildren(drawing);
 }
