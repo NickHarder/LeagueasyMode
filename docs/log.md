@@ -4,6 +4,17 @@ What changed in this project and why, newest first. A commit shows the differenc
 gives the reason. The `handoff` skill adds to it at every checkpoint, and the `write-okf-concept`
 skill has the format.
 
+## 2026-10-28
+
+- Games are sent by themselves. The owner, asked how recordings would reach the cloud: "can you do
+  option two and have it automatically push to github? i want it automated if possible", and,
+  asked where, a new private repository. `leagueasymode run` now sends every finished recording,
+  anonymized and never otherwise, to `NickHarder/LeagueasyMode-recordings` when it starts and
+  after each game, once a GitHub token limited to that repository is in the Keychain; the status
+  page shows how it went and has "Send games now". The repository could not be created from here
+  (GitHub refused the integration), so the owner creates it. The button is on the status page
+  rather than the menu, so as not to collide with the menu's rework in pull request #50.
+
 ## 2026-10-09
 
 - Phase 9.4, early leads in lane: the player lookups now also read the timelines of each player's

@@ -45,6 +45,22 @@ async function copyReport(report, copyStatus) {
         copyStatus.textContent = "Selected: press ⌘C to copy it.";
     }
 }
+/** Ask the engine for a round of sending games now, and say what it answered. */
+async function sendGames(sendStatus) {
+    try {
+        const response = await fetch("/games/send", {
+            method: "POST",
+            headers: { "X-LeagueasyMode-Request": "send-games" },
+        });
+        sendStatus.textContent =
+            response.status === 202
+                ? "Sending: see “Sending games” above."
+                : "Games are not sent from this engine.";
+    }
+    catch {
+        sendStatus.textContent = "The engine did not answer.";
+    }
+}
 /** Draw the page's frame, and return the parts that each report fills. */
 export function renderStatusFrame(root) {
     const detail = htmlElement("p", "summary-detail");
@@ -64,13 +80,22 @@ export function renderStatusFrame(root) {
     copyButton.addEventListener("click", () => {
         void copyReport(report, copyStatus);
     });
+    const sendButton = htmlElement("button", "status-send", "Send games now");
+    sendButton.type = "button";
+    const sendStatus = htmlElement("span", "status-sent");
+    sendStatus.setAttribute("role", "status");
+    sendButton.addEventListener("click", () => {
+        void sendGames(sendStatus);
+    });
+    const sendActions = htmlElement("div", "status-actions");
+    sendActions.append(sendButton, sendStatus);
     const eventsSection = htmlElement("section", "status-section");
     eventsSection.append(htmlElement("h2", "", "Feed events"), htmlElement("p", "summary-detail", "Each kind of event in this game's feed; one no estimator reads may be new."), events);
     const reportSection = htmlElement("section", "status-section");
     const actions = htmlElement("div", "status-actions");
     actions.append(copyButton, copyStatus);
     reportSection.append(htmlElement("h2", "", "Report"), htmlElement("p", "summary-detail", "To send after a test. It names no player and no folder of yours."), actions, report);
-    root.replaceChildren(htmlElement("h1", "summary-result", "What the engine sees"), detail, parts, eventsSection, fieldsSection, reportSection);
+    root.replaceChildren(htmlElement("h1", "summary-result", "What the engine sees"), detail, parts, sendActions, eventsSection, fieldsSection, reportSection);
     return { detail, parts, events, fieldsSection, fields, report };
 }
 async function fetchStatus() {

@@ -101,8 +101,8 @@ async def test_each_part_shows_its_state_in_words() -> None:
             "Answering: CLASSIC on map 11, 12:34 in, 10 players"
         )
         # The game, the client, the patch, the lookups, the recording, the timeline, the scoring,
-        # League's settings, the models and the tuning.
-        await expect(page.locator(".status-part")).to_have_count(10)
+        # League's settings, the models, the tuning and the sending of games.
+        await expect(page.locator(".status-part")).to_have_count(11)
         await expect(page.locator(".status-part[data-key='tuning'] .status-detail")).to_have_text(
             "Read when the engine starts"
         )
@@ -115,6 +115,18 @@ async def test_each_part_shows_its_state_in_words() -> None:
         )
         await expect(page.locator(".status-fields")).to_be_hidden()
         await keep_screenshot(page, "status-page")
+
+
+async def test_a_round_of_sending_games_can_be_asked_for() -> None:
+    async with open_status(a_game_with_a_new_event()) as page:
+        await expect(page.locator(".status-part[data-key='sending'] .status-detail")).to_have_text(
+            "After each recorded game, once a GitHub token is set up", timeout=5000
+        )
+        # This engine sends no games, and says so.
+        await page.get_by_role("button", name="Send games now").click()
+        await expect(page.locator(".status-sent")).to_have_text(
+            "Games are not sent from this engine."
+        )
 
 
 async def test_the_report_is_copied_and_names_no_player() -> None:
