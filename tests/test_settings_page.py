@@ -53,23 +53,28 @@ async def test_each_switch_starts_as_its_default_and_a_change_is_kept(tmp_path: 
     preferences_path = tmp_path / "preferences.json"
     async with open_settings(preferences_path) as (page, engine):
         switches = page.locator(".settings-row input")
-        # Ten switches since "Moments about friends" (phase 11.6), on by default like the others.
-        await expect(switches).to_have_count(10, timeout=5000)
-        # Everything shows; only speaking the callouts waits to be turned on.
+        # Eleven switches: "Click to mark spells", beside the app's shortcuts, and "Moments about
+        # friends" (phase 11.6), on by default like the others.
+        await expect(switches).to_have_count(11, timeout=5000)
+        # Everything shows; speaking the callouts and clicking to mark wait to be turned on.
         for index in range(9):
             await expect(switches.nth(index)).to_be_checked()
         await expect(page.get_by_label("Speak callouts")).not_to_be_checked()
+        await expect(page.get_by_label("Click to mark spells")).not_to_be_checked()
         await page.get_by_label("Win chance").uncheck()
         await expect(page.locator(".settings-status")).to_have_text("Saved")
         assert not engine.preferences.show_win_chance
         await page.get_by_label("Speak callouts").check()
         await expect(page.locator(".settings-status")).to_have_text("Saved")
         assert engine.preferences.speak_callouts
+        await page.get_by_label("Click to mark spells").check()
+        await expect(page.locator(".settings-status")).to_have_text("Saved")
+        assert engine.preferences.click_to_mark
         screenshot_directory = os.environ.get("OVERLAY_SCREENSHOT_DIRECTORY")
         if screenshot_directory:
             await page.screenshot(path=str(Path(screenshot_directory) / "settings.png"))
     assert load_preferences(preferences_path) == OverlayPreferences(
-        show_win_chance=False, speak_callouts=True
+        show_win_chance=False, speak_callouts=True, click_to_mark=True
     )
 
 

@@ -214,6 +214,10 @@ export interface PlayerCard {
   /** For an enemy: how long since the team last saw them, and whether they are taken to be in sight. */
   readonly seen_seconds_ago: number | null;
   readonly is_seen: boolean;
+  /** For an enemy: their place in role order, 1 for top to 5 for support, as a mark counts it. */
+  readonly enemy_slot: number | null;
+  /** For an enemy: the spells a "flash" and a "summoner" mark name, in that order. */
+  readonly marked_spell_names: readonly string[];
 }
 
 /** What each team's items are worth: gold earned and spent, not gold in hand. */
@@ -368,6 +372,7 @@ export interface OverlayPreferences {
   readonly show_suggestions: boolean;
   readonly show_moments: boolean;
   readonly speak_callouts: boolean;
+  readonly click_to_mark: boolean;
 }
 
 /** The preferences' names, in the settings page's order. */
@@ -382,6 +387,7 @@ export const PREFERENCE_NAMES = [
   "show_suggestions",
   "show_moments",
   "speak_callouts",
+  "click_to_mark",
 ] as const satisfies readonly (keyof OverlayPreferences)[];
 
 /** The widgets the player can move; the minimap layer stays over League's minimap. */
@@ -715,7 +721,9 @@ export function isPlayerCard(value: unknown): value is PlayerCard {
     (value["last_clue"] === null || isPositionClue(value["last_clue"])) &&
     (value["location"] === null || isPositionEstimate(value["location"])) &&
     isNumberOrNull(value["seen_seconds_ago"]) &&
-    typeof value["is_seen"] === "boolean"
+    typeof value["is_seen"] === "boolean" &&
+    isNumberOrNull(value["enemy_slot"]) &&
+    isArrayOf(value["marked_spell_names"], (name: unknown): name is string => typeof name === "string")
   );
 }
 

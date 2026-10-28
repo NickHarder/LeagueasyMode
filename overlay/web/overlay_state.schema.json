@@ -936,6 +936,11 @@
           "default": false,
           "title": "Speak Callouts",
           "type": "boolean"
+        },
+        "click_to_mark": {
+          "default": false,
+          "title": "Click To Mark",
+          "type": "boolean"
         }
       },
       "title": "OverlayPreferences",
@@ -1129,6 +1134,25 @@
           "default": false,
           "title": "Is Seen",
           "type": "boolean"
+        },
+        "enemy_slot": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Enemy Slot"
+        },
+        "marked_spell_names": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Marked Spell Names",
+          "type": "array"
         }
       },
       "required": [

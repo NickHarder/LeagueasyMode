@@ -31,6 +31,10 @@ const DESCRIPTIONS: Readonly<Record<PreferenceName, readonly [string, string]>> 
     "A notice when a friend's game hands over ammo, such as a second death to their lane opponent. Never spoken; ⌃⌥C copies it.",
   ],
   speak_callouts: ["Speak callouts", "Each new callout read aloud in macOS’s voice, as it shows. Off unless turned on."],
+  click_to_mark: [
+    "Click to mark spells",
+    "Buttons on each enemy’s row that start their Flash, other summoner spell or ultimate timer in one click, beside the ⌃⌥ shortcuts. The overlay takes the clicks on those buttons only. Off unless turned on.",
+  ],
 };
 
 function htmlElement<Name extends keyof HTMLElementTagNameMap>(
