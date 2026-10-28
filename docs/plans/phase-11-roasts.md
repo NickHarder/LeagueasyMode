@@ -4,7 +4,7 @@ title: "Phase 11: roasts with receipts, after the game and in it"
 description: How the overlay gets nothingsmyfault's cited roasts, a case file for anyone in the game in the post-game window and short moments about friends during it, both copied for chat with one shortcut and never posted, in a proposed build order with what each needs and where the owner decides.
 tags: [plan, phase-11, roasts, post-game]
 status: stable
-generated: { by: claude-code/cloud, at: 2026-10-28T21:48:02Z }
+generated: { by: claude-code/cloud, at: 2026-10-28T22:52:09Z }
 sources:
   - id: owner-2026-10-28
     resource: "The owner's messages of 2026-10-28, in the session that built nothingsmyfault"
@@ -74,11 +74,12 @@ The owner's answers so far:[^owner-2026-10-28]
 | 11.5 | The friends list | A setting of the friends' Riot IDs. The overlay marks which players in the game are friends, from the Riot IDs the game's API already sends | The settings page |
 | 11.6 | Moments about friends | A short notice, of its own kind beside the callouts,[^callouts] when a friend's game hands over ammo, from exact facts only. See "The moments" below | 11.5; the scoreboard and kill feed the engine already reads |
 | 11.8 | Claude's take | With its setting on, each line that passed the checks is reworded by the `claude` command on the Mac, with the owner's own Claude login, in the style the owner sets. See "Claude's take (11.8)" below. Off by default; the approved lines stay the default | `claude` installed and signed in on the Mac; 11.3 and 11.4 |
+| 11.9 | Team calls | For teammates who are not friends: calm, constructive calls to paste in team chat, such as "Drake in 1:00. Let's not die, ward river and start moving bot." From the objective timers, the death timers and the win chance the engine already has; no blame, no names. See "Team calls (11.9)" below | 11.6's notice and copy; the objective timers, the respawn timers and the win chance |
 | 11.7 | A quick scoreboard case | Right after the game, before the timeline comes, a case from the end-of-game stats: scoreboard lines, no lane verdict. The full case replaces it when the timeline arrives | 11.0's shape of the end-of-game stats; built only if they hold enough |
 
 The tracer bullet is 11.2 to 11.4 on one recorded game: a case in the post-game window, its
-closing line copied by the shortcut. 11.5 and 11.6 come next, then 11.8, then 11.7 if the
-end-of-game stats are worth it.
+closing line copied by the shortcut. 11.5 and 11.6 come next, then 11.9, then 11.8, then 11.7 if
+the end-of-game stats are worth it.
 
 ## The moments (11.6)
 
@@ -98,6 +99,26 @@ roles are given or likely, never a guess, so a moment is never wrong about who l
 **Gold is left out.** The game's API gives gold for the active player only. Every other player's gold
 is an estimate with a band, and a roast states only exact facts. Gold leads wait for the post-game
 timeline.
+
+## Team calls (11.9)
+
+The owner, 2026-10-28: "can you make a constructive mode for non firnds. like i need thhe team
+alive for drake. 1 min no deaths and set up vision / start rotating.? its can look at stats and
+recommend non tilt messages to boost coordination and encouragement", and "yes add team calls as
+11.9".[^owner-2026-10-28]
+
+- **What sets one off**, each from what the engine already reads:
+  - an epic monster (a dragon, the Herald, the grubs, Baron) up in 60 to 90 seconds: stay alive,
+    ward, move toward it;
+  - two or more enemies dead with long enough timers: take a tower or the objective now;
+  - a fight lost: reset, buy, and group for the next objective, with its time;
+  - behind in gold while the win chance is still in reach: play safe and scale;
+  - a teammate's death streak: steady the team toward the next objective.
+- **The words** are templates with slots for times and counts, written for the owner's sign-off as
+  the roast lines were. No blame, no player named, no number that is an estimate (a gold lead is
+  rounded and said as one, "about 2k").
+- **How it shows:** as 11.6's notice, marked as a call, and ⌃⌥C copies the newest. At most one call
+  a minute. Nothing is sent to chat.
 
 ## Where the engine lives
 
@@ -193,6 +214,10 @@ variety and custom spice to roasts", and, to adding it here, "yes add it as 11.8
    - a second solo death;
    - a death within 60 seconds of the enemy's objective;
    - 20 creep score behind at 10:00, 30 at 14:00.
+
+8. **Who gets team calls (11.9).** Proposed: always on, beside the moments about friends, since a
+   call is for the whole team; a setting turns them off.
+9. **Which chat (11.9).** Proposed: team chat only. Nothing a call says is for the enemy.
 
 [^owner-2026-10-28]: The owner's messages of 2026-10-28, in the session that built nothingsmyfault
 [^nothingsmyfault]: nothingsmyfault: fact-cited case files for the last game (private)
