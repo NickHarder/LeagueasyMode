@@ -34,7 +34,7 @@ up as its own pull request into `main` without waiting for the one before to mer
 | Area | State | Proof |
 |---|---|---|
 | Scaffold | ai-kit v0.11.1, Python layer, GitHub CI | `.copier-answers.yml` |
-| Gate | Green: lint, 839 tests (and 39 in Chromium), secrets | `make gate` |
+| Gate | Green: lint, 846 tests (and 40 in Chromium), secrets | `make gate` |
 | Recorder | Records games, the client's patch data and the post-game timeline; anonymized copies | `uv run leagueasymode record`; `tests/test_recorder.py`, `tests/test_anonymize.py` |
 | Replay | A recording served as a stand-in game API | `uv run leagueasymode replay <recording>`; `tests/test_replay.py` |
 | Engine and overlay page | The dragon and Elder timer, from the game's answer to the page | `uv run leagueasymode run`; `tests/test_tracer_bullet.py` |
@@ -149,6 +149,10 @@ In `AGENTS.md`. Also: a raw recording (it holds other players' names); only `ano
   values, not yet checked against a recording of this season.
 - The overlay follows League's window (8.2) on the guess that the game's window is owned by
   "League of Legends" and has a title bar when windowed; the test on a Mac confirms both.
+- Sightings (an enemy in sight has no circle on the minimap) rest on League's scoreboard
+  showing an enemy's creep score, items and level only while your team sees them; if the game
+  gives them through the fog, an enemy farming out of sight loses their circle for 3 seconds at
+  a time. The first recording settles it. The owner ruled out reading the screen (2026-10-28).
 - Edit mode (8.3) makes the overlay's panel key so its widgets take drags; that a
   non-activating panel takes them without bringing the app forward is seen on a Mac.
 - The test item catalog (`tests/fixtures/client/items.json`) is hand-written: its prices are not

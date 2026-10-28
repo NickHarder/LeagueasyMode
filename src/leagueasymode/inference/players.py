@@ -40,6 +40,7 @@ def player_cards(
     level_estimates: Mapping[PlayerKey, LevelEstimate] | None = None,
     last_backs: Mapping[PlayerKey, BackEstimate] | None = None,
     position_clues: Mapping[PlayerKey, list[PositionClue]] | None = None,
+    sightings: Mapping[PlayerKey, float] | None = None,
     intel_rules: IntelRules = INTEL_RULES,
     position_rules: PositionRules = POSITION_RULES,
     build_rules: BuildRules = BUILD_RULES,
@@ -58,6 +59,7 @@ def player_cards(
         last_backs: Each player's last trip to base, by key; None while trips are not followed.
         position_clues: Each player's clues to where they are, oldest first, by key; None while
             they are not gathered.
+        sightings: When your team last saw each enemy, by key; None while not followed.
         intel_rules: The intel's hand-set thresholds.
         position_rules: The positions'.
         build_rules: The build path's weights.
@@ -101,6 +103,8 @@ def player_cards(
                 rules=build_rules,
             ),
             last_clue=_last_clue(player, position_clues),
+            seen_seconds_ago=_seen_seconds_ago(player, sightings, game_time_seconds),
+            is_seen=_is_seen(player, sightings, game_time_seconds, position_rules),
             location=_location(
                 snapshot,
                 player,
@@ -230,6 +234,44 @@ def _last_clue(
     """
     clues = position_clues.get(player_key(player), []) if position_clues is not None else []
     return clues[-1] if clues else None
+
+
+def _seen_seconds_ago(
+    player: ScoreboardPlayer, sightings: Mapping[PlayerKey, float] | None, game_time_seconds: float
+) -> float | None:
+    """Return how long since your team last saw a player.
+
+    Args:
+        player: The player.
+        sightings: When each enemy was last seen; None while sightings are not followed.
+        game_time_seconds: The game's clock.
+
+    Returns:
+        The seconds; None for an ally, or an enemy not seen yet.
+    """
+    seen_at = sightings.get(player_key(player)) if sightings is not None else None
+    return game_time_seconds - seen_at if seen_at is not None else None
+
+
+def _is_seen(
+    player: ScoreboardPlayer,
+    sightings: Mapping[PlayerKey, float] | None,
+    game_time_seconds: float,
+    rules: PositionRules,
+) -> bool:
+    """Return whether an enemy is taken to be in your team's sight now.
+
+    Args:
+        player: The player.
+        sightings: When each enemy was last seen; None while sightings are not followed.
+        game_time_seconds: The game's clock.
+        rules: How long a sighting lasts.
+
+    Returns:
+        Whether they were seen within `rules.seen_for_seconds`, and are alive.
+    """
+    seen_ago = _seen_seconds_ago(player, sightings, game_time_seconds)
+    return not player.is_dead and seen_ago is not None and seen_ago <= rules.seen_for_seconds
 
 
 def _intel(

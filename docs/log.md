@@ -4,6 +4,18 @@ What changed in this project and why, newest first. A commit shows the differenc
 gives the reason. The `handoff` skill adds to it at every checkpoint, and the `write-okf-concept`
 skill has the format.
 
+## 2026-10-28
+
+- Enemies in sight keep their likely place off the minimap. The owner, on the first try over a
+  game: "dont show the potential character circle if they are already on the map (aka we have
+  vision of htem)". The game's API gives no vision, and the owner ruled out reading the screen
+  ("i just dont thin screen recording and camera vision is allowed"), so, on the owner's idea, an
+  enemy counts as seen when their creep score, items or level change while alive, which League's
+  scoreboard is taken to show only in sight, or when a champion kill with your team puts them in
+  sight. For 3 seconds after (`positions.seen_for_seconds` in `tuning.json`) their card says so
+  and the minimap draws no circle for them. Whether the scoreboard hides those numbers in the fog
+  is unconfirmed until a recording shows it.
+
 ## 2026-10-09
 
 - Phase 9.4, early leads in lane: the player lookups now also read the timelines of each player's

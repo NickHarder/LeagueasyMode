@@ -98,6 +98,8 @@ class PositionRules(BaseModel):
     # A jungler's 4:00 habit weighs the halves of the map from 3:00 to 5:00.
     four_minute_habit_from_seconds: float = 180.0
     four_minute_habit_until_seconds: float = 300.0
+    # An enemy seen this recently (`sightings.py`) is in sight: the minimap draws no likely place.
+    seen_for_seconds: float = 3.0
 
 
 POSITION_RULES: Final = PositionRules()

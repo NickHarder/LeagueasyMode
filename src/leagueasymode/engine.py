@@ -28,6 +28,7 @@ from leagueasymode.inference.objectives import (
     objective_timers,
 )
 from leagueasymode.inference.players import numbers_window, player_cards, team_item_gold
+from leagueasymode.inference.sightings import SightingTracker
 from leagueasymode.inference.structures import lane_structures
 from leagueasymode.inference.wards import WardTracker
 from leagueasymode.inference.win_chance import (
@@ -77,6 +78,7 @@ def compute_overlay_state(
     experience_tracker: ExperienceTracker | None = None,
     back_tracker: BackTracker | None = None,
     clue_tracker: ClueTracker | None = None,
+    sighting_tracker: SightingTracker | None = None,
     jungle_tracker: JunglePathTracker | None = None,
     ward_tracker: WardTracker | None = None,
     you_tracker: YouTracker | None = None,
@@ -101,6 +103,7 @@ def compute_overlay_state(
         experience_tracker: The same for each player's experience; None to show none.
         back_tracker: The same for each player's trips to base; None to show none.
         clue_tracker: The same for the clues to where each player is; None to show none.
+        sighting_tracker: The same for when your team last saw each enemy; None to follow none.
         jungle_tracker: The same for the junglers' clears; None to show none.
         ward_tracker: The same for the control wards; None to show none.
         you_tracker: The same for how long you have held your gold; None to show no You panel.
@@ -159,6 +162,7 @@ def compute_overlay_state(
         level_estimates=level_estimates,
         last_backs=last_backs,
         position_clues=position_clues,
+        sightings=sighting_tracker.update(snapshot) if sighting_tracker is not None else None,
         intel_rules=tuning.intel,
         position_rules=tuning.positions,
         build_rules=tuning.build_path,
@@ -315,6 +319,7 @@ class OverlayEngine:
         self._experience_tracker: Final = ExperienceTracker(rules=tuning.experience)
         self._back_tracker: Final = BackTracker(rules=tuning.backs)
         self._clue_tracker: Final = ClueTracker()
+        self._sighting_tracker: Final = SightingTracker()
         self._jungle_tracker: Final = JunglePathTracker(rules=tuning.jungle_path)
         self._ward_tracker: Final = WardTracker()
         self._you_tracker: Final = YouTracker(rules=tuning.you)
@@ -435,6 +440,7 @@ class OverlayEngine:
                 experience_tracker=self._experience_tracker,
                 back_tracker=self._back_tracker,
                 clue_tracker=self._clue_tracker,
+                sighting_tracker=self._sighting_tracker,
                 jungle_tracker=self._jungle_tracker,
                 ward_tracker=self._ward_tracker,
                 you_tracker=self._you_tracker,
