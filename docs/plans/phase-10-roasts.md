@@ -30,7 +30,8 @@ sources:
     resource: ../../src/leagueasymode/game_state.py
 verified:
   - { by: human:nickharder, at: 2026-10-28T20:33:34Z }
-approved_sha256: 80c27de7553d7103387578a8d68a9ef73c65357127253ac1d73ce76c031fdd32
+  - { by: human:nickharder, at: 2026-10-28T21:26:16Z }
+approved_sha256: fb6be157b45bb1f9193decbee4e6663280f34d4de264868b1a31fb5b6ae9c4f1
 ---
 
 # Phase 10: roasts with receipts, after the game and in it

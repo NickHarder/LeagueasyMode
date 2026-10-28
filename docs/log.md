@@ -6,6 +6,7 @@ skill has the format.
 
 ## 2026-10-28
 
+- The owner approved phase 10's plan again, with slice 10.8 ("approved, keep building 10.2").
 - Phase 10's plan adds slice 10.8, Claude's take: lines reworded by the `claude` command on the
   Mac in a style the owner sets, numbers still filled from exhibits and every line checked again,
   the approved line used whenever one fails. At the owner's word, "yes add it as 10.8"; the plan

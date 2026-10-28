@@ -97,8 +97,7 @@ In `AGENTS.md`, this project's own included: every session reads that file.
    on recordings, the engine and the macOS app, all drafts. Every plan is approved (phase 3's on
    2026-10-08, the rest on 2026-10-09).
 9. **Phase 10, roasts with receipts** ([docs/plans/phase-10-roasts.md](docs/plans/phase-10-roasts.md),
-   approved 2026-10-28, then changed to add slice 10.8, Claude's take, so it waits for approval
-   again): its slice 10.0 needs one real matchmade game recorded to the end; the only recording
+   approved 2026-10-28, again with slice 10.8, Claude's take): its slice 10.0 needs one real matchmade game recorded to the end; the only recording
    so far is a Practice Tool game cancelled at 0:00.
 
 ## Where everything is
