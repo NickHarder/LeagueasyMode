@@ -1,6 +1,7 @@
 # The moments about friends (phase 11.6): one line for each kind, its slots in braces.
 #
-# These are drafts for the owner's sign-off, as the case's lines were. Each states only facts a
+# The owner approved these on 2026-10-28 ("approved"); a test holds them to a fingerprint, so a
+# new or reworded line goes back to the owner first. Each states only facts a
 # friend can check on the scoreboard or in the kill feed; the creep score is "at least" since the
 # scoreboard may show an enemy's creep score only while they are in sight, so it can only lag.
 # Slots: {friend} and {opponent} are champions; {count}, {kills}, {seconds} and {creep} numbers;

@@ -6,6 +6,8 @@ skill has the format.
 
 ## 2026-10-28
 
+- The owner approved the five lines of the moments about friends ("approved"); a test now holds
+  them to a fingerprint, as the case's lines are, so a reworded line goes back to the owner.
 - Phase 11.6, moments about friends. During a game the engine notices when a friend's game hands
   over ammo: a second or third death to their lane opponent with no help, a death in the minute
   before the enemy's dragon, Elder or Baron, first blood given up, being at least 20 CS behind at

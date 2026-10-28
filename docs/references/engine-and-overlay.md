@@ -278,7 +278,7 @@ sight), and the lane opponent's kills on a friend who has none. A lane opponent 
 both roles are given or likely. Each moment is made once per game, shows among the callouts as kind
 `moment` for `roast.moments.shown_seconds` in `tuning.json` when noticed within 30 seconds of
 happening, is never spoken, and has its own switch on the settings page. `/closing-line` gives the
-newest during a game, for ⌃⌥C. The lines, in `roast/moments.toml`, wait for the owner's sign-off.
+newest during a game, for ⌃⌥C. The lines, in `roast/moments.toml`, are the ones the owner approved, held to a fingerprint.
 
 The engine's own settings come from the repository's `.env` in a clone. An installed app, which
 has no clone, reads `settings.env` in the application's directory instead; where both exist, the

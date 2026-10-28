@@ -1,6 +1,8 @@
 """Moments about friends (phase 11.6): exact facts, once per game per friend and threshold."""
 
 import dataclasses
+import hashlib
+import json
 import re
 import string
 from typing import Final
@@ -29,6 +31,11 @@ AHRI_PLAYER: Final = "Ahri"
 ZED_PLAYER: Final = "Shadow Step"
 VI_PLAYER: Final = "Gank Plz"
 GAREN_PLAYER: Final = "Garen Main"
+# The moments' lines the owner approved on 2026-10-28. A change to any line changes this; the new
+# line goes to the owner before the fingerprint does.
+APPROVED_MOMENT_LINES_SHA256: Final = (
+    "07f44664ee474c40440e4f4b87adfeef3b2483e20eb0a8fa8c233afbede032ad"
+)
 SLOTS: Final = frozenset(
     {"friend", "opponent", "count", "kills", "seconds", "creep", "clock", "monster"}
 )
@@ -226,3 +233,8 @@ def test_each_line_uses_known_slots_and_holds_the_floor(kind: str) -> None:
     assert floor_problems(line) == []
     # Every number comes from a slot.
     assert not re.search(r"\d", re.sub(r"\{\w+\}", "", line).replace("CS", ""))
+
+
+def test_the_moment_lines_are_the_ones_the_owner_approved() -> None:
+    canonical = json.dumps(load_moment_lines().model_dump(), sort_keys=True, ensure_ascii=False)
+    assert hashlib.sha256(canonical.encode()).hexdigest() == APPROVED_MOMENT_LINES_SHA256
