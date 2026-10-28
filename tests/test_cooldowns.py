@@ -5,11 +5,13 @@ import pytest
 
 from data_dragon_fixtures import fixture_patch_stats
 from game_payloads import DEFAULT_PLAYERS, PlayerSeed, all_game_data
+from leagueasymode.engine import compute_overlay_state
 from leagueasymode.game_state import GameSnapshot, SummonerSpell
 from leagueasymode.inference.cooldowns import (
     enemies_in_role_order,
     marked_cooldown,
     running_cooldowns,
+    ultimate_rank,
 )
 
 ZED: Final = DEFAULT_PLAYERS[7]
@@ -94,3 +96,36 @@ def test_a_timer_is_shown_until_its_spell_is_back() -> None:
     assert timer is not None
     assert running_cooldowns([timer], 779.0) == [timer]
     assert running_cooldowns([timer], 780.0) == []
+
+
+def test_an_ultimates_rank_goes_by_the_level_and_how_many_ranks_it_has() -> None:
+    # Three ranks, as most champions' ultimates: none before 6, then 1, 2 and 3.
+    assert [ultimate_rank(level, 3) for level in (1, 5, 6, 10, 11, 15, 16, 18)] == [
+        0,
+        0,
+        1,
+        1,
+        2,
+        2,
+        3,
+        3,
+    ]
+    # Four ranks, as Karma's, Jayce's, Elise's and Nidalee's: learned at 1, then 6, 11 and 16.
+    assert [ultimate_rank(level, 4) for level in (1, 6, 11, 16)] == [1, 2, 3, 4]
+    # Any other count, as an ultimate ranked like a basic ability: not known, so not shown.
+    assert ultimate_rank(9, 5) is None
+
+
+def test_each_enemys_card_shows_their_ultimates_rank() -> None:
+    zed = dataclasses.replace(ZED, level=11)
+    players = tuple(zed if seed is ZED else seed for seed in DEFAULT_PLAYERS)
+    cards = compute_overlay_state(
+        all_game_data(600.0, players=players), patch_stats=fixture_patch_stats()
+    ).players
+    zed_card = next(card for card in cards if card.champion_name == "Zed")
+    assert zed_card.ultimate_rank == 2
+    # Without the patch's files, how many ranks the ultimate has is not known.
+    assert (
+        compute_overlay_state(all_game_data(600.0, players=players)).players[7].ultimate_rank
+        is None
+    )
