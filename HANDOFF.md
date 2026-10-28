@@ -97,8 +97,8 @@ In `AGENTS.md`, this project's own included: every session reads that file.
    on recordings, the engine and the macOS app, all drafts. Every plan is approved (phase 3's on
    2026-10-08, the rest on 2026-10-09).
 9. **Phase 10, roasts with receipts** ([docs/plans/phase-10-roasts.md](docs/plans/phase-10-roasts.md),
-   a draft): approve the plan and make its decisions, first how nothingsmyfault's engine ships
-   here (it is private; this repository is public). It starts with one real matchmade game
+   a draft): approve the plan and make its decisions, first that nothingsmyfault's engine is
+   ported here, which makes the roast lines public. It starts with one real matchmade game
    recorded to the end: the only recording so far is a Practice Tool game cancelled at 0:00.
 
 ## Where everything is

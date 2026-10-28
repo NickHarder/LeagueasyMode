@@ -4,7 +4,7 @@ title: "Phase 10: roasts with receipts, after the game and in it"
 description: How the overlay gets nothingsmyfault's cited roasts, a case file for anyone in the game in the post-game window and short moments about friends during it, both copied for chat with one shortcut and never posted, in a proposed build order with what each needs and where the owner decides.
 tags: [plan, phase-10, roasts, post-game]
 status: draft
-generated: { by: claude-code/cloud, at: 2026-10-28T20:18:41Z }
+generated: { by: claude-code/cloud, at: 2026-10-28T20:30:33Z }
 sources:
   - id: owner-2026-10-28
     resource: "The owner's messages of 2026-10-28, in the session that built nothingsmyfault"
@@ -22,6 +22,10 @@ sources:
     resource: ../../overlay/macos/Sources/LeagueasyOverlay/AppDelegate.swift
   - id: callouts
     resource: ../../src/leagueasymode/inference/callouts.py
+  - id: update-check
+    resource: ../../overlay/macos/Sources/OverlayCore/UpdateCheck.swift
+  - id: engine-size
+    resource: "wc -l over nothingsmyfault's src/ on 2026-10-28: the engine (evidence/, verdict.py, roast/, casefile.py) 2,993 lines and roast/templates.yaml 599; the site and Riot plumbing (app.py, riot/, cache.py, recordings.py, ddragon.py, ledger.py, roster.py, web/) 3,273"
   - id: game-state
     resource: ../../src/leagueasymode/game_state.py
 ---
@@ -40,7 +44,8 @@ nothingsmyfault reads Riot's web API, which needs a developer key that expires e
 overlay already has what the case file needs without one. After a game, the recorder saves the
 client's game details, the game's timeline and the end-of-game stats.[^recorder] During a game,
 the game's API gives every player's score and the kill feed.[^game-state] So the overlay can roast
-any game you play, with no key.
+any game you play, with no key. The engine moves here; nothingsmyfault stays private and as it
+is (see "Where the engine lives").
 
 The owner's answers so far:[^owner-2026-10-28]
 
@@ -58,8 +63,8 @@ The owner's answers so far:[^owner-2026-10-28]
 | # | Slice | Shows | Needs |
 |---|---|---|---|
 | 10.0 | The client's post-game answers, seen | Nothing. One real matchmade game, recorded through to the end, shows the client's game details, timeline and end-of-game stats as they really are | One game of the owner's with `leagueasymode record` running until the timeline is saved. The only recording so far is a Practice Tool game cancelled at 0:00, before any player loaded, so it holds none of the three[^first-recording] |
-| 10.1 | The roast engine, available here | Nothing yet. LeagueasyMode can call nothingsmyfault's case file, without its website's dependencies | The owner's choice of how it ships (decision 1) |
-| 10.2 | A client game as a case | The client's game details and timeline turned into nothingsmyfault's match record. Every exhibit cites the client's own answer (its path in `/lol-match-history/v1/games/<id>` or the timeline), not a converted copy. A field the client does not send gives no exhibit and no line, never a zero, as nothingsmyfault already does | 10.0's shapes; 10.1 |
+| 10.1 | The roast engine, here | Nothing yet. nothingsmyfault's engine ported into `src/leagueasymode/roast/`: exhibits, the verdict, the composer, the validator, the safety floor and the closing line, with the approved lines word for word. Its thresholds go into `tuning.json`; its checks, the independent "every number cited" scorer included, become tests | Built payloads in the client's shape, since nothingsmyfault's test games are in Riot's web format |
+| 10.2 | A client game as a case | The families read the client's game details and timeline through this project's own models, so every exhibit cites the client's answer (its path in `/lol-match-history/v1/games/<id>` or the timeline) with no converted copy between. A field the client does not send gives no exhibit and no line, never a zero, as nothingsmyfault already does | 10.0's shapes; 10.1 |
 | 10.3 | The case file in the post-game window | A section of the post-game window: the verdict, the lane board, the lines and the closing line. Targets cover anyone in the game: the whole team (the default), the enemy team, any lane, or any one of the ten players. Four spice levels, as on the site | 10.2 |
 | 10.4 | The copy shortcut | ⌃⌥C copies the roast that is up: after a game, the closing line; during one, the newest moment (10.6). Pressed again within 5 seconds, it copies the next take, or the moment before. A toast says what was copied ("Copied: …"). Nothing is ever sent to chat | The overlay's Carbon hot keys,[^global-hot-key] which work while League has focus with no Accessibility permission; the clipboard written from Swift, not the page |
 | 10.5 | The friends list | A setting of the friends' Riot IDs. The overlay marks which players in the game are friends, from the Riot IDs the game's API already sends | The settings page |
@@ -89,6 +94,18 @@ roles are given or likely, never a guess, so a moment is never wrong about who l
 is an estimate with a band, and a roast states only exact facts. Gold leads wait for the post-game
 timeline.
 
+## Where the engine lives
+
+**Claim:** nothingsmyfault's engine is ported into LeagueasyMode, and LeagueasyMode depends on nothing of nothingsmyfault's.
+**Evidence:** the app's update check reads this repository's releases from GitHub's API without signing in, so this repository stays public;[^update-check] of nothingsmyfault's code, the engine is about 3,000 lines and its lines 600, while the other 3,300 (Riot's web client, a cache, the website, recording and scrubbing, Data Dragon) duplicate what this project has or are not needed;[^engine-size] the recorder, the client's models, the roles estimator, the callouts, the post-game window and the hot keys are already here.
+**Alternative considered:** make nothingsmyfault public and depend on a pinned version of it, its website's dependencies made optional; one copy of the engine.
+**Why rejected:** a second repository, release and gate for every change to a line; nothingsmyfault's engine reads Riot's web format, so a converter would sit between the client's answer and every exhibit; and its website would be published for no use. Depending on it while private would need a token in this public repository's CI.
+**How to reverse:** if nothingsmyfault's site comes back, its `casefile.py` imports `leagueasymode.roast` instead of its own engine (a private project can depend on a public one with no token), and its copy is deleted.
+
+The cost is a second copy of the engine while nothingsmyfault keeps its own; it is parked, and the
+line above ends that if it comes back. The roast lines become public with this repository, as they
+would with any option that ships them in the overlay.
+
 ## What changes from nothingsmyfault's site
 
 - **The source** is the League client after the game, not Riot's web API, so no key is needed and
@@ -111,7 +128,7 @@ timeline.
 - **The timeline comes a little after the game.** The case appears when it does. 10.7 would fill the
   wait.
 - **The Mac only.** The overlay roasts games the owner plays. Friends' own games, without the
-  owner, still need nothingsmyfault's site and a Riot key.
+  owner, would need nothingsmyfault's site and a Riot key.
 - **Chat lengths.** The post-game lobby's limit and the in-game chat's may differ, and neither is
   measured. nothingsmyfault starts at 140 characters.
 
@@ -131,16 +148,9 @@ timeline.
 
 ## Where the owner decides
 
-1. **How the engine ships (10.1).** nothingsmyfault is private, and LeagueasyMode is public with CI
-   that builds the app. The choices:
-   - **(a) Make nothingsmyfault public**, and depend on a pinned version of it, with the website's
-     dependencies (FastAPI, uvicorn, Jinja2, httpx2) moved to an optional extra. Proposed: one
-     copy of the engine and the approved lines, tested in both projects.
-   - **(b) Copy the engine into LeagueasyMode**: the same files twice, kept in step by hand.
-   - **(c) Keep it private and depend on it anyway**: LeagueasyMode's public CI would need a token to
-     read it. Not proposed.
-
-   (a) and (b) both make the roast lines public, since LeagueasyMode is.
+1. **Where the engine lives (10.1).** Proposed: ported here, as "Where the engine lives" says.
+   The roast lines become public with it. To keep them private instead, the lines file can live
+   outside the repository, read from the app's folder, with a test set of lines in the repository.
 2. **The shortcut (10.4).** Proposed: ⌃⌥C. The overlay's own shortcuts are ⌃⌥⌘L, and ⌃⌥ with 1 to
    5, F, D and R,[^app-delegate] and League binds Ctrl with the ability keys. It is a setting.
 3. **Who the moments are about (10.6).** Proposed: friends only, with a setting for everyone.
@@ -160,3 +170,5 @@ timeline.
 [^global-hot-key]: `overlay/macos/Sources/LeagueasyOverlay/GlobalHotKey.swift`
 [^app-delegate]: `overlay/macos/Sources/LeagueasyOverlay/AppDelegate.swift`
 [^callouts]: `src/leagueasymode/inference/callouts.py`
+[^update-check]: `overlay/macos/Sources/OverlayCore/UpdateCheck.swift`
+[^engine-size]: Line counts of nothingsmyfault's source, 2026-10-28
