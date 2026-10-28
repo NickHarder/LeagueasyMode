@@ -6,6 +6,8 @@ skill has the format.
 
 ## 2026-10-28
 
+- The app has an icon: a gold scope over a faint minimap, on a dark blue body, drawn here with no
+  game's artwork. Asked for by the owner; before, Finder and the Dock showed macOS's blank app.
 - Updates install themselves. The owner asked whether the app could pull updates down by itself:
   it now checks for a new build of main at every start and every hour, and installs it without
   asking once no game window of League's is on screen ("Install updates automatically", on unless

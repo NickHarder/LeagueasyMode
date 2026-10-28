@@ -4,7 +4,7 @@ title: The macOS overlay app
 description: What the menu bar app does, how to run it from a clone, how to build, release and open the app that carries its own engine, its update check and open at login, and the steps for the tracer bullet's test on a Mac over League in each display mode.
 tags: [macos, overlay, tracer-bullet]
 status: draft
-generated: { by: claude-code/cloud, at: 2026-10-28T21:55:00Z }
+generated: { by: claude-code/cloud, at: 2026-10-28T22:20:00Z }
 sources:
   - id: build-update
     resource: ../../overlay/macos/Sources/OverlayCore/BuildUpdate.swift
@@ -160,6 +160,13 @@ a clone's instead, to try a change to the engine.
 With no clone there is no `.env`: the engine's settings are read from
 `~/Library/Application Support/LeagueasyMode/settings.env`, in the form of `.env.example`, and its
 files (recordings, the accuracy history, the last game, the preferences) are kept beside it.
+
+**The icon.** A gold scope over a faint minimap, on a dark blue body: an original drawing, with
+no game's artwork in it. `overlay/macos/Resources/AppIcon.svg` is the drawing and `AppIcon.png`
+its 1024-pixel rendering (`overlay/macos/scripts/render_icon.py`, in Chromium, after a change to
+the drawing); `build_app.sh` makes `AppIcon.icns` from the PNG with macOS's `sips` and
+`iconutil`, and the smoke test checks it is in the app. The menu bar keeps macOS's "scope"
+symbol, which follows the menu bar's light and dark look.
 
 **Opening it the first time.** The app is signed ad hoc, not with a Developer ID, so macOS stops
 it the first time it opens, once:

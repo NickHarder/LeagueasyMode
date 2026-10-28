@@ -26,6 +26,7 @@ python_version=$(cat "$engine_directory/python-version")
 
 plutil -lint "$contents/Info.plist"
 codesign --verify --strict --deep "$app"
+[ -s "$contents/Resources/AppIcon.icns" ] || { echo "smoke_test_app: no AppIcon.icns in the app" >&2; exit 1; }
 
 work_directory=$(mktemp -d)
 mkdir "$work_directory/home"
