@@ -1,10 +1,12 @@
 """The last game kept for its case after the game, and `/case` serving it (phase 11.3)."""
 
+import asyncio
 import dataclasses
 from pathlib import Path
 from typing import Final
 
 import aiohttp
+from aiohttp import web
 from pydantic import JsonValue
 
 from client_game_payloads import details_payload, summary_payload, timeline_payload
@@ -175,3 +177,99 @@ async def test_the_case_is_served_for_any_target(tmp_path: Path) -> None:
     assert (case["target"], case["spice"], case["take"]) == ("player:8", 3, 1)
     assert len(case["players"]) == 10
     assert case["risk_warning"]
+
+
+def a_game_in_progress() -> web.Application:
+    """The game's API, answering that a game is on at every ask."""
+    application = web.Application()
+
+    async def answer(_request: web.Request) -> web.Response:
+        return web.json_response(all_game_data(600.0))
+
+    application.router.add_get("/liveclientdata/allgamedata", answer)
+    return application
+
+
+def keep_a_case_beside(summary_path: Path) -> None:
+    roast = last_game_roast(
+        client_resources(details_payload()),
+        snapshot_as("Player 3", "TEST"),
+        lane_rules=LaneRules(),
+    )
+    assert roast is not None
+    roast_path_beside(summary_path).write_text(roast.model_dump_json())
+
+
+async def test_the_shortcut_copies_the_closing_line_the_window_shows(tmp_path: Path) -> None:
+    summary_path = tmp_path / "last-game.json"
+    keep_a_case_beside(summary_path)
+    async with aiohttp.ClientSession() as session:
+        engine = OverlayEngine(
+            GameApiClient(session, unused_local_url(), tls_context=None), poll_interval_seconds=1
+        )
+        application = create_overlay_application(engine, summary_path=summary_path)
+        async with serve(application) as overlay_url:
+            async with session.get(overlay_url + "/closing-line") as default_response:
+                default_line = await default_response.json()
+            async with session.get(overlay_url + "/case") as default_case_response:
+                default_case = await default_case_response.json()
+            async with session.get(
+                overlay_url + "/case?target=player:8&spice=3&take=1"
+            ) as shown_response:
+                shown = await shown_response.json()
+            async with session.get(overlay_url + "/closing-line") as copied_response:
+                copied = await copied_response.json()
+            async with session.get(overlay_url + "/closing-line?next=1") as next_response:
+                next_line = await next_response.json()
+            async with session.get(
+                overlay_url + "/case?target=player:8&spice=3&take=2"
+            ) as next_case_response:
+                next_case = await next_case_response.json()
+            async with session.get(overlay_url + "/closing-line?next=x") as refused_response:
+                refused_status = refused_response.status
+    # Before the window picks anything, the whole team at Salty, as the window opens on.
+    assert default_line == {"text": default_case["closing_line"], "take": 0}
+    assert copied == {"text": shown["closing_line"], "take": 1}
+    assert next_line == {"text": next_case["closing_line"], "take": 2}
+    assert refused_status == 400
+
+
+async def test_without_a_case_there_is_nothing_to_copy(tmp_path: Path) -> None:
+    async with aiohttp.ClientSession() as session:
+        engine = OverlayEngine(
+            GameApiClient(session, unused_local_url(), tls_context=None), poll_interval_seconds=1
+        )
+        application = create_overlay_application(engine, summary_path=tmp_path / "last-game.json")
+        async with (
+            serve(application) as overlay_url,
+            session.get(overlay_url + "/closing-line") as response,
+        ):
+            assert response.status == 404
+
+
+async def test_during_a_game_the_last_games_line_is_not_copied(tmp_path: Path) -> None:
+    summary_path = tmp_path / "last-game.json"
+    keep_a_case_beside(summary_path)
+    async with serve(a_game_in_progress()) as game_url, aiohttp.ClientSession() as session:
+        engine = OverlayEngine(
+            GameApiClient(session, game_url, tls_context=None), poll_interval_seconds=0.01
+        )
+        stop_requested = asyncio.Event()
+        engine_task = asyncio.create_task(engine.run(stop_requested))
+        for _ in range(200):
+            if engine.current_state.is_game_running:
+                break
+            await asyncio.sleep(0.01)
+        try:
+            application = create_overlay_application(engine, summary_path=summary_path)
+            async with (
+                serve(application) as overlay_url,
+                session.get(overlay_url + "/closing-line") as response,
+            ):
+                status = response.status
+                message = (await response.json())["message"]
+        finally:
+            stop_requested.set()
+            await engine_task
+    assert status == 409
+    assert "during a game" in message

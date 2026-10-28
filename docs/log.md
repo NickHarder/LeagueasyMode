@@ -6,6 +6,13 @@ skill has the format.
 
 ## 2026-10-28
 
+- Phase 11.4, the copy shortcut. After a game, ⌃⌥C copies the closing line the post-game window
+  shows, and pressed again within five seconds the next take; a toast near the top of League's
+  window says "Copied: …". The app writes the clipboard itself and never sends anything to chat.
+  The engine serves the line at `/closing-line` from the case the window last asked for, and
+  refuses during a game until moments about friends come (11.6). The toast is a borderless panel
+  that does not activate the app and lets every click through, so it cannot take the keyboard or
+  the mouse from League, as the overlay once did. The How to use page lists the shortcut.
 - Phase 11.3, the case file in the post-game window. After each game, `leagueasymode run` keeps
   the game's players and exhibits beside the last game's summary (`last-game-roast.json`: no
   names, champions only; removed when a game has no case). The window's new section, under the

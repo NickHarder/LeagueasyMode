@@ -835,3 +835,59 @@ final class EngineRestartPolicyTests: XCTestCase {
         XCTAssertTrue(policy.shouldRestart(at: start.addingTimeInterval(10 * 60 + 1)))
     }
 }
+
+final class RoastCopyTests: XCTestCase {
+    func testAFirstPressCopiesTheShownTakeAndQuickPressesTheTakesAfterIt() {
+        var presses = CopyPresses()
+        XCTAssertEqual(presses.press(atSeconds: 100), 0)
+        XCTAssertEqual(presses.press(atSeconds: 102), 1)
+        // Within five seconds of the press before, not of the first.
+        XCTAssertEqual(presses.press(atSeconds: 106.5), 2)
+        XCTAssertEqual(presses.press(atSeconds: 111.5), 3)
+    }
+
+    func testAPressAfterAPauseCopiesTheShownTakeAgain() {
+        var presses = CopyPresses()
+        XCTAssertEqual(presses.press(atSeconds: 100), 0)
+        XCTAssertEqual(presses.press(atSeconds: 103), 1)
+        XCTAssertEqual(presses.press(atSeconds: 108.5), 0)
+        // A clock that went back starts over too.
+        XCTAssertEqual(presses.press(atSeconds: 50), 0)
+    }
+
+    func testTheRequestAsksForTheTakesAfterTheShownOne() throws {
+        let overlayURL = try XCTUnwrap(URL(string: "http://127.0.0.1:52011/"))
+        let request = ClosingLineRequest.make(overlayURL: overlayURL, laterTakes: 2)
+        XCTAssertEqual(request.url?.absoluteString, "http://127.0.0.1:52011/closing-line?next=2")
+        XCTAssertEqual(request.httpMethod, "GET")
+    }
+
+    func testAfterAGameTheEnginesLineIsCopied() throws {
+        let body = try XCTUnwrap(#"{"text": "gg. TEAM DIFF. Our Vi died 9 times.", "take": 1}"#.data(using: .utf8))
+        let line = CopyOutcome.line(statusCode: 200, body: body)
+        XCTAssertEqual(line, CopiedLine(text: "gg. TEAM DIFF. Our Vi died 9 times.", take: 1))
+        XCTAssertEqual(
+            line.map(CopyOutcome.toastText(copied:)),
+            "Copied: gg. TEAM DIFF. Our Vi died 9 times."
+        )
+    }
+
+    func testDuringAGameOrWithoutACaseNothingIsCopied() throws {
+        let refusal = try XCTUnwrap(#"{"message": "nothing to copy during a game yet"}"#.data(using: .utf8))
+        XCTAssertNil(CopyOutcome.line(statusCode: 409, body: refusal))
+        XCTAssertEqual(CopyOutcome.toastText(failedWith: 409), "Nothing to copy during a game yet")
+        XCTAssertNil(CopyOutcome.line(statusCode: 404, body: refusal))
+        XCTAssertEqual(
+            CopyOutcome.toastText(failedWith: 404), "Nothing to copy: no case for the last game yet"
+        )
+        let empty = try XCTUnwrap(#"{"text": "", "take": 0}"#.data(using: .utf8))
+        XCTAssertNil(CopyOutcome.line(statusCode: 200, body: empty))
+        XCTAssertNil(CopyOutcome.line(statusCode: 200, body: Data("not json".utf8)))
+    }
+
+    func testTheToastCutsALongLineShort() {
+        let longLine = CopiedLine(text: String(repeating: "a", count: 120), take: 0)
+        let toast = CopyOutcome.toastText(copied: longLine)
+        XCTAssertEqual(toast, "Copied: " + String(repeating: "a", count: 59) + "…")
+    }
+}
