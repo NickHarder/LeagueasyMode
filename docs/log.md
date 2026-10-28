@@ -6,6 +6,11 @@ skill has the format.
 
 ## 2026-10-28
 
+- Phase 10.1 and 10.2: each build is told apart and the engine's log is kept. Every build was
+  "0.1.0", and the engine's output went nowhere when the app was opened from Finder, so neither
+  "which build was that" nor "why exit 1" had an answer. The menu now names the build ("0.1.0
+  (build 62, b0d63a8)"), the engine, its status page and crash reports carry it, and the engine's
+  output goes to `~/Library/Logs/LeagueasyMode/engine.log`, the last three runs kept.
 - The overlay can no longer hold the mouse. On the first try on a Mac the overlay showed nothing,
   and the owner, trying to make it work, turned "Let clicks through" off and "Edit layout" on:
   either makes the overlay's invisible full-screen layer catch every click, and with nothing

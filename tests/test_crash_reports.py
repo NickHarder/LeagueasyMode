@@ -173,3 +173,16 @@ def test_a_crash_at_start_leaves_a_report(tmp_path: Path, monkeypatch: pytest.Mo
         cli.main(["run"])
     reports = list((tmp_path / CRASH_REPORTS_FOLDER).iterdir())
     assert [json.loads(path.read_text())["where"] for path in reports] == ["running the engine"]
+
+
+def test_the_status_page_and_each_crash_report_name_the_build(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("LEAGUEASYMODE_BUILD", "0.1.0 (build 62, b0d63a8)")
+    board = StatusBoard(home_directory=tmp_path)
+    assert board.report().version == "0.1.0 (build 62, b0d63a8)"
+    assert crash_report("the engine", a_raised_error(), now=NOW).engine_version == (
+        "0.1.0 (build 62, b0d63a8)"
+    )
+    monkeypatch.delenv("LEAGUEASYMODE_BUILD")
+    assert board.report().version.endswith("(from source)")

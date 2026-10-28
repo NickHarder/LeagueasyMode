@@ -622,3 +622,42 @@ final class SpokenCalloutTests: XCTestCase {
         XCTAssertEqual(SpokenCallout.messageName, "leagueasymodeSpeak")
     }
 }
+
+final class BuildInfoTests: XCTestCase {
+    func testABuildNamesItsVersionRunAndCommit() {
+        let info = BuildInfo(infoDictionary: [
+            "CFBundleShortVersionString": "0.1.0",
+            "CFBundleVersion": "62",
+            "LeagueasyModeCommit": "b0d63a8",
+        ])
+        XCTAssertEqual(info.label, "0.1.0 (build 62, b0d63a8)")
+    }
+
+    func testAnAppRunFromItsSourceSaysSo() {
+        XCTAssertEqual(BuildInfo(infoDictionary: nil).label, "from source")
+        XCTAssertEqual(BuildInfo(infoDictionary: ["CFBundleShortVersionString": "0.1.0"]).label, "0.1.0")
+    }
+}
+
+final class EngineLogTests: XCTestCase {
+    func testEachStartKeepsTheLastThreeRunsLogs() throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        for run in 1...4 {
+            let logURL = try EngineLog.startNewLog(in: directory)
+            try Data("run \(run)\n".utf8).write(to: logURL)
+        }
+        let names = try FileManager.default.contentsOfDirectory(atPath: directory.path).sorted()
+        XCTAssertEqual(names, ["engine.1.log", "engine.2.log", "engine.log"])
+        let newest = try String(contentsOf: directory.appendingPathComponent("engine.log"), encoding: .utf8)
+        let oldest = try String(contentsOf: directory.appendingPathComponent("engine.2.log"), encoding: .utf8)
+        XCTAssertEqual(newest, "run 4\n")
+        XCTAssertEqual(oldest, "run 2\n")
+    }
+
+    func testTheLogIsKeptWhereMacOSKeepsLogs() {
+        let home = URL(fileURLWithPath: "/Users/someone", isDirectory: true)
+        XCTAssertEqual(EngineLog.directory(homeDirectory: home).path, "/Users/someone/Library/Logs/LeagueasyMode")
+    }
+}

@@ -20,7 +20,10 @@
 	<key>CFBundleShortVersionString</key>
 	<string>@VERSION@</string>
 	<key>CFBundleVersion</key>
-	<string>@VERSION@</string>
+	<string>@BUILD_NUMBER@</string>
+	<!-- The commit the app was built from, which the menu names beside the build (BuildInfo). -->
+	<key>LeagueasyModeCommit</key>
+	<string>@COMMIT@</string>
 	<key>LSApplicationCategoryType</key>
 	<string>public.app-category.utilities</string>
 	<key>LSMinimumSystemVersion</key>

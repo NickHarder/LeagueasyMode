@@ -4,7 +4,7 @@ title: The macOS overlay app
 description: What the menu bar app does, how to run it from a clone, how to build, release and open the app that carries its own engine, its update check and open at login, and the steps for the tracer bullet's test on a Mac over League in each display mode.
 tags: [macos, overlay, tracer-bullet]
 status: draft
-generated: { by: claude-code/cloud, at: 2026-10-28T00:35:00Z }
+generated: { by: claude-code/cloud, at: 2026-10-28T20:16:00Z }
 sources:
   - id: panel
     resource: ../../overlay/macos/Sources/LeagueasyOverlay/OverlayPanel.swift
@@ -84,6 +84,14 @@ the overlay while editing, puts every widget back.[^layout-editing]
 the overlay page hands each new callout to the app as it shows, and the app speaks it once in
 macOS's own voice (`AVSpeechSynthesizer`, the system's default voice).[^speech] In a browser, as
 against a replay, the browser's own speech speaks it instead.
+
+**Which build, and the engine's log.** The menu's first line names the build: "LeagueasyMode
+0.1.0 (build 62, b0d63a8)", its version, CI's run number and the commit (`BuildInfo`; "from source"
+under `swift run`). The app hands the same words to the engine in `LEAGUEASYMODE_BUILD`, so the
+status page, its report and each crash report name the build too. The engine's output, which an app
+opened from Finder has nowhere to show, goes to `~/Library/Logs/LeagueasyMode/engine.log`, a new
+one each start with the last three runs' kept (`EngineLog`); "Open engine log" in the menu opens
+it.
 
 The menu shows whether the engine runs and whether the overlay page loaded in the overlay's
 window ("Overlay: page loaded", or "Overlay: the page did not load (…)" with the web view's

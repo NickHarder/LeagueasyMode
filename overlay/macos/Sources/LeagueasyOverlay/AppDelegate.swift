@@ -46,6 +46,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // When edit mode was turned on; it ends by itself after `LayoutEditing.timeLimit`.
     private var editingStartedAt: Date?
     private var engineStatusText = "Engine: starting…"
+    // Which build this is (`BuildInfo`), shown in the menu and handed to the engine.
+    private let buildInfo = BuildInfo(infoDictionary: Bundle.main.infoDictionary)
+    // This run's engine log; nil when it could not be made.
+    private var engineLogURL: URL?
     private var pageState = OverlayPageState.waiting
     // How many times the overlay found itself holding the keyboard and gave it back to the game.
     private var keyboardHandBackCount = 0
@@ -126,8 +130,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             )
             return
         }
+        let logDirectory = EngineLog.directory(homeDirectory: FileManager.default.homeDirectoryForCurrentUser)
+        engineLogURL = try? EngineLog.startNewLog(in: logDirectory)
         let process = EngineProcess(
             command: command,
+            logURL: engineLogURL,
+            extraEnvironment: ["LEAGUEASYMODE_BUILD": buildInfo.label],
             onOverlayURL: { [weak self] overlayURL in
                 self?.engineDidAnnounce(overlayURL)
             },
@@ -325,7 +333,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func makeMenu() -> NSMenu {
         let menu = NSMenu()
-        menu.addItem(Self.disabledItem("LeagueasyMode"))
+        menu.addItem(Self.disabledItem("LeagueasyMode \(buildInfo.label)"))
         menu.addItem(Self.disabledItem(engineStatusText))
         menu.addItem(Self.disabledItem(pageState.menuText))
         if let keyboardText = KeyboardHandBack.menuText(handBackCount: keyboardHandBackCount) {
@@ -362,6 +370,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         levelItem.submenu = makeLevelMenu()
         menu.addItem(levelItem)
         menu.addItem(.separator())
+        if engineLogURL != nil {
+            let logItem = NSMenuItem(title: "Open engine log", action: #selector(openEngineLog(_:)), keyEquivalent: "")
+            logItem.target = self
+            menu.addItem(logItem)
+        } else {
+            menu.addItem(Self.disabledItem("Open engine log"))
+        }
         for page in EnginePage.allCases {
             if overlayURL != nil {
                 let pageItem = NSMenuItem(
@@ -501,6 +516,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         levelChoice = choice
         overlayPanel?.place(at: choice)
         statusItem?.menu = makeMenu()
+    }
+
+    /// Opens this run's engine log in the app macOS opens logs with (Console).
+    @objc private func openEngineLog(_ sender: NSMenuItem) {
+        guard let engineLogURL else {
+            return
+        }
+        NSWorkspace.shared.open(engineLogURL)
     }
 
     /// Opens one of the engine's pages in the default browser: a normal window, unlike the overlay.

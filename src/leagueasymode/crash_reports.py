@@ -20,7 +20,7 @@ from typing import Final
 
 from pydantic import BaseModel, ConfigDict
 
-from leagueasymode import __version__
+from leagueasymode.build_info import build_label
 from leagueasymode.engine_status import StatusBoard
 
 CRASH_REPORTS_FOLDER: Final = "crash-reports"
@@ -94,7 +94,7 @@ def crash_report(where: str, error: BaseException, *, now: datetime.datetime) ->
     """
     return CrashReport(
         happened_at=now,
-        engine_version=__version__,
+        engine_version=build_label(),
         where=where,
         error_type=type(error).__name__,
         frames=code_frames(traceback.extract_tb(error.__traceback__)),

@@ -195,6 +195,8 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
       - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7  # v10.2.0
       - run: overlay/macos/scripts/build_app.sh "$RUNNER_TEMP/app"
+        env:
+          BUILD_NUMBER: ${{ github.run_number }}
       - run: overlay/macos/scripts/smoke_test_app.sh "$RUNNER_TEMP/app/LeagueasyMode.app"
       # The zipped app, to try a pull request's build on a Mac without a clone. Uploaded as it is, so
       # the download is the zip itself rather than a zip of it.

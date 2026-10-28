@@ -22,7 +22,7 @@ from typing import Final, Literal
 
 from pydantic import BaseModel, ConfigDict, ValidationError
 
-from leagueasymode import __version__
+from leagueasymode.build_info import build_label
 from leagueasymode.game_api import NoAnswer
 from leagueasymode.game_state import GameSnapshot
 
@@ -255,7 +255,7 @@ class StatusBoard:
             The report.
         """
         return EngineStatus(
-            version=__version__,
+            version=build_label(),
             platform=platform.platform(terse=True),
             python_version=platform.python_version(),
             started_at=self.started_at.isoformat(),
