@@ -4,14 +4,20 @@
  * own speech synthesis speaks it instead.
  */
 
-/** The app's handler of the page's messages, as WebKit exposes it. */
+/** One of the app's handlers of the page's messages, as WebKit exposes it. */
 interface MessageHandler {
-  postMessage(message: string): void;
+  postMessage(message: unknown): void;
 }
 
 declare global {
   interface Window {
-    webkit?: { readonly messageHandlers?: { readonly leagueasymodeSpeak?: MessageHandler } };
+    // The app's handlers: speech here, and where the click-to-mark buttons are (marking.ts).
+    webkit?: {
+      readonly messageHandlers?: {
+        readonly leagueasymodeSpeak?: MessageHandler;
+        readonly leagueasymodeClickRegions?: MessageHandler;
+      };
+    };
   }
 }
 
