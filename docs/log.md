@@ -6,6 +6,7 @@ skill has the format.
 
 ## 2026-10-28
 
+- The owner approved phase 10's plan ("approved, start building phase 10").
 - Phase 10's plan now ports nothingsmyfault's engine into this project instead of depending on it,
   at the owner's question "why do you want to make it public? can you build off of leagues mode?".
   This repository must stay public for the app's update check, so depending on the private

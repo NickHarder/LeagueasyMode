@@ -3,7 +3,7 @@ type: Plan
 title: "Phase 10: roasts with receipts, after the game and in it"
 description: How the overlay gets nothingsmyfault's cited roasts, a case file for anyone in the game in the post-game window and short moments about friends during it, both copied for chat with one shortcut and never posted, in a proposed build order with what each needs and where the owner decides.
 tags: [plan, phase-10, roasts, post-game]
-status: draft
+status: stable
 generated: { by: claude-code/cloud, at: 2026-10-28T20:30:33Z }
 sources:
   - id: owner-2026-10-28
@@ -28,6 +28,9 @@ sources:
     resource: "wc -l over nothingsmyfault's src/ on 2026-10-28: the engine (evidence/, verdict.py, roast/, casefile.py) 2,993 lines and roast/templates.yaml 599; the site and Riot plumbing (app.py, riot/, cache.py, recordings.py, ddragon.py, ledger.py, roster.py, web/) 3,273"
   - id: game-state
     resource: ../../src/leagueasymode/game_state.py
+verified:
+  - { by: human:nickharder, at: 2026-10-28T20:33:34Z }
+approved_sha256: 80c27de7553d7103387578a8d68a9ef73c65357127253ac1d73ce76c031fdd32
 ---
 
 # Phase 10: roasts with receipts, after the game and in it
