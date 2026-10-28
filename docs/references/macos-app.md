@@ -4,7 +4,7 @@ title: The macOS overlay app
 description: What the menu bar app does, how to run it from a clone, how to build, release and open the app that carries its own engine, its update check and open at login, and the steps for the tracer bullet's test on a Mac over League in each display mode.
 tags: [macos, overlay, tracer-bullet]
 status: draft
-generated: { by: claude-code/cloud, at: 2026-10-28T23:05:00Z }
+generated: { by: claude-code/cloud, at: 2026-10-28T21:55:00Z }
 sources:
   - id: build-update
     resource: ../../overlay/macos/Sources/OverlayCore/BuildUpdate.swift
@@ -187,19 +187,24 @@ request's test build and the builds of main are ordered alike. The owner allowed
 2026-10-28 ("Auto-published builds"); full releases stay the owner's tags.[^build-update]
 
 **The update check.** Once a day at most, the bundled app asks GitHub's API for the repository's
-latest release, without a token; a draft, a prerelease, or a version not newer than the app's is
+latest release, without a token; a draft, a prerelease, a release without the zipped app (as the
+repository's old v1.0.0, which led to an empty page), or a version not newer than the app's is
 ignored.[^update-check] A newer one adds "LeagueasyMode 0.2.0 is out…" to the menu, which opens the
 release's page; the page's address is always built from the tag on this repository, whatever
-GitHub's answer says. The same check, and one at every start, asks for the newest builds of main:
-one with a higher build number and a version no lower than the app's adds "Install update: build
-75 (0.1.0)…", which, once confirmed, downloads the zip and its checksum from this repository's
+GitHub's answer says. The same check, one at every start and one every hour ask for the newest
+builds of main: one with a higher build number and a version no lower than the app's adds "Install
+update: build 75 (0.1.0)…". With "Install updates automatically (not during a game)" on, as it is
+unless turned off, the app installs it by itself as soon as no game window of League's is on
+screen, the widgets are not being moved and no install runs (`AutomaticUpdate`), and after the
+restart the menu says "Update: build 75 installed"; a build whose automatic install failed is not
+tried again by itself. Otherwise the menu item, once confirmed, downloads the zip and its checksum from this repository's
 release, checks one against the other, unpacks the app with `ditto`, checks it is LeagueasyMode
 and that its signature holds, puts it in place of the running app, starts it and quits
 (`UpdateInstaller`). A file the app downloads itself is not marked as from the internet, so the
 new build opens without "Open Anyway"; that is first seen on the Mac. A folder the app cannot
 write to, or any failed step, leaves the app as it was and says why in the menu ("Update: not
-installed (…)"). "Check for updates now" asks at once. "Check for updates daily" in the menu turns
-the checks off; they are the app's only requests beyond this Mac, League's servers, Data Dragon
+installed (…)"). "Check for updates now" asks at once. "Check for updates" in the menu turns the
+checks off; they are the app's only requests beyond this Mac, League's servers, Data Dragon
 and the games' repository. An app run from a clone has no version and does not check.
 
 **Open at login.** The menu's "Open at login" asks macOS to open the app when the player logs in

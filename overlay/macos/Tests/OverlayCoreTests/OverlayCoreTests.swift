@@ -372,8 +372,11 @@ final class ReleaseVersionTests: XCTestCase {
 final class UpdateCheckTests: XCTestCase {
     private let appVersion = ReleaseVersion("0.1.0")!
 
+    /// A release's answer, with the zipped app attached as a release of the app always has it.
     private func answer(_ fields: [String: Any]) throws -> Data {
-        try JSONSerialization.data(withJSONObject: fields)
+        let appFile: [String: Any] = ["name": "LeagueasyMode-0.2.0.zip"]
+        let withApp = fields.merging(["assets": [appFile, ["name": "LeagueasyMode-0.2.0.zip.sha256"]]]) { given, _ in given }
+        return try JSONSerialization.data(withJSONObject: withApp)
     }
 
     func testTheRequestAsksGitHubForTheLatestRelease() {
@@ -420,6 +423,18 @@ final class UpdateCheckTests: XCTestCase {
         ] {
             XCTAssertNil(UpdateCheck.newerRelease(answer: try answer(fields), appVersion: appVersion))
         }
+    }
+
+    func testAReleaseWithoutTheAppIsNotOffered() throws {
+        // The repository's old v1.0.0 has no files: offering it led to an empty page.
+        for assets: [[String: Any]] in [[], [["name": "notes.txt"]], [["name": "LeagueasyMode-1.0.0.zip.sha256"]]] {
+            XCTAssertNil(
+                UpdateCheck.newerRelease(answer: try answer(["tag_name": "v1.0.0", "assets": assets]), appVersion: appVersion),
+                "\(assets)"
+            )
+        }
+        let noAssetsField = try JSONSerialization.data(withJSONObject: ["tag_name": "v1.0.0"])
+        XCTAssertNil(UpdateCheck.newerRelease(answer: noAssetsField, appVersion: appVersion))
     }
 
     func testThePageIsAlwaysThisRepositorysWhateverTheAnswerSays() throws {
@@ -718,6 +733,31 @@ final class BuildUpdateCheckTests: XCTestCase {
     func testAnUnnumberedAppIsOfferedAnyBuild() throws {
         let offered = BuildUpdateCheck.newerBuild(answer: try answer([build(5)]), appVersion: appVersion, appBuildNumber: nil)
         XCTAssertEqual(offered?.buildNumber, 5)
+    }
+}
+
+final class AutomaticUpdateTests: XCTestCase {
+    private let screen = CGRect(x: 0, y: 0, width: 1920, height: 1080)
+
+    func testABuildIsInstalledOnlyWithNoGameOnScreen() {
+        XCTAssertTrue(
+            AutomaticUpdate.canInstallNow(
+                isOn: true, placement: .mainScreen(screen), isEditingLayout: false, isInstalling: false
+            )
+        )
+        for placement in [GamePlacement.screen(screen), .window(screen)] {
+            XCTAssertFalse(
+                AutomaticUpdate.canInstallNow(isOn: true, placement: placement, isEditingLayout: false, isInstalling: false)
+            )
+        }
+        XCTAssertFalse(AutomaticUpdate.canInstallNow(isOn: true, placement: nil, isEditingLayout: false, isInstalling: false))
+    }
+
+    func testNotWhenOffEditingOrAlreadyInstalling() {
+        let noGame = GamePlacement.mainScreen(screen)
+        XCTAssertFalse(AutomaticUpdate.canInstallNow(isOn: false, placement: noGame, isEditingLayout: false, isInstalling: false))
+        XCTAssertFalse(AutomaticUpdate.canInstallNow(isOn: true, placement: noGame, isEditingLayout: true, isInstalling: false))
+        XCTAssertFalse(AutomaticUpdate.canInstallNow(isOn: true, placement: noGame, isEditingLayout: false, isInstalling: true))
     }
 }
 

@@ -156,3 +156,25 @@ private struct ReleaseAnswer: Decodable {
 private struct AssetAnswer: Decodable {
     let name: String
 }
+
+/// When the app installs a newer build by itself: with the player's switch on, and never while
+/// League's game window is on screen, the widgets are being moved, or an install is running.
+/// Installing restarts the app, which would blank the overlay for a few seconds in a game.
+public enum AutomaticUpdate {
+    /// Returns whether the app may install a build now, without asking.
+    ///
+    /// - Parameters:
+    ///   - isOn: The player's switch, "Install updates automatically".
+    ///   - placement: Where the overlay is; only `.mainScreen` means no game window is on screen.
+    ///   - isEditingLayout: Whether the widgets are being moved.
+    ///   - isInstalling: Whether an install is already running.
+    /// - Returns: Whether to install now.
+    public static func canInstallNow(
+        isOn: Bool, placement: GamePlacement?, isEditingLayout: Bool, isInstalling: Bool
+    ) -> Bool {
+        guard isOn, !isEditingLayout, !isInstalling, case .some(.mainScreen) = placement else {
+            return false
+        }
+        return true
+    }
+}
