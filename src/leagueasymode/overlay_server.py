@@ -69,6 +69,7 @@ WEB_ASSETS: Final = {
     "/state.js": ("state.js", "text/javascript"),
     "/layout.js": ("layout.js", "text/javascript"),
     "/speech.js": ("speech.js", "text/javascript"),
+    "/marking.js": ("marking.js", "text/javascript"),
     "/overlay.css": ("overlay.css", "text/css"),
     "/summary.html": ("summary.html", "text/html"),
     "/summary.js": ("summary.js", "text/javascript"),

@@ -4,7 +4,7 @@ title: The macOS overlay app
 description: What the menu bar app does, how to run it from a clone, how to build, release and open the app that carries its own engine, its update check and open at login, and the steps for the tracer bullet's test on a Mac over League in each display mode.
 tags: [macos, overlay, tracer-bullet]
 status: draft
-generated: { by: claude-code/cloud, at: 2026-10-28T22:20:00Z }
+generated: { by: claude-code/cloud, at: 2026-10-28T23:20:00Z }
 sources:
   - id: build-update
     resource: ../../overlay/macos/Sources/OverlayCore/BuildUpdate.swift
@@ -70,6 +70,15 @@ Each hot key checks that a press is its own, since every one hears all of the ap
 their ultimate, within three seconds. Every key carries ⌃⌥, so marking never takes a key League
 uses. The app posts the mark to the engine's `/marks`, which starts the timer shown on that
 enemy's row.[^cooldown-marking]
+
+**Or with a click.** With "Click to mark spells" on in Settings (off unless turned on), each
+living enemy's row has three buttons, their Flash, their other summoner spell and R, and a press
+on one posts the same mark, naming the enemy by the same place in role order, which the engine
+puts on each card (`enemy_slot`). The page tells the app where the buttons are
+(`ClickRegions`); the panel looks where the pointer is 30 times a second, takes the mouse only
+while it is over a button, and lets every other click through to the game. The panel still never
+becomes key, so League keeps the keyboard, and the page's view takes the first click on a panel
+that is not key. In edit mode the strip has no buttons, as a press there drags it.
 Quitting the app asks the engine to stop; the engine closes the game it is recording first.
 
 **Moving the widgets:** "Edit layout (Esc to finish)" in the menu makes the overlay take clicks,

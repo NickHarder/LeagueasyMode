@@ -5,13 +5,21 @@ import WebKit
 /// A transparent window over League, its screen or its window, that shows the overlay page.
 ///
 /// It never becomes main and its panel does not activate the app, so League keeps the keyboard
-/// and the focus; clicks always pass through it to the game. Only in edit mode does it become key
-/// and take clicks, so its widgets can be dragged: then it is tinted, so that the player sees the
-/// layer that catches their clicks even when the page shows nothing, and Escape ends it. It joins
-/// every Space, the full-screen ones included.
+/// and the focus; clicks pass through it to the game. Only in edit mode does it become key and
+/// take clicks, so its widgets can be dragged: then it is tinted, so that the player sees the
+/// layer that catches their clicks even when the page shows nothing, and Escape ends it. With
+/// "Click to mark spells" on, it also takes the clicks on the page's spell buttons, and those
+/// alone, while the pointer is over one (`ClickRegions`); it still never becomes key then. It
+/// joins every Space, the full-screen ones included.
 final class OverlayPanel: NSPanel, WKNavigationDelegate {
-    private let webView = WKWebView(frame: .zero, configuration: WKWebViewConfiguration())
+    // How often the panel looks where the pointer is, to take a click on a spell button: 30 times
+    // a second, so that the button is ready before a click lands on it.
+    private static let pointerCheckSeconds: TimeInterval = 1.0 / 30
+    private let webView = OverlayWebView(frame: .zero, configuration: WKWebViewConfiguration())
     private var isEditingLayout = false
+    // The page's spell buttons, in its points from its top left; none unless the setting is on.
+    private var clickRegions: [CGRect] = []
+    private var pointerTimer: Timer?
     // When the panel last gave the keyboard back; at most once a second, so that a panel AppKit
     // made key again on showing could never hide and show itself without end.
     private var lastKeyboardHandBack: Date?
@@ -45,11 +53,53 @@ final class OverlayPanel: NSPanel, WKNavigationDelegate {
         webView.autoresizingMask = [.width, .height]
         // The page hands its callouts to the app's voice, when the player turned speech on.
         webView.configuration.userContentController.add(SpeechBridge(), name: SpokenCallout.messageName)
+        // The page says where its spell buttons are, so that the panel takes those clicks only.
+        webView.configuration.userContentController.add(
+            ClickRegionBridge { [weak self] rectangles in
+                self?.clickRegionsDidChange(rectangles)
+            },
+            name: ClickRegions.messageName
+        )
         webView.navigationDelegate = self
         contentView = webView
     }
 
     override var canBecomeKey: Bool { isEditingLayout }
+
+    /// Keeps the page's spell buttons, and looks for the pointer only while there are some.
+    private func clickRegionsDidChange(_ rectangles: [CGRect]) {
+        clickRegions = rectangles
+        if rectangles.isEmpty {
+            pointerTimer?.invalidate()
+            pointerTimer = nil
+            if !isEditingLayout {
+                ignoresMouseEvents = true
+            }
+        } else if pointerTimer == nil {
+            pointerTimer = Timer.scheduledTimer(
+                timeInterval: Self.pointerCheckSeconds,
+                target: self,
+                selector: #selector(pointerTimerFired(_:)),
+                userInfo: nil,
+                repeats: true
+            )
+        }
+    }
+
+    /// Takes the mouse while the pointer is over a spell button, and lets it through elsewhere.
+    @objc private func pointerTimerFired(_ timer: Timer) {
+        guard !isEditingLayout else {
+            return
+        }
+        let pointer = NSEvent.mouseLocation
+        let pointInWindow = CGPoint(x: pointer.x - frame.minX, y: pointer.y - frame.minY)
+        let isOverButton =
+            isVisible
+            && ClickRegions.contains(clickRegions, pointInWindow: pointInWindow, windowHeight: frame.height)
+        if ignoresMouseEvents == isOverButton {
+            ignoresMouseEvents = !isOverButton
+        }
+    }
     override var canBecomeMain: Bool { false }
 
     /// Loads the overlay page from the engine's local server.
@@ -82,6 +132,7 @@ final class OverlayPanel: NSPanel, WKNavigationDelegate {
     /// - Parameter isEditing: Whether edit mode is on.
     func setEditingLayout(_ isEditing: Bool) {
         isEditingLayout = isEditing
+        // Out of edit mode the pointer check gives the spell buttons their clicks again.
         ignoresMouseEvents = !isEditing
         backgroundColor = isEditing ? NSColor.black.withAlphaComponent(0.3) : .clear
         webView.evaluateJavaScript(LayoutEditing.editingScript(isEditing: isEditing))
@@ -171,5 +222,34 @@ final class OverlayPanel: NSPanel, WKNavigationDelegate {
     func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
         onPageStateChange?(.failed("its process stopped; loading it again"))
         webView.reload()
+    }
+}
+
+/// The page's view. A click on a spell button lands on a panel that is not key, so the view takes
+/// that first click rather than spending it on making the panel key, which it never becomes.
+final class OverlayWebView: WKWebView {
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool {
+        true
+    }
+}
+
+/// Hands the page's spell buttons, as `ClickRegions` reads them, to the panel.
+final class ClickRegionBridge: NSObject, WKScriptMessageHandler {
+    private let onRectangles: @MainActor ([CGRect]) -> Void
+
+    init(onRectangles: @escaping @MainActor ([CGRect]) -> Void) {
+        self.onRectangles = onRectangles
+    }
+
+    func userContentController(
+        _ userContentController: WKUserContentController, didReceive message: WKScriptMessage
+    ) {
+        guard let rectangles = ClickRegions.rectangles(fromMessageBody: message.body) else {
+            return
+        }
+        // WebKit hands the page's messages over on the main thread.
+        MainActor.assumeIsolated {
+            onRectangles(rectangles)
+        }
     }
 }
