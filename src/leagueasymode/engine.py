@@ -128,6 +128,8 @@ def compute_overlay_state(
         return NOT_RUNNING
     if status is not None:
         status.note_game(snapshot)
+    # Off the Rift, its dragons, jungle, lanes and minimap mean nothing, so none is worked out.
+    on_the_rift = snapshot.game_data.is_summoners_rift
     gold_estimates = (
         gold_tracker.update(snapshot, item_catalog) if gold_tracker is not None else None
     )
@@ -140,7 +142,9 @@ def compute_overlay_state(
         else None
     )
     position_clues = (
-        clue_tracker.update(snapshot, last_backs or {}) if clue_tracker is not None else None
+        clue_tracker.update(snapshot, last_backs or {})
+        if clue_tracker is not None and on_the_rift
+        else None
     )
     jungle_paths, camp_timers = (
         jungle_tracker.update(
@@ -151,7 +155,7 @@ def compute_overlay_state(
             },
             jungle_starts=jungle_starts_of(player_records or {}),
         )
-        if jungle_tracker is not None
+        if jungle_tracker is not None and on_the_rift
         else ([], [])
     )
     cards = player_cards(
@@ -168,20 +172,23 @@ def compute_overlay_state(
         position_rules=tuning.positions,
         build_rules=tuning.build_path,
     )
-    dragon = dragon_timer(snapshot, tuning.dragon)
-    objectives = objective_timers(snapshot)
-    buffs = buff_timers(snapshot)
-    inhibitors = inhibitor_timers(snapshot)
+    # The win chance reads the dragons taken, none off the Rift; only the Rift shows the timer.
+    dragons_taken = dragon_timer(snapshot, tuning.dragon)
+    dragon = dragons_taken if on_the_rift else None
+    objectives = objective_timers(snapshot) if on_the_rift else []
+    buffs = buff_timers(snapshot) if on_the_rift else []
+    inhibitors = inhibitor_timers(snapshot) if on_the_rift else []
     teams_gold = team_gold(cards)
     teams_item_gold = team_item_gold(cards)
     return OverlayState(
         is_game_running=True,
+        is_summoners_rift=on_the_rift,
         game_time_seconds=snapshot.game_data.game_time_seconds,
         dragon=dragon,
         objectives=objectives,
         buffs=buffs,
         inhibitors=inhibitors,
-        structures=lane_structures(snapshot),
+        structures=lane_structures(snapshot) if on_the_rift else [],
         players=cards,
         numbers_window=numbers_window(snapshot),
         team_item_gold=teams_item_gold,
@@ -191,7 +198,7 @@ def compute_overlay_state(
         camp_timers=camp_timers,
         control_wards=(
             ward_tracker.update(snapshot, _locations_by_key(snapshot, cards))
-            if ward_tracker is not None
+            if ward_tracker is not None and on_the_rift
             else []
         ),
         minimap=minimap,
@@ -200,20 +207,24 @@ def compute_overlay_state(
                 snapshot,
                 team_gold=teams_gold,
                 team_item_gold=teams_item_gold,
-                dragon=dragon,
+                dragon=dragons_taken,
                 buffs=buffs,
                 inhibitors=inhibitors,
             ),
             win_rules,
         ),
         fight=team_fight(snapshot, patch_stats, fight_rules),
-        contests=objective_contests(
-            snapshot,
-            dragon=dragon,
-            objectives=objectives,
-            position_clues=position_clues or {},
-            patch_stats=patch_stats,
-            rules=tuning.contests,
+        contests=(
+            objective_contests(
+                snapshot,
+                dragon=dragons_taken,
+                objectives=objectives,
+                position_clues=position_clues or {},
+                patch_stats=patch_stats,
+                rules=tuning.contests,
+            )
+            if on_the_rift
+            else []
         ),
         you=(
             you_panel(

@@ -32,6 +32,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // The update check: whether the player wants it (on unless turned off), and when it last asked.
     private static let checksForUpdatesKey = "checksForUpdates"
     private static let lastUpdateCheckKey = "lastUpdateCheck"
+    // Whether the How to use page was opened by itself once, on the first start.
+    private static let hasShownHowToUseKey = "hasShownHowToUse"
     // How often the app sees whether a check is due; the check itself is at most once a day.
     private static let updateTimerSeconds: TimeInterval = 60 * 60
     // How often the app looks for League's window, which can move, resize or change screens.
@@ -186,6 +188,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             overlayPanel?.showOverlay()
         }
         updateEngineStatus("Engine: running")
+        showHowToUseOnce(overlayURL: overlayURL)
+    }
+
+    /// Opens the How to use page the first time the engine is up, and never again by itself.
+    private func showHowToUseOnce(overlayURL: URL) {
+        guard
+            !UserDefaults.standard.bool(forKey: Self.hasShownHowToUseKey),
+            let pageURL = EnginePage.howToUse.url(overlayURL: overlayURL)
+        else {
+            return
+        }
+        UserDefaults.standard.set(true, forKey: Self.hasShownHowToUseKey)
+        NSWorkspace.shared.open(pageURL)
     }
 
     /// Starts a stopped engine again after a moment, unless the app is quitting or the engine has

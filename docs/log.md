@@ -6,6 +6,13 @@ skill has the format.
 
 ## 2026-10-28
 
+- Phase 10.5 and 10.4: off the Rift, and How to use. The owner's ARAM Mayhem game showed the
+  Rift's timers for a map that has none; on any map but Summoner's Rift, the engine now leaves out
+  the dragon, objectives, jungle, turrets per lane, positions and the minimap layer, and keeps the
+  enemies, the fight and the win chance. The owner asked how anyone learns the shortcuts: "How to
+  use…" in the menu, opened once by itself on the first start, lists each shortcut in Mac and
+  Windows-keyboard names, what each widget means and what to do when the mouse or keyboard acts
+  up; a test fails when the app registers a key the page does not list.
 - Phase 10.3: "Report a problem…". Each problem after the first tests took rounds of describing,
   screenshots and guesses; the owner asked for "a snap shot way to upload issues for you easily".
   The menu item, or ⌃⌥⌘R in a game, has the engine write a report (the app's menu lines, the status

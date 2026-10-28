@@ -405,6 +405,7 @@ export function isOverlayState(value) {
     }
     const dragon = value["dragon"];
     return (typeof value["is_game_running"] === "boolean" &&
+        typeof value["is_summoners_rift"] === "boolean" &&
         isNumberOrNull(value["game_time_seconds"]) &&
         (dragon === null || isDragonTimer(dragon)) &&
         isArrayOf(value["objectives"], isObjectiveTimer) &&

@@ -985,7 +985,8 @@ function renderMinimap(nowMilliseconds: number): void {
     return;
   }
   const state = received.state;
-  if (!state.preferences.show_minimap) {
+  // League's minimap off the Rift is another map, which the layer's places do not fit.
+  if (!state.preferences.show_minimap || !state.is_summoners_rift) {
     minimap.hidden = true;
     minimap.replaceChildren();
     return;

@@ -4,7 +4,7 @@ title: The macOS overlay app
 description: What the menu bar app does, how to run it from a clone, how to build, release and open the app that carries its own engine, its update check and open at login, and the steps for the tracer bullet's test on a Mac over League in each display mode.
 tags: [macos, overlay, tracer-bullet]
 status: draft
-generated: { by: claude-code/cloud, at: 2026-10-28T22:10:00Z }
+generated: { by: claude-code/cloud, at: 2026-10-28T22:40:00Z }
 sources:
   - id: panel
     resource: ../../overlay/macos/Sources/LeagueasyOverlay/OverlayPanel.swift
@@ -110,11 +110,15 @@ window ("Overlay: page loaded", or "Overlay: the page did not load (…)" with t
 reason; a page whose process stops is loaded again), toggles the overlay, and picks the window
 level, since which level stays above League depends on how League draws:[^levels]
 Floating, Status bar, Screen saver, and Above a captured display (one above the level a game that
-captures the display draws at). "Last game…" opens the post-game window, "Settings…" the
-settings page and "Status…" what the engine sees, in the default browser, normal windows rather
-than the click-through overlay: the engine's pages `summary.html`, `settings.html` and
+captures the display draws at). "How to use…" opens the shortcuts, in Mac and Windows-keyboard
+names (⌃⌥⌘L is Ctrl + Alt + Windows + L), what each widget and minimap mark means, the menu, and
+what to do when the mouse or keyboard acts up; the app opens it by itself once, the first time
+the engine is up. "Last game…" opens the post-game window, "Settings…" the settings page and
+"Status…" what the engine sees, in the default browser, normal windows rather than the
+click-through overlay: the engine's pages `how-to-use.html`, `summary.html`, `settings.html` and
 `status.html` beside the overlay's (`EnginePage` in `OverlayCore` builds their addresses); each
-waits until the engine has announced its address.
+waits until the engine has announced its address. A test checks that each key the app registers
+is on the How to use page (`tests/test_how_to_use_page.py`).
 
 `OverlayCore` holds what the app decides without AppKit (which engine to run, its command and
 search path,[^engine-command] reading its output, finding the bundled engine or the clone) and has

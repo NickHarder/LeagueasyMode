@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>How to use · LeagueasyMode</title>
+    <link rel="stylesheet" href="/summary.css">
+    <style>
+      kbd {
+        font: inherit;
+        font-variant-numeric: tabular-nums;
+        white-space: nowrap;
+      }
+      .how-to table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      .how-to th,
+      .how-to td {
+        text-align: left;
+        vertical-align: top;
+        padding: 6px 12px 6px 0;
+        border-bottom: 1px solid color-mix(in srgb, currentColor 15%, transparent);
+      }
+      .how-to li {
+        margin-bottom: 6px;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- The app opens this page once, on its first start, and from "How to use…" in its menu. -->
+    <main id="how-to-use" class="summary how-to">
+      <header class="summary-header">
+        <h1>How to use LeagueasyMode</h1>
+        <p class="summary-detail">
+          A layer over League that shows what the scoreboard hides: timers, each enemy's likely
+          gold, items, level and place, and how a fight would likely go. It reads only League's own
+          local data on this Mac; it never reads the screen.
+        </p>
+      </header>
+
+      <section class="summary-section">
+        <h2>Starting</h2>
+        <ol>
+          <li>Open the app: a scope icon appears in the menu bar, at the top right of the screen.</li>
+          <li>Play League in <strong>Windowed</strong> or <strong>Borderless</strong> mode. The overlay
+            follows League's window and shows once a game starts.</li>
+          <li>The overlay never takes a click or a key from the game, except while you move the
+            widgets (Edit layout).</li>
+        </ol>
+      </section>
+
+      <section class="summary-section">
+        <h2>Shortcuts</h2>
+        <p class="summary-detail">
+          On a Windows keyboard, <kbd>Ctrl</kbd> is ⌃ Control, <kbd>Alt</kbd> is ⌥ Option and the
+          <kbd>Windows</kbd> key is ⌘ Command.
+        </p>
+        <table id="shortcuts">
+          <thead>
+            <tr><th>Mac</th><th>Windows keyboard</th><th>What it does</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><kbd>⌃⌥⌘L</kbd></td>
+              <td><kbd>Ctrl + Alt + Windows + L</kbd></td>
+              <td>Shows or hides the overlay. While you move the widgets, ends that instead.</td>
+            </tr>
+            <tr>
+              <td><kbd>⌃⌥⌘R</kbd></td>
+              <td><kbd>Ctrl + Alt + Windows + R</kbd></td>
+              <td>Sends a problem report at once, without a note (see below).</td>
+            </tr>
+            <tr>
+              <td><kbd>⌃⌥1</kbd> to <kbd>⌃⌥5</kbd></td>
+              <td><kbd>Ctrl + Alt + 1</kbd> to <kbd>Ctrl + Alt + 5</kbd></td>
+              <td>Picks an enemy, in role order: 1 top, 2 jungle, 3 mid, 4 bot, 5 support.</td>
+            </tr>
+            <tr>
+              <td><kbd>⌃⌥F</kbd></td>
+              <td><kbd>Ctrl + Alt + F</kbd></td>
+              <td>Within 3 seconds of a pick: that enemy used Flash. Its cooldown counts down on
+                their row.</td>
+            </tr>
+            <tr>
+              <td><kbd>⌃⌥D</kbd></td>
+              <td><kbd>Ctrl + Alt + D</kbd></td>
+              <td>Within 3 seconds of a pick: that enemy used their other summoner spell.</td>
+            </tr>
+            <tr>
+              <td><kbd>⌃⌥R</kbd></td>
+              <td><kbd>Ctrl + Alt + R</kbd></td>
+              <td>Within 3 seconds of a pick: that enemy used their ultimate.</td>
+            </tr>
+            <tr>
+              <td><kbd>Esc</kbd></td>
+              <td><kbd>Esc</kbd></td>
+              <td>Ends Edit layout.</td>
+            </tr>
+          </tbody>
+        </table>
+        <p class="summary-detail">
+          Example: the enemy mid laner flashes. Press <kbd>Ctrl + Alt + 3</kbd>, then
+          <kbd>Ctrl + Alt + F</kbd>.
+        </p>
+      </section>
+
+      <section class="summary-section">
+        <h2>What the overlay shows</h2>
+        <p class="summary-detail">
+          A number with <strong>~</strong> or a percentage is an estimate, worked out from what
+          League shows; the rest is League's own. Each can be turned off in Settings.
+        </p>
+        <ul>
+          <li><strong>Dragon</strong>: when the next dragon spawns, each team's dragons, and the
+            rift's element.</li>
+          <li><strong>Objective strip</strong>: Baron, Herald, grubs and their buffs, inhibitors
+            coming back, turrets down per lane, and whether a team can likely contest an
+            objective.</li>
+          <li><strong>Enemy strip</strong>, a row per enemy: role, level, items and their gold,
+            respawn, the cooldowns you marked, health, armor and magic resist, rank and record,
+            and the estimates: unspent gold, likely next item, last trip to base, where they were
+            last seen and where they likely are.</li>
+          <li><strong>Win chance</strong> and <strong>fight</strong>: each team's chance to win the
+            game, and to win a fight now, with what moves them.</li>
+          <li><strong>You</strong>: what to buy next and your pace against your lane opponent.</li>
+          <li><strong>Callouts</strong>: short notes when something changes, such as an enemy
+            reaching level 6 or a numbers advantage. They can be spoken (Settings).</li>
+          <li><strong>Minimap layer</strong>, over League's minimap: a circle, with the first
+            letters of the champion's name, where each unseen enemy likely is (larger and darker
+            when likelier; none for an enemy your team sees), the camps down with their respawn,
+            and the enemy's likely control wards.</li>
+        </ul>
+        <p class="summary-detail">
+          On ARAM, its Mayhem, Arena and other maps, the Rift's dragon, objectives, jungle and
+          minimap layer hide; the enemy strip, win chance and fights stay.
+        </p>
+      </section>
+
+      <section class="summary-section">
+        <h2>The menu</h2>
+        <ul>
+          <li>The first lines say which build this is, whether the engine runs, whether the
+            overlay page loaded, and where League's window is.</li>
+          <li><strong>Show overlay</strong>: as <kbd>⌃⌥⌘L</kbd>.</li>
+          <li><strong>Edit layout</strong>: the overlay turns tinted and takes the mouse, so you
+            can drag a widget. <kbd>Esc</kbd> ends it, and it ends by itself after 2 minutes.
+            <strong>Reset layout</strong> puts every widget back.</li>
+          <li><strong>Window level</strong>: try another when the overlay does not stay above
+            League.</li>
+          <li><strong>Report a problem…</strong>: write what went wrong; see below.</li>
+          <li><strong>Open engine log</strong>, <strong>How to use…</strong>, <strong>Last
+            game…</strong> (after a game: how it went, minute by minute),
+            <strong>Settings…</strong> (what the overlay shows) and <strong>Status…</strong>
+            (what the engine sees, part by part).</li>
+        </ul>
+      </section>
+
+      <section class="summary-section">
+        <h2>When something goes wrong</h2>
+        <ul>
+          <li><strong>The mouse or the keyboard does nothing in League:</strong> press
+            <kbd>⌃⌥⌘L</kbd> twice (hide, then show). If that does not help, quit the app from its
+            menu; League works as before without it.</li>
+          <li><strong>No overlay over the game:</strong> check that League is windowed or
+            borderless, then the menu's first lines; try another Window level.</li>
+          <li><strong>Anything else:</strong> use <strong>Report a problem…</strong> (or
+            <kbd>⌃⌥⌘R</kbd> in a game) right when it happens. The report holds the engine's log,
+            the status page and the game so far, with every player's name taken out, and is sent
+            on its own; just say "sent a report".</li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>

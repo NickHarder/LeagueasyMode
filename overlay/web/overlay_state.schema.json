@@ -1734,6 +1734,11 @@
       "title": "Is Game Running",
       "type": "boolean"
     },
+    "is_summoners_rift": {
+      "default": true,
+      "title": "Is Summoners Rift",
+      "type": "boolean"
+    },
     "game_time_seconds": {
       "anyOf": [
         {

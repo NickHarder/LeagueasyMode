@@ -642,6 +642,8 @@ class OverlayState(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     is_game_running: bool
+    # False on ARAM, its Mayhem, Arena and any other map: the Rift's widgets and minimap then hide.
+    is_summoners_rift: bool = True
     game_time_seconds: float | None = None
     dragon: DragonTimer | None = None
     objectives: list[ObjectiveTimer] = Field(default_factory=list)

@@ -398,6 +398,8 @@ export interface OverlayLayout {
 /** Everything the overlay shows at one moment. */
 export interface OverlayState {
   readonly is_game_running: boolean;
+  // False on ARAM, its Mayhem, Arena and any other map: the Rift's widgets and minimap then hide.
+  readonly is_summoners_rift: boolean;
   readonly game_time_seconds: number | null;
   readonly dragon: DragonTimer | null;
   readonly objectives: readonly ObjectiveTimer[];
@@ -915,6 +917,7 @@ export function isOverlayState(value: unknown): value is OverlayState {
   const dragon = value["dragon"];
   return (
     typeof value["is_game_running"] === "boolean" &&
+    typeof value["is_summoners_rift"] === "boolean" &&
     isNumberOrNull(value["game_time_seconds"]) &&
     (dragon === null || isDragonTimer(dragon)) &&
     isArrayOf(value["objectives"], isObjectiveTimer) &&

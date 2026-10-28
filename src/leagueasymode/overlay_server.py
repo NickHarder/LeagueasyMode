@@ -75,6 +75,7 @@ WEB_ASSETS: Final = {
     "/settings.html": ("settings.html", "text/html"),
     "/settings.js": ("settings.js", "text/javascript"),
     "/status.html": ("status.html", "text/html"),
+    "/how-to-use.html": ("how-to-use.html", "text/html"),
     "/status.js": ("status.js", "text/javascript"),
     "/status_state.js": ("status_state.js", "text/javascript"),
 }

@@ -329,11 +329,16 @@ final class EnginePageTests: XCTestCase {
             EnginePage.status.url(overlayURL: overlayURL),
             URL(string: "http://127.0.0.1:52011/status.html")
         )
+        XCTAssertEqual(
+            EnginePage.howToUse.url(overlayURL: overlayURL),
+            URL(string: "http://127.0.0.1:52011/how-to-use.html")
+        )
     }
 
     func testEachPageHasItsMenuTitle() {
         XCTAssertEqual(
-            EnginePage.allCases.map(\.menuTitle), ["Last game\u{2026}", "Settings\u{2026}", "Status\u{2026}"]
+            EnginePage.allCases.map(\.menuTitle),
+            ["How to use\u{2026}", "Last game\u{2026}", "Settings\u{2026}", "Status\u{2026}"]
         )
     }
 }
