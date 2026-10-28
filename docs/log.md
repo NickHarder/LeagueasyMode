@@ -4,6 +4,13 @@ What changed in this project and why, newest first. A commit shows the differenc
 gives the reason. The `handoff` skill adds to it at every checkpoint, and the `write-okf-concept`
 skill has the format.
 
+## 2026-10-28
+
+- Phase 10 planned in [plans/phase-10-field-testing.md](plans/phase-10-field-testing.md): a
+  review of the first evening of tests on the owner's Mac, and what takes the owner out of the
+  loop. The owner: "can you do a review and try to figure out some next steps and QoL improvements
+  rather then having this back and forth constantly".
+
 ## 2026-10-09
 
 - Phase 9.4, early leads in lane: the player lookups now also read the timelines of each player's
