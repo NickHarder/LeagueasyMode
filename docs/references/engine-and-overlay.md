@@ -4,7 +4,7 @@ title: The engine and the overlay page
 description: How the engine turns the game's answers into the overlay's state, how that state reaches the widgets, how the page is built and tested, and how to run it all against a replay.
 tags: [engine, overlay, architecture]
 status: draft
-generated: { by: claude-code/cloud, at: 2026-10-09T05:13:00Z }
+generated: { by: claude-code/cloud, at: 2026-10-28T02:26:00Z }
 sources:
   - id: engine
     resource: ../../src/leagueasymode/engine.py
@@ -58,6 +58,8 @@ sources:
     resource: ../../src/leagueasymode/inference/contests.py
   - id: you
     resource: ../../src/leagueasymode/inference/you.py
+  - id: crash-reports
+    resource: ../../src/leagueasymode/crash_reports.py
   - id: game-summary
     resource: ../../src/leagueasymode/game_summary.py
   - id: preferences
@@ -312,6 +314,13 @@ sentence saying why:[^engine-status]
 - **Recording, match timeline, after the game:** the file being written, the timeline saved or
   not come in time, the game scored.
 - **League's settings and the models:** `game.cfg` read or not, hand-set or refit weights.
+- **Sending games:** what was sent to the games' repository, or why not (`recordings.md`).
+- **Errors:** how many errors the engine met, and the last one's kind and place in the code. An
+  error in using one answer of the game costs that answer; one in recording, or in loading the
+  game's data, starts that job again five seconds later; none stops the engine any more. Each kind
+  is written once as a crash report, beside the recordings, and sent with the games: its kind, the
+  job, and the lines of code it passed through without their folders, never its message, which can
+  hold a player's name.[^crash-reports]
 
 It also lists each kind of event in the game's feed, marking those no estimator reads, which is
 how an event new this patch shows. "Copy report" copies all of it as text, to paste into a message
@@ -381,6 +390,7 @@ Chromium against a replay (Chromium from `uv run playwright install chromium`, o
 [^fights]: `src/leagueasymode/inference/fights.py`
 [^contests]: `src/leagueasymode/inference/contests.py`
 [^you]: `src/leagueasymode/inference/you.py`
+[^crash-reports]: `src/leagueasymode/crash_reports.py`
 [^game-summary]: `src/leagueasymode/game_summary.py`
 [^preferences]: `src/leagueasymode/preferences.py`
 [^engine-status]: `src/leagueasymode/engine_status.py`

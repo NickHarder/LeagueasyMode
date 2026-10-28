@@ -18,6 +18,7 @@ import asyncio
 import base64
 import json
 import logging
+import lzma
 import os
 import ssl
 import subprocess
@@ -30,6 +31,7 @@ from typing import Final
 import aiohttp
 from pydantic import BaseModel, ConfigDict, Field
 
+from leagueasymode.crash_reports import CRASH_REPORTS_FOLDER
 from leagueasymode.engine_status import PartState, StatusBoard
 from leagueasymode.recording.anonymize import IdentityLeakError, anonymize_recording
 from leagueasymode.recording.file_format import COMPRESSED_SUFFIX, PLAIN_SUFFIX
@@ -61,6 +63,8 @@ class SentLog(BaseModel):
 
     sent: list[str] = Field(default_factory=list)
     withheld: list[str] = Field(default_factory=list)
+    # The crash reports sent (`crash_reports.py`), by file name.
+    crash_reports: list[str] = Field(default_factory=list)
 
 
 def _run_command(arguments: list[str]) -> subprocess.CompletedProcess[str]:
@@ -102,6 +106,34 @@ def recording_stem(recording_path: Path) -> str:
         The name.
     """
     return recording_path.name.removesuffix(COMPRESSED_SUFFIX).removesuffix(PLAIN_SUFFIX)
+
+
+def finish_interrupted_recordings(directory: Path) -> list[Path]:
+    """Compress each recording the engine stopped in the middle of, so that it can be sent.
+
+    A recording is written plain and compressed when it is closed; one a crash left plain is
+    never closed. Its lines are kept as they are, the reader skipping a last one cut off part
+    way. Only call this while no recording is being written.
+
+    Args:
+        directory: The recordings' folder.
+
+    Returns:
+        The compressed recordings.
+    """
+    if not directory.is_dir():
+        return []
+    finished = []
+    for plain_path in sorted(directory.glob(f"*{PLAIN_SUFFIX}")):
+        compressed_path = plain_path.with_name(plain_path.name + ".xz")
+        if compressed_path.exists():
+            continue
+        with lzma.open(compressed_path, "wb") as compressed_file:
+            compressed_file.write(plain_path.read_bytes())
+        plain_path.unlink()
+        finished.append(compressed_path)
+        logger.info("finished %s, which a stop of the engine had left open", plain_path.name)
+    return finished
 
 
 def finished_recordings(directory: Path) -> list[Path]:
@@ -200,6 +232,7 @@ class GameSender:
             return
         sent_now: list[str] = []
         withheld_now: list[str] = []
+        reports_now: list[str] = []
         try:
             for recording_path in unsent:
                 stem = recording_stem(recording_path)
@@ -207,10 +240,35 @@ class GameSender:
                 (sent_now if is_sent else withheld_now).append(stem)
                 (sent_log.sent if is_sent else sent_log.withheld).append(stem)
                 await asyncio.to_thread(_write_sent_log, log_path, sent_log)
+            for report_path in await asyncio.to_thread(self._unsent_crash_reports, sent_log):
+                report_bytes = await asyncio.to_thread(report_path.read_bytes)
+                await self._put(f"{CRASH_REPORTS_FOLDER}/{report_path.name}", report_bytes, token)
+                sent_log.crash_reports.append(report_path.name)
+                reports_now.append(report_path.name)
+                await asyncio.to_thread(_write_sent_log, log_path, sent_log)
         except SendRefusedError as refusal:
             self._note("problem", str(refusal))
             return
-        self._note_round(len(sent_now), len(withheld_now), len(sent_log.sent))
+        self._note_round(
+            len(sent_now), len(withheld_now), len(sent_log.sent), report_count=len(reports_now)
+        )
+
+    def _unsent_crash_reports(self, sent_log: SentLog) -> list[Path]:
+        """Return the crash reports not yet sent, oldest first.
+
+        Args:
+            sent_log: What was sent.
+
+        Returns:
+            The reports.
+        """
+        reports_directory = self.recordings_directory / CRASH_REPORTS_FOLDER
+        if not reports_directory.is_dir():
+            return []
+        sent_names = set(sent_log.crash_reports)
+        return sorted(
+            path for path in reports_directory.glob("*.json") if path.name not in sent_names
+        )
 
     async def _send_one(self, recording_path: Path, token: str) -> bool:
         """Send one game's anonymized copy.
@@ -288,15 +346,22 @@ class GameSender:
             "or it does not exist"
         )
 
-    def _note_round(self, sent_count: int, withheld_count: int, total_sent: int) -> None:
+    def _note_round(
+        self, sent_count: int, withheld_count: int, total_sent: int, *, report_count: int = 0
+    ) -> None:
         """Say how a round went.
 
         Args:
             sent_count: Games sent this round.
             withheld_count: Games withheld this round.
             total_sent: Games sent in all.
+            report_count: Crash reports sent this round.
         """
+        reports_text = f"; {report_count} crash reports sent" if report_count else ""
         if sent_count == 0 and withheld_count == 0:
+            if report_count:
+                self._note("ok", f"Nothing new to send but crash reports{reports_text}")
+                return
             self._note("ok", f"Nothing new to send; {total_sent} sent to {self.repository} in all")
             return
         game_word = "game" if sent_count == 1 else "games"
@@ -306,7 +371,8 @@ class GameSender:
         self._note(
             "problem" if withheld_count else "ok",
             f"Sent {sent_count} {game_word} to {self.repository}; {total_sent} sent in all"
-            + withheld_text,
+            + withheld_text
+            + reports_text,
         )
 
     def _note(self, state: PartState, detail: str) -> None:

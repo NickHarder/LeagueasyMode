@@ -272,6 +272,7 @@ class OverlayEngine:
         layout: OverlayLayout | None = None,
         status: StatusBoard | None = None,
         tuning: Tuning = DEFAULT_TUNING,
+        on_error: Callable[[str, BaseException], None] | None = None,
     ) -> None:
         """Keep the game's API, how often to ask it, and where the patch's data comes from.
 
@@ -291,8 +292,11 @@ class OverlayEngine:
             status: Told what the engine sees, part by part, for the status page; None for a
                 board of its own.
             tuning: The hand-set thresholds, as `tuning.json` sets them.
+            on_error: Told of an error in using one answer of the game, after which the engine
+                goes on to the next (`crash_reports.py`); None to log it only.
         """
         self.game_api: Final = game_api
+        self.on_error: Final = on_error
         self.tuning: Final = tuning
         self.poll_interval_seconds: Final = poll_interval_seconds
         self.connect_to_client: Final = connect_to_client
@@ -421,46 +425,57 @@ class OverlayEngine:
             stop_requested: Set to stop.
         """
         while not stop_requested.is_set():
-            payload = await self.game_api.fetch_all_game_data()
-            no_answer = self.game_api.last_no_answer
-            if payload is None and no_answer is not None:
-                self.status.note_no_answer(no_answer)
-            answer_state = compute_overlay_state(
-                payload,
-                self._item_catalog,
-                patch_stats=self._patch_stats,
-                player_records=self._player_records,
-                cooldown_timers=self._cooldown_timers,
-                gold_tracker=self._gold_tracker,
-                experience_tracker=self._experience_tracker,
-                back_tracker=self._back_tracker,
-                clue_tracker=self._clue_tracker,
-                jungle_tracker=self._jungle_tracker,
-                ward_tracker=self._ward_tracker,
-                you_tracker=self._you_tracker,
-                minimap=self.minimap_layout,
-                win_rules=self.model_weights.win_rules,
-                fight_rules=self.model_weights.fight_rules,
-                status=self.status,
-                tuning=self.tuning,
-            )
-            self._last_payload = payload if answer_state.is_game_running else None
-            if answer_state.is_game_running and not self._current_state.is_game_running:
-                self._start_loading_the_games_data()
-            new_state = answer_state.model_copy(
-                update={
-                    "callouts": self._callouts.update(answer_state),
-                    "preferences": self._preferences,
-                    "layout": self._layout,
-                }
-            )
-            if new_state != self._current_state:
-                self._current_state = new_state
-                self._publish(new_state)
+            try:
+                await self._take_one_answer()
+            except Exception as error:
+                # One answer the engine could not use costs that answer, never the engine.
+                if self.on_error is not None:
+                    self.on_error("the engine", error)
+                else:
+                    logger.exception("could not use one answer of the game")
             try:
                 await asyncio.wait_for(stop_requested.wait(), timeout=self.poll_interval_seconds)
             except TimeoutError:
                 continue
+
+    async def _take_one_answer(self) -> None:
+        """Ask the game once, and publish the overlay's state if it changed."""
+        payload = await self.game_api.fetch_all_game_data()
+        no_answer = self.game_api.last_no_answer
+        if payload is None and no_answer is not None:
+            self.status.note_no_answer(no_answer)
+        answer_state = compute_overlay_state(
+            payload,
+            self._item_catalog,
+            patch_stats=self._patch_stats,
+            player_records=self._player_records,
+            cooldown_timers=self._cooldown_timers,
+            gold_tracker=self._gold_tracker,
+            experience_tracker=self._experience_tracker,
+            back_tracker=self._back_tracker,
+            clue_tracker=self._clue_tracker,
+            jungle_tracker=self._jungle_tracker,
+            ward_tracker=self._ward_tracker,
+            you_tracker=self._you_tracker,
+            minimap=self.minimap_layout,
+            win_rules=self.model_weights.win_rules,
+            fight_rules=self.model_weights.fight_rules,
+            status=self.status,
+            tuning=self.tuning,
+        )
+        self._last_payload = payload if answer_state.is_game_running else None
+        if answer_state.is_game_running and not self._current_state.is_game_running:
+            self._start_loading_the_games_data()
+        new_state = answer_state.model_copy(
+            update={
+                "callouts": self._callouts.update(answer_state),
+                "preferences": self._preferences,
+                "layout": self._layout,
+            }
+        )
+        if new_state != self._current_state:
+            self._current_state = new_state
+            self._publish(new_state)
 
     def _start_loading_the_games_data(self) -> None:
         """Load the patch's data and the players' records in the background, once per game start.
@@ -473,7 +488,17 @@ class OverlayEngine:
         is_loading = self._game_data_task is not None and not self._game_data_task.done()
         if is_loading:
             return
-        self._game_data_task = asyncio.create_task(self._load_the_games_data())
+        self._game_data_task = asyncio.create_task(self._load_the_games_data_safely())
+
+    async def _load_the_games_data_safely(self) -> None:
+        """Load the game's data; an error costs that data, never the engine, and is reported."""
+        try:
+            await self._load_the_games_data()
+        except Exception as error:
+            if self.on_error is not None:
+                self.on_error("loading the game's data", error)
+            else:
+                logger.exception("could not load the game's data")
 
     async def _load_the_games_data(self) -> None:
         """Ask the client for the items and the game's version, then the stats and the players.
