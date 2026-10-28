@@ -21,6 +21,12 @@ FLASH_SPELL_ID: Final = "SummonerFlash"
 ROLE_ORDER: Final = ("TOP", "JUNGLE", "MIDDLE", "BOTTOM", "UTILITY")
 # The levels at which an ultimate reaches rank 2 and rank 3.
 ULTIMATE_RANK_LEVELS: Final = (11, 16)
+# The levels at which a player can put a point in their ultimate: most learn it at 6.
+ULTIMATE_POINT_LEVELS: Final = (6, 11, 16)
+# How many ranks an ultimate has: three for most; four for those learned at level 1 (Karma, Jayce,
+# Elise, Nidalee), which rank up at 6, 11 and 16 too.
+USUAL_ULTIMATE_RANKS: Final = 3
+EARLY_ULTIMATE_RANKS: Final = 4
 ULTIMATE_LABEL: Final = "R"
 ULTIMATE_NAME: Final = "ultimate"
 # The widget's short label for each summoner spell; any other is its name's first three letters.
@@ -143,7 +149,14 @@ def _ultimate_timer(
     cooldowns_by_rank = patch_stats.ultimate_cooldowns(enemy.raw_champion_name, enemy.champion_name)
     if not cooldowns_by_rank:
         return None
-    rank = 1 + sum(1 for level in ULTIMATE_RANK_LEVELS if enemy.level >= level)
+    # The rank the row shows, and at least 1: a marked ultimate was cast, so it was learned. An
+    # ultimate ranked in another way takes the usual rule.
+    shown_rank = ultimate_rank(enemy.level, len(cooldowns_by_rank))
+    rank = (
+        max(1, shown_rank)
+        if shown_rank is not None
+        else 1 + sum(1 for level in ULTIMATE_RANK_LEVELS if enemy.level >= level)
+    )
     base_cooldown_seconds = cooldowns_by_rank[min(rank, len(cooldowns_by_rank)) - 1]
     ability_haste = sum(haste.ability_haste for haste in item_hastes)
     return CooldownTimer(
@@ -156,6 +169,45 @@ def _ultimate_timer(
         ready_at_game_time_seconds=marked_at_seconds
         + _hasted(base_cooldown_seconds, ability_haste),
     )
+
+
+def ultimate_rank(level: int, rank_count: int) -> int | None:
+    """Return the rank of a player's ultimate at a level, as the game lets them put points in it.
+
+    Args:
+        level: The player's level.
+        rank_count: How many ranks the ultimate has, from the patch's files.
+
+    Returns:
+        The rank, 0 before it is learned; None for an ultimate ranked in another way, as one that
+        ranks like a basic ability, whose rank the level does not give.
+    """
+    points_by_level = sum(1 for point_level in ULTIMATE_POINT_LEVELS if level >= point_level)
+    if rank_count == USUAL_ULTIMATE_RANKS:
+        return points_by_level
+    if rank_count == EARLY_ULTIMATE_RANKS:
+        return 1 + points_by_level
+    return None
+
+
+def player_ultimate_rank(player: ScoreboardPlayer, patch_stats: PatchStats | None) -> int | None:
+    """Return the rank of a player's ultimate now.
+
+    Args:
+        player: The player.
+        patch_stats: The patch's files; None while unknown.
+
+    Returns:
+        The rank, 0 before it is learned; None while it cannot be known.
+    """
+    if patch_stats is None:
+        return None
+    cooldowns_by_rank = patch_stats.ultimate_cooldowns(
+        player.raw_champion_name, player.champion_name
+    )
+    if not cooldowns_by_rank:
+        return None
+    return ultimate_rank(player.level, len(cooldowns_by_rank))
 
 
 def marked_spell_names(enemy: ScoreboardPlayer) -> list[str]:

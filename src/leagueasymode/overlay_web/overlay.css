@@ -171,6 +171,15 @@ body {
   align-items: baseline;
 }
 
+.enemy-ultimate {
+  font-size: 10px;
+  color: var(--widget-alive);
+}
+
+.enemy-ultimate[data-rank="0"] {
+  color: var(--widget-muted);
+}
+
 .enemy-level {
   text-align: right;
   color: var(--widget-muted);

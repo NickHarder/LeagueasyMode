@@ -30,6 +30,10 @@ skill has the format.
   shortcut and never posted. The first recording in LeagueasyMode-recordings is a Practice Tool
   game cancelled at 0:00, so the client's post-game answers are still unseen; one real game
   recorded to the end comes first. The plan waits for the owner's approval and decisions.
+- Each enemy's ultimate rank on their row ("R2", "no R"). The owner asked whether the game gives
+  the enemies' ultimates: it does not, neither cast nor cooldown, but their level gives the rank,
+  which a marked ultimate's timer already used. The timer and the row now take one rule, which
+  also fixes the timer for the four champions whose ultimate is learned at level 1.
 - Click to mark spells. The owner: "add the clickable spell icons as an option ... and leave the
   shortcuts as well". With the setting on, each enemy's row has Flash, other-spell and R buttons
   that mark in one click; the app takes the mouse only while the pointer is over one, and never
