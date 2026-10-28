@@ -69,6 +69,10 @@ skill has the format.
   page shows how it went and has "Send games now". The repository could not be created from here
   (GitHub refused the integration), so the owner creates it. The button is on the status page
   rather than the menu, so as not to collide with the menu's rework in pull request #50.
+- Phase 10 planned in [plans/phase-10-field-testing.md](plans/phase-10-field-testing.md): a
+  review of the first evening of tests on the owner's Mac, and what takes the owner out of the
+  loop. The owner: "can you do a review and try to figure out some next steps and QoL improvements
+  rather then having this back and forth constantly".
 
 ## 2026-10-09
 

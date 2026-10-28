@@ -1,5 +1,6 @@
 # Plan
 
+* [Phase 10: testing on the Mac without the back and forth](phase-10-field-testing.md) - A review of the first tests over real games on the owner's Mac and of what made each round slow, and a proposed build order for what removes the owner from the loop, versions told apart, the engine's log kept, a one-click problem report, a tutorial, builds that install themselves, and what is the owner's call.
 * [Phase 2: patch data and exact facts](phase-2-exact-facts.md) - The slices of phase 2 of the approved plan, in build order, with what each shows, what it needs and the points where the owner decides.
 * [Phase 3: the hidden economy, and what the open policy adds](phase-3-economy-and-open-policy.md) - The slices of phase 3 of the approved plan, gold, XP, backs and build paths, plus what the owner's 2026-10-08 answer that everything may show adds, in a proposed build order with what each needs and where the owner decides.
 * [Phase 4: where the enemies are](phase-4-positions.md) - The slices of phase 4 of the approved plan, the map, the clues, the position filter, the jungle path, control wards and the minimap layer, in a proposed build order with what each needs and where the owner decides.
