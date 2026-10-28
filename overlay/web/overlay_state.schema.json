@@ -1147,6 +1147,18 @@
           },
           "title": "Marked Spell Names",
           "type": "array"
+        },
+        "ultimate_rank": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ultimate Rank"
         }
       },
       "required": [

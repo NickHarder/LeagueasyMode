@@ -252,7 +252,8 @@ export function isPlayerCard(value) {
         isNumberOrNull(value["seen_seconds_ago"]) &&
         typeof value["is_seen"] === "boolean" &&
         isNumberOrNull(value["enemy_slot"]) &&
-        isArrayOf(value["marked_spell_names"], (name) => typeof name === "string"));
+        isArrayOf(value["marked_spell_names"], (name) => typeof name === "string") &&
+        isNumberOrNull(value["ultimate_rank"]));
 }
 /** Return whether a value is each team's item gold as the engine sends it. */
 export function isTeamItemGold(value) {

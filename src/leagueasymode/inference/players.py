@@ -10,7 +10,11 @@ from leagueasymode.data_dragon import PatchStats
 from leagueasymode.game_state import RIOT_ID_SEPARATOR, GameSnapshot, ScoreboardPlayer
 from leagueasymode.inference.build_path import BUILD_RULES, BuildRules, next_item
 from leagueasymode.inference.combat_stats import combat_stats_of, move_speed_of
-from leagueasymode.inference.cooldowns import enemies_in_role_order, marked_spell_names
+from leagueasymode.inference.cooldowns import (
+    enemies_in_role_order,
+    marked_spell_names,
+    player_ultimate_rank,
+)
 from leagueasymode.inference.gold import PlayerKey, player_key
 from leagueasymode.inference.intel import INTEL_RULES, IntelRules, player_intel
 from leagueasymode.inference.positions import POSITION_RULES, PositionRules, position_estimate
@@ -115,6 +119,7 @@ def player_cards(
             seen_seconds_ago=_seen_seconds_ago(player, sightings, game_time_seconds),
             is_seen=_is_seen(player, sightings, game_time_seconds, position_rules),
             enemy_slot=enemy_slots.get(player_key(player)),
+            ultimate_rank=player_ultimate_rank(player, patch_stats),
             marked_spell_names=(marked_spell_names(player) if player.team != ally_team else []),
             location=_location(
                 snapshot,
