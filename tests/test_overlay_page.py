@@ -794,6 +794,68 @@ async def test_a_marked_flash_shows_on_the_enemys_row_and_counts_down(tmp_path: 
         await keep_screenshot(page, "marked-cooldown")
 
 
+# Stands in for the macOS app's handler, keeping each list of button places the page reports.
+CLICK_REGIONS_RECORDER: Final = """
+window.reportedClickRegions = [];
+window.webkit = { messageHandlers: { leagueasymodeClickRegions: {
+  postMessage: (regionsText) => window.reportedClickRegions.push(JSON.parse(regionsText)),
+} } };
+"""
+
+
+# Where Zed's Flash button is now, measured in the page as the strip is drawn again.
+ZED_FLASH_BUTTON_CENTER: Final = """() => {
+  const row = [...document.querySelectorAll("#enemy-strip .enemy-row")]
+    .find((element) => element.textContent.includes("Zed"));
+  const button = row?.querySelector(".mark-button");
+  if (button === undefined || button === null) return null;
+  const box = button.getBoundingClientRect();
+  return [box.left + box.width / 2, box.top + box.height / 2];
+}"""
+
+
+async def test_a_click_on_an_enemys_spell_button_marks_it(tmp_path: Path) -> None:
+    async with open_overlay(
+        tmp_path,
+        snapshot_count=60,
+        speed=1.0,
+        preferences=OverlayPreferences(click_to_mark=True),
+        init_script=CLICK_REGIONS_RECORDER,
+    ) as page:
+        # A screen's height, so that the enemy strip's buttons are on the page to press.
+        await page.set_viewport_size({"width": 1280, "height": 900})
+        zed_row = page.locator("#enemy-strip .enemy-row", has_text="Zed")
+        zed_buttons = zed_row.locator(".mark-button")
+        await expect(zed_buttons).to_have_text(["Flash", "Ignite", "R"], timeout=5000)
+        # The page tells the app where each button is, so that it takes those clicks only.
+        regions = await page.evaluate("window.reportedClickRegions.at(-1)")
+        assert len(regions) == await page.locator(".mark-button").count()
+        assert all(width > 0 and height > 0 for _, _, width, height in regions)
+        # A press where the button is, as a player's: the strip is drawn again every quarter
+        # second, and the press counts on the strip itself, whichever row is under it then. The
+        # engine takes marks once the patch's cooldowns are in, so the press is made again until
+        # the timer shows, as the app's shortcut test asks again.
+        zed_cooldowns = zed_row.locator(".enemy-cooldowns")
+        for _ in range(40):
+            flash_center = await page.evaluate(ZED_FLASH_BUTTON_CENTER)
+            if flash_center is not None:
+                await page.mouse.click(flash_center[0], flash_center[1])
+            await asyncio.sleep(0.3)
+            if await zed_cooldowns.count() > 0:
+                break
+        await expect(zed_cooldowns).to_have_text(re.compile(r"^F 4:5\d$|^F 5:00$"), timeout=5000)
+        await keep_screenshot(page, "click-to-mark")
+
+
+async def test_without_the_setting_there_are_no_buttons_to_click(tmp_path: Path) -> None:
+    async with open_overlay(
+        tmp_path, snapshot_count=40, speed=1.0, init_script=CLICK_REGIONS_RECORDER
+    ) as page:
+        await expect(page.locator("#enemy-strip .enemy-row")).to_have_count(5, timeout=5000)
+        await expect(page.locator(".mark-button")).to_have_count(0)
+        assert await page.evaluate("window.reportedClickRegions.at(-1)") == []
+
+
 async def test_a_marked_flash_brings_a_suggestion(tmp_path: Path) -> None:
     async with open_overlay(tmp_path, snapshot_count=60, speed=1.0) as page:
         for _ in range(50):

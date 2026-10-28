@@ -187,6 +187,34 @@ body {
   gap: 4px;
 }
 
+.mark-buttons {
+  grid-column: 2 / -1;
+  display: flex;
+  gap: 4px;
+}
+
+.mark-button {
+  padding: 1px 6px;
+  border: 1px solid rgb(255 255 255 / 0.25);
+  border-radius: 4px;
+  background: rgb(10 20 34 / 0.75);
+  color: var(--widget-muted);
+  font: inherit;
+  font-size: 10px;
+  line-height: 1.3;
+  cursor: pointer;
+}
+
+.mark-button:hover {
+  color: var(--widget-enemy);
+  border-color: var(--widget-enemy);
+}
+
+.mark-button[data-pressed="true"] {
+  background: rgb(255 122 107 / 0.35);
+  color: var(--widget-enemy);
+}
+
 .cooldown-badge {
   padding: 0 4px;
   border-radius: 4px;

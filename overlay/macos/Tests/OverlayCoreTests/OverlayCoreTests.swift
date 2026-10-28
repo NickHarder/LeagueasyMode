@@ -891,3 +891,28 @@ final class RoastCopyTests: XCTestCase {
         XCTAssertEqual(toast, "Copied: " + String(repeating: "a", count: 59) + "…")
     }
 }
+
+final class ClickRegionsTests: XCTestCase {
+    func testThePagesButtonsAreRead() throws {
+        let rectangles = try XCTUnwrap(ClickRegions.rectangles(fromMessageBody: "[[937,427,40,17],[981,427,36,17]]"))
+        XCTAssertEqual(rectangles, [CGRect(x: 937, y: 427, width: 40, height: 17), CGRect(x: 981, y: 427, width: 36, height: 17)])
+        XCTAssertEqual(ClickRegions.rectangles(fromMessageBody: "[]"), [])
+    }
+
+    func testAnythingElseIsRefused() {
+        for body: Any in [5, "not json", "[[1,2,3]]", "[[1,2,0,4]]", "{\"left\":1}"] {
+            XCTAssertNil(ClickRegions.rectangles(fromMessageBody: body), "\(body)")
+        }
+        let tooMany = "[" + Array(repeating: "[1,1,1,1]", count: 65).joined(separator: ",") + "]"
+        XCTAssertNil(ClickRegions.rectangles(fromMessageBody: tooMany))
+    }
+
+    func testThePointerIsOverAButtonOnlyInsideIt() {
+        // The page counts from its top left, AppKit from the window's bottom left.
+        let button = [CGRect(x: 937, y: 427, width: 40, height: 17)]
+        let windowHeight: CGFloat = 900
+        XCTAssertTrue(ClickRegions.contains(button, pointInWindow: CGPoint(x: 950, y: 900 - 435), windowHeight: windowHeight))
+        XCTAssertFalse(ClickRegions.contains(button, pointInWindow: CGPoint(x: 950, y: 435), windowHeight: windowHeight))
+        XCTAssertFalse(ClickRegions.contains([], pointInWindow: CGPoint(x: 950, y: 465), windowHeight: windowHeight))
+    }
+}

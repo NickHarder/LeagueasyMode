@@ -35,7 +35,8 @@ import {
   type YouPanel,
   isOverlayState,
 } from "./state.js";
-import { applyLayout, startLayoutEditing } from "./layout.js";
+import { applyLayout, isEditingLayout, startLayoutEditing } from "./layout.js";
+import { listenForMarks, markButtonsElement, reportClickRegions } from "./marking.js";
 import { speak } from "./speech.js";
 
 const EVENTS_PATH = "/events";
@@ -615,6 +616,7 @@ function enemyRowElement(
   gameTimeSeconds: number,
   cooldowns: readonly CooldownTimer[],
   junglePaths: readonly JunglePath[],
+  hasMarkButtons: boolean,
 ): HTMLElement {
   const row = document.createElement("div");
   row.className = "enemy-row";
@@ -661,6 +663,11 @@ function enemyRowElement(
       ...runningCooldowns.map((timer) => cooldownBadgeElement(timer, gameTimeSeconds)),
     );
     row.append(cooldownsElement);
+  }
+  // A dead enemy casts nothing, so their row has no buttons until they are back.
+  const markButtons = hasMarkButtons && !card.is_dead ? markButtonsElement(card) : null;
+  if (markButtons !== null) {
+    row.append(markButtons);
   }
   if (card.intel !== null) {
     const intelElement = document.createElement("span");
@@ -856,12 +863,15 @@ function renderEnemyStrip(nowMilliseconds: number): void {
     .sort((first, second) => roleRank(first) - roleRank(second))
     .map((card) => (areEstimatesShown ? card : withoutEstimates(card)));
   strip.hidden = enemyCards.length === 0;
+  // While the widgets are being moved, a press drags the strip, so it shows no buttons.
+  const hasMarkButtons = received.state.preferences.click_to_mark && !isEditingLayout();
   const rows = enemyCards.map((card) =>
     enemyRowElement(
       card,
       gameTimeSeconds,
       received.state.cooldowns,
       areEstimatesShown ? received.state.jungle_paths : [],
+      hasMarkButtons,
     ),
   );
   const campTimersText = areEstimatesShown
@@ -1043,6 +1053,7 @@ function render(): void {
   renderCallouts(nowMilliseconds);
   renderMinimap(nowMilliseconds);
   renderYouPanel();
+  reportClickRegions();
 }
 
 /** Listen to the engine; the browser reconnects by itself when the stream drops. */
@@ -1060,5 +1071,6 @@ function listenToEngine(): void {
 }
 
 startLayoutEditing();
+listenForMarks(requireElement("enemy-strip"));
 listenToEngine();
 window.setInterval(render, RENDER_INTERVAL_MILLISECONDS);

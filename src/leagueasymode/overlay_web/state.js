@@ -15,6 +15,7 @@ export const PREFERENCE_NAMES = [
     "show_callouts",
     "show_suggestions",
     "speak_callouts",
+    "click_to_mark",
 ];
 /** The widgets the player can move; the minimap layer stays over League's minimap. */
 export const MOVABLE_WIDGETS = ["objective_strip", "callouts", "enemy_strip", "you_panel"];
@@ -249,7 +250,9 @@ export function isPlayerCard(value) {
         (value["last_clue"] === null || isPositionClue(value["last_clue"])) &&
         (value["location"] === null || isPositionEstimate(value["location"])) &&
         isNumberOrNull(value["seen_seconds_ago"]) &&
-        typeof value["is_seen"] === "boolean");
+        typeof value["is_seen"] === "boolean" &&
+        isNumberOrNull(value["enemy_slot"]) &&
+        isArrayOf(value["marked_spell_names"], (name) => typeof name === "string"));
 }
 /** Return whether a value is each team's item gold as the engine sends it. */
 export function isTeamItemGold(value) {
