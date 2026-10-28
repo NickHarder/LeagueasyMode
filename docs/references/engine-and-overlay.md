@@ -288,7 +288,7 @@ teammate's third death in four minutes, and being about 2k gold down while the w
 name); the gold lead is an estimate and is said as "about". At most one call a minute, shown as kind
 `team_call` for `roast.team_calls.shown_seconds`, never spoken, with its own switch; ⌃⌥C copies the
 newest call or moment. The thresholds are in `tuning.json` under `roast.team_calls`, and the lines,
-in `roast/team_calls.toml`, are drafts for the owner's sign-off.
+in `roast/team_calls.toml`, are the ones the owner approved, held to a fingerprint.
 
 The engine's own settings come from the repository's `.env` in a clone. An installed app, which
 has no clone, reads `settings.env` in the application's directory instead; where both exist, the

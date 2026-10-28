@@ -6,6 +6,8 @@ skill has the format.
 
 ## 2026-10-28
 
+- The owner approved the five lines of the team calls ("approved"); a test holds them to a
+  fingerprint, so a reworded line goes back to the owner.
 - Phase 11.9, team calls, as the owner approved them ("approved, keep building 11.9"): on for
   everyone, with a switch, for team chat. Calm, constructive calls for the whole team, from what
   the overlay already shows: an objective spawning in a minute or so (stay alive, ward, move), enemies

@@ -1,5 +1,7 @@
 """Team calls (phase 11.9): calm calls for the team, at most one a minute, naming no one."""
 
+import hashlib
+import json
 import re
 import string
 from collections.abc import Mapping
@@ -23,6 +25,11 @@ from leagueasymode.roast.safety import floor_problems
 from leagueasymode.roast.team_calls import TeamCallLines, TeamCallTracker, load_team_call_lines
 
 NOW: Final = 1000.0
+# The team calls' lines the owner approved on 2026-10-28. A change to any line changes this; the
+# new line goes to the owner before the fingerprint does.
+APPROVED_TEAM_CALL_LINES_SHA256: Final = (
+    "4d84fec861aa87e2be56aca56abe5befd8636ef5635ff85d57a8c16c973f70a0"
+)
 SLOTS: Final = frozenset({"monster", "clock", "count", "seconds", "target", "next", "gold"})
 BOT_GAP: Final = "Bot Gap"
 
@@ -180,3 +187,8 @@ def test_each_line_uses_known_slots_and_holds_the_floor(kind: str) -> None:
     assert floor_problems(line) == []
     # Every number comes from a slot.
     assert not re.search(r"\d", re.sub(r"\{\w+\}", "", line))
+
+
+def test_the_team_call_lines_are_the_ones_the_owner_approved() -> None:
+    canonical = json.dumps(load_team_call_lines().model_dump(), sort_keys=True, ensure_ascii=False)
+    assert hashlib.sha256(canonical.encode()).hexdigest() == APPROVED_TEAM_CALL_LINES_SHA256
