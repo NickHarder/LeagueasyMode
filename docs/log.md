@@ -6,6 +6,11 @@ skill has the format.
 
 ## 2026-10-28
 
+- Phase 11's plan adds slice 11.9, team calls: calm, constructive calls for teammates who are not
+  friends, to paste in team chat, such as staying alive and warding before a dragon, from the
+  timers and the win chance the engine already has. At the owner's request ("can you make a
+  constructive mode for non firnds") and word ("yes add team calls as 11.9"). Who gets them and
+  which chat are proposed for the owner to settle; the plan waits for approval again.
 - The roast plan is now phase 11, its slices 11.0 to 11.8: phase 10 on main became testing
   on the Mac, with slices of its own, while the roast plan waited. Nothing else in it changed.
 - The owner approved phase 11's plan again, with slice 11.8 ("approved, keep building 10.2").
