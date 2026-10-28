@@ -1,0 +1,14 @@
+# The moments about friends (phase 11.6): one line for each kind, its slots in braces.
+#
+# These are drafts for the owner's sign-off, as the case's lines were. Each states only facts a
+# friend can check on the scoreboard or in the kill feed; the creep score is "at least" since the
+# scoreboard may show an enemy's creep score only while they are in sight, so it can only lag.
+# Slots: {friend} and {opponent} are champions; {count}, {kills}, {seconds} and {creep} numbers;
+# {clock} a game clock such as 2:41 or 10:00; {monster} what the enemy took.
+
+[lines]
+solo_death = "{friend} has died to {opponent} alone {count} times now. Lane diff, live."
+death_before_objective = "{friend} died {seconds} seconds before their {monster}. Very generous."
+first_blood = "{friend} gave up first blood at {clock}. Setting the tone."
+creep_behind = "{friend} is at least {creep} CS behind {opponent} at {clock}. The minions are winning."
+opponent_streak = "{opponent} has killed {friend} {kills} times, and {friend} has no kills. Lane diff."

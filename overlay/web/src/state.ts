@@ -250,7 +250,8 @@ export type CalloutKind =
   | "jungle_four_minutes"
   | "one_trick"
   | "inhibitor_open"
-  | "suggestion";
+  | "suggestion"
+  | "moment";
 
 /** A short notice shown for a few seconds when something happens; never an instruction. */
 export interface Callout {
@@ -365,6 +366,7 @@ export interface OverlayPreferences {
   readonly show_enemy_estimates: boolean;
   readonly show_callouts: boolean;
   readonly show_suggestions: boolean;
+  readonly show_moments: boolean;
   readonly speak_callouts: boolean;
 }
 
@@ -378,6 +380,7 @@ export const PREFERENCE_NAMES = [
   "show_enemy_estimates",
   "show_callouts",
   "show_suggestions",
+  "show_moments",
   "speak_callouts",
 ] as const satisfies readonly (keyof OverlayPreferences)[];
 
@@ -449,6 +452,7 @@ const CALLOUT_KINDS: ReadonlySet<string> = new Set([
   "one_trick",
   "inhibitor_open",
   "suggestion",
+  "moment",
 ]);
 const START_SIDES: ReadonlySet<string> = new Set(["blue", "red"]);
 const MAP_HALVES: ReadonlySet<string> = new Set(["top", "bot"]);

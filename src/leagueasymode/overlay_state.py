@@ -402,6 +402,8 @@ type CalloutKind = Literal[
     "one_trick",
     "inhibitor_open",
     "suggestion",
+    # A moment about a friend (phase 11.6, `roast/moments.py`); never spoken.
+    "moment",
 ]
 
 
@@ -609,6 +611,8 @@ class OverlayPreferences(BaseModel):
     show_callouts: bool = True
     # Callouts that name an action, such as "take it".
     show_suggestions: bool = True
+    # Moments about friends (phase 11.6), shown beside the callouts and never spoken.
+    show_moments: bool = True
     # Each new callout shown is read aloud in macOS's voice; off unless the player turns it on.
     speak_callouts: bool = False
 

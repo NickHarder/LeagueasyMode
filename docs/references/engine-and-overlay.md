@@ -4,7 +4,7 @@ title: The engine and the overlay page
 description: How the engine turns the game's answers into the overlay's state, how that state reaches the widgets, how the page is built and tested, and how to run it all against a replay.
 tags: [engine, overlay, architecture]
 status: draft
-generated: { by: claude-code/cloud, at: 2026-10-28T22:41:06Z }
+generated: { by: claude-code/cloud, at: 2026-10-28T23:03:54Z }
 generated: { by: claude-code/cloud, at: 2026-10-28T22:40:00Z }
 sources:
   - id: engine
@@ -268,6 +268,16 @@ as name#tag. They never travel with the state: each player card carries only `is
 against the scoreboard's Riot ID in any case, and an enemy who is a friend has a ★ on the enemy
 strip. After the game the case's players are marked the same way, from the Riot IDs in the game's
 details, and the post-game window's chips show the ★.
+
+Moments about friends (phase 11.6, `roast/moments.py`) read each answer of the game with the cards'
+`is_friend` and roles: a friend's second and third deaths to their lane opponent with no help, a
+death shortly before the enemy takes a dragon, the Elder or Baron, first blood given up, a creep
+score deficit at 10:00 or 14:00 ("at least", since the scoreboard can lag on an enemy out of
+sight), and the lane opponent's kills on a friend who has none. A lane opponent is used only when
+both roles are given or likely. Each moment is made once per game, shows among the callouts as kind
+`moment` for `roast.moments.shown_seconds` in `tuning.json` when noticed within 30 seconds of
+happening, is never spoken, and has its own switch on the settings page. `/closing-line` gives the
+newest during a game, for ⌃⌥C. The lines, in `roast/moments.toml`, wait for the owner's sign-off.
 
 The engine's own settings come from the repository's `.env` in a clone. An installed app, which
 has no clone, reads `settings.env` in the application's directory instead; where both exist, the

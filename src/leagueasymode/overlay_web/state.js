@@ -14,6 +14,7 @@ export const PREFERENCE_NAMES = [
     "show_enemy_estimates",
     "show_callouts",
     "show_suggestions",
+    "show_moments",
     "speak_callouts",
 ];
 /** The widgets the player can move; the minimap layer stays over League's minimap. */
@@ -41,6 +42,7 @@ const CALLOUT_KINDS = new Set([
     "one_trick",
     "inhibitor_open",
     "suggestion",
+    "moment",
 ]);
 const START_SIDES = new Set(["blue", "red"]);
 const MAP_HALVES = new Set(["top", "bot"]);
