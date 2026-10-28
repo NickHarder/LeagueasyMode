@@ -436,7 +436,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         isInstallingUpdate = true
         updateStatusText = "Update: downloading build \(build.buildNumber)…"
         statusItem?.menu = makeMenu()
-        let appURL = Bundle.main.bundleURL
+        // The running app, or Applications for one macOS runs from a read-only copy.
+        let appURL = UpdateTarget.installURL(runningAppURL: Bundle.main.bundleURL)
         Task { [weak self] in
             do {
                 try await UpdateInstaller.install(build, over: appURL)

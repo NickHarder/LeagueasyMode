@@ -916,3 +916,22 @@ final class ClickRegionsTests: XCTestCase {
         XCTAssertFalse(ClickRegions.contains([], pointInWindow: CGPoint(x: 950, y: 465), windowHeight: windowHeight))
     }
 }
+
+final class UpdateTargetTests: XCTestCase {
+    func testABuildReplacesTheRunningApp() {
+        let appURL = URL(fileURLWithPath: "/Applications/LeagueasyMode.app")
+        XCTAssertFalse(UpdateTarget.isTranslocated(appURL))
+        XCTAssertEqual(UpdateTarget.installURL(runningAppURL: appURL), appURL)
+    }
+
+    func testAnAppRunFromMacOSsReadOnlyCopyIsUpdatedInApplications() {
+        // Opened where the browser's download was unzipped, the app runs from a copy like this.
+        let translocated = URL(
+            fileURLWithPath: "/private/var/folders/ab/xyz/T/AppTranslocation/1234-ABCD/d/LeagueasyMode.app"
+        )
+        XCTAssertTrue(UpdateTarget.isTranslocated(translocated))
+        XCTAssertEqual(
+            UpdateTarget.installURL(runningAppURL: translocated).path, "/Applications/LeagueasyMode.app"
+        )
+    }
+}
