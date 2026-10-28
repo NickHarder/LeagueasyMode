@@ -629,6 +629,22 @@ async def test_off_the_rift_its_widgets_and_the_minimap_layer_hide(tmp_path: Pat
         await keep_screenshot(page, "off-the-rift")
 
 
+async def test_each_enemys_row_shows_their_ultimates_rank(tmp_path: Path) -> None:
+    # Level 9 in the replay: their ultimate is learned, at rank 1; at 5, Zed's is not yet.
+    async with open_overlay(
+        tmp_path, snapshot_count=60, speed=1.0, zed_reaches_six_at_seconds=1450.0
+    ) as page:
+        darius_ultimate = page.locator("#enemy-strip .enemy-row", has_text="Darius").locator(
+            ".enemy-ultimate"
+        )
+        await expect(darius_ultimate).to_have_text("R1", timeout=10000)
+        zed_ultimate = page.locator("#enemy-strip .enemy-row", has_text="Zed").locator(
+            ".enemy-ultimate"
+        )
+        await expect(zed_ultimate).to_have_text("no R")
+        await keep_screenshot(page, "ultimate-ranks")
+
+
 async def test_the_enemy_strip_shows_item_gold_and_the_lead(tmp_path: Path) -> None:
     async with open_overlay(tmp_path, snapshot_count=60, speed=1.0) as page:
         lead = page.locator("#enemy-strip .item-lead.items")
