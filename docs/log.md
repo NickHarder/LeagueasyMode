@@ -6,6 +6,10 @@ skill has the format.
 
 ## 2026-10-28
 
+- The first automatic update on the Mac stopped at "the app's folder cannot be written": build 89
+  ran from the read-only copy macOS makes of a downloaded app opened where it was unzipped (App
+  Translocation). Such an app now installs its update into Applications instead, from where the
+  update runs without the "downloaded" mark.
 - Each enemy's ultimate rank on their row ("R2", "no R"). The owner asked whether the game gives
   the enemies' ultimates: it does not, neither cast nor cooldown, but their level gives the rank,
   which a marked ultimate's timer already used. The timer and the row now take one rule, which

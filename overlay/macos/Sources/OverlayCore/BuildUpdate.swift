@@ -178,3 +178,28 @@ public enum AutomaticUpdate {
         return true
     }
 }
+
+/// Where a new build goes. Usually where the running app is; but an app the browser downloaded
+/// and that was opened where it was unzipped runs from a read-only copy macOS makes for it (App
+/// Translocation), which nothing can replace: the build then goes to Applications. A build the app
+/// downloads itself is not marked as from the internet, so it runs from where it is put.
+public enum UpdateTarget {
+    /// Where a translocated app's build goes.
+    public static let applicationsAppURL = URL(fileURLWithPath: "/Applications/LeagueasyMode.app", isDirectory: true)
+
+    /// Returns whether an app runs from the read-only copy macOS made for it.
+    ///
+    /// - Parameter appURL: The running app.
+    /// - Returns: Whether its path is under macOS's translocation folder.
+    public static func isTranslocated(_ appURL: URL) -> Bool {
+        appURL.path.contains("/AppTranslocation/")
+    }
+
+    /// Returns where a new build goes.
+    ///
+    /// - Parameter runningAppURL: The running app.
+    /// - Returns: The running app, or Applications' LeagueasyMode.app for a translocated one.
+    public static func installURL(runningAppURL: URL) -> URL {
+        isTranslocated(runningAppURL) ? applicationsAppURL : runningAppURL
+    }
+}
