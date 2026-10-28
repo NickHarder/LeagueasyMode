@@ -333,6 +333,12 @@ class PlayerCard(BaseModel):
     # that is recent enough that they are taken to be in sight; None and False before a sighting.
     seen_seconds_ago: float | None = None
     is_seen: bool = False
+    # For an enemy: their place in role order, 1 for top to 5 for support, as a mark counts it
+    # (⌃⌥1 to 5 in the app, or a click on their row); None for an ally.
+    enemy_slot: int | None = None
+    # For an enemy: the spells a "flash" and a "summoner" mark name, in that order; empty for an
+    # ally. An enemy without Flash has their first spell marked as "flash".
+    marked_spell_names: list[str] = Field(default_factory=list)
 
 
 class TeamItemGold(BaseModel):
@@ -609,6 +615,9 @@ class OverlayPreferences(BaseModel):
     show_suggestions: bool = True
     # Each new callout shown is read aloud in macOS's voice; off unless the player turns it on.
     speak_callouts: bool = False
+    # Buttons on each enemy's row that mark a spell in one click, beside the app's shortcuts; off
+    # unless the player turns it on, as the overlay then takes the clicks on those buttons.
+    click_to_mark: bool = False
 
 
 # The widgets the player can move; the minimap layer stays over League's minimap.
