@@ -8,6 +8,7 @@
 #
 #     Contents/MacOS/LeagueasyOverlay                  the app, built for release
 #     Contents/Helpers/uv                              a copy of uv: UV_BINARY, or the uv on PATH
+#     Contents/Resources/AppIcon.icns                  the icon, from Resources/AppIcon.png
 #     Contents/Resources/engine/leagueasymode-*.whl    the engine, with its overlay pages
 #     Contents/Resources/engine/constraints.txt        the versions uv.lock pins
 #     Contents/Resources/engine/python-version         the Python version .python-version names
@@ -75,6 +76,19 @@ commit=$(git -C "$repository_root" rev-parse --short HEAD 2>/dev/null || echo un
 sed -e "s/@VERSION@/$version/g" -e "s/@BUILD_NUMBER@/$build_number/g" -e "s/@COMMIT@/$commit/g" \
   "$macos_directory/Info.plist.in" > "$contents/Info.plist"
 plutil -lint "$contents/Info.plist"
+
+# The icon, from Resources/AppIcon.png (render_icon.py draws it from AppIcon.svg): each size macOS
+# asks for, at 1x and 2x, made with its own sips and turned into AppIcon.icns with iconutil.
+iconset=$(mktemp -d)/AppIcon.iconset
+mkdir -p "$iconset"
+for size in 16 32 128 256 512; do
+  sips -z "$size" "$size" "$macos_directory/Resources/AppIcon.png" --out "$iconset/icon_${size}x${size}.png" >/dev/null
+  double=$((size * 2))
+  sips -z "$double" "$double" "$macos_directory/Resources/AppIcon.png" --out "$iconset/icon_${size}x${size}@2x.png" >/dev/null
+done
+mkdir -p "$contents/Resources"
+iconutil -c icns "$iconset" -o "$contents/Resources/AppIcon.icns"
+rm -rf "$(dirname "$iconset")"
 
 # Ad hoc: the inner program first, then the app, whose seal covers it and the resources.
 codesign --force --sign - "$contents/Helpers/uv"
