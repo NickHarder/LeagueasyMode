@@ -30,5 +30,12 @@
 	<true/>
 	<key>NSHighResolutionCapable</key>
 	<true/>
+	<!-- The overlay page comes from the engine on 127.0.0.1 over plain HTTP; let the web view load
+	     it whatever App Transport Security makes of a local address. -->
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
 </dict>
 </plist>

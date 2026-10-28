@@ -149,6 +149,12 @@ In `AGENTS.md`. Also: a raw recording (it holds other players' names); only `ano
   values, not yet checked against a recording of this season.
 - The overlay follows League's window (8.2) on the guess that the game's window is owned by
   "League of Legends" and has a title bar when windowed; the test on a Mac confirms both.
+- The first try on a Mac (the owner, 2026-10-28, an Apple silicon MacBook Pro, League
+  windowed): the overlay showed nothing, and with "Let clicks through" turned off and "Edit
+  layout" on, its invisible layer caught every click until the app was stopped. The menu item is
+  gone, edit mode is tinted and ends on Escape, ⌃⌥⌘L or after two minutes, and the menu says
+  whether the overlay page loaded. Why nothing showed is not known yet: the menu's "Overlay:" line
+  and the status page's report say where it stops.
 - Edit mode (8.3) makes the overlay's panel key so its widgets take drags; that a
   non-activating panel takes them without bringing the app forward is seen on a Mac.
 - The test item catalog (`tests/fixtures/client/items.json`) is hand-written: its prices are not

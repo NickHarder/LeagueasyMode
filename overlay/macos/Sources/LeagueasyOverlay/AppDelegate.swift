@@ -42,9 +42,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var overlayURL: URL?
     private var levelChoice = WindowLevelChoice.initialChoice
     private var isOverlayShown = true
-    private var isClickThrough = true
     private var isEditingLayout = false
+    // When edit mode was turned on; it ends by itself after `LayoutEditing.timeLimit`.
+    private var editingStartedAt: Date?
     private var engineStatusText = "Engine: starting…"
+    private var pageState = OverlayPageState.waiting
     private var availableRelease: AvailableRelease?
     private var updateTimer: Timer?
     private var gamePlacement: GamePlacement?
@@ -54,6 +56,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let placement = Self.currentGamePlacement()
         let panel = OverlayPanel(screenFrame: placement.frame)
         panel.place(at: levelChoice)
+        panel.onEscape = { [weak self] in
+            self?.endEditingLayout()
+        }
+        panel.onPageStateChange = { [weak self] pageState in
+            self?.pageStateDidChange(pageState)
+        }
         overlayPanel = panel
         gamePlacement = placement
         statusItem = makeStatusItem()
@@ -62,7 +70,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             keyCode: UInt32(kVK_ANSI_L),
             modifiers: UInt32(cmdKey | optionKey | controlKey)
         ) { [weak self] in
-            self?.toggleOverlay()
+            self?.shortcutPressed()
         }
         if toggleHotKey == nil {
             NSLog("LeagueasyMode: the shortcut %@ is taken; use the menu", Self.toggleShortcutDescription)
@@ -134,7 +142,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         self.overlayURL = overlayURL
         // A page loaded afresh is out of edit mode; so is the app.
         isEditingLayout = false
-        overlayPanel?.setEditingLayout(false, isClickThrough: isClickThrough)
+        editingStartedAt = nil
+        overlayPanel?.setEditingLayout(false)
         overlayPanel?.loadOverlay(from: overlayURL)
         if isOverlayShown {
             overlayPanel?.showOverlay()
@@ -144,6 +153,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func updateEngineStatus(_ statusText: String) {
         engineStatusText = statusText
+        statusItem?.menu = makeMenu()
+    }
+
+    private func pageStateDidChange(_ newPageState: OverlayPageState) {
+        pageState = newPageState
         statusItem?.menu = makeMenu()
     }
 
@@ -302,6 +316,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let menu = NSMenu()
         menu.addItem(Self.disabledItem("LeagueasyMode"))
         menu.addItem(Self.disabledItem(engineStatusText))
+        menu.addItem(Self.disabledItem(pageState.menuText))
         if let gamePlacement {
             menu.addItem(Self.disabledItem(gamePlacement.menuText))
         }
@@ -314,15 +329,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         showItem.target = self
         showItem.state = isOverlayShown ? .on : .off
         menu.addItem(showItem)
-        let clickThroughItem = NSMenuItem(
-            title: "Let clicks through", action: #selector(toggleClickThrough(_:)), keyEquivalent: ""
-        )
-        clickThroughItem.target = self
-        clickThroughItem.state = isClickThrough ? .on : .off
-        menu.addItem(clickThroughItem)
         if overlayURL != nil {
             let editItem = NSMenuItem(
-                title: "Edit layout", action: #selector(toggleEditLayout(_:)), keyEquivalent: ""
+                title: "Edit layout (Esc to finish)", action: #selector(toggleEditLayout(_:)), keyEquivalent: ""
             )
             editItem.target = self
             editItem.state = isEditingLayout ? .on : .off
@@ -412,11 +421,25 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     // MARK: - Actions
 
+    /// The shortcut: ends edit mode when it is on, so that it always gives the mouse back to the
+    /// game; otherwise shows or hides the overlay.
+    private func shortcutPressed() {
+        if isEditingLayout {
+            endEditingLayout()
+        } else {
+            toggleOverlay()
+        }
+    }
+
     private func toggleOverlay() {
         isOverlayShown.toggle()
         if isOverlayShown {
             overlayPanel?.showOverlay()
         } else {
+            // A hidden overlay takes no clicks, and edit mode ends with it.
+            if isEditingLayout {
+                endEditingLayout()
+            }
             overlayPanel?.hideOverlay()
         }
         statusItem?.menu = makeMenu()
@@ -426,22 +449,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         toggleOverlay()
     }
 
-    @objc private func toggleClickThrough(_ sender: NSMenuItem) {
-        isClickThrough.toggle()
-        // In edit mode the panel takes clicks whatever this says; it applies once editing ends.
-        if !isEditingLayout {
-            overlayPanel?.setClickThrough(isClickThrough)
+    /// Turns edit mode on or off: on, the overlay is tinted, takes clicks and its widgets can be
+    /// dragged, until Escape, the shortcut, the menu or the time limit ends it.
+    @objc private func toggleEditLayout(_ sender: NSMenuItem) {
+        if isEditingLayout {
+            endEditingLayout()
+            return
         }
+        if !isOverlayShown {
+            toggleOverlay()
+        }
+        isEditingLayout = true
+        editingStartedAt = Date()
+        overlayPanel?.setEditingLayout(true)
         statusItem?.menu = makeMenu()
     }
 
-    /// Turns edit mode on or off: on, the overlay takes clicks and its widgets can be dragged.
-    @objc private func toggleEditLayout(_ sender: NSMenuItem) {
-        isEditingLayout.toggle()
-        if isEditingLayout && !isOverlayShown {
-            toggleOverlay()
-        }
-        overlayPanel?.setEditingLayout(isEditingLayout, isClickThrough: isClickThrough)
+    /// Ends edit mode: the overlay lets every click through to the game again.
+    private func endEditingLayout() {
+        isEditingLayout = false
+        editingStartedAt = nil
+        overlayPanel?.setEditingLayout(false)
         statusItem?.menu = makeMenu()
     }
 
@@ -480,6 +508,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func gameWindowTimerFired(_ timer: Timer) {
         followGameWindow()
+        if let editingStartedAt, LayoutEditing.hasRunOut(startedAt: editingStartedAt, now: Date()) {
+            endEditingLayout()
+        }
     }
 
     /// Moves the overlay over League's window when it has moved, resized or changed screens.

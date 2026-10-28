@@ -573,6 +573,30 @@ final class LayoutEditingTests: XCTestCase {
     func testResetPutsTheWidgetsBackInThePage() {
         XCTAssertEqual(LayoutEditing.resetScript, "window.leagueasymodeResetLayout?.();")
     }
+
+    func testEditModeEndsByItselfAfterTwoMinutes() {
+        let startedAt = Date(timeIntervalSince1970: 1_000)
+        XCTAssertFalse(LayoutEditing.hasRunOut(startedAt: startedAt, now: startedAt.addingTimeInterval(119)))
+        XCTAssertTrue(LayoutEditing.hasRunOut(startedAt: startedAt, now: startedAt.addingTimeInterval(120)))
+    }
+
+    func testEscapeEndsEditMode() {
+        // 53 is the Escape key's code on every Mac keyboard layout.
+        XCTAssertTrue(LayoutEditing.endsEditing(keyCode: 53))
+        XCTAssertFalse(LayoutEditing.endsEditing(keyCode: 0))
+    }
+}
+
+final class OverlayPageStateTests: XCTestCase {
+    func testTheMenuSaysWhetherTheOverlayPageLoaded() {
+        XCTAssertEqual(OverlayPageState.waiting.menuText, "Overlay: waiting for the engine")
+        XCTAssertEqual(OverlayPageState.loading.menuText, "Overlay: loading the page\u{2026}")
+        XCTAssertEqual(OverlayPageState.loaded.menuText, "Overlay: page loaded")
+        XCTAssertEqual(
+            OverlayPageState.failed("Could not connect to the server.").menuText,
+            "Overlay: the page did not load (Could not connect to the server.)"
+        )
+    }
 }
 
 final class SpokenCalloutTests: XCTestCase {

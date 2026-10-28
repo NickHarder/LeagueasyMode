@@ -4,6 +4,18 @@ What changed in this project and why, newest first. A commit shows the differenc
 gives the reason. The `handoff` skill adds to it at every checkpoint, and the `write-okf-concept`
 skill has the format.
 
+## 2026-10-28
+
+- The overlay can no longer hold the mouse. On the first try on a Mac the overlay showed nothing,
+  and the owner, trying to make it work, turned "Let clicks through" off and "Edit layout" on:
+  either makes the overlay's invisible full-screen layer catch every click, and with nothing
+  drawn there was no sign of it and no way out short of stopping the app, which cost a game.
+  "Let clicks through" is removed, since nothing outside edit mode needs the overlay to take
+  clicks. Edit mode tints the overlay, ends on Escape, on ⌃⌥⌘L or after two minutes, and ends when
+  the overlay is hidden. The menu now says whether the overlay page loaded in the overlay's
+  window, and why not when it did not, and the app's Info.plist allows its web view to load the
+  page from 127.0.0.1 over plain HTTP, in case App Transport Security stopped it.
+
 ## 2026-10-09
 
 - Phase 9.4, early leads in lane: the player lookups now also read the timelines of each player's

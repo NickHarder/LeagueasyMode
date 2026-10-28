@@ -4,7 +4,7 @@ title: The macOS overlay app
 description: What the menu bar app does, how to run it from a clone, how to build, release and open the app that carries its own engine, its update check and open at login, and the steps for the tracer bullet's test on a Mac over League in each display mode.
 tags: [macos, overlay, tracer-bullet]
 status: draft
-generated: { by: claude-code/cloud, at: 2026-10-09T01:37:17Z }
+generated: { by: claude-code/cloud, at: 2026-10-28T00:35:00Z }
 sources:
   - id: panel
     resource: ../../overlay/macos/Sources/LeagueasyOverlay/OverlayPanel.swift
@@ -45,7 +45,8 @@ bundle carries or else the one in the clone it was built from (`uv run --project
 leagueasymode run`), reads the overlay's address from the line the engine prints, and shows that
 page in a window over League:[^panel]
 
-- transparent, borderless, without a shadow, and with clicks passing through to the game;
+- transparent, borderless, without a shadow, and with every click passing through to the game
+  outside edit mode, with no setting to change that;
 - never key or main, and its panel does not activate the app, so League keeps the keyboard;
 - on every Space, full-screen ones included, at the "Screen saver" window level by default;
 - over the screen League is on, or over League's window below its title bar when it is windowed,
@@ -66,21 +67,25 @@ uses. The app posts the mark to the engine's `/marks`, which starts the timer sh
 enemy's row.[^cooldown-marking]
 Quitting the app asks the engine to stop; the engine closes the game it is recording first.
 
-**Moving the widgets:** "Edit layout" in the menu makes the overlay take clicks and outlines
-each movable widget with its name, an empty one too: the objective strip, the callouts, the enemy
-strip and the You panel (the minimap layer stays over League's minimap). Drag one and drop it; it
-stays there, kept by the engine in `layout.json` in the application's directory as shares of the
-overlay's width and height, so it keeps its place when League's window changes size. Choose
-"Edit layout" again to finish; "Reset layout", in the menu or on the notice at the bottom of the
-overlay while editing, puts every widget back.[^layout-editing]
+**Moving the widgets:** "Edit layout (Esc to finish)" in the menu makes the overlay take clicks,
+tints the whole overlay so that the layer catching them shows even when the page shows nothing,
+and outlines each movable widget with its name, an empty one too: the objective strip, the
+callouts, the enemy strip and the You panel (the minimap layer stays over League's minimap). Drag
+one and drop it; it stays there, kept by the engine in `layout.json` in the application's
+directory as shares of the overlay's width and height, so it keeps its place when League's window
+changes size. Escape, ⌃⌥⌘L, the menu item again, hiding the overlay, or two minutes end it, and
+every click goes to the game again; "Reset layout", in the menu or on the notice at the bottom of
+the overlay while editing, puts every widget back.[^layout-editing]
 
 **Spoken callouts:** with "Speak callouts" turned on in the settings (it is off until then),
 the overlay page hands each new callout to the app as it shows, and the app speaks it once in
 macOS's own voice (`AVSpeechSynthesizer`, the system's default voice).[^speech] In a browser, as
 against a replay, the browser's own speech speaks it instead.
 
-The menu shows whether the engine runs, toggles the overlay and the click-through, and picks the
-window level, since which level stays above League depends on how League draws:[^levels]
+The menu shows whether the engine runs and whether the overlay page loaded in the overlay's
+window ("Overlay: page loaded", or "Overlay: the page did not load (…)" with the web view's
+reason; a page whose process stops is loaded again), toggles the overlay, and picks the window
+level, since which level stays above League depends on how League draws:[^levels]
 Floating, Status bar, Screen saver, and Above a captured display (one above the level a game that
 captures the display draws at). "Last game…" opens the post-game window, "Settings…" the
 settings page and "Status…" what the engine sees, in the default browser, normal windows rather
