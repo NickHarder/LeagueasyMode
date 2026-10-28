@@ -38,6 +38,12 @@ skill has the format.
   shortcut and never posted. The first recording in LeagueasyMode-recordings is a Practice Tool
   game cancelled at 0:00, so the client's post-game answers are still unseen; one real game
   recorded to the end comes first. The plan waits for the owner's approval and decisions.
+- Click to mark spells. The owner: "add the clickable spell icons as an option ... and leave the
+  shortcuts as well". With the setting on, each enemy's row has Flash, other-spell and R buttons
+  that mark in one click; the app takes the mouse only while the pointer is over one, and never
+  the keyboard. Marking by itself, which the owner would prefer, waits on the data: the game's
+  local API gives no enemy's spell casts, and the status page's feed lists any event kind no
+  estimator reads, which is where one would first show.
 - Off the Rift, the estimates set for the Rift are hidden too: unspent gold, level timing, backs
   and the win chance assumed Summoner's Rift's starting gold, income and fountain, and ARAM starts
   richer and higher. The owner: "yes hide them in aram until tuned". They come back for ARAM once
