@@ -101,12 +101,14 @@ public enum UpdateCheck {
     ///   - answer: The body of GitHub's answer.
     ///   - appVersion: The app's version.
     /// - Returns: The release, or nil when the answer is no published release, its tag no version,
-    ///   or it is not newer than the app.
+    ///   it is not newer than the app, or it has no zipped app to download (as the repository's old
+    ///   v1.0.0, which led to an empty page).
     public static func newerRelease(answer: Data, appVersion: ReleaseVersion) -> AvailableRelease? {
         guard
             let release = try? JSONDecoder().decode(LatestReleaseAnswer.self, from: answer),
             release.draft != true,
             release.prerelease != true,
+            release.assets?.contains(where: { $0.name.hasPrefix("LeagueasyMode-") && $0.name.hasSuffix(".zip") }) == true,
             let version = ReleaseVersion(release.tagName),
             appVersion < version,
             let pageURL = URL(string: "https://github.com/\(repository)/releases/tag/\(release.tagName)")
@@ -122,10 +124,17 @@ private struct LatestReleaseAnswer: Decodable {
     let tagName: String
     let draft: Bool?
     let prerelease: Bool?
+    let assets: [LatestReleaseAsset]?
 
     enum CodingKeys: String, CodingKey {
         case tagName = "tag_name"
         case draft
         case prerelease
+        case assets
     }
+}
+
+/// A file of the latest release: only its name is read.
+private struct LatestReleaseAsset: Decodable {
+    let name: String
 }

@@ -1101,6 +1101,23 @@
             }
           ],
           "default": null
+        },
+        "seen_seconds_ago": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Seen Seconds Ago"
+        },
+        "is_seen": {
+          "default": false,
+          "title": "Is Seen",
+          "type": "boolean"
         }
       },
       "required": [
@@ -1715,6 +1732,11 @@
   "properties": {
     "is_game_running": {
       "title": "Is Game Running",
+      "type": "boolean"
+    },
+    "is_summoners_rift": {
+      "default": true,
+      "title": "Is Summoners Rift",
       "type": "boolean"
     },
     "game_time_seconds": {

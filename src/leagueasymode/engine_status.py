@@ -22,7 +22,7 @@ from typing import Final, Literal
 
 from pydantic import BaseModel, ConfigDict, ValidationError
 
-from leagueasymode import __version__
+from leagueasymode.build_info import build_label
 from leagueasymode.game_api import NoAnswer
 from leagueasymode.game_state import GameSnapshot
 
@@ -38,6 +38,8 @@ type PartKey = Literal[
     "settings",
     "models",
     "tuning",
+    "sending",
+    "errors",
 ]
 
 # Each part, in the order the page shows them, with what it says before anything happens.
@@ -52,6 +54,8 @@ PART_TITLES: Final[dict[PartKey, str]] = {
     "settings": "League's settings",
     "models": "Models",
     "tuning": "Tuning",
+    "sending": "Sending games",
+    "errors": "Errors",
 }
 FIRST_DETAILS: Final[dict[PartKey, str]] = {
     "game": "No answer yet",
@@ -64,6 +68,8 @@ FIRST_DETAILS: Final[dict[PartKey, str]] = {
     "settings": "Not read yet",
     "models": "Not loaded yet",
     "tuning": "Read when the engine starts",
+    "sending": "After each recorded game, once a GitHub token is set up",
+    "errors": "None so far",
 }
 # The feed's events some estimator reads; a test holds this to the estimators' own names.
 READ_EVENT_NAMES: Final = frozenset(
@@ -249,7 +255,7 @@ class StatusBoard:
             The report.
         """
         return EngineStatus(
-            version=__version__,
+            version=build_label(),
             platform=platform.platform(terse=True),
             python_version=platform.python_version(),
             started_at=self.started_at.isoformat(),

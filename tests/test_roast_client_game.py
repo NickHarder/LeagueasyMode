@@ -1,4 +1,4 @@
-"""The reader of the client's game details and timeline (phase 10.2), on client-shaped payloads."""
+"""The reader of the client's game details and timeline (phase 11.2), on client-shaped payloads."""
 
 import copy
 import re

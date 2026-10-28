@@ -134,6 +134,7 @@ def write_recording(
     vi_wards_at_seconds: float | None = None,
     turret_kills: tuple[tuple[int, float, str], ...] = (),
     first_game_time_seconds: float = 1395.0,
+    map_number: int = 11,
 ) -> Path:
     writer = RecordingWriter(directory / "game.jsonl", keyframe_interval_seconds=60.0)
     writer.write_started(
@@ -187,6 +188,7 @@ def write_recording(
                 [event for event in events if has_happened(event, game_time_seconds)],
                 players=players,
                 map_terrain="Infernal",
+                map_number=map_number,
             ),
         )
     writer.write_ended(received_at_seconds=snapshot_count * 0.5, reason="game ended")
@@ -283,6 +285,7 @@ async def open_overlay(
     init_script: str | None = None,
     turret_kills: tuple[tuple[int, float, str], ...] = (),
     first_game_time_seconds: float = 1395.0,
+    map_number: int = 11,
 ) -> AsyncIterator[Page]:
     if preferences is not None:
         save_preferences(tmp_path / "preferences.json", preferences)
@@ -298,6 +301,7 @@ async def open_overlay(
             vi_wards_at_seconds,
             turret_kills,
             first_game_time_seconds,
+            map_number,
         ),
         speed=speed,
     )
@@ -599,6 +603,30 @@ async def test_the_minimap_layer_marks_where_each_enemy_likely_is(tmp_path: Path
                 1
             )
         await keep_screenshot(page, "minimap")
+
+
+async def test_an_enemy_in_sight_has_no_mark_on_the_minimap(tmp_path: Path) -> None:
+    # Vi's creep score rises at 23:20, which the game shows only while your team sees her.
+    async with open_overlay(
+        tmp_path, snapshot_count=40, speed=1.0, vi_farms_at_seconds=(1400.0,)
+    ) as page:
+        minimap = page.locator("#minimap")
+        vi_mark = minimap.locator('circle[data-champion="Vi"]')
+        await expect(vi_mark).to_have_count(0, timeout=10000)
+        await expect(minimap.locator('circle[data-champion="Zed"]')).to_have_count(1)
+        await keep_screenshot(page, "minimap-enemy-in-sight")
+        # Three seconds on, unseen again, she has her mark back.
+        await expect(vi_mark).to_have_count(1, timeout=10000)
+
+
+async def test_off_the_rift_its_widgets_and_the_minimap_layer_hide(tmp_path: Path) -> None:
+    # The same game on ARAM's map: the enemies show, the Rift's dragon, objectives and minimap not.
+    async with open_overlay(tmp_path, snapshot_count=60, speed=1.0, map_number=12) as page:
+        await expect(page.locator("#enemy-strip .enemy-row")).to_have_count(5, timeout=5000)
+        await expect(page.locator("#dragon-widget")).to_be_hidden()
+        await expect(page.locator("#objective-pills .pill")).to_have_count(0)
+        await expect(page.locator("#minimap")).to_be_hidden()
+        await keep_screenshot(page, "off-the-rift")
 
 
 async def test_the_enemy_strip_shows_item_gold_and_the_lead(tmp_path: Path) -> None:

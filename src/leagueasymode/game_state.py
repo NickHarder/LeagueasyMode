@@ -171,6 +171,10 @@ class ActivePlayer(RiotPayloadModel):
     champion_stats: ActiveChampionStats | None = Field(default=None, alias="championStats")
 
 
+# Summoner's Rift, and 0, the number of an answer that names no map.
+RIFT_MAP_NUMBERS: Final = frozenset({0, 11})
+
+
 class GameData(RiotPayloadModel):
     """The game itself: its mode, its clock and the map's state."""
 
@@ -179,6 +183,18 @@ class GameData(RiotPayloadModel):
     map_number: int = Field(default=0, alias="mapNumber")
     # "Default" until the second dragon; then the soul's element ("Infernal", "Ocean", ...).
     map_terrain: str = Field(default="Default", alias="mapTerrain")
+
+    @property
+    def is_summoners_rift(self) -> bool:
+        """Whether the game is on Summoner's Rift, whose dragons, jungle and lanes are known.
+
+        An answer that names no map counts as the Rift, as the overlay assumed before maps were
+        told apart; ARAM and its Mayhem (12), Arena (30) and the rest do not.
+
+        Returns:
+            True on the Rift, or when the map is not named.
+        """
+        return self.map_number in RIFT_MAP_NUMBERS
 
 
 class GameSnapshot(RiotPayloadModel):

@@ -15,5 +15,5 @@ class RoastPlayer(BaseModel):
     # The champion's name as people write it ("Lee Sin"), which is all a line ever calls a player.
     champion: str
     won: bool
-    # On the owner's friends list (phase 10.5).
+    # On the owner's friends list (phase 11.5).
     is_friend: bool = False

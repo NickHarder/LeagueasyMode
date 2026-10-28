@@ -1,4 +1,4 @@
-"""A game as the League client tells it after the game: its players and every exhibit (phase 10.2).
+"""A game as the League client tells it after the game: its players and every exhibit (phase 11.2).
 
 The client's game details (`/lol-match-history/v1/games/<id>`) give each player's line of the
 scoreboard and each team's objectives; its timeline gives every player's numbers once a minute and
@@ -7,7 +7,7 @@ answer it came from. A field the answer does not hold gives no exhibit and no li
 
 The details' shape is the client's older one: stats nested under each participant, who each player
 is in a list of its own, and a team's result as "Win" or "Fail". It has not been seen in a real
-game yet (the plan's slice 10.0); the readers take what is there.
+game yet (the plan's slice 11.0); the readers take what is there.
 """
 
 from typing import Final
