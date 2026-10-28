@@ -218,6 +218,8 @@ export interface PlayerCard {
   readonly enemy_slot: number | null;
   /** For an enemy: the spells a "flash" and a "summoner" mark name, in that order. */
   readonly marked_spell_names: readonly string[];
+  /** Their ultimate's rank from their level: 0 before it is learned; null while not known. */
+  readonly ultimate_rank: number | null;
 }
 
 /** What each team's items are worth: gold earned and spent, not gold in hand. */
@@ -723,7 +725,8 @@ export function isPlayerCard(value: unknown): value is PlayerCard {
     isNumberOrNull(value["seen_seconds_ago"]) &&
     typeof value["is_seen"] === "boolean" &&
     isNumberOrNull(value["enemy_slot"]) &&
-    isArrayOf(value["marked_spell_names"], (name: unknown): name is string => typeof name === "string")
+    isArrayOf(value["marked_spell_names"], (name: unknown): name is string => typeof name === "string") &&
+    isNumberOrNull(value["ultimate_rank"])
   );
 }
 

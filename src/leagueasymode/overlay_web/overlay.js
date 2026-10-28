@@ -514,6 +514,13 @@ export function formatIntel(intel) {
     }
     return parts.join(" \u00b7 ");
 }
+/** Return an enemy's ultimate's rank as their row shows it, "R2" or "no R", or null when unknown. */
+export function formatUltimateRank(rank) {
+    if (rank === null) {
+        return null;
+    }
+    return rank === 0 ? "no R" : `R${String(rank)}`;
+}
 /** Return the row that draws one enemy: champion, level, item gold, the death timer and stats. */
 function enemyRowElement(card, gameTimeSeconds, cooldowns, junglePaths, hasMarkButtons) {
     const row = document.createElement("div");
@@ -535,6 +542,14 @@ function enemyRowElement(card, gameTimeSeconds, cooldowns, junglePaths, hasMarkB
         friendElement.title = "On your friends list";
         friendElement.setAttribute("aria-label", "friend");
         nameElement.append(friendElement);
+    }
+    const ultimateText = formatUltimateRank(card.ultimate_rank);
+    if (ultimateText !== null) {
+        const ultimateElement = document.createElement("span");
+        ultimateElement.className = "enemy-ultimate";
+        ultimateElement.dataset["rank"] = String(card.ultimate_rank);
+        ultimateElement.textContent = ultimateText;
+        nameElement.append(" ", ultimateElement);
     }
     const levelElement = document.createElement("span");
     levelElement.className = "enemy-level";
