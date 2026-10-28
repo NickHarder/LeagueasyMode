@@ -158,6 +158,21 @@ def _ultimate_timer(
     )
 
 
+def marked_spell_names(enemy: ScoreboardPlayer) -> list[str]:
+    """Return the spells a "flash" and a "summoner" mark name for an enemy, in that order.
+
+    Args:
+        enemy: The enemy.
+
+    Returns:
+        The two spells' names.
+    """
+    return [
+        _summoner_spell_marked(enemy, is_flash=True).display_name,
+        _summoner_spell_marked(enemy, is_flash=False).display_name,
+    ]
+
+
 def _summoner_spell_marked(enemy: ScoreboardPlayer, *, is_flash: bool) -> SummonerSpell:
     """Return which of an enemy's summoner spells a mark names.
 
