@@ -1,10 +1,13 @@
 ---
 type: Plan
 title: "Overlay layout: move, resize and see through"
-description: A plan, for the owner's approval, to let the player place each widget exactly, resize it and see the game through it, tied to the use cases in USERS.md, with the build order and what was considered and cut.
+description: The owner's approved plan to let the player place each widget exactly, resize it and see the game through it, tied to the use cases in USERS.md, with the build order and what was considered and cut.
 tags: [plan, layout, overlay]
-status: draft
-generated: { by: claude-code/cloud, at: 2026-10-29T03:20:00Z }
+status: stable
+generated: { by: claude-code/cloud, at: 2026-10-29T03:11:37Z }
+verified:
+  - { by: human:nickharder, at: 2026-10-29T03:12:39Z }
+approved_sha256: 354bc0ac7117aa3bce0547a2d0101bd6fd2927221b7be383eae1ebf4db5512ce
 ---
 
 # Overlay layout: move, resize and see through
@@ -27,7 +30,7 @@ glance takes, fails every other use case on screen, it serves UC-02 to UC-05 too
 - **Not there:** a size for a widget, a place set to the pixel, a way to see the game through a
   widget, anything that keeps a widget off League's own HUD.
 
-## Slices, proposed build order
+## Slices, in build order
 
 | # | Slice | What changes for the player | Use cases |
 |---|---|---|---|
@@ -69,8 +72,12 @@ place can be set without the overlay ever taking the mouse in a game.
 - **Moving the minimap layer freely:** it must sit on League's minimap; L.2's size and nudge fit
   it there instead.
 
-## Where the owner decides
+## The owner's decisions
 
-1. **Approve the plan,** or change the order.
-2. **L.3's regions:** shade League's HUD in edit mode and move widgets off it (proposed), or only
-   shade it and let the player choose.
+The owner, 2026-10-29: "approved, move them off automatically, no ARAM timers except inhib".
+
+1. **The plan and its order are approved:** L.1 to L.5, as above.
+2. **L.3:** a widget dropped on League's HUD is moved just off it automatically; the shaded
+   regions show why.
+3. **ARAM** (beside the layout): the only timers off the Rift are the inhibitors', marked "~"
+   until a recorded ARAM game confirms the respawn time.

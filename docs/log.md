@@ -6,6 +6,9 @@ skill has the format.
 
 ## 2026-10-29
 
+- The overlay layout plan is approved ("approved, move them off automatically"): resize, sliders,
+  keeping widgets off League's HUD (moved off automatically), opacity, and hiding from edit mode,
+  built in that order.
 - `USERS.md`, the users, moments and use cases (UC-01 to UC-08), at the owner's ask ("define user
   personas and tie your plan to the use cases"), from what the owner has said and shown while
   testing; three fields are open questions for them. With it, `plans/overlay-layout.md`, a plan
