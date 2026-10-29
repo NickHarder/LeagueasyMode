@@ -58,9 +58,7 @@ def closing_line_candidates(
             else ""
         )
         verdict_opener = f"{CHAT_OPENER} {verdict_words}. " if verdict_words else f"{CHAT_OPENER}, "
-        signed = (
-            [f"{verdict_opener}{line.text}{citation}{SIGNATURE}"] if signature else []
-        )
+        signed = [f"{verdict_opener}{line.text}{citation}{SIGNATURE}"] if signature else []
         longest_first = [
             *signed,
             f"{verdict_opener}{line.text}{citation}",
