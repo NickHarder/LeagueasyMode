@@ -1019,6 +1019,19 @@ async def test_at_a_glance_only_callouts_to_act_on_now_show(tmp_path: Path) -> N
         await expect(items).to_have_count(4)
 
 
+async def test_at_a_glance_the_newest_line_for_chat_shows_too(tmp_path: Path) -> None:
+    # The owner, 2026-10-29: "make moments and team calls show at a glance". The newest one shows
+    # beside the action callouts, without taking their place. At 18:30 Baron spawns in 1:30, and
+    # Vi has been missing since 11:50.
+    async with open_overlay(
+        tmp_path, snapshot_count=60, speed=1.0, first_game_time_seconds=1110.0, hold_details=False
+    ) as page:
+        team_call = page.locator('#callouts .callout[data-kind="team_call"]')
+        await expect(team_call).to_have_text(re.compile(r"^Baron in 1:\d\d\. "), timeout=10000)
+        await expect(page.locator('#callouts .callout[data-kind="missing"]')).to_have_count(1)
+        await keep_screenshot(page, "chat-line-at-a-glance")
+
+
 async def test_while_you_are_dead_the_details_show_by_themselves(tmp_path: Path) -> None:
     # Dead, the player's eyes are free: the death screen shows the details without a key, and
     # they go when the player is back. Ahri is the player in these games.

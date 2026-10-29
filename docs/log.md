@@ -6,6 +6,9 @@ skill has the format.
 
 ## 2026-10-29
 
+- Moments and team calls show at a glance again (the owner: "make moments and team calls show at
+  a glance"): the newest one shows beside the two newest action callouts without taking their
+  place, still never spoken; the rest wait for Tab or Option as before.
 - Worth a look away, after the owner: "league is already a very bsy game so if it is goign to take
   my eyes off fights, it needs to be wort while info". At a glance only the callouts that ask for
   an action now show and are spoken (objective soon, numbers window, level 6, a laner missing, the
