@@ -45,6 +45,7 @@ export const USUAL_MINIMAP_FIT = { scale: 1, x_share: 0, y_share: 0 };
 let currentOffsets = {};
 let currentScales = {};
 let currentMinimapFit = USUAL_MINIMAP_FIT;
+let currentOpacity = 1;
 let draggedWidget = null;
 let wheelSaveTimer;
 function shareOf(value) {
@@ -54,7 +55,7 @@ function scaleOf(value) {
     return Math.round(Math.min(MAX_WIDGET_SCALE, Math.max(MIN_WIDGET_SCALE, value)) * SCALE_PRECISION) / SCALE_PRECISION;
 }
 function currentLayout() {
-    return { offsets: currentOffsets, scales: currentScales, minimap_fit: currentMinimapFit };
+    return { offsets: currentOffsets, scales: currentScales, minimap_fit: currentMinimapFit, opacity: currentOpacity };
 }
 function placeWidget(widget, offset) {
     const element = document.getElementById(WIDGET_ELEMENT_IDS[widget]);
@@ -93,7 +94,10 @@ export function applyLayout(layout) {
     currentOffsets = { ...layout.offsets };
     currentScales = { ...layout.scales };
     currentMinimapFit = layout.minimap_fit;
+    currentOpacity = layout.opacity;
     fitMinimap(layout.minimap_fit);
+    // The widgets' backgrounds and borders fade; their text does not (overlay.css).
+    document.documentElement.style.setProperty("--overlay-opacity", String(layout.opacity));
     for (const widget of MOVABLE_WIDGETS) {
         if (widget !== draggedWidget) {
             placeWidget(widget, layout.offsets[widget] ?? USUAL_PLACE);
@@ -119,9 +123,14 @@ export function isEditingLayout() {
 function setEditing(isEditing) {
     document.body.classList.toggle(EDITING_CLASS, isEditing);
 }
-/** Put every widget back; the minimap layer's fit, which lines it up with League's, stays. */
+/** Put every widget back; the minimap layer's fit and the opacity, which are no widget's place, stay. */
 function resetLayout() {
-    const usualLayout = { offsets: {}, scales: {}, minimap_fit: currentMinimapFit };
+    const usualLayout = {
+        offsets: {},
+        scales: {},
+        minimap_fit: currentMinimapFit,
+        opacity: currentOpacity,
+    };
     applyLayout(usualLayout);
     void saveLayout(usualLayout);
 }

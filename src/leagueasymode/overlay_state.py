@@ -701,6 +701,9 @@ class OverlayLayout(BaseModel):
     offsets: dict[MovableWidget, WidgetOffset] = Field(default_factory=dict)
     scales: dict[MovableWidget, WidgetScale] = Field(default_factory=dict)
     minimap_fit: MinimapFit = Field(default_factory=MinimapFit)
+    # How much of the widgets' backgrounds shows, so the game shows through them (layout slice
+    # L.4); their text stays as it is.
+    opacity: float = Field(default=1.0, ge=0.4, le=1.0)
 
 
 class OverlayState(BaseModel):

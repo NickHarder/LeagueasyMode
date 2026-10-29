@@ -926,6 +926,13 @@
         },
         "minimap_fit": {
           "$ref": "#/$defs/MinimapFit"
+        },
+        "opacity": {
+          "default": 1.0,
+          "maximum": 1.0,
+          "minimum": 0.4,
+          "title": "Opacity",
+          "type": "number"
         }
       },
       "title": "OverlayLayout",

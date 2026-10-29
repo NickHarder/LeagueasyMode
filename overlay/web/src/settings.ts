@@ -13,6 +13,7 @@ import {
   MAX_MINIMAP_NUDGE_SHARE,
   MAX_WIDGET_SCALE,
   MIN_MINIMAP_FIT_SCALE,
+  MIN_OVERLAY_OPACITY,
   MIN_WIDGET_SCALE,
   MOVABLE_WIDGETS,
   type MinimapFit,
@@ -459,6 +460,23 @@ function layoutElement(startLayout: OverlayLayout): HTMLElement {
     fitDown.row,
     fitReset,
   );
+  const opacityRange = { min: MIN_OVERLAY_OPACITY * PERCENT, max: PERCENT, step: 5 };
+  const opacity = sliderElement("overlay-opacity", "Opacity", "Background opacity", opacityRange, (percent) => {
+    change({ ...layout, opacity: percent / PERCENT });
+  });
+  refreshers.push(() => {
+    opacity.setValue(Math.round(layout.opacity * PERCENT));
+  });
+  const opacityGroup = htmlElement("fieldset", "settings-layout-widget");
+  opacityGroup.append(
+    htmlElement("legend", "", "See-through"),
+    htmlElement(
+      "p",
+      "settings-description",
+      "How much of the widgets' backgrounds shows, so the game shows through them; their text stays as it is.",
+    ),
+    opacity.row,
+  );
   for (const refresh of refreshers) {
     refresh();
   }
@@ -486,6 +504,7 @@ function layoutElement(startLayout: OverlayLayout): HTMLElement {
       "settings-description",
       "Where each widget sits, as a share of League's window from its usual place, and its size. The overlay moves as you slide; dragging in Edit layout does the same.",
     ),
+    opacityGroup,
     ...widgetGroups,
     fitGroup,
     status,

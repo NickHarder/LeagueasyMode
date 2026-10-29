@@ -31,6 +31,8 @@ export const MAX_WIDGET_SCALE = 1.6;
 export const MIN_MINIMAP_FIT_SCALE = 0.5;
 export const MAX_MINIMAP_FIT_SCALE = 1.5;
 export const MAX_MINIMAP_NUDGE_SHARE = 0.1;
+/** The widgets' background opacity: 40% to 100%. */
+export const MIN_OVERLAY_OPACITY = 0.4;
 const DRAGON_OBJECTIVES = new Set(["dragon", "elder_dragon"]);
 const DRAGON_STATUSES = new Set(["not_spawned", "respawning", "alive"]);
 const SIDES = new Set(["ally", "enemy"]);
@@ -428,7 +430,10 @@ export function isOverlayLayout(value) {
     if (!isRecord(value) ||
         !isRecord(value["offsets"]) ||
         !isRecord(value["scales"]) ||
-        !isMinimapFit(value["minimap_fit"])) {
+        !isMinimapFit(value["minimap_fit"]) ||
+        typeof value["opacity"] !== "number" ||
+        value["opacity"] < MIN_OVERLAY_OPACITY ||
+        value["opacity"] > 1) {
         return false;
     }
     const movable = new Set(MOVABLE_WIDGETS);
