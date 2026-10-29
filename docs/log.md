@@ -6,6 +6,11 @@ skill has the format.
 
 ## 2026-10-29
 
+- Layout slice L.3, keep off League's HUD ("move them off automatically"): in edit mode the score,
+  kill feed, champion bar, chat, ally portraits and minimap are shaded and named; a widget dropped
+  on one, or grown over it, moves the shortest way off it, and never out of the window. The regions
+  are a first guess at League's HUD, to check on the Mac. The enemy strip's usual place moved below
+  the kill feed, which it covered.
 - Layout slice L.5, hide from edit mode: the edit-mode notice has a Hide/Show button for each
   widget, and Settings a "Shown" switch; a widget turned off never shows over the game, and stays
   in sight, faded, while editing. In the notice rather than on the widget's label, as the plan had

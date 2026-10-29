@@ -127,6 +127,140 @@ export function isEditingLayout() {
 }
 function setEditing(isEditing) {
     document.body.classList.toggle(EDITING_CLASS, isEditing);
+    if (isEditing) {
+        drawHudRegions();
+    }
+}
+// League's HUD at its default size, as shares of the window (layout slice L.3): a first guess,
+// seen against a 1920 × 925 window, to be checked on the Mac. The minimap is worked out from the
+// minimap layer, which sits on it.
+const FIXED_HUD_REGIONS = [
+    { name: "Score", left: 0.8, top: 0, right: 1, bottom: 0.045 },
+    { name: "Kill feed", left: 0.84, top: 0.05, right: 1, bottom: 0.3 },
+    { name: "Champion bar", left: 0.3, top: 0.83, right: 0.7, bottom: 1 },
+    { name: "Chat", left: 0, top: 0.64, right: 0.25, bottom: 0.83 },
+    { name: "Ally portraits", left: 0, top: 0.2, right: 0.045, bottom: 0.55 },
+];
+// The minimap layer's side at League's scale 1, a share of the window's height (overlay.css).
+const MINIMAP_HEIGHT_SHARE = 0.22;
+// How many times a dropped widget is moved off a region; a move can land it on another.
+const MOST_HUD_MOVES = 4;
+// The gap left between a moved widget and the region it was moved off, in pixels.
+const HUD_GAP_PIXELS = 4;
+/** Return League's HUD regions in this window: the fixed ones and the minimap. */
+function hudRegions() {
+    const minimap = document.getElementById("minimap");
+    const style = minimap === null ? null : getComputedStyle(minimap);
+    const leagueScale = Number(style?.getPropertyValue("--minimap-scale") ?? "") || 1;
+    const fitScale = Number(style?.getPropertyValue("--minimap-fit") ?? "") || 1;
+    const heightShare = MINIMAP_HEIGHT_SHARE * leagueScale * fitScale;
+    const widthShare = (heightShare * window.innerHeight) / window.innerWidth;
+    const isLeft = minimap?.dataset["side"] === "left";
+    return [
+        ...FIXED_HUD_REGIONS,
+        {
+            name: "Minimap",
+            left: isLeft ? 0 : 1 - widthShare,
+            top: 1 - heightShare,
+            right: isLeft ? widthShare : 1,
+            bottom: 1,
+        },
+    ];
+}
+/** Shade and name League's HUD regions, for edit mode: what a widget dropped there would cover. */
+function drawHudRegions() {
+    let layer = document.getElementById("hud-regions");
+    if (layer === null) {
+        layer = document.createElement("div");
+        layer.id = "hud-regions";
+        layer.setAttribute("aria-hidden", "true");
+        document.body.prepend(layer);
+    }
+    layer.replaceChildren(...hudRegions().map((region) => {
+        const shade = document.createElement("div");
+        shade.className = "hud-region";
+        shade.textContent = region.name;
+        shade.style.left = `${String(region.left * 100)}vw`;
+        shade.style.top = `${String(region.top * 100)}vh`;
+        shade.style.width = `${String((region.right - region.left) * 100)}vw`;
+        shade.style.height = `${String((region.bottom - region.top) * 100)}vh`;
+        return shade;
+    }));
+}
+/**
+ * Return what a widget covers: its own box, or for the strips that span the window's width, the
+ * box of what they hold, which is all that shows; null when nothing shows.
+ */
+function coveredBox(element) {
+    if (element.id !== WIDGET_ELEMENT_IDS.objective_strip && element.id !== WIDGET_ELEMENT_IDS.callouts) {
+        return element.getBoundingClientRect();
+    }
+    const boxes = [...element.children]
+        .map((child) => child.getBoundingClientRect())
+        .filter((box) => box.width > 0 && box.height > 0);
+    if (boxes.length === 0) {
+        return null;
+    }
+    const left = Math.min(...boxes.map((box) => box.left));
+    const top = Math.min(...boxes.map((box) => box.top));
+    const right = Math.max(...boxes.map((box) => box.right));
+    const bottom = Math.max(...boxes.map((box) => box.bottom));
+    return new DOMRect(left, top, right - left, bottom - top);
+}
+/**
+ * Return how far, in pixels, to move a box so that it covers no HUD region and stays in the
+ * window: the shortest way off each region it lands on, then back inside the window's edges.
+ */
+export function moveOffHud(box, regions, width, height) {
+    let right = 0;
+    let down = 0;
+    for (let move = 0; move < MOST_HUD_MOVES; move += 1) {
+        const left = box.left + right;
+        const top = box.top + down;
+        const covered = regions.find((region) => left < region.right * width &&
+            left + box.width > region.left * width &&
+            top < region.bottom * height &&
+            top + box.height > region.top * height);
+        if (covered === undefined) {
+            break;
+        }
+        const ways = [
+            [covered.left * width - (left + box.width) - HUD_GAP_PIXELS, 0],
+            [covered.right * width - left + HUD_GAP_PIXELS, 0],
+            [0, covered.top * height - (top + box.height) - HUD_GAP_PIXELS],
+            [0, covered.bottom * height - top + HUD_GAP_PIXELS],
+        ];
+        const inside = ways.filter(([wayRight, wayDown]) => left + wayRight >= 0 &&
+            left + wayRight + box.width <= width &&
+            top + wayDown >= 0 &&
+            top + wayDown + box.height <= height);
+        const shortest = (inside.length > 0 ? inside : ways).reduce((best, way) => Math.abs(way[0]) + Math.abs(way[1]) < Math.abs(best[0]) + Math.abs(best[1]) ? way : best);
+        right += shortest[0];
+        down += shortest[1];
+    }
+    // Never outside the window, whatever the regions.
+    const left = box.left + right;
+    const top = box.top + down;
+    right += Math.max(0, -left) - Math.max(0, left + box.width - width);
+    down += Math.max(0, -top) - Math.max(0, top + box.height - height);
+    return [right, down];
+}
+/** Move a dropped widget off League's HUD and into the window, and return its new place. */
+function settleOffHud(widget, element, offset) {
+    const box = coveredBox(element);
+    if (box === null) {
+        return offset;
+    }
+    const [right, down] = moveOffHud(box, hudRegions(), window.innerWidth, window.innerHeight);
+    if (right === 0 && down === 0) {
+        return offset;
+    }
+    const settled = {
+        x_share: shareOf(offset.x_share + right / window.innerWidth),
+        y_share: shareOf(offset.y_share + down / window.innerHeight),
+    };
+    placeWidget(widget, settled);
+    return settled;
 }
 /** Put every widget back; the minimap layer's fit and the opacity, which are no widget's place, stay. */
 function resetLayout() {
@@ -215,9 +349,14 @@ function makeMovable(widget, element) {
             if (isResizing) {
                 currentScales = withScale(widget, resizedScale);
             }
-            else {
-                currentOffsets = { ...currentOffsets, [widget]: movedOffset };
-            }
+            // Dropped on League's HUD, or grown over it, the widget moves just off it (the owner:
+            // "move them off automatically").
+            const settledOffset = settleOffHud(widget, element, isResizing ? startOffset : movedOffset);
+            const { [widget]: _previousOffset, ...otherOffsets } = currentOffsets;
+            const isUsualPlace = settledOffset.x_share === 0 && settledOffset.y_share === 0;
+            // A resize that leaves the widget in its usual place keeps no offset for it, as before.
+            currentOffsets =
+                isResizing && isUsualPlace ? otherOffsets : { ...otherOffsets, [widget]: settledOffset };
             void saveLayout(currentLayout());
         };
         element.addEventListener("pointermove", move);
