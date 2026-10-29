@@ -10,6 +10,13 @@ out from what the overlay already shows:
 - a teammate's death streak: steady the team toward the next objective, naming no one;
 - behind in estimated gold while the win chance is still in reach: play safe, it is winnable.
 
+Off the Rift (ARAM and the rest) only the window to push is called: those maps have no epic
+monsters and no recall, so "reset and buy" and "next up is…" do not hold there (the owner,
+2026-10-29: "i am getting stuff like reset for obj even in aram"). No call is made while a fight is
+on, a death in the last few seconds, so a fight brings one call when it ends, not one a death; and
+while the numbers window callout is shown, the call that enemies are down stays off the overlay,
+since the callout says it already (⌃⌥C still copies it).
+
 A call blames no one and names no player. The gold lead is an estimate, so it is said as "about".
 At most one call a minute; each shows beside the callouts as a callout of kind "team_call", is
 never spoken, and ⌃⌥C copies the newest call or moment (11.4). Nothing is sent to chat.
@@ -136,6 +143,8 @@ class TeamCallTracker:
             and game_time_seconds - last_call_seconds < self.rules.least_gap_seconds
         ):
             return None
+        if _is_fight_on(snapshot, game_time_seconds, self.rules.fight_quiet_seconds):
+            return None
         made_ids = {call.call_id for call in self._calls}
         candidates = [
             *self._objective_soon(state, game_time_seconds),
@@ -149,11 +158,15 @@ class TeamCallTracker:
             self._calls.append(new_call)
         return new_call
 
-    def callouts(self, game_time_seconds: float | None) -> list[Callout]:
+    def callouts(
+        self, game_time_seconds: float | None, *, is_numbers_window_shown: bool = False
+    ) -> list[Callout]:
         """Return the calls still shown, as callouts of kind "team_call".
 
         Args:
             game_time_seconds: The game's clock; None when no game is running.
+            is_numbers_window_shown: Whether the numbers window callout shows now; it says what a
+                call that enemies are down would, so that call stays off the overlay.
 
         Returns:
             The calls made less than `shown_seconds` ago, oldest first.
@@ -170,6 +183,7 @@ class TeamCallTracker:
             )
             for call in self._calls
             if call.made_at_game_time_seconds + self.rules.shown_seconds > game_time_seconds
+            and not (is_numbers_window_shown and call.kind == "enemies_down")
         ]
 
     def _call(self, call_id: str, kind: TeamCallKind, text: str, now: float) -> TeamCall:
@@ -233,7 +247,9 @@ class TeamCallTracker:
         ]
 
     def _fight_lost(self, state: OverlayState, now: float) -> list[TeamCall]:
-        """Return a call to reset after a lost fight."""
+        """Return a call to reset after a lost fight; on the Rift only, which has a recall."""
+        if not state.is_summoners_rift:
+            return []
         allies_dead = sum(1 for card in state.players if card.side == "ally" and card.is_dead)
         enemies_dead = sum(1 for card in state.players if card.side == "enemy" and card.is_dead)
         if allies_dead < self.rules.fight_lost_allies_dead or enemies_dead >= allies_dead:
@@ -250,7 +266,9 @@ class TeamCallTracker:
     def _death_streak(
         self, state: OverlayState, snapshot: GameSnapshot, now: float
     ) -> list[TeamCall]:
-        """Return a call to steady the team after a teammate's deaths, naming no one."""
+        """Return a call to steady the team after a teammate's deaths; on the Rift only."""
+        if not state.is_summoners_rift:
+            return []
         ally_team = snapshot.ally_team()
         recent_deaths: dict[str, list[float]] = {}
         for event in snapshot.event_list.events:
@@ -344,6 +362,15 @@ def upcoming_objectives(state: OverlayState, now: float) -> list[UpcomingObjecti
             item.spawns_at_game_time_seconds is not None,
             item.spawns_at_game_time_seconds or 0.0,
         ),
+    )
+
+
+def _is_fight_on(snapshot: GameSnapshot, now: float, quiet_seconds: float) -> bool:
+    """Return whether a champion died in the last `quiet_seconds`: a fight still on."""
+    return any(
+        event.event_name == CHAMPION_KILL_EVENT
+        and now - quiet_seconds < event.event_time_seconds <= now
+        for event in snapshot.event_list.events
     )
 
 

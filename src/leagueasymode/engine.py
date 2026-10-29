@@ -562,12 +562,17 @@ class OverlayEngine:
             self.claude_take.take_for(
                 approved_line, self._champion_names, self.tuning.roast.chat_line_max_characters
             )
+        callouts = self._callouts.update(answer_state)
+        is_numbers_window_shown = any(callout.kind == "numbers_window" for callout in callouts)
         new_state = answer_state.model_copy(
             update={
                 "callouts": [
-                    *self._callouts.update(answer_state),
+                    *callouts,
                     *self._moments.callouts(answer_state.game_time_seconds),
-                    *self._team_calls.callouts(answer_state.game_time_seconds),
+                    *self._team_calls.callouts(
+                        answer_state.game_time_seconds,
+                        is_numbers_window_shown=is_numbers_window_shown,
+                    ),
                 ],
                 "preferences": self._preferences,
                 "layout": self._layout,

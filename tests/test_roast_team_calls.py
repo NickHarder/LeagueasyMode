@@ -162,6 +162,46 @@ def test_at_most_one_call_a_minute() -> None:
     assert later.kind == "behind_but_winnable"
 
 
+def test_off_the_rift_no_call_speaks_of_buying_or_objectives() -> None:
+    # The owner, 2026-10-29, in ARAM: "i am getting stuff like reset for obj even in aram". ARAM
+    # has no recall and no epic monsters; a window to push holds anywhere.
+    off_the_rift: dict[str, object] = {"is_summoners_rift": False}
+    lost = {"Garen": NOW + 30.0, "Ahri": NOW + 30.0, "Jinx": NOW + 30.0, "Zed": NOW + 20.0}
+    assert first_call_text(state_at(dead=lost, updates=off_the_rift)) is None
+    deaths = [
+        champion_kill_event(index, NOW - 200 + 60 * index, "Headshot", BOT_GAP, [])
+        for index in (1, 2, 3)
+    ]
+    assert first_call_text(state_at(events=deaths, updates=off_the_rift)) is None
+    enemies_down = {"Zed": NOW + 25.4, "Vi": NOW + 30.0, "Lux": NOW + 41.0}
+    assert first_call_text(state_at(dead=enemies_down, updates=off_the_rift)) == (
+        "3 of theirs are down for 25s. Let's take a tower now."
+    )
+
+
+def test_no_call_while_a_fight_is_on() -> None:
+    # As with the callouts: a death in the last 8 seconds is a fight still on, and the call waits
+    # for it to end, so a fight does not bring a call at each death.
+    dead = {"Zed": NOW + 25.4, "Vi": NOW + 30.0, "Lux": NOW + 41.0}
+    just_now = [champion_kill_event(1, NOW - 3.0, "Headshot", "Lux", [])]
+    assert first_call_text(state_at(events=just_now, dead=dead)) is None
+    a_while_ago = [champion_kill_event(1, NOW - 9.0, "Headshot", "Lux", [])]
+    assert first_call_text(state_at(events=a_while_ago, dead=dead)) == (
+        "3 of theirs are down for 25s. Let's take a tower now."
+    )
+
+
+def test_the_numbers_window_callout_says_what_enemies_down_would() -> None:
+    # One line a fight: with the numbers window shown, the same news as a team call stays off the
+    # overlay; ⌃⌥C still copies it.
+    tracker = TeamCallTracker(TeamCallRules())
+    tracker.update(*state_at(dead={"Zed": NOW + 25.4, "Vi": NOW + 30.0, "Lux": NOW + 41.0}))
+    assert tracker.callouts(NOW + 1.0, is_numbers_window_shown=True) == []
+    (callout,) = tracker.callouts(NOW + 1.0)
+    assert callout.text == "3 of theirs are down for 25s. Let's take a tower now."
+    assert [call.kind for call in tracker.calls] == ["enemies_down"]
+
+
 def test_a_call_shows_for_a_few_seconds_as_a_callout() -> None:
     tracker = TeamCallTracker(TeamCallRules(shown_seconds=8.0))
     tracker.update(*state_at(updates={"dragon": dragon_at(NOW + 85.0)}))

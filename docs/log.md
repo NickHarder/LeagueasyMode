@@ -6,6 +6,11 @@ skill has the format.
 
 ## 2026-10-29
 
+- Fewer calls on deaths, after the owner's ARAM game: "thers still a lot of death notificatiosn and
+  i am getting stuff like reset for obj even in aram". Team calls now wait for a fight to end, as
+  the callouts do; the "enemies down" call stays off the overlay while the numbers window callout
+  says the same; and off the Rift only that call is made, since "reset and buy" and "next up is…"
+  need a recall and epic monsters ARAM does not have.
 - Layout slice L.2, sliders: the Settings page's Layout section places and sizes each widget with
   X, Y and size sliders that move the overlay as they slide, with a Reset each, and fits the
   minimap layer over League's minimap (size 50% to 150%, nudged up to a tenth of the window), kept
