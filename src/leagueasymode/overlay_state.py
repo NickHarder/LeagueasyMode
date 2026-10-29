@@ -56,13 +56,18 @@ class BuffTimer(BaseModel):
 
 
 class InhibitorTimer(BaseModel):
-    """A destroyed inhibitor, and when it comes back."""
+    """A destroyed inhibitor, and when it comes back.
+
+    `is_rule_verified` is false where the respawn time is not yet confirmed for the map (off the
+    Rift), so the widget can mark the timer as provisional.
+    """
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     side: Literal["ally", "enemy"]
     lane: Literal["top", "mid", "bot"]
     respawns_at_game_time_seconds: float
+    is_rule_verified: bool
 
 
 class LaneStructures(BaseModel):

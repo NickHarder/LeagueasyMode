@@ -419,7 +419,7 @@
     },
     "InhibitorTimer": {
       "additionalProperties": false,
-      "description": "A destroyed inhibitor, and when it comes back.",
+      "description": "A destroyed inhibitor, and when it comes back.\n\n`is_rule_verified` is false where the respawn time is not yet confirmed for the map (off the\nRift), so the widget can mark the timer as provisional.",
       "properties": {
         "side": {
           "enum": [
@@ -441,12 +441,17 @@
         "respawns_at_game_time_seconds": {
           "title": "Respawns At Game Time Seconds",
           "type": "number"
+        },
+        "is_rule_verified": {
+          "title": "Is Rule Verified",
+          "type": "boolean"
         }
       },
       "required": [
         "side",
         "lane",
-        "respawns_at_game_time_seconds"
+        "respawns_at_game_time_seconds",
+        "is_rule_verified"
       ],
       "title": "InhibitorTimer",
       "type": "object"
