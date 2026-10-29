@@ -4,7 +4,7 @@ title: The macOS overlay app
 description: What the menu bar app does, how to run it from a clone, how to build, release and open the app that carries its own engine, its update check and open at login, and the steps for the tracer bullet's test on a Mac over League in each display mode.
 tags: [macos, overlay, tracer-bullet]
 status: draft
-generated: { by: claude-code/cloud, at: 2026-10-29T04:28:30Z }
+generated: { by: claude-code/cloud, at: 2026-10-29T05:02:23Z }
 sources:
   - id: build-update
     resource: ../../overlay/macos/Sources/OverlayCore/BuildUpdate.swift
@@ -87,8 +87,12 @@ becomes key, so League keeps the keyboard, and the page's view takes the first c
 that is not key. In edit mode the strip has no buttons, as a press there drags it.
 Quitting the app asks the engine to stop; the engine closes the game it is recording first.
 
-**Details on a key:** at a glance the overlay shows the timers, the newest two callouts and one
-short line an enemy; while Tab or Option is held it shows the rest, the spell buttons of "Click to
+**Details on a key:** at a glance the overlay shows the timers, the newest two callouts that ask
+for an action now (objective soon, numbers window, level 6, a laner missing, the jungler's start
+and place at 4:00, an inhibitor open, a marked spell back, a suggestion; only these are spoken)
+and one short line an enemy; while Tab or Option is held, or while the player is dead and their
+eyes are free (the owner: "if it is goign to take my eyes off fights, it needs to be wort while
+info"), it shows the rest, the other callouts included, the spell buttons of "Click to
 mark spells" included, so at a glance the overlay takes no click at all (the owner, 2026-10-29:
 "thers still too much visual clutter and it messes with my mouse. maybe extra details onyl show if
 i hit tab"). The panel looks 20 times a second whether either key is down

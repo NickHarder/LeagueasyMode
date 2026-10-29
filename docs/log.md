@@ -11,6 +11,13 @@ skill has the format.
   and the jungle path divided by it; a speed of 0 now counts as none, and the usual 380 stands in.
   A game withheld because its anonymized copy would hold a name is now tried again by each new
   build, so that the build that fixes the cause sends the games already played.
+- Worth a look away, after the owner: "league is already a very bsy game so if it is goign to take
+  my eyes off fights, it needs to be wort while info". At a glance only the callouts that ask for
+  an action now show and are spoken (objective soon, numbers window, level 6, a laner missing, the
+  jungler's start and place at 4:00, inhibitor open, a marked spell back, suggestions); the rest
+  wait for Tab or Option. While the player is dead the details show by themselves, as the death
+  screen is when their eyes are free, the way established overlays use the loading and death
+  screens for their heavier panels.
 - Details on a key, at the owner's ask: "thers still too much visual clutter and it messes with my
   mouse. maybe extra details onyl show if i hit tab or somethign". At a glance: the timers, the
   newest two callouts, and one short line an enemy (role, name, R, level, respawn, marked

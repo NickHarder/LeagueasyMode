@@ -1000,13 +1000,40 @@ async def test_at_a_glance_each_enemy_is_one_short_line_and_details_wait_for_the
         await expect(page.locator("#you-panel")).to_be_hidden()
 
 
-async def test_at_a_glance_at_most_two_callouts_show(tmp_path: Path) -> None:
-    # Four enemies can likely buy an item at this moment of the replay: two show, the newest.
-    async with open_overlay(tmp_path, snapshot_count=60, speed=1.0, hold_details=False) as page:
-        callouts = page.locator('#callouts .callout[data-kind="item_soon"]')
-        await expect(callouts).to_have_count(2, timeout=8000)
+async def test_at_a_glance_only_callouts_to_act_on_now_show(tmp_path: Path) -> None:
+    # The owner, 2026-10-29: "league is already a very bsy game so if it is goign to take my eyes
+    # off fights, it needs to be wort while info". Zed reaching 6 is; four enemies who can likely
+    # buy an item wait for the key (this test once saw two of those at a glance).
+    async with open_overlay(
+        tmp_path,
+        snapshot_count=60,
+        speed=1.0,
+        zed_reaches_six_at_seconds=1397.0,
+        hold_details=False,
+    ) as page:
+        level_six = page.locator('#callouts .callout[data-kind="level_spike"]')
+        await expect(level_six).to_have_text("Zed is level 6", timeout=5000)
+        items = page.locator('#callouts .callout[data-kind="item_soon"]')
+        await expect(items).to_have_count(0)
         await hold_the_details_key(page, is_held=True)
-        await expect(callouts).to_have_count(4)
+        await expect(items).to_have_count(4)
+
+
+async def test_while_you_are_dead_the_details_show_by_themselves(tmp_path: Path) -> None:
+    # Dead, the player's eyes are free: the death screen shows the details without a key, and
+    # they go when the player is back. Ahri is the player in these games.
+    async with open_overlay(
+        tmp_path,
+        snapshot_count=60,
+        speed=1.0,
+        respawn_at_by_champion={"Ahri": 1405.0},
+        hold_details=False,
+    ) as page:
+        leads = page.locator("#enemy-strip .item-lead")
+        await expect(leads.first).to_be_visible(timeout=5000)
+        items = page.locator('#callouts .callout[data-kind="item_soon"]')
+        await expect(items.first).to_be_visible()
+        await expect(leads).to_have_count(0, timeout=15000)
 
 
 async def test_the_spell_buttons_show_only_while_the_key_is_held(tmp_path: Path) -> None:
