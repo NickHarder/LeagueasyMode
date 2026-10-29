@@ -108,7 +108,8 @@ export function isInhibitorTimer(value) {
     return (isRecord(value) &&
         isOneOf(value["side"], SIDES) &&
         isOneOf(value["lane"], LANES) &&
-        typeof value["respawns_at_game_time_seconds"] === "number");
+        typeof value["respawns_at_game_time_seconds"] === "number" &&
+        typeof value["is_rule_verified"] === "boolean");
 }
 function isLaneStructures(value) {
     return (isRecord(value) &&
