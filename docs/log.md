@@ -6,6 +6,11 @@ skill has the format.
 
 ## 2026-10-29
 
+- `ARCHITECTURE.md`, by the kit's `plan-architecture`, after the product as the audit was: the
+  three programs and their contract, the trust boundaries, one answer end to end, failure per
+  dependency, the latency budget against what PERF measured, eight deviations from the plan (the
+  owner's own calls among them: enemy marks, scouting, no signing, details on a key, ARAM), each use
+  case traced to its capability, data, finding and metric, and the cut order.
 - The audit (`AUDIT.md`, `audit/`), at the owner's ask to run the kit's skills: late, three weeks
   after the first product commit. Five areas, every reproduction run. What matters most: the one
   real recording (a Practice Tool game cancelled at 0:00) confirms almost nothing the estimators
