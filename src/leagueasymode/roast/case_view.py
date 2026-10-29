@@ -120,6 +120,8 @@ class CaseView(BaseModel):
     # is still being written; None and false while the setting is off.
     claude_take: str | None = None
     claude_take_pending: bool = False
+    # A quick case from the end-of-game stats (phase 11.7): no lane verdict until the full one.
+    is_quick: bool = False
 
 
 def case_options_of(query: Mapping[str, str]) -> CaseOptions:
@@ -224,6 +226,7 @@ def case_view(last_game: LastGameRoast, options: CaseOptions, rules: RoastRules)
         ),
         closing_line=case.closing_line.text,
         closing_line_limit=rules.chat_line_max_characters,
+        is_quick=last_game.is_quick,
         risk_warning=RISK_WARNING if options.spice >= RISKY_SPICE else None,
         exhibits=tuple(
             ViewExhibit(

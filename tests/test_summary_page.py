@@ -15,7 +15,12 @@ import aiohttp
 import pytest
 from playwright.async_api import Page, async_playwright, expect
 
-from client_game_payloads import details_payload, summary_payload, timeline_payload
+from client_game_payloads import (
+    details_payload,
+    end_of_game_payload,
+    summary_payload,
+    timeline_payload,
+)
 from data_dragon_fixtures import fixture_patch_stats
 from game_payloads import DEFAULT_PLAYERS, champion_kill_event, turret_killed_event
 from leagueasymode.accuracy_history import (
@@ -29,6 +34,7 @@ from leagueasymode.game_summary import game_summary
 from leagueasymode.overlay_server import create_overlay_application
 from leagueasymode.patch_data import CHAMPION_SUMMARY_PATH
 from leagueasymode.roast.claude_take import ClaudeTake, ClaudeTakeSettings
+from leagueasymode.roast.end_of_game import quick_game_roast
 from leagueasymode.roast.last_game import last_game_roast, roast_path_beside
 from leagueasymode.roast.rules import LaneRules
 from leagueasymode.scoring import read_recorded_game, score_game
@@ -249,3 +255,18 @@ async def test_claudes_take_shows_under_the_closing_line(tmp_path: Path) -> None
         closing = await page.locator(".case-closing > .case-closing-line").text_content()
         await expect(claude_take.locator(".case-closing-line")).to_have_text(f"Yarr! {closing}")
         await keep_screenshot(page, "post-game-claudes-take")
+
+
+async def test_a_quick_case_says_so_until_the_full_one_comes(tmp_path: Path) -> None:
+    summary_path, history_path = write_summary_and_history(tmp_path)
+    quick = quick_game_roast(end_of_game_payload())
+    assert quick is not None
+    roast_path_beside(summary_path).write_text(quick.model_dump_json())
+    async with open_summary(summary_path, history_path) as page:
+        case_file = page.locator(".case-file")
+        await expect(case_file.locator(".case-quick")).to_contain_text(
+            "quick case from the end-of-game scoreboard", timeout=5000
+        )
+        await expect(case_file.locator(".case-stamp")).to_have_text("NO LANE VERDICT")
+        await expect(case_file.locator(".case-board")).to_have_count(0)
+        assert await case_file.locator(".case-lines li").count() > 0

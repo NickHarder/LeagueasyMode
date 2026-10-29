@@ -64,6 +64,9 @@ def scripted_game(answers: list[JsonValue | None]) -> web.Application:
     return application
 
 
+END_OF_GAME_STATS: Final[JsonValue] = {"gameId": GAME_ID, "gameLength": 1834, "teams": []}
+
+
 def stand_in_client(timeline_misses: int) -> web.Application:
     """A League client whose timeline turns up after a few tries, as it does after a real game."""
     application = web.Application()
@@ -83,7 +86,12 @@ def stand_in_client(timeline_misses: int) -> web.Application:
 
     application.router.add_get("/lol-gameflow/v1/session", session_route)
     application.router.add_get("/lol-game-data/assets/v1/items.json", items_route)
+
+    async def end_of_game_route(_request: web.Request) -> web.Response:
+        return web.json_response(END_OF_GAME_STATS)
+
     application.router.add_get(f"/lol-match-history/v1/game-timelines/{GAME_ID}", timeline_route)
+    application.router.add_get("/lol-end-of-game/v1/eog-stats-block", end_of_game_route)
     return application
 
 
@@ -313,3 +321,28 @@ async def test_each_recorded_game_is_handed_on_once_its_recording_is_closed(tmp_
     assert recording_path is not None
     assert handed_on == [recording_path]
     assert isinstance(list(iter_recording_lines(recording_path))[-1], RecordingEnded)
+
+
+async def test_the_end_of_game_stats_are_handed_on_before_the_timeline(tmp_path: Path) -> None:
+    handed_on: list[tuple[JsonValue, bool]] = []
+
+    def recording_has_a_timeline() -> bool:
+        return any("game-timelines" in path.read_text() for path in tmp_path.glob("*.jsonl"))
+
+    async def on_end_of_game(stats: JsonValue) -> None:
+        # The timeline is not in the recording yet when the stats are handed on (phase 11.7).
+        handed_on.append((stats, await asyncio.to_thread(recording_has_a_timeline)))
+
+    async with (
+        serve(scripted_game(a_game_of(3, ends_with_game_end=True))) as game_url,
+        aiohttp.ClientSession() as session,
+        serve(stand_in_client(timeline_misses=2)) as client_url,
+    ):
+        await record_one_game(
+            GameApiClient(session, game_url, tls_context=None),
+            client_at(session, client_url),
+            tmp_path,
+            FAST_TIMINGS,
+            on_end_of_game=on_end_of_game,
+        )
+    assert handed_on == [(END_OF_GAME_STATS, False)]

@@ -4,6 +4,16 @@ What changed in this project and why, newest first. A commit shows the differenc
 gives the reason. The `handoff` skill adds to it at every checkpoint, and the `write-okf-concept`
 skill has the format.
 
+## 2026-10-29
+
+- Phase 11.7, a quick case ("approved, keep building 11.7"). Right after a game, the client's
+  end-of-game stats are handed on before the timeline is waited for, and the post-game window gets
+  a case at once from the scoreboard: kills, deaths, assists, vision, damage and time dead, with
+  their shares, and no lane verdict, since lanes need the timeline. It says it is a quick case and
+  is replaced by the full case when the details and timeline come; if they never come, it stays.
+  The stats' shape is still unseen in a real game, so it is read as the client is documented to
+  send it, and anything missing gives no line rather than a guess.
+
 ## 2026-10-28
 
 - Phase 11.8, Claude's take ("approved, keep building 11.8"). With its setting on, the lines ⌃⌥C

@@ -45,6 +45,8 @@ class LastGameRoast(BaseModel):
     game: ClientGame
     # The player on this machine, whose side is "our team".
     defendant_participant_id: int
+    # A quick case from the end-of-game stats (phase 11.7), until the details and timeline come.
+    is_quick: bool = False
 
 
 def roast_path_beside(summary_path: Path) -> Path:

@@ -44,6 +44,10 @@ const SOURCE_NAMES: Readonly<Record<string, string>> = {
 };
 // How soon the window asks again while Claude's take is being written.
 const CLAUDE_TAKE_RECHECK_MILLISECONDS = 1500;
+// How soon the window asks again while the case is the quick one, for the full case.
+const QUICK_CASE_RECHECK_MILLISECONDS = 15000;
+const QUICK_CASE_TEXT =
+  "A quick case from the end-of-game scoreboard. The full case, with the lanes, replaces it when the match timeline comes.";
 const NO_CASE_TEXT =
   "No case for this game: its details have not come yet, or it was not two teams of five.";
 
@@ -231,7 +235,7 @@ export function renderCaseBody(body: HTMLElement, view: CaseView): void {
       `${String(view.closing_line.length)} / ${String(view.closing_line_limit)} characters · paste it yourself; nothing is sent to chat`,
     ),
   );
-  const parts: HTMLElement[] = [verdict];
+  const parts: HTMLElement[] = view.is_quick ? [htmlElement("p", "case-quick", QUICK_CASE_TEXT), verdict] : [verdict];
   const claudeTake = claudeTakeElement(view);
   if (view.board.length > 0) {
     parts.push(boardElement(view, openExhibits));
@@ -334,13 +338,19 @@ export function caseSectionElement(fetchCase: (path: string) => Promise<unknown>
     }
     markChoice();
     renderCaseBody(body, answer);
-    if (answer.claude_take_pending) {
-      // Ask again for the same choice until Claude's take arrives; a new pick replaces this.
+    // Ask again for the same choice until Claude's take arrives, or the full case replaces the
+    // quick one; a new pick replaces this.
+    const recheckMilliseconds = answer.claude_take_pending
+      ? CLAUDE_TAKE_RECHECK_MILLISECONDS
+      : answer.is_quick
+        ? QUICK_CASE_RECHECK_MILLISECONDS
+        : null;
+    if (recheckMilliseconds !== null) {
       window.setTimeout(() => {
         if (request === latestRequest) {
           void load();
         }
-      }, CLAUDE_TAKE_RECHECK_MILLISECONDS);
+      }, recheckMilliseconds);
     }
   };
 

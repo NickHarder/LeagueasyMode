@@ -154,7 +154,7 @@ def read_client_game(
         *_game_exhibits(details, participants),
     ]
     scoreboard_by_key = {exhibit.key: exhibit for exhibit in exhibits}
-    exhibits_by_key = {**scoreboard_by_key, **_share_exhibits(players, scoreboard_by_key)}
+    exhibits_by_key = {**scoreboard_by_key, **share_exhibits(players, scoreboard_by_key)}
     timeline_exhibit_list = timeline_exhibits(
         timeline_payload, list(players), exhibits_by_key, lane_rules
     )
@@ -322,7 +322,7 @@ def _scoreboard_exhibits(
     return exhibits
 
 
-def _share_exhibits(
+def share_exhibits(
     players: tuple[RoastPlayer, ...], scoreboard_by_key: dict[str, Exhibit]
 ) -> dict[str, Exhibit]:
     """Return each team's kills, and each player's share of their team's kills and damage.

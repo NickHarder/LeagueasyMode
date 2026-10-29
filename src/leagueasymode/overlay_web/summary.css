@@ -800,3 +800,13 @@ body {
   outline: 2px solid var(--series-1);
   outline-offset: 2px;
 }
+
+/* A quick case from the end-of-game stats (phase 11.7). */
+.case-quick {
+  margin: 0 0 10px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: var(--page);
+  color: var(--text-secondary);
+  font-size: 12px;
+}
