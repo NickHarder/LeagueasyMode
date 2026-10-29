@@ -2,6 +2,10 @@
 okf_version: "0.2"
 ---
 
+# Audit
+
+* [Audit](AUDIT.md) - What LeagueasyMode builds on, audited in five areas (security, performance, architecture, data quality, compliance), the findings that matter most and what each one changes in the plan.
+
 # Key Metrics
 
 * [Key metrics](KEY_METRICS.md) - One north star, four drivers and two guardrails that prove LeagueasyMode's promise to the player, each scored from the owner's recorded games against League's post-game timeline or counted from what the app sends.
@@ -16,6 +20,7 @@ okf_version: "0.2"
 
 # Subdirectories
 
+* [audit](audit/index.md) - 5 concepts: Audit Area.
 * [history](history/index.md) - 1 concept: Retrospective.
 * [metrics](metrics/index.md) - 7 concepts: Metric.
 * [plans](plans/index.md) - 12 concepts: Plan.
