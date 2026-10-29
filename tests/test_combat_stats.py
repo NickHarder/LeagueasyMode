@@ -9,10 +9,13 @@ from leagueasymode.engine import compute_overlay_state
 from leagueasymode.game_state import GameSnapshot, ScoreboardPlayer
 from leagueasymode.inference.combat_stats import (
     ATTACK_SPEED_CAP,
+    DEFAULT_MOVE_SPEED,
     estimated_combat_stats,
     move_speed_after_caps,
+    move_speed_of,
     stat_growth,
 )
+from leagueasymode.inference.jungle_path import JunglePathTracker
 from leagueasymode.inference.players import player_cards
 from leagueasymode.overlay_state import CombatStats
 
@@ -152,3 +155,21 @@ def test_without_the_patch_stats_only_the_player_on_this_machine_has_stats() -> 
 def test_the_overlay_state_carries_every_players_stats_once_the_patch_stats_are_known() -> None:
     state = compute_overlay_state(all_game_data(600.0), patch_stats=fixture_patch_stats())
     assert all(card.combat_stats is not None for card in state.players)
+
+
+def test_a_move_speed_of_zero_from_the_game_is_no_speed_at_all() -> None:
+    # The owner's Mac, build 170, a Swiftplay game: the game gave the player's move speed as 0
+    # (as it may while they are dead), and the jungle path divided by it, which stopped the
+    # engine. The usual speed stands in, as for a player it cannot estimate.
+    payload = all_game_data(600.0, active_player_index=1)
+    assert isinstance(payload, dict)
+    active_player = payload["activePlayer"]
+    assert isinstance(active_player, dict)
+    champion_stats = active_player["championStats"]
+    assert isinstance(champion_stats, dict)
+    champion_stats["moveSpeed"] = 0.0
+    snapshot = GameSnapshot.model_validate(payload)
+    you = next(player for player in snapshot.players if snapshot.is_active_player(player))
+    assert move_speed_of(snapshot, you, None) == DEFAULT_MOVE_SPEED
+    state = compute_overlay_state(payload, jungle_tracker=JunglePathTracker())
+    assert state.is_game_running

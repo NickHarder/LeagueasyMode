@@ -15,10 +15,12 @@ from leagueasymode.recording.file_format import (
     ClientResource,
     RecordingEnded,
     RecordingFormatError,
+    RecordingLine,
     RecordingStarted,
     SnapshotDelta,
     SnapshotKeyframe,
 )
+from leagueasymode.recording.reader import iter_recording_lines
 
 DEFAULT_KEYFRAME_INTERVAL_SECONDS: Final = 60.0
 # xz's preset 6 keeps an 8 MiB dictionary, so a snapshot is compressed against the keyframes and
@@ -136,18 +138,7 @@ class RecordingWriter:
             The compressed recording's path.
         """
         self._file.close()
-        stem = self.plain_path.name.removesuffix(PLAIN_SUFFIX)
-        compressed_path = self.plain_path.with_name(stem + COMPRESSED_SUFFIX)
-        partial_path = compressed_path.with_name(compressed_path.name + ".partial")
-        with (
-            self.plain_path.open("rb") as plain_file,
-            lzma.open(partial_path, "wb", preset=XZ_PRESET) as compressed_file,
-        ):
-            for chunk in iter(lambda: plain_file.read(1 << 20), b""):
-                compressed_file.write(chunk)
-        partial_path.replace(compressed_path)
-        self.plain_path.unlink()
-        return compressed_path
+        return compress_recording(self.plain_path)
 
     def abandon(self) -> None:
         """Close the file and leave it uncompressed, as a crash would."""
@@ -170,3 +161,76 @@ class RecordingWriter:
         """
         self._file.write(record.model_dump_json() + "\n")
         self._file.flush()
+
+
+def compress_recording(plain_path: Path) -> Path:
+    """Compress a closed recording to `<name>.jsonl.xz`, and remove the plain file.
+
+    The plain file is removed only after the compressed one is complete, so a crash while
+    compressing leaves the plain file to read.
+
+    Args:
+        plain_path: The closed `.jsonl` recording.
+
+    Returns:
+        The compressed recording's path.
+    """
+    stem = plain_path.name.removesuffix(PLAIN_SUFFIX)
+    compressed_path = plain_path.with_name(stem + COMPRESSED_SUFFIX)
+    partial_path = compressed_path.with_name(compressed_path.name + ".partial")
+    with (
+        plain_path.open("rb") as plain_file,
+        lzma.open(partial_path, "wb", preset=XZ_PRESET) as compressed_file,
+    ):
+        for chunk in iter(lambda: plain_file.read(1 << 20), b""):
+            compressed_file.write(chunk)
+    partial_path.replace(compressed_path)
+    plain_path.unlink()
+    return compressed_path
+
+
+def close_unfinished_recording(plain_path: Path, reason: str) -> Path:
+    """Close a recording an engine left open, as when the app quit before the game's timeline came.
+
+    The recording keeps every whole line; a last line cut part way is dropped. One with no last
+    line gets one, at the time of its last record, saying why; then it is compressed like any.
+
+    Args:
+        plain_path: The open `.jsonl` recording, which nothing writes any more.
+        reason: Why it stopped, for its last line.
+
+    Returns:
+        The compressed recording's path.
+
+    Raises:
+        RecordingFormatError: The file is not a recording.
+    """
+    records = list(iter_recording_lines(plain_path))
+    written_bytes = plain_path.read_bytes()
+    whole_lines = written_bytes[: written_bytes.rfind(b"\n") + 1]
+    plain_path.write_bytes(whole_lines + _ending_line(records, reason))
+    return compress_recording(plain_path)
+
+
+def _ending_line(records: list[RecordingLine], reason: str) -> bytes:
+    """Return the last line a recording lacks, or nothing when it has one.
+
+    Args:
+        records: The recording's records.
+        reason: Why it stopped.
+
+    Returns:
+        The line, at the time of the last record, or empty bytes.
+    """
+    if isinstance(records[-1], RecordingEnded):
+        return b""
+    last_seconds = max(
+        (
+            record.received_at_seconds
+            for record in records
+            if not isinstance(record, RecordingStarted)
+        ),
+        default=0.0,
+    )
+    ended = RecordingEnded(received_at_seconds=last_seconds, reason=reason)
+    return (ended.model_dump_json() + "\n").encode()

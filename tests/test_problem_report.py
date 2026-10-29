@@ -80,6 +80,11 @@ def test_a_report_holds_the_facts_the_log_and_the_game_so_far_without_a_name(
     assert report["note"] == "keys stopped, [player] was there"
     assert report["app_facts"]["keyboard"] == "Keyboard: handed back once"
     assert report["crash_reports"] == ["crash-1.json"]
+    # The recordings' folder, as names and sizes: what was recorded, closed and sent shows
+    # without asking the owner to look (none of their games had reached the repository).
+    assert [(item["name"], item["size_bytes"] > 0) for item in report["recordings"]] == [
+        ("game-now.jsonl.xz", True)
+    ]
     assert report["status"]["parts"]
     log_text = (report_directory / "engine-log.txt").read_text()
     assert log_text.startswith("line 400\n") and log_text.endswith("line 899\n")

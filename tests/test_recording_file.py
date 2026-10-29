@@ -16,7 +16,7 @@ from leagueasymode.recording.file_format import (
     SnapshotKeyframe,
 )
 from leagueasymode.recording.reader import iter_game_frames, iter_recording_lines
-from leagueasymode.recording.writer import RecordingWriter
+from leagueasymode.recording.writer import RecordingWriter, close_unfinished_recording
 
 STARTED_AT: Final = datetime.datetime(2026, 10, 8, 14, 0, tzinfo=datetime.UTC)
 
@@ -134,3 +134,37 @@ def test_writing_starts_with_the_header(tmp_path: Path) -> None:
     writer = RecordingWriter(tmp_path / "game.jsonl", keyframe_interval_seconds=60.0)
     with pytest.raises(RecordingFormatError, match="write_started"):
         writer.write_snapshot(received_at_seconds=0.0, payload=game_state(0.0, 0))
+
+
+def test_a_recording_left_open_is_closed_with_what_it_has(tmp_path: Path) -> None:
+    # An engine stopped before it closed a game (none of the owner's games was ever sent): the
+    # recording is cut at its last whole line, ends with why, and is compressed like any other.
+    plain_path = tmp_path / "game.jsonl"
+    writer = RecordingWriter(plain_path, keyframe_interval_seconds=60.0)
+    writer.write_started(started_at=STARTED_AT, recorder_version="test", poll_interval_seconds=0.5)
+    writer.write_snapshot(received_at_seconds=0.0, payload=game_state(0.0, 0))
+    writer.write_snapshot(received_at_seconds=0.5, payload=game_state(0.5, 1))
+    writer.abandon()
+    with plain_path.open("a", encoding="utf-8") as plain_file:
+        plain_file.write('{"kind": "snapshot_delta", "received_at_sec')
+    compressed_path = close_unfinished_recording(plain_path, "closed after the engine stopped")
+    assert compressed_path == tmp_path / "game.jsonl.xz"
+    assert not plain_path.exists()
+    records = list(iter_recording_lines(compressed_path))
+    assert records[-1] == RecordingEnded(
+        received_at_seconds=0.5, reason="closed after the engine stopped"
+    )
+    frames = list(iter_game_frames(compressed_path))
+    assert [frame.payload for frame in frames] == [game_state(0.0, 0), game_state(0.5, 1)]
+
+
+def test_a_recording_that_ended_but_was_not_compressed_keeps_its_end(tmp_path: Path) -> None:
+    plain_path = tmp_path / "game.jsonl"
+    writer = RecordingWriter(plain_path, keyframe_interval_seconds=60.0)
+    writer.write_started(started_at=STARTED_AT, recorder_version="test", poll_interval_seconds=0.5)
+    writer.write_snapshot(received_at_seconds=0.0, payload=game_state(0.0, 0))
+    writer.write_ended(received_at_seconds=3.0, reason="game ended")
+    writer.abandon()
+    compressed_path = close_unfinished_recording(plain_path, "closed after the engine stopped")
+    records = list(iter_recording_lines(compressed_path))
+    assert records[-1] == RecordingEnded(received_at_seconds=3.0, reason="game ended")
