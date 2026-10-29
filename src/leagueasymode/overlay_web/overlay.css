@@ -122,9 +122,10 @@ body {
   color: var(--widget-advantage);
 }
 
+/* Below League's kill feed (top right, to 30% of the window's height), so it covers none of it. */
 .enemy-strip {
   position: fixed;
-  top: 64px;
+  top: calc(30vh + 8px);
   right: 8px;
   display: flex;
   flex-direction: column;
@@ -477,6 +478,27 @@ body {
 
 .editing-layout [data-movable]:active {
   cursor: grabbing;
+}
+
+/* League's own HUD, shaded and named in edit mode: a widget dropped there is moved off it
+   (layout slice L.3). */
+#hud-regions {
+  display: none;
+}
+
+.editing-layout #hud-regions {
+  display: block;
+}
+
+.hud-region {
+  position: fixed;
+  box-sizing: border-box;
+  padding: 2px 6px;
+  border: 1px dashed rgb(255 122 107 / 0.8);
+  background: rgb(255 122 107 / 0.18);
+  color: var(--widget-text);
+  font: 600 11px/16px system-ui, -apple-system, sans-serif;
+  pointer-events: none;
 }
 
 /* A widget the player turned off never shows over the game; while editing it stays, faded, so it

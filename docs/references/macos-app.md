@@ -4,7 +4,7 @@ title: The macOS overlay app
 description: What the menu bar app does, how to run it from a clone, how to build, release and open the app that carries its own engine, its update check and open at login, and the steps for the tracer bullet's test on a Mac over League in each display mode.
 tags: [macos, overlay, tracer-bullet]
 status: draft
-generated: { by: claude-code/cloud, at: 2026-10-29T05:48:08Z }
+generated: { by: claude-code/cloud, at: 2026-10-29T05:52:05Z }
 sources:
   - id: build-update
     resource: ../../overlay/macos/Sources/OverlayCore/BuildUpdate.swift
@@ -123,7 +123,12 @@ widget can be turned off: in edit mode the notice at the bottom has a "Hide …"
 (it says "Show …" once off, and the widget stays in sight there, faded), and each widget's group in
 Settings a "Shown" switch; off, it never shows over the game (layout slice L.5). The plan put the ×
 on the widget's own label; the widgets draw their contents anew four times a second, which would
-take a button inside them away, so it sits in the notice instead. Escape, ⌃⌥⌘L, the menu item again, hiding the overlay, or two minutes end it, and
+take a button inside them away, so it sits in the notice instead. In edit mode League's own HUD is shaded and
+named (score, kill feed, champion bar, chat, ally portraits, and the minimap where the minimap
+layer sits); a widget dropped on one, or grown over it, is moved the shortest way off it, and no
+widget is left outside the window (the owner: "move them off automatically"; layout slice L.3).
+The regions are shares of the window, a first guess at League's HUD at its default size, to be
+checked on the Mac. The enemy strip's usual place moved below the kill feed, which it covered. Escape, ⌃⌥⌘L, the menu item again, hiding the overlay, or two minutes end it, and
 every click goes to the game again; "Reset layout", in the menu or on the notice at the bottom of
 the overlay while editing, puts every widget back in its usual place and size.[^layout-editing]
 
