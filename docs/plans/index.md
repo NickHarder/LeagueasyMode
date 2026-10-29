@@ -1,5 +1,6 @@
 # Plan
 
+* [Overlay layout: move, resize and see through](overlay-layout.md) - A plan, for the owner's approval, to let the player place each widget exactly, resize it and see the game through it, tied to the use cases in USERS.md, with the build order and what was considered and cut.
 * [Phase 10: testing on the Mac without the back and forth](phase-10-field-testing.md) - A review of the first tests over real games on the owner's Mac and of what made each round slow, and a proposed build order for what removes the owner from the loop, versions told apart, the engine's log kept, a one-click problem report, a tutorial, builds that install themselves, and what is the owner's call.
 * [Phase 11: roasts with receipts, after the game and in it](phase-11-roasts.md) - How the overlay gets nothingsmyfault's cited roasts, a case file for anyone in the game in the post-game window and short moments about friends during it, both copied for chat with one shortcut and never posted, in a proposed build order with what each needs and where the owner decides.
 * [Phase 2: patch data and exact facts](phase-2-exact-facts.md) - The slices of phase 2 of the approved plan, in build order, with what each shows, what it needs and the points where the owner decides.
