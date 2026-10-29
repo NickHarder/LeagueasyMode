@@ -7,7 +7,7 @@
  * kept in `friends.json`; the overlay and the post-game case mark those players (phase 11.5).
  */
 import { USUAL_MINIMAP_FIT, WIDGET_TITLES } from "./layout.js";
-import { MAX_MINIMAP_FIT_SCALE, MAX_MINIMAP_NUDGE_SHARE, MAX_WIDGET_SCALE, MIN_MINIMAP_FIT_SCALE, MIN_WIDGET_SCALE, MOVABLE_WIDGETS, PREFERENCE_NAMES, isOverlayLayout, isOverlayPreferences, } from "./state.js";
+import { MAX_MINIMAP_FIT_SCALE, MAX_MINIMAP_NUDGE_SHARE, MAX_WIDGET_SCALE, MIN_MINIMAP_FIT_SCALE, MIN_OVERLAY_OPACITY, MIN_WIDGET_SCALE, MOVABLE_WIDGETS, PREFERENCE_NAMES, isOverlayLayout, isOverlayPreferences, } from "./state.js";
 // The header the server asks of a change, which a page elsewhere cannot send.
 const REQUEST_HEADER = "X-LeagueasyMode-Request";
 const REQUEST_VALUE = "preferences";
@@ -371,6 +371,15 @@ function layoutElement(startLayout) {
     });
     const fitGroup = htmlElement("fieldset", "settings-layout-widget");
     fitGroup.append(htmlElement("legend", "", "Minimap layer"), htmlElement("p", "settings-description", "Fits the layer over League's minimap where the two do not line up."), fitSize.row, fitAcross.row, fitDown.row, fitReset);
+    const opacityRange = { min: MIN_OVERLAY_OPACITY * PERCENT, max: PERCENT, step: 5 };
+    const opacity = sliderElement("overlay-opacity", "Opacity", "Background opacity", opacityRange, (percent) => {
+        change({ ...layout, opacity: percent / PERCENT });
+    });
+    refreshers.push(() => {
+        opacity.setValue(Math.round(layout.opacity * PERCENT));
+    });
+    const opacityGroup = htmlElement("fieldset", "settings-layout-widget");
+    opacityGroup.append(htmlElement("legend", "", "See-through"), htmlElement("p", "settings-description", "How much of the widgets' backgrounds shows, so the game shows through them; their text stays as it is."), opacity.row);
     for (const refresh of refreshers) {
         refresh();
     }
@@ -392,7 +401,7 @@ function layoutElement(startLayout) {
             }
         })();
     });
-    section.append(htmlElement("h2", "", "Layout"), htmlElement("p", "settings-description", "Where each widget sits, as a share of League's window from its usual place, and its size. The overlay moves as you slide; dragging in Edit layout does the same."), ...widgetGroups, fitGroup, status);
+    section.append(htmlElement("h2", "", "Layout"), htmlElement("p", "settings-description", "Where each widget sits, as a share of League's window from its usual place, and its size. The overlay moves as you slide; dragging in Edit layout does the same."), opacityGroup, ...widgetGroups, fitGroup, status);
     return section;
 }
 /** Draw the form, one switch for each preference, the layout, the friends list and Claude's take. */

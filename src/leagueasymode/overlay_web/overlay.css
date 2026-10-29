@@ -5,8 +5,9 @@
   --widget-enemy: #ff7a6b;
   --widget-text: #f3efe4;
   --widget-muted: #b9b3a3;
-  --widget-surface: rgb(10 12 18 / 0.72);
-  --widget-border: rgb(255 255 255 / 0.14);
+  /* The player's opacity (Settings, Layout) fades the backgrounds and borders, never the text. */
+  --widget-surface: rgb(10 12 18 / calc(0.72 * var(--overlay-opacity, 1)));
+  --widget-border: rgb(255 255 255 / calc(0.14 * var(--overlay-opacity, 1)));
   --widget-alive: #f0c75e;
 }
 

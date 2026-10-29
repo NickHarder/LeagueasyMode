@@ -6,6 +6,9 @@ skill has the format.
 
 ## 2026-10-29
 
+- Layout slice L.4, see-through: an opacity slider in Settings fades the widgets' backgrounds and
+  borders from 100% down to 40%, so the game shows through; the text stays as it is. Kept in
+  `layout.json`; Reset layout leaves it.
 - Moments and team calls show at a glance again (the owner: "make moments and team calls show at
   a glance"): the newest one shows beside the two newest action callouts without taking their
   place, still never spoken; the rest wait for Tab or Option as before.

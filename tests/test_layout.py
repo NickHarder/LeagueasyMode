@@ -88,6 +88,20 @@ def test_the_minimap_layer_is_fitted_only_a_little() -> None:
         raise AssertionError(f"{out_of_range} was accepted")
 
 
+def test_the_widgets_backgrounds_fade_from_full_to_40_percent(tmp_path: Path) -> None:
+    # Layout slice L.4: the game shows through the widgets; their text stays as it is.
+    assert OverlayLayout().opacity == 1.0
+    layout_path = tmp_path / "layout.json"
+    save_layout(layout_path, OverlayLayout(opacity=0.6))
+    assert load_layout(layout_path).opacity == 0.6
+    for out_of_range in (0.39, 1.01):
+        try:
+            OverlayLayout(opacity=out_of_range)
+        except ValidationError:
+            continue
+        raise AssertionError(f"{out_of_range} was accepted")
+
+
 def test_a_widget_moves_at_most_a_whole_screen() -> None:
     for out_of_reach in (1.5, -1.01):
         try:

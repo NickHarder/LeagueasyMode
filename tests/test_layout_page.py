@@ -236,3 +236,14 @@ async def test_reset_layout_keeps_the_minimap_layers_fit(tmp_path: Path) -> None
         await page.get_by_role("button", name="Reset layout").click()
         # The fit lines the layer up with League's minimap; it is not a widget's place.
         assert await layout_when(engine, fitted) == fitted
+
+
+async def test_the_widgets_backgrounds_fade_with_the_opacity(tmp_path: Path) -> None:
+    layout_path = tmp_path / "layout.json"
+    layout_path.write_text(OverlayLayout(opacity=0.5).model_dump_json())
+    async with open_overlay(layout_path) as (page, _engine):
+        await page.evaluate("window.leagueasymodeSetEditing(true)")
+        # Edit mode draws the empty enemy strip on its background: 0.72 at full, half of it now.
+        await expect(page.locator("#enemy-strip")).to_have_css(
+            "background-color", "rgba(10, 12, 18, 0.36)"
+        )

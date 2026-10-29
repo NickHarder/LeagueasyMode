@@ -68,6 +68,7 @@ declare global {
 let currentOffsets: Partial<Record<MovableWidget, WidgetOffset>> = {};
 let currentScales: Partial<Record<MovableWidget, number>> = {};
 let currentMinimapFit: MinimapFit = USUAL_MINIMAP_FIT;
+let currentOpacity = 1;
 let draggedWidget: MovableWidget | null = null;
 let wheelSaveTimer: number | undefined;
 
@@ -80,7 +81,7 @@ function scaleOf(value: number): number {
 }
 
 function currentLayout(): OverlayLayout {
-  return { offsets: currentOffsets, scales: currentScales, minimap_fit: currentMinimapFit };
+  return { offsets: currentOffsets, scales: currentScales, minimap_fit: currentMinimapFit, opacity: currentOpacity };
 }
 
 function placeWidget(widget: MovableWidget, offset: WidgetOffset): void {
@@ -123,7 +124,10 @@ export function applyLayout(layout: OverlayLayout): void {
   currentOffsets = { ...layout.offsets };
   currentScales = { ...layout.scales };
   currentMinimapFit = layout.minimap_fit;
+  currentOpacity = layout.opacity;
   fitMinimap(layout.minimap_fit);
+  // The widgets' backgrounds and borders fade; their text does not (overlay.css).
+  document.documentElement.style.setProperty("--overlay-opacity", String(layout.opacity));
   for (const widget of MOVABLE_WIDGETS) {
     if (widget !== draggedWidget) {
       placeWidget(widget, layout.offsets[widget] ?? USUAL_PLACE);
@@ -152,9 +156,14 @@ function setEditing(isEditing: boolean): void {
   document.body.classList.toggle(EDITING_CLASS, isEditing);
 }
 
-/** Put every widget back; the minimap layer's fit, which lines it up with League's, stays. */
+/** Put every widget back; the minimap layer's fit and the opacity, which are no widget's place, stay. */
 function resetLayout(): void {
-  const usualLayout: OverlayLayout = { offsets: {}, scales: {}, minimap_fit: currentMinimapFit };
+  const usualLayout: OverlayLayout = {
+    offsets: {},
+    scales: {},
+    minimap_fit: currentMinimapFit,
+    opacity: currentOpacity,
+  };
   applyLayout(usualLayout);
   void saveLayout(usualLayout);
 }
