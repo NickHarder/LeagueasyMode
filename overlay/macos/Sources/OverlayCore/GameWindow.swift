@@ -75,15 +75,18 @@ public enum GameWindowLocator {
     static let gameOwnerName = "leagueoflegends"
     /// A window within this many points of each edge of its screen fills it.
     static let fillTolerance: CGFloat = 2
+    /// A window of League's above layer 0 is the game only when at least this large: borderless
+    /// can raise the game's window, but League's small windows up there are not the game.
+    static let smallestRaisedGameSize = CGSize(width: 640, height: 360)
 
-    /// Returns League's game window: its largest ordinary window on screen.
+    /// Returns League's game window: its largest window on screen, ordinary or raised and large.
     ///
     /// - Parameter windows: The windows on screen.
     /// - Returns: The game's window, or nil when none is on screen.
     public static func gameWindow(in windows: [ListedWindow]) -> ListedWindow? {
         windows
             .filter { window in
-                window.layer == 0
+                (window.layer == 0 || isLargeEnoughToBeRaisedGame(window))
                     && normalizedName(window.ownerName) == gameOwnerName
                     && window.bounds.width > 0 && window.bounds.height > 0
             }
@@ -136,6 +139,23 @@ public enum GameWindowLocator {
                 height: hasRoomForTitleBar ? gameFrame.height - titleBarHeight : gameFrame.height
             )
         )
+    }
+
+    /// Returns the window level the overlay needs to show above the game: one above the game's
+    /// layer when League raised its window above ordinary ones, as borderless can.
+    ///
+    /// - Parameter gameWindow: League's game window, or nil.
+    /// - Returns: The level, or nil when the game is on layer 0 or not on screen.
+    public static func levelAbove(gameWindow: ListedWindow?) -> Int? {
+        guard let gameWindow, gameWindow.layer > 0 else {
+            return nil
+        }
+        return gameWindow.layer + 1
+    }
+
+    private static func isLargeEnoughToBeRaisedGame(_ window: ListedWindow) -> Bool {
+        window.bounds.width >= smallestRaisedGameSize.width
+            && window.bounds.height >= smallestRaisedGameSize.height
     }
 
     private static func normalizedName(_ name: String) -> String {

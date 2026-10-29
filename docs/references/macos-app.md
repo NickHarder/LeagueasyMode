@@ -4,7 +4,7 @@ title: The macOS overlay app
 description: What the menu bar app does, how to run it from a clone, how to build, release and open the app that carries its own engine, its update check and open at login, and the steps for the tracer bullet's test on a Mac over League in each display mode.
 tags: [macos, overlay, tracer-bullet]
 status: draft
-generated: { by: claude-code/cloud, at: 2026-10-29T06:04:35Z }
+generated: { by: claude-code/cloud, at: 2026-10-29T20:01:28Z }
 sources:
   - id: build-update
     resource: ../../overlay/macos/Sources/OverlayCore/BuildUpdate.swift
@@ -177,7 +177,11 @@ window ("Overlay: page loaded", or "Overlay: the page did not load (…)" with t
 reason; a page whose process stops is loaded again), toggles the overlay, and picks the window
 level, since which level stays above League depends on how League draws:[^levels]
 Floating, Status bar, Screen saver, and Above a captured display (one above the level a game that
-captures the display draws at). "How to use…" opens the shortcuts, in Mac and Windows-keyboard
+captures the display draws at). Whatever the choice, when League raises its game window above
+ordinary windows, as borderless can, the overlay goes one level above it, and the status page
+says so ("raised above League's window"); a large League window above layer 0 counts as the
+game, a small one does not (the owner, 2026-10-29, in borderless: the overlay was "behind the
+game almost"). "How to use…" opens the shortcuts, in Mac and Windows-keyboard
 names (⌃⌥⌘L is Ctrl + Alt + Windows + L), what each widget and minimap mark means, the menu, and
 what to do when the mouse or keyboard acts up; the app opens it by itself once, the first time
 the engine is up. "Last game…" opens the post-game window, "Settings…" the settings page and
