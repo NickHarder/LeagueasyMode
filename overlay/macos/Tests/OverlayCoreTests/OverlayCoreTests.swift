@@ -810,22 +810,38 @@ final class AutomaticUpdateTests: XCTestCase {
     func testABuildIsInstalledOnlyWithNoGameOnScreen() {
         XCTAssertTrue(
             AutomaticUpdate.canInstallNow(
-                isOn: true, placement: .mainScreen(screen), isEditingLayout: false, isInstalling: false
+                isOn: true, placement: .mainScreen(screen), isGameRunning: false, isEditingLayout: false,
+                isInstalling: false
             )
         )
         for placement in [GamePlacement.screen(screen), .window(screen)] {
             XCTAssertFalse(
-                AutomaticUpdate.canInstallNow(isOn: true, placement: placement, isEditingLayout: false, isInstalling: false)
+                AutomaticUpdate.canInstallNow(isOn: true, placement: placement, isGameRunning: false, isEditingLayout: false, isInstalling: false)
             )
         }
-        XCTAssertFalse(AutomaticUpdate.canInstallNow(isOn: true, placement: nil, isEditingLayout: false, isInstalling: false))
+        XCTAssertFalse(AutomaticUpdate.canInstallNow(isOn: true, placement: nil, isGameRunning: false, isEditingLayout: false, isInstalling: false))
+    }
+
+    func testNotWhileLeaguesGameRunsWithItsWindowOffScreen() {
+        // The owner's game of 2026-10-29 22:02 was cut in two when build 222 installed itself:
+        // no game window was on screen, so the placement said no game.
+        XCTAssertFalse(
+            AutomaticUpdate.canInstallNow(
+                isOn: true, placement: .mainScreen(screen), isGameRunning: true, isEditingLayout: false,
+                isInstalling: false
+            )
+        )
+        XCTAssertTrue(GameWindowLocator.isGameApp(named: "League of Legends"))
+        XCTAssertTrue(GameWindowLocator.isGameApp(named: "LeagueofLegends"))
+        XCTAssertFalse(GameWindowLocator.isGameApp(named: "LeagueClientUx"))
+        XCTAssertFalse(GameWindowLocator.isGameApp(named: "League of Legends Helper"))
     }
 
     func testNotWhenOffEditingOrAlreadyInstalling() {
         let noGame = GamePlacement.mainScreen(screen)
-        XCTAssertFalse(AutomaticUpdate.canInstallNow(isOn: false, placement: noGame, isEditingLayout: false, isInstalling: false))
-        XCTAssertFalse(AutomaticUpdate.canInstallNow(isOn: true, placement: noGame, isEditingLayout: true, isInstalling: false))
-        XCTAssertFalse(AutomaticUpdate.canInstallNow(isOn: true, placement: noGame, isEditingLayout: false, isInstalling: true))
+        XCTAssertFalse(AutomaticUpdate.canInstallNow(isOn: false, placement: noGame, isGameRunning: false, isEditingLayout: false, isInstalling: false))
+        XCTAssertFalse(AutomaticUpdate.canInstallNow(isOn: true, placement: noGame, isGameRunning: false, isEditingLayout: true, isInstalling: false))
+        XCTAssertFalse(AutomaticUpdate.canInstallNow(isOn: true, placement: noGame, isGameRunning: false, isEditingLayout: false, isInstalling: true))
     }
 }
 

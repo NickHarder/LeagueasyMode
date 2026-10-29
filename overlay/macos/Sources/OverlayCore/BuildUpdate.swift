@@ -158,21 +158,25 @@ private struct AssetAnswer: Decodable {
 }
 
 /// When the app installs a newer build by itself: with the player's switch on, and never while
-/// League's game window is on screen, the widgets are being moved, or an install is running.
-/// Installing restarts the app, which would blank the overlay for a few seconds in a game.
+/// League's game runs, its window is on screen, the widgets are being moved, or an install is
+/// running. Installing restarts the app, which would blank the overlay for a few seconds in a game
+/// and split its recording in two; a game in another Space or behind another app has no window on
+/// screen, so the game's process is asked too (the owner's game of 2026-10-29 22:02, cut in two by
+/// build 222).
 public enum AutomaticUpdate {
     /// Returns whether the app may install a build now, without asking.
     ///
     /// - Parameters:
     ///   - isOn: The player's switch, "Install updates automatically".
     ///   - placement: Where the overlay is; only `.mainScreen` means no game window is on screen.
+    ///   - isGameRunning: Whether League's game app runs, on screen or not.
     ///   - isEditingLayout: Whether the widgets are being moved.
     ///   - isInstalling: Whether an install is already running.
     /// - Returns: Whether to install now.
     public static func canInstallNow(
-        isOn: Bool, placement: GamePlacement?, isEditingLayout: Bool, isInstalling: Bool
+        isOn: Bool, placement: GamePlacement?, isGameRunning: Bool, isEditingLayout: Bool, isInstalling: Bool
     ) -> Bool {
-        guard isOn, !isEditingLayout, !isInstalling, case .some(.mainScreen) = placement else {
+        guard isOn, !isGameRunning, !isEditingLayout, !isInstalling, case .some(.mainScreen) = placement else {
             return false
         }
         return true

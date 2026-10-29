@@ -153,6 +153,14 @@ public enum GameWindowLocator {
         return gameWindow.layer + 1
     }
 
+    /// Returns whether an app is League's game, by its name: "League of Legends", not the client.
+    ///
+    /// - Parameter appName: A running app's name.
+    /// - Returns: Whether it is the game.
+    public static func isGameApp(named appName: String) -> Bool {
+        normalizedName(appName) == gameOwnerName
+    }
+
     private static func isLargeEnoughToBeRaisedGame(_ window: ListedWindow) -> Bool {
         window.bounds.width >= smallestRaisedGameSize.width
             && window.bounds.height >= smallestRaisedGameSize.height
