@@ -6,6 +6,9 @@ skill has the format.
 
 ## 2026-10-29
 
+- No kit eval suite for now: asked "Do we need evals?", Claude advised against it, as the product
+  has no model in the loop to replay and its tests and the accuracy history already do the work
+  evals would; recorded in HANDOFF.md, Settled.
 - The owner's volume, the last open field of P-01: "Some days I play zero. Others I will play 1-3
   normals or 2-4 arams." DR-01's target drops from 10 to 5 games a week, every game played; the
   20 Rift games the thresholds need take six to eight weeks.
