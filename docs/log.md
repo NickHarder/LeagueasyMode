@@ -13,6 +13,9 @@ skill has the format.
   undoes the at-a-glance change above; ⌃⌥C copies them, and their switches say whether it does.
   A level 6 and an item likely bought are no longer callouts: the enemy's row shows the rank of
   their ultimate and their gold, and the item was a guess from components, recent games and class.
+- Handoff refreshed at `ff23895`: the layout plan built (#84, #85, #91, #92, #93), the overlay quiet
+  at a glance with details on Tab or Option (#87, #88) and the Tab overview (#94), fewer calls on
+  deaths (#86), and the owner's unsent games closed and sent (#89).
 - The Tab overview, after the owner's photos of Mobalytics' "Player Overview": "When tabbed we can
   show the detailed stats". While Tab or Option is held, or the player is dead: both teams side by
   side, each player's rank, recent record, champion games and win rate, tags (one-trick, main,
