@@ -31,7 +31,8 @@ sources:
 verified:
   - { by: human:nickharder, at: 2026-10-28T20:33:34Z }
   - { by: human:nickharder, at: 2026-10-28T21:26:16Z }
-approved_sha256: fb6be157b45bb1f9193decbee4e6663280f34d4de264868b1a31fb5b6ae9c4f1
+  - { by: human:nickharder, at: 2026-10-29T00:28:07Z }
+approved_sha256: bbe7880640891ecc5bfb16be08d3d480def9d586ed728e24a95bd9255e59fe76
 ---
 
 # Phase 11: roasts with receipts, after the game and in it
