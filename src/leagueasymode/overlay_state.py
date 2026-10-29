@@ -704,6 +704,8 @@ class OverlayLayout(BaseModel):
     # How much of the widgets' backgrounds shows, so the game shows through them (layout slice
     # L.4); their text stays as it is.
     opacity: float = Field(default=1.0, ge=0.4, le=1.0)
+    # The widgets the player turned off, from edit mode or Settings (layout slice L.5).
+    hidden: list[MovableWidget] = Field(default_factory=list)
 
 
 class OverlayState(BaseModel):

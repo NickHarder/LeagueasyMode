@@ -102,6 +102,18 @@ def test_the_widgets_backgrounds_fade_from_full_to_40_percent(tmp_path: Path) ->
         raise AssertionError(f"{out_of_range} was accepted")
 
 
+def test_a_hidden_widget_is_kept_hidden(tmp_path: Path) -> None:
+    # Layout slice L.5: a widget turned off from edit mode or Settings stays off.
+    layout_path = tmp_path / "layout.json"
+    save_layout(layout_path, OverlayLayout(hidden=["you_panel"]))
+    assert load_layout(layout_path).hidden == ["you_panel"]
+    try:
+        OverlayLayout.model_validate({"hidden": ["minimap"]})
+    except ValidationError:
+        return
+    raise AssertionError("the minimap layer, no movable widget, was accepted")
+
+
 def test_a_widget_moves_at_most_a_whole_screen() -> None:
     for out_of_reach in (1.5, -1.01):
         try:

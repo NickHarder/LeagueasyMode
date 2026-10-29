@@ -247,3 +247,21 @@ async def test_the_widgets_backgrounds_fade_with_the_opacity(tmp_path: Path) -> 
         await expect(page.locator("#enemy-strip")).to_have_css(
             "background-color", "rgba(10, 12, 18, 0.36)"
         )
+
+
+async def test_in_edit_mode_a_widget_is_hidden_and_shown_again(tmp_path: Path) -> None:
+    layout_path = tmp_path / "layout.json"
+    async with open_overlay(layout_path) as (page, engine):
+        await page.evaluate("window.leagueasymodeSetEditing(true)")
+        await page.get_by_role("button", name="Hide You panel").click()
+        hidden = OverlayLayout(hidden=["you_panel"])
+        assert await layout_when(engine, hidden) == hidden
+        # While editing it stays in sight, faded, so that it can be shown again.
+        await expect(page.locator("#you-panel")).to_be_visible()
+        await page.evaluate("window.leagueasymodeSetEditing(false)")
+        await page.evaluate("document.getElementById('you-panel').hidden = false")
+        await expect(page.locator("#you-panel")).to_be_hidden()
+        await page.evaluate("window.leagueasymodeSetEditing(true)")
+        await page.get_by_role("button", name="Show You panel").click()
+        assert await layout_when(engine, OverlayLayout()) == OverlayLayout()
+    assert load_layout(layout_path) == OverlayLayout()

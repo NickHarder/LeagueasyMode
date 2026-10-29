@@ -431,6 +431,8 @@ export function isOverlayLayout(value) {
         !isRecord(value["offsets"]) ||
         !isRecord(value["scales"]) ||
         !isMinimapFit(value["minimap_fit"]) ||
+        !Array.isArray(value["hidden"]) ||
+        !value["hidden"].every((widget) => MOVABLE_WIDGETS.includes(widget)) ||
         typeof value["opacity"] !== "number" ||
         value["opacity"] < MIN_OVERLAY_OPACITY ||
         value["opacity"] > 1) {

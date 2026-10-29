@@ -201,3 +201,15 @@ async def test_the_opacity_slider_fades_the_widgets_backgrounds(tmp_path: Path) 
         await section.get_by_label("Background opacity").fill("60")
         faded = OverlayLayout(opacity=0.6)
         assert await layout_when(engine, faded) == faded
+
+
+async def test_a_widget_is_turned_off_and_on_from_the_layout(tmp_path: Path) -> None:
+    async with open_settings(tmp_path / "preferences.json") as (page, engine):
+        section = page.locator(".settings-layout")
+        shown = section.get_by_label("Enemy strip shown")
+        await expect(shown).to_be_checked(timeout=5000)
+        await shown.uncheck()
+        hidden = OverlayLayout(hidden=["enemy_strip"])
+        assert await layout_when(engine, hidden) == hidden
+        await shown.check()
+        assert await layout_when(engine, OverlayLayout()) == OverlayLayout()

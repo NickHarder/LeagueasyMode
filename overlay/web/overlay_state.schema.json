@@ -933,6 +933,13 @@
           "minimum": 0.4,
           "title": "Opacity",
           "type": "number"
+        },
+        "hidden": {
+          "items": {
+            "$ref": "#/$defs/MovableWidget"
+          },
+          "title": "Hidden",
+          "type": "array"
         }
       },
       "title": "OverlayLayout",
