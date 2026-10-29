@@ -1,6 +1,7 @@
 # The roast's lines, approved word for word by the owner: first on 2026-10-08 in nothingsmyfault,
 # where they were written, then with more flair and harsher Speedrun lines, then on 2026-10-29 in
-# League-chat voice, what a player would type (the owner: "not nerd stuff"; the draft "approve").
+# League-chat voice, what a player would type (the owner: "not nerd stuff"; the draft "approve"),
+# with self-aware lines for what the defendant did too ("approved").
 # A new or reworded line goes back to the owner.
 #
 # Every number in a line is a slot filled from an exhibit, so a template holds no digits and no
@@ -414,6 +415,62 @@ rank_by = "gold_behind_14"
 verdicts = ["guilty", "mutual_destruction", "enemy_smurf"]
 when = [{ slot = "gold_behind_14", at_least = 500 }]
 text = "ok i was {gold_behind_14} gold behind {opponent_champion} at {game.clock_14}. my bad"
+
+# --- Self-aware: the defendant owns what they did too, since no line flames a teammate for it ---------
+
+[[templates]]
+id = "self-deaths"
+family = "scoreboard"
+subject = "defendant"
+spice = [1, 2]
+rank_by = "deaths"
+when = [{ slot = "deaths", at_least = 6 }]
+text = "died {deaths} times myself, we all inted"
+
+[[templates]]
+id = "self-deaths-spicy"
+family = "scoreboard"
+subject = "defendant"
+spice = [3, 4]
+rank_by = "deaths"
+when = [{ slot = "deaths", at_least = 6 }]
+text = "{deaths} deaths from me too. whole team was inting, me included"
+
+[[templates]]
+id = "self-grey-screen"
+family = "scoreboard"
+subject = "defendant"
+spice = [1, 2]
+rank_by = "time_dead"
+when = [{ slot = "time_dead", at_least = 180 }]
+text = "spent {time_dead} dead myself. rough game"
+
+[[templates]]
+id = "self-grey-screen-spicy"
+family = "scoreboard"
+subject = "defendant"
+spice = [3, 4]
+rank_by = "time_dead"
+when = [{ slot = "time_dead", at_least = 180 }]
+text = "{time_dead} on a grey screen, me too. nobody played this game"
+
+[[templates]]
+id = "self-low-kp"
+family = "scoreboard"
+subject = "defendant"
+spice = [1, 2]
+rank_by = "kill_participation"
+when = [{ slot = "kill_participation", at_most = 0.35 }, { slot = "team.team_kills", at_least = 10 }]
+text = "{kill_participation} kp from me too, nobody showed up"
+
+[[templates]]
+id = "self-low-kp-spicy"
+family = "scoreboard"
+subject = "defendant"
+spice = [3, 4]
+rank_by = "kill_participation"
+when = [{ slot = "kill_participation", at_most = 0.35 }, { slot = "team.team_kills", at_least = 10 }]
+text = "{kill_participation} kp myself. we all forgot to group"
 
 # --- The scoreboard ----------------------------------------------------------------------------------
 

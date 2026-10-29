@@ -60,3 +60,13 @@ def test_a_quick_case_with_no_lanes_still_offers_lines() -> None:
     assert len(set(suggestions.lines)) == len(suggestions.lines)
     # "NO LANE VERDICT" is no ruling, so chat does not hear it.
     assert all(line.startswith("gg, ") for line in suggestions.lines)
+
+
+def test_no_line_flames_a_teammate_for_what_the_defendant_did_too() -> None:
+    # The owner, 2026-10-29: "cant do a roast if i am also bad". Here the player died 8 times and
+    # Jax 10: no line flames Jax's deaths, and the card owns it instead.
+    quick = quick_game_roast(end_of_game_payload())
+    assert quick is not None
+    lines = roast_suggestions(quick, 2, RoastRules()).lines
+    assert not any("Jax died" in line for line in lines)
+    assert lines[0] == "gg, died 8 times myself, we all inted"

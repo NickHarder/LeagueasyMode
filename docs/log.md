@@ -6,6 +6,12 @@ skill has the format.
 
 ## 2026-10-29
 
+- Self-aware roasts (the owner: "you need to make roasts self aware ... cant do a roast if i am
+  also bad"; the draft "approved"). No line flames a teammate for what the defendant did too:
+  a line about a teammate is not offered when the defendant meets its conditions as well (six
+  deaths, a lane lost, a low kill participation); lines clearing a teammate stay. Six new lines
+  own it instead ("died 8 times myself, we all inted"), and the roast card leads with the
+  defendant's own line when there is one.
 - The case lines in League-chat voice (the owner: "make good roasts dont be lame. like what a
   league player might actually type not nerd stuff"; the draft "approve"). All 75 lines redrafted,
   short and mostly lower case, with the slots and spice levels as before; the chat opener reads as

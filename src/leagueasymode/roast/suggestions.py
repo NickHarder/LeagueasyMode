@@ -3,7 +3,8 @@
 The owner, 2026-10-29: the post-game window's options were "overwhelming", so the overlay offers
 three, each about a different target: the team, the lane lost by the most gold, and the enemy team.
 No two come from the same template; when those would, or a quick case has no lanes, the team's
-next lines fill in.
+next lines fill in. When the defendant lost their own lane, the card leads with owning it; and no
+line flames a teammate for what the defendant did too (`compose.py`).
 """
 
 from typing import Final
@@ -16,6 +17,11 @@ from leagueasymode.roast.last_game import LastGameRoast
 from leagueasymode.roast.rules import RoastRules
 
 SUGGESTION_COUNT: Final = 3
+# The defendant's own lane lost: the card leads with owning it (the owner, 2026-10-29: "make
+# roasts self aware").
+OWNING_IT_TEMPLATE_ID: Final = "defendant-behind"
+# The lines where the defendant owns what they did too, which the card leads with likewise.
+SELF_AWARE_PREFIX: Final = "self-"
 LOST_OUTCOMES: Final = ("lost", "gap")
 
 
@@ -49,7 +55,13 @@ def roast_suggestions(last_game: LastGameRoast, spice: int, rules: RoastRules) -
             for target in ([f"lane:{worst_lane}"] if worst_lane else []) + ["enemy"]
         ),
     ]
-    chosen: list[ClosingLine] = []
+    owning_it = [
+        option
+        for option in team_case.closing_options
+        if option.template_id == OWNING_IT_TEMPLATE_ID
+        or option.template_id.startswith(SELF_AWARE_PREFIX)
+    ]
+    chosen: list[ClosingLine] = owning_it[:1]
     # Each target's first line not like one chosen, then the team's others.
     for options in [case.closing_options for case in cases] + [team_case.closing_options] * 2:
         fresh = next((option for option in options if _is_new(option, chosen)), None)
