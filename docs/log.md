@@ -11,6 +11,11 @@ skill has the format.
   short and mostly lower case, with the slots and spice levels as before; the chat opener reads as
   chat ("gg jg diff.", "gg team diff.", "gg every lane lost.", "gg,") instead of the verdict's
   stamp, which the post-game window still shows.
+- Details and the Tab overview only while Tab or Option is held, no longer while dead: the
+  owner's screenshots had the overview over League's own Tab scoreboard and ARAM's augment cards
+  on the death screen ("i should only show when i tab … not block out the actualy tab info … not
+  block agugments or shop"). The overview moved from the middle to the left edge, your team above
+  the enemy's, each lane's lead beside your laner; "Unranked" no longer overflows its column.
 - The roast after a game moves into the overlay (the owner: "there are too many options... its
   overwhelming", and "can it be done through the overlay as opposed to opening its own window in
   the browser"; the card's layout approved). After a game the overlay shows a card of three lines,

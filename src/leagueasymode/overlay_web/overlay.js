@@ -120,14 +120,12 @@ const OFF_SCREEN_CALLOUT_KINDS = new Set([
  * enemy's second line, the spell buttons and every callout. With "Details only while Tab or ⌥ is
  * held", the default, only while that key is held, or while the widgets are moved; at a glance the
  * overlay is the timers, the newest callouts and one short line an enemy (the owner: "thers still
- * too much visual clutter … maybe extra details onyl show if i hit tab").
+ * too much visual clutter … maybe extra details onyl show if i hit tab"). Being dead no longer
+ * shows them: the death screen is where ARAM's augments and the shop are ("i should only show
+ * when i tab").
  */
 function areDetailsShown(state) {
-    return !state.preferences.details_on_hold || isDetailsKeyHeld || isEditingLayout() || isYouDead(state);
-}
-/** Return whether the player is dead: their eyes are free, so the details show by themselves. */
-function isYouDead(state) {
-    return state.players.some((card) => card.is_you && card.is_dead);
+    return !state.preferences.details_on_hold || isDetailsKeyHeld || isEditingLayout();
 }
 /** Return the game's clock now, moved on from the last state by at most a couple of seconds. */
 function currentGameTimeSeconds(received, nowMilliseconds) {
@@ -1069,7 +1067,7 @@ function overviewRowElement(card) {
         ["overview-role", ROLE_SHORT_NAMES[card.role] ?? ""],
         ["overview-champion", `${card.champion_name}${card.is_friend ? " \u2605" : ""}${card.is_you ? " (you)" : ""}`],
         ["overview-level", String(card.level)],
-        ["overview-rank", intel === null ? "" : formatRank(intel.ranked)],
+        ["overview-rank", intel === null || intel.ranked === null ? "" : formatRank(intel.ranked)],
         ["overview-record", recordText],
         ["overview-gold", card.item_gold === null ? "" : formatGold(card.item_gold)],
     ];
@@ -1096,7 +1094,7 @@ function overviewRowElement(card) {
     return row;
 }
 /**
- * Draw the overview of both teams while Tab or Option is held, or while the player is dead: each
+ * Draw the overview of both teams while Tab or Option is held, and only then: each
  * player's rank, record, games and win rate on their champion, tags and item gold, and on the
  * Rift each lane's item-gold lead between the two columns (the owner, after Mobalytics' "Player
  * Overview": "When tabbed we can show the detailed stats").
@@ -1105,7 +1103,7 @@ function renderOverview() {
     const panel = requireElement("overview");
     const received = latestReceivedState;
     const state = received?.state ?? null;
-    if (state === null || !state.is_game_running || !(isDetailsKeyHeld || isYouDead(state))) {
+    if (state === null || !state.is_game_running || !isDetailsKeyHeld) {
         panel.hidden = true;
         panel.replaceChildren();
         return;
