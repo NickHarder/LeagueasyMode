@@ -6,6 +6,10 @@ skill has the format.
 
 ## 2026-10-29
 
+- Speedrun gets lines of its own (the owner: "make them spicier at speedrun"; the draft
+  "approved, ship the speedrun lines"). Each line offered at Tilted and Speedrun is split: Tilted
+  keeps the approved wording and a harsher copy takes Speedrun, 17 new lines, and the 3 lines
+  already Speedrun-only are reworded harder. All pass the floor and the moderation list.
 - The case lines get more flair (the owner: "these roasts seems lame. you have to add some
   flair to them"; the draft "approved"). All 58 are reworded so that each ends on a punchline,
   the plain ones at Honor-eligible and Salty included; the slots, spice levels and conditions are

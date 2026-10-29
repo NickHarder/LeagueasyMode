@@ -1,6 +1,7 @@
 # The roast's lines, approved word for word by the owner: first on 2026-10-08 in nothingsmyfault,
 # where they were written, then rewritten here with more flair, each line with a punchline, and
-# approved again on 2026-10-29 (docs/plans/phase-11-roasts.md). A new or reworded line goes back
+# approved again on 2026-10-29, with harsher lines of its own for Speedrun
+# (docs/plans/phase-11-roasts.md). A new or reworded line goes back
 # to the owner.
 #
 # Every number in a line is a slot filled from an exhibit, so a template holds no digits and no
@@ -35,11 +36,21 @@ text = "Receipt: {kills}/{deaths}/{assists}. Tips appreciated."
 id = "carry-receipt-score-spicy"
 family = "carry"
 subject = "defendant"
-spice = [3, 4]
+spice = [3, 3]
 rank_by = "kills"
 verdicts = ["carry_receipt"]
 when = [{ slot = "kills", at_least = 5 }]
 text = "Receipt: {kills}/{deaths}/{assists}. I accept payment in LP and public apologies."
+
+[[templates]]
+id = "carry-receipt-score-speedrun"
+family = "carry"
+subject = "defendant"
+spice = [4, 4]
+rank_by = "kills"
+verdicts = ["carry_receipt"]
+when = [{ slot = "kills", at_least = 5 }]
+text = "Receipt: {kills}/{deaths}/{assists}. I accept LP, apologies and duo requests, in that order."
 
 [[templates]]
 id = "carry-receipt-damage"
@@ -101,7 +112,7 @@ spice = [4, 4]
 rank_by = "gold_behind_14"
 max_subjects = 2
 when = [{ slot = "gold_behind_14", at_least = 1500 }]
-text = "Our {champion} handed {opponent_champion} {gold_behind_14} gold by {game.clock_14}. Not a lane, a charity drive."
+text = "Our {champion} handed {opponent_champion} {gold_behind_14} gold by {game.clock_14}. Uninstall is free, just saying."
 
 # --- The defendant's own lane, when it held ----------------------------------------------------------
 
@@ -127,10 +138,21 @@ text = "I was {gold_ahead_14} gold up on {opponent_champion} at {game.clock_14}.
 id = "defendant-ahead-spicy"
 family = "lanes"
 subject = "defendant"
-spice = [3, 4]
+spice = [3, 3]
 rank_by = "gold_ahead_14"
 when = [{ slot = "gold_ahead_14", at_least = 500 }]
 text = "I was {gold_ahead_14} gold up on {opponent_champion} at {game.clock_14} and we still lost. I won my lane. The map had other plans."
+
+# --- A lane that was lost ----------------------------------------------------------------------------
+
+[[templates]]
+id = "defendant-ahead-speedrun"
+family = "lanes"
+subject = "defendant"
+spice = [4, 4]
+rank_by = "gold_ahead_14"
+when = [{ slot = "gold_ahead_14", at_least = 500 }]
+text = "I was {gold_ahead_14} gold up on {opponent_champion} at {game.clock_14} and still lost. My team was the enemy's best player."
 
 # --- A lane that was lost ----------------------------------------------------------------------------
 
@@ -162,7 +184,7 @@ spice = [4, 4]
 rank_by = "gold_behind_14"
 max_subjects = 2
 when = [{ slot = "gold_behind_14", at_least = 500, at_most = 1499 }]
-text = "Our {champion} spotted {opponent_champion} {gold_behind_14} gold by {game.clock_14}. Free elo, gift-wrapped, wrong team."
+text = "Our {champion} fed {opponent_champion} {gold_behind_14} gold by {game.clock_14}. Inting with extra steps."
 
 # --- The enemy's lanes -------------------------------------------------------------------------------
 
@@ -180,11 +202,23 @@ text = "Their {champion} was {gold_ahead_14} gold up on our {opponent_champion} 
 id = "enemy-lane-won-spicy"
 family = "lanes"
 subject = "enemy"
-spice = [3, 4]
+spice = [3, 3]
 rank_by = "gold_ahead_14"
 max_subjects = 2
 when = [{ slot = "gold_ahead_14", at_least = 500 }]
 text = "Their {champion} was {gold_ahead_14} gold up on our {opponent_champion} at {game.clock_14}. Our {opponent_champion} ran a food bank."
+
+# --- A targeted lane that held -----------------------------------------------------------------------
+
+[[templates]]
+id = "enemy-lane-won-speedrun"
+family = "lanes"
+subject = "enemy"
+spice = [4, 4]
+rank_by = "gold_ahead_14"
+max_subjects = 2
+when = [{ slot = "gold_ahead_14", at_least = 500 }]
+text = "Their {champion} was {gold_ahead_14} gold up on our {opponent_champion} at {game.clock_14}. Our {opponent_champion} should get an assist on every kill they got."
 
 # --- A targeted lane that held -----------------------------------------------------------------------
 
@@ -224,11 +258,21 @@ text = "Our {champion} was {cs_behind_14} CS behind {opponent_champion} at {game
 id = "lane-cs-behind-spicy"
 family = "lanes"
 subject = "ally"
-spice = [3, 4]
+spice = [3, 3]
 rank_by = "cs_behind_14"
 narrow_only = true
 when = [{ slot = "cs_behind_14", at_least = 15 }]
 text = "Our {champion} was {cs_behind_14} CS behind {opponent_champion} at {game.clock_14}. The minions walked in, waved, and left."
+
+[[templates]]
+id = "lane-cs-behind-speedrun"
+family = "lanes"
+subject = "ally"
+spice = [4, 4]
+rank_by = "cs_behind_14"
+narrow_only = true
+when = [{ slot = "cs_behind_14", at_least = 15 }]
+text = "Our {champion} was {cs_behind_14} CS behind {opponent_champion} at {game.clock_14}. The cannon minion had better farm."
 
 [[templates]]
 id = "lane-level-gap"
@@ -244,11 +288,21 @@ text = "At {game.clock_14}, our {champion} was level {level_at_14} and {opponent
 id = "lane-level-gap-spicy"
 family = "lanes"
 subject = "ally"
-spice = [3, 4]
+spice = [3, 3]
 rank_by = "levels_behind_14"
 narrow_only = true
 when = [{ slot = "levels_behind_14", at_least = 2 }]
 text = "Level {level_at_14} against level {opponent.level_at_14} at {game.clock_14}. Our {champion} was in that lane on a tourist visa."
+
+[[templates]]
+id = "lane-level-gap-speedrun"
+family = "lanes"
+subject = "ally"
+spice = [4, 4]
+rank_by = "levels_behind_14"
+narrow_only = true
+when = [{ slot = "levels_behind_14", at_least = 2 }]
+text = "Level {level_at_14} against level {opponent.level_at_14} at {game.clock_14}. Our {champion} was AFK with extra steps."
 
 [[templates]]
 id = "lane-solo-deaths"
@@ -264,11 +318,23 @@ text = "{opponent_champion} killed our {champion} alone {solo_deaths_to_opponent
 id = "lane-solo-deaths-spicy"
 family = "lanes"
 subject = "ally"
-spice = [3, 4]
+spice = [3, 3]
 rank_by = "solo_deaths_to_opponent"
 narrow_only = true
 when = [{ slot = "solo_deaths_to_opponent", at_least = 2 }]
 text = "{opponent_champion} killed our {champion} alone {solo_deaths_to_opponent} times. Not a matchup, a subscription with auto-renew."
+
+# --- The defendant's own farm ------------------------------------------------------------------------
+
+[[templates]]
+id = "lane-solo-deaths-speedrun"
+family = "lanes"
+subject = "ally"
+spice = [4, 4]
+rank_by = "solo_deaths_to_opponent"
+narrow_only = true
+when = [{ slot = "solo_deaths_to_opponent", at_least = 2 }]
+text = "{opponent_champion} killed our {champion} alone {solo_deaths_to_opponent} times. A personal ATM, no fees, open all game."
 
 # --- The defendant's own farm ------------------------------------------------------------------------
 
@@ -286,11 +352,23 @@ text = "I was {cs_ahead_14} CS up on {opponent_champion} at {game.clock_14}. Far
 id = "defendant-cs-ahead-spicy"
 family = "lanes"
 subject = "defendant"
-spice = [3, 4]
+spice = [3, 3]
 rank_by = "cs_ahead_14"
 verdicts = ["team_diff", "lane_diff", "mutual_destruction", "enemy_smurf", "hung_jury"]
 when = [{ slot = "cs_ahead_14", at_least = 15 }]
 text = "I was {cs_ahead_14} CS up on {opponent_champion} at {game.clock_14}. I farmed my lane. I'm not farming yours too."
+
+# --- An enemy who killed everyone --------------------------------------------------------------------
+
+[[templates]]
+id = "defendant-cs-ahead-speedrun"
+family = "lanes"
+subject = "defendant"
+spice = [4, 4]
+rank_by = "cs_ahead_14"
+verdicts = ["team_diff", "lane_diff", "mutual_destruction", "enemy_smurf", "hung_jury"]
+when = [{ slot = "cs_ahead_14", at_least = 15 }]
+text = "I was {cs_ahead_14} CS up on {opponent_champion} at {game.clock_14}. I farmed. The rest of you got farmed."
 
 # --- An enemy who killed everyone --------------------------------------------------------------------
 
@@ -308,11 +386,23 @@ text = "Their {champion} had {kills} kills on {distinct_victims} different playe
 id = "smurf-receipt-spicy"
 family = "kills"
 subject = "enemy"
-spice = [3, 4]
+spice = [3, 3]
 rank_by = "kills"
 verdicts = ["enemy_smurf"]
 when = [{ slot = "kills", at_least = 10 }, { slot = "distinct_victims", at_least = 4 }]
 text = "Their {champion} had {kills} kills on {distinct_victims} different players. Not a lane, a hostage situation. Send a negotiator."
+
+# --- When the data says it was the defendant ---------------------------------------------------------
+
+[[templates]]
+id = "smurf-receipt-speedrun"
+family = "kills"
+subject = "enemy"
+spice = [4, 4]
+rank_by = "kills"
+verdicts = ["enemy_smurf"]
+when = [{ slot = "kills", at_least = 10 }, { slot = "distinct_victims", at_least = 4 }]
+text = "Their {champion} had {kills} kills on {distinct_victims} different players. We weren't a team, we were a buffet."
 
 # --- When the data says it was the defendant ---------------------------------------------------------
 
@@ -362,7 +452,7 @@ subject = "ally"
 spice = [4, 4]
 rank_by = "deaths"
 when = [{ slot = "deaths", at_least = 6 }]
-text = "Our {champion} died {deaths} times. Their team should list them as a gold income."
+text = "Our {champion} died {deaths} times. Inting? No. Inting takes a plan."
 
 # --- Deaths right before an enemy objective ----------------------------------------------------------
 
@@ -379,10 +469,21 @@ text = "Our {champion} died at {throw_death_clock}, {throw_seconds_before} secon
 id = "throw-spicy"
 family = "throws"
 subject = "ally"
-spice = [3, 4]
+spice = [3, 3]
 rank_by = "throw_seconds_before"
 when = [{ slot = "throw_seconds_before", at_least = 1 }]
 text = "Our {champion} died at {throw_death_clock}. Their {throw_objective} came {throw_seconds_before} seconds later. Delivered on time."
+
+# --- The grey screen ---------------------------------------------------------------------------------
+
+[[templates]]
+id = "throw-speedrun"
+family = "throws"
+subject = "ally"
+spice = [4, 4]
+rank_by = "throw_seconds_before"
+when = [{ slot = "throw_seconds_before", at_least = 1 }]
+text = "Our {champion} died at {throw_death_clock}. Their {throw_objective} came {throw_seconds_before} seconds later. Sold the game, no refunds."
 
 # --- The grey screen ---------------------------------------------------------------------------------
 
@@ -399,10 +500,21 @@ text = "Our {champion} spent {time_dead} of the game dead. Long time, no see."
 id = "grey-screen-spicy"
 family = "scoreboard"
 subject = "ally"
-spice = [3, 4]
+spice = [3, 3]
 rank_by = "time_dead"
 when = [{ slot = "time_dead", at_least = 180 }]
 text = "Our {champion} spent {time_dead} on a grey screen. Best seat in the house to watch us lose."
+
+# --- Vision ------------------------------------------------------------------------------------------
+
+[[templates]]
+id = "grey-screen-speedrun"
+family = "scoreboard"
+subject = "ally"
+spice = [4, 4]
+rank_by = "time_dead"
+when = [{ slot = "time_dead", at_least = 180 }]
+text = "Our {champion} spent {time_dead} dead. We played that long a man down, and it showed."
 
 # --- Vision ------------------------------------------------------------------------------------------
 
@@ -439,10 +551,21 @@ text = "Our {champion} sent {enemy_missing_pings} question-mark pings. A curious
 id = "question-marks-spicy"
 family = "pings"
 subject = "ally"
-spice = [3, 4]
+spice = [3, 3]
 rank_by = "enemy_missing_pings"
 when = [{ slot = "enemy_missing_pings", at_least = 10 }]
 text = "Our {champion} sent {enemy_missing_pings} question-mark pings. All questions, no answers, no wards."
+
+# --- Damage ------------------------------------------------------------------------------------------
+
+[[templates]]
+id = "question-marks-speedrun"
+family = "pings"
+subject = "ally"
+spice = [4, 4]
+rank_by = "enemy_missing_pings"
+when = [{ slot = "enemy_missing_pings", at_least = 10 }]
+text = "Our {champion} sent {enemy_missing_pings} question-mark pings. That's not a ping, that's a confession."
 
 # --- Damage ------------------------------------------------------------------------------------------
 
@@ -459,10 +582,21 @@ text = "I did {damage_share} of our team's damage to champions. Someone had to."
 id = "damage-share-spicy"
 family = "damage"
 subject = "defendant"
-spice = [3, 4]
+spice = [3, 3]
 rank_by = "damage_share"
 when = [{ slot = "damage_share", at_least = 0.28 }]
 text = "I did {damage_share} of our team's damage to champions. Backpack carry, unpaid, no reviews yet."
+
+# --- Objectives --------------------------------------------------------------------------------------
+
+[[templates]]
+id = "damage-share-speedrun"
+family = "damage"
+subject = "defendant"
+spice = [4, 4]
+rank_by = "damage_share"
+when = [{ slot = "damage_share", at_least = 0.28 }]
+text = "I did {damage_share} of our team's damage to champions. The rest of you were cosplaying as minions."
 
 # --- Objectives --------------------------------------------------------------------------------------
 
@@ -525,11 +659,21 @@ text = "I was in on {kill_participation} of our {team.team_kills} kills. Present
 id = "defendant-kill-participation-spicy"
 family = "scoreboard"
 subject = "defendant"
-spice = [3, 4]
+spice = [3, 3]
 rank_by = "kill_participation"
 verdicts = ["team_diff", "lane_diff", "mutual_destruction", "enemy_smurf", "hung_jury"]
 when = [{ slot = "kill_participation", at_least = 0.6 }]
 text = "I was in on {kill_participation} of our {team.team_kills} kills. I showed up. The rest treated fights as optional."
+
+[[templates]]
+id = "defendant-kill-participation-speedrun"
+family = "scoreboard"
+subject = "defendant"
+spice = [4, 4]
+rank_by = "kill_participation"
+verdicts = ["team_diff", "lane_diff", "mutual_destruction", "enemy_smurf", "hung_jury"]
+when = [{ slot = "kill_participation", at_least = 0.6 }]
+text = "I was in on {kill_participation} of our {team.team_kills} kills. Everyone else was busy collecting grey screens."
 
 [[templates]]
 id = "low-kill-participation"
@@ -544,10 +688,21 @@ text = "Our {champion} was in on {kill_participation} of our {team.team_kills} k
 id = "low-kill-participation-spicy"
 family = "scoreboard"
 subject = "ally"
-spice = [3, 4]
+spice = [3, 3]
 rank_by = "deaths"
 when = [{ slot = "kill_participation", at_most = 0.35 }, { slot = "team.team_kills", at_least = 10 }]
 text = "Our {champion} was in on {kill_participation} of our {team.team_kills} kills. On the scoreboard, off the map."
+
+# --- Short lives -------------------------------------------------------------------------------------
+
+[[templates]]
+id = "low-kill-participation-speedrun"
+family = "scoreboard"
+subject = "ally"
+spice = [4, 4]
+rank_by = "deaths"
+when = [{ slot = "kill_participation", at_most = 0.35 }, { slot = "team.team_kills", at_least = 10 }]
+text = "Our {champion} was in on {kill_participation} of our {team.team_kills} kills. Ghosted the team harder than the enemy jungler did."
 
 # --- Short lives -------------------------------------------------------------------------------------
 
@@ -564,10 +719,21 @@ text = "Our {champion}'s longest life lasted {longest_alive}. Live fast."
 id = "short-lives-spicy"
 family = "scoreboard"
 subject = "ally"
-spice = [3, 4]
+spice = [3, 3]
 rank_by = "deaths"
 when = [{ slot = "longest_alive", at_most = 420 }, { slot = "deaths", at_least = 6 }]
 text = "Our {champion}'s longest life lasted {longest_alive}. Mayfly energy."
+
+# --- All-in pings ------------------------------------------------------------------------------------
+
+[[templates]]
+id = "short-lives-speedrun"
+family = "scoreboard"
+subject = "ally"
+spice = [4, 4]
+rank_by = "deaths"
+when = [{ slot = "longest_alive", at_most = 420 }, { slot = "deaths", at_least = 6 }]
+text = "Our {champion}'s longest life lasted {longest_alive}. Spawned, sightsaw, died. Repeat."
 
 # --- All-in pings ------------------------------------------------------------------------------------
 
@@ -584,10 +750,21 @@ text = "Our {champion} pinged all in {all_in_pings} times and died {deaths} time
 id = "all-in-pings-spicy"
 family = "pings"
 subject = "ally"
-spice = [3, 4]
+spice = [3, 3]
 rank_by = "all_in_pings"
 when = [{ slot = "all_in_pings", at_least = 5 }, { slot = "deaths", at_least = 6 }]
 text = "Our {champion} pinged all in {all_in_pings} times and died {deaths} times. Shotcaller, no shots."
+
+# --- The surrender -----------------------------------------------------------------------------------
+
+[[templates]]
+id = "all-in-pings-speedrun"
+family = "pings"
+subject = "ally"
+spice = [4, 4]
+rank_by = "all_in_pings"
+when = [{ slot = "all_in_pings", at_least = 5 }, { slot = "deaths", at_least = 6 }]
+text = "Our {champion} pinged all in {all_in_pings} times and died {deaths} times. Shotcaller, straight to the grey screen."
 
 # --- The surrender -----------------------------------------------------------------------------------
 
@@ -604,10 +781,19 @@ text = "We {game.surrender} at {game.game_length}. Dignity, partly preserved."
 id = "surrendered-spicy"
 family = "scoreboard"
 subject = "defendant"
-spice = [3, 4]
+spice = [3, 3]
 rank_by = "deaths"
 verdicts = ["team_diff", "lane_diff", "mutual_destruction", "enemy_smurf", "hung_jury", "guilty", "no_lane_verdict"]
 text = "We {game.surrender} at {game.game_length}. Fastest rotation this team made all game."
+
+[[templates]]
+id = "surrendered-speedrun"
+family = "scoreboard"
+subject = "defendant"
+spice = [4, 4]
+rank_by = "deaths"
+verdicts = ["team_diff", "lane_diff", "mutual_destruction", "enemy_smurf", "hung_jury", "guilty", "no_lane_verdict"]
+text = "We {game.surrender} at {game.game_length}. Best call anyone on this team made all game."
 
 [[templates]]
 id = "they-surrendered"
