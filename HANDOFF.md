@@ -112,6 +112,9 @@ In `AGENTS.md`, this project's own included: every session reads that file.
    requests for what they show.
 11. **Advanced opponent tracking**: whether the minimap's circles should first show only the
    jungler and laners likely away from lane, with a setting; not yet answered.
+12. **Phase 11, roasts with receipts** ([docs/plans/phase-11-roasts.md](docs/plans/phase-11-roasts.md),
+    approved 2026-10-28, again with slice 11.8, Claude's take): its slice 11.0 needs one real matchmade game recorded to the end; the only recording
+    so far is a Practice Tool game cancelled at 0:00.
 
 ## Where everything is
 

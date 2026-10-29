@@ -534,3 +534,20 @@ body {
   white-space: nowrap;
   cursor: pointer;
 }
+
+/* A friend on the other team (phase 11.5). */
+.enemy-friend {
+  margin-left: 4px;
+  color: #f2c94c;
+  font-size: 0.85em;
+}
+
+/* A moment about a friend (phase 11.6): its own color beside the callouts. */
+.callout[data-kind="moment"] {
+  border-left: 3px solid #f2c94c;
+}
+
+/* A call for the team (phase 11.9): calm, its own color. */
+.callout[data-kind="team_call"] {
+  border-left: 3px solid #56ccf2;
+}

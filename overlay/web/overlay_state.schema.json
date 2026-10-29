@@ -97,7 +97,9 @@
         "jungle_four_minutes",
         "one_trick",
         "inhibitor_open",
-        "suggestion"
+        "suggestion",
+        "moment",
+        "team_call"
       ],
       "type": "string"
     },
@@ -926,6 +928,16 @@
           "title": "Show Suggestions",
           "type": "boolean"
         },
+        "show_moments": {
+          "default": true,
+          "title": "Show Moments",
+          "type": "boolean"
+        },
+        "show_team_calls": {
+          "default": true,
+          "title": "Show Team Calls",
+          "type": "boolean"
+        },
         "speak_callouts": {
           "default": false,
           "title": "Speak Callouts",
@@ -964,6 +976,11 @@
         "is_you": {
           "default": false,
           "title": "Is You",
+          "type": "boolean"
+        },
+        "is_friend": {
+          "default": false,
+          "title": "Is Friend",
           "type": "boolean"
         },
         "position": {

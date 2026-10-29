@@ -1,0 +1,341 @@
+{
+  "$defs": {
+    "CasePlayer": {
+      "additionalProperties": false,
+      "description": "One of the ten players, for the target chips.",
+      "properties": {
+        "participant_id": {
+          "title": "Participant Id",
+          "type": "integer"
+        },
+        "champion": {
+          "title": "Champion",
+          "type": "string"
+        },
+        "position": {
+          "title": "Position",
+          "type": "string"
+        },
+        "side": {
+          "enum": [
+            "ally",
+            "enemy"
+          ],
+          "title": "Side",
+          "type": "string"
+        },
+        "is_defendant": {
+          "title": "Is Defendant",
+          "type": "boolean"
+        },
+        "is_friend": {
+          "title": "Is Friend",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "participant_id",
+        "champion",
+        "position",
+        "side",
+        "is_defendant",
+        "is_friend"
+      ],
+      "title": "CasePlayer",
+      "type": "object"
+    },
+    "ViewExhibit": {
+      "additionalProperties": false,
+      "description": "One exhibit, and where its value came from.",
+      "properties": {
+        "letter": {
+          "title": "Letter",
+          "type": "string"
+        },
+        "label": {
+          "title": "Label",
+          "type": "string"
+        },
+        "display": {
+          "title": "Display",
+          "type": "string"
+        },
+        "unit": {
+          "title": "Unit",
+          "type": "string"
+        },
+        "source": {
+          "title": "Source",
+          "type": "string"
+        },
+        "source_kind": {
+          "enum": [
+            "game",
+            "timeline",
+            "live",
+            "computation"
+          ],
+          "title": "Source Kind",
+          "type": "string"
+        },
+        "supporting": {
+          "title": "Supporting",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "letter",
+        "label",
+        "display",
+        "unit",
+        "source",
+        "source_kind",
+        "supporting"
+      ],
+      "title": "ViewExhibit",
+      "type": "object"
+    },
+    "ViewLane": {
+      "additionalProperties": false,
+      "description": "One lane of the position diff board, at minute 14.",
+      "properties": {
+        "position": {
+          "title": "Position",
+          "type": "string"
+        },
+        "ally_champion": {
+          "title": "Ally Champion",
+          "type": "string"
+        },
+        "enemy_champion": {
+          "title": "Enemy Champion",
+          "type": "string"
+        },
+        "outcome": {
+          "title": "Outcome",
+          "type": "string"
+        },
+        "gold_difference": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Gold Difference"
+        },
+        "cs_difference": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Cs Difference"
+        },
+        "letter": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Letter"
+        }
+      },
+      "required": [
+        "position",
+        "ally_champion",
+        "enemy_champion",
+        "outcome",
+        "gold_difference",
+        "cs_difference",
+        "letter"
+      ],
+      "title": "ViewLane",
+      "type": "object"
+    },
+    "ViewLine": {
+      "additionalProperties": false,
+      "description": "One line of the case.",
+      "properties": {
+        "parts": {
+          "items": {
+            "$ref": "#/$defs/ViewPart"
+          },
+          "title": "Parts",
+          "type": "array"
+        }
+      },
+      "required": [
+        "parts"
+      ],
+      "title": "ViewLine",
+      "type": "object"
+    },
+    "ViewPart": {
+      "additionalProperties": false,
+      "description": "A piece of a line; one that states an exhibit's value carries its letter.",
+      "properties": {
+        "text": {
+          "title": "Text",
+          "type": "string"
+        },
+        "letter": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Letter"
+        }
+      },
+      "required": [
+        "text",
+        "letter"
+      ],
+      "title": "ViewPart",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "A case, for the post-game window.",
+  "properties": {
+    "game_id": {
+      "title": "Game Id",
+      "type": "integer"
+    },
+    "players": {
+      "items": {
+        "$ref": "#/$defs/CasePlayer"
+      },
+      "title": "Players",
+      "type": "array"
+    },
+    "target": {
+      "title": "Target",
+      "type": "string"
+    },
+    "spice": {
+      "title": "Spice",
+      "type": "integer"
+    },
+    "spice_name": {
+      "title": "Spice Name",
+      "type": "string"
+    },
+    "prove": {
+      "title": "Prove",
+      "type": "boolean"
+    },
+    "take": {
+      "title": "Take",
+      "type": "integer"
+    },
+    "verdict_title": {
+      "title": "Verdict Title",
+      "type": "string"
+    },
+    "verdict_summary": {
+      "title": "Verdict Summary",
+      "type": "string"
+    },
+    "acquitted": {
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Acquitted"
+    },
+    "board": {
+      "items": {
+        "$ref": "#/$defs/ViewLane"
+      },
+      "title": "Board",
+      "type": "array"
+    },
+    "lines": {
+      "items": {
+        "$ref": "#/$defs/ViewLine"
+      },
+      "title": "Lines",
+      "type": "array"
+    },
+    "closing_line": {
+      "title": "Closing Line",
+      "type": "string"
+    },
+    "closing_line_limit": {
+      "title": "Closing Line Limit",
+      "type": "integer"
+    },
+    "risk_warning": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Risk Warning"
+    },
+    "exhibits": {
+      "items": {
+        "$ref": "#/$defs/ViewExhibit"
+      },
+      "title": "Exhibits",
+      "type": "array"
+    },
+    "claude_take": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Claude Take"
+    },
+    "claude_take_pending": {
+      "default": false,
+      "title": "Claude Take Pending",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "game_id",
+    "players",
+    "target",
+    "spice",
+    "spice_name",
+    "prove",
+    "take",
+    "verdict_title",
+    "verdict_summary",
+    "acquitted",
+    "board",
+    "lines",
+    "closing_line",
+    "closing_line_limit",
+    "risk_warning",
+    "exhibits"
+  ],
+  "title": "CaseView",
+  "type": "object"
+}

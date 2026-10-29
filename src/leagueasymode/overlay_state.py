@@ -301,6 +301,8 @@ class PlayerCard(BaseModel):
     side: Literal["ally", "enemy"]
     # Whether this is the player on this machine.
     is_you: bool = False
+    # Whether their Riot ID is on the owner's friends list (phase 11.5); never their name.
+    is_friend: bool = False
     # As the game names it ("TOP", "JUNGLE", "MIDDLE", "BOTTOM", "UTILITY"); empty when the queue
     # assigns none.
     position: str
@@ -412,6 +414,10 @@ type CalloutKind = Literal[
     "one_trick",
     "inhibitor_open",
     "suggestion",
+    # A moment about a friend (phase 11.6, `roast/moments.py`); never spoken.
+    "moment",
+    # A call for the team (phase 11.9, `roast/team_calls.py`); never spoken.
+    "team_call",
 ]
 
 
@@ -619,6 +625,10 @@ class OverlayPreferences(BaseModel):
     show_callouts: bool = True
     # Callouts that name an action, such as "take it".
     show_suggestions: bool = True
+    # Moments about friends (phase 11.6), shown beside the callouts and never spoken.
+    show_moments: bool = True
+    # Calls for the team, to paste in team chat (phase 11.9); never spoken.
+    show_team_calls: bool = True
     # Each new callout shown is read aloud in macOS's voice; off unless the player turns it on.
     speak_callouts: bool = False
     # Buttons on each enemy's row that mark a spell in one click, beside the app's shortcuts; off

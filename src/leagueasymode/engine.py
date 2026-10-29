@@ -9,6 +9,7 @@ from pydantic import JsonValue, ValidationError
 
 from leagueasymode.data_dragon import PatchStats
 from leagueasymode.engine_status import StatusBoard
+from leagueasymode.friends import FriendsList
 from leagueasymode.game_api import GameApiClient
 from leagueasymode.game_state import GameSnapshot
 from leagueasymode.inference.backs import BackTracker
@@ -58,6 +59,9 @@ from leagueasymode.player_intel import (
 )
 from leagueasymode.problem_report import player_identities
 from leagueasymode.refit import ModelWeights
+from leagueasymode.roast.claude_take import ClaudeTake, ClaudeTakeSettings
+from leagueasymode.roast.moments import Moment, MomentTracker
+from leagueasymode.roast.team_calls import TeamCallTracker
 from leagueasymode.tuning import DEFAULT_TUNING, Tuning
 
 NOT_RUNNING: Final = OverlayState(is_game_running=False)
@@ -88,6 +92,7 @@ def compute_overlay_state(
     fight_rules: FightRules = FIGHT_RULES,
     status: StatusBoard | None = None,
     tuning: Tuning = DEFAULT_TUNING,
+    friend_riot_ids: frozenset[str] = frozenset(),
 ) -> OverlayState:
     """Return what the overlay shows for one answer of the game's API.
 
@@ -113,6 +118,7 @@ def compute_overlay_state(
         fight_rules: The fight model's, likewise.
         status: Told whether the answer could be read, and what it held; None to tell nothing.
         tuning: The hand-set thresholds, as `tuning.json` sets them.
+        friend_riot_ids: The owner's friends' Riot IDs, in lower case, whose cards are marked.
 
     Returns:
         The overlay's state; no game running when there is no answer or it cannot be read.
@@ -177,6 +183,7 @@ def compute_overlay_state(
         intel_rules=tuning.intel,
         position_rules=tuning.positions,
         build_rules=tuning.build_path,
+        friend_riot_ids=friend_riot_ids,
     )
     # The win chance reads the dragons taken, none off the Rift; only the Rift shows the timer.
     dragons_taken = dragon_timer(snapshot, tuning.dragon)
@@ -293,6 +300,8 @@ class OverlayEngine:
         minimap_layout: MinimapLayout | None = None,
         model_weights: ModelWeights | None = None,
         preferences: OverlayPreferences | None = None,
+        friends: FriendsList | None = None,
+        claude_take: ClaudeTake | None = None,
         layout: OverlayLayout | None = None,
         status: StatusBoard | None = None,
         tuning: Tuning = DEFAULT_TUNING,
@@ -312,6 +321,8 @@ class OverlayEngine:
                 unknown.
             model_weights: The refit models' weights; None for the hand-set ones.
             preferences: What the player chose to see; None for everything.
+            friends: The owner's friends, whose cards are marked; None for none.
+            claude_take: Rewords the lines to copy (phase 11.8); None for none.
             layout: Where the player moved the widgets; None for their usual places.
             status: Told what the engine sees, part by part, for the status page; None for a
                 board of its own.
@@ -350,6 +361,9 @@ class OverlayEngine:
         self._ward_tracker: Final = WardTracker()
         self._you_tracker: Final = YouTracker(rules=tuning.you)
         self._preferences = preferences or OverlayPreferences()
+        self._friends = friends or FriendsList()
+        self.claude_take: Final = claude_take or ClaudeTake(ClaudeTakeSettings(), command=None)
+        self._champion_names: frozenset[str] = frozenset()
         self._layout = layout or OverlayLayout()
         self._current_state = NOT_RUNNING.model_copy(
             update={"preferences": self._preferences, "layout": self._layout}
@@ -357,6 +371,8 @@ class OverlayEngine:
         self._callouts: Final = CalloutTracker(
             rules=tuning.callouts, suggestion_rules=tuning.suggestions
         )
+        self._moments: Final = MomentTracker(rules=tuning.roast.moments)
+        self._team_calls: Final = TeamCallTracker(rules=tuning.roast.team_calls)
         self._subscribers: Final[set[asyncio.Queue[OverlayState]]] = set()
 
     @property
@@ -378,6 +394,45 @@ class OverlayEngine:
     def preferences(self) -> OverlayPreferences:
         """What the player chose to see."""
         return self._preferences
+
+    @property
+    def moments(self) -> tuple[Moment, ...]:
+        """This game's moments about friends, oldest first (phase 11.6)."""
+        return self._moments.moments
+
+    @property
+    def lines_to_copy(self) -> tuple[str, ...]:
+        """This game's moments and team calls, in the order they were made, for ⌃⌥C.
+
+        Each is Claude's take when it is on and its take is ready (phase 11.8), else the approved
+        line.
+        """
+        limit = self.tuning.roast.chat_line_max_characters
+        return tuple(
+            self.claude_take.take_for(text, self._champion_names, limit)[0] or text
+            for text in self._approved_lines_to_copy()
+        )
+
+    def _approved_lines_to_copy(self) -> list[str]:
+        """Return this game's moments and team calls as approved, in the order they were made."""
+        made = [
+            *((moment.made_at_game_time_seconds, moment.text) for moment in self._moments.moments),
+            *((call.made_at_game_time_seconds, call.text) for call in self._team_calls.calls),
+        ]
+        return [text for _, text in sorted(made, key=lambda pair: pair[0])]
+
+    @property
+    def friends(self) -> FriendsList:
+        """The owner's friends, whose cards are marked."""
+        return self._friends
+
+    def set_friends(self, friends: FriendsList) -> None:
+        """Mark these friends from the next answer on.
+
+        Args:
+            friends: The owner's friends.
+        """
+        self._friends = friends
 
     def set_preferences(self, preferences: OverlayPreferences) -> None:
         """Take the player's new choices, and send the current state again with them.
@@ -491,13 +546,27 @@ class OverlayEngine:
             fight_rules=self.model_weights.fight_rules,
             status=self.status,
             tuning=self.tuning,
+            friend_riot_ids=self._friends.riot_id_keys,
         )
         self._last_payload = payload if answer_state.is_game_running else None
         if answer_state.is_game_running and not self._current_state.is_game_running:
             self._start_loading_the_games_data()
+        snapshot = _snapshot_or_none(payload) if answer_state.is_game_running else None
+        self._moments.update(snapshot, answer_state.players)
+        self._team_calls.update(answer_state, snapshot)
+        # Each new moment and call starts its take at once, so it is ready when ⌃⌥C is pressed.
+        self._champion_names = frozenset(card.champion_name for card in answer_state.players)
+        for approved_line in self._approved_lines_to_copy():
+            self.claude_take.take_for(
+                approved_line, self._champion_names, self.tuning.roast.chat_line_max_characters
+            )
         new_state = answer_state.model_copy(
             update={
-                "callouts": self._callouts.update(answer_state),
+                "callouts": [
+                    *self._callouts.update(answer_state),
+                    *self._moments.callouts(answer_state.game_time_seconds),
+                    *self._team_calls.callouts(answer_state.game_time_seconds),
+                ],
                 "preferences": self._preferences,
                 "layout": self._layout,
             }
@@ -666,3 +735,20 @@ class OverlayEngine:
             if updates.full():
                 updates.get_nowait()
             updates.put_nowait(new_state)
+
+
+def _snapshot_or_none(payload: JsonValue | None) -> GameSnapshot | None:
+    """Return the game's answer as a snapshot, for the moments.
+
+    Args:
+        payload: The answer.
+
+    Returns:
+        The snapshot; None when there is none or it cannot be read.
+    """
+    if payload is None:
+        return None
+    try:
+        return GameSnapshot.model_validate(payload)
+    except ValidationError:
+        return None

@@ -38,6 +38,7 @@ async def test_the_page_names_each_shortcut_for_a_windows_keyboard() -> None:
         "Ctrl + Alt + F",
         "Ctrl + Alt + D",
         "Ctrl + Alt + R",
+        "Ctrl + Alt + C",
     ):
         assert f"<kbd>{windows_keys}</kbd>" in text
 
@@ -46,6 +47,7 @@ async def test_every_key_the_app_registers_is_on_the_page() -> None:
     # A shortcut added to the app without a line here fails this test.
     text = await page_text()
     registered_keys = set(re.findall(r"kVK_ANSI_(\w)\b", APP_DELEGATE.read_text()))
-    assert registered_keys == {"L", "R", "1", "2", "3", "4", "5", "F", "D"}
+    # C is the copy shortcut of phase 11.4.
+    assert registered_keys == {"L", "R", "1", "2", "3", "4", "5", "F", "D", "C"}
     shown_keys = set(re.findall(r"<kbd>Ctrl \+ Alt \+ (?:Windows \+ )?(\w)</kbd>", text))
     assert registered_keys - {"2", "3", "4"} <= shown_keys

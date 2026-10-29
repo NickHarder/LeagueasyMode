@@ -263,6 +263,49 @@ with `PUT /layout` only with the header `X-LeagueasyMode-Request: layout`, sent 
 state, and kept in `layout.json` (`LEAGUEASYMODE_LAYOUT` moves it). A file that cannot be read
 puts every widget in its usual place.
 
+The owner's friends list (phase 11.5) is kept apart from both: their Riot IDs, written on the
+settings page one a line and saved with `PUT /friends` (header `X-LeagueasyMode-Request:
+friends`), are kept in `friends.json` (`LEAGUEASYMODE_FRIENDS` moves it), at most 50, each checked
+as name#tag. They never travel with the state: each player card carries only `is_friend`, matched
+against the scoreboard's Riot ID in any case, and an enemy who is a friend has a ★ on the enemy
+strip. After the game the case's players are marked the same way, from the Riot IDs in the game's
+details, and the post-game window's chips show the ★.
+
+Moments about friends (phase 11.6, `roast/moments.py`) read each answer of the game with the cards'
+`is_friend` and roles: a friend's second and third deaths to their lane opponent with no help, a
+death shortly before the enemy takes a dragon, the Elder or Baron, first blood given up, a creep
+score deficit at 10:00 or 14:00 ("at least", since the scoreboard can lag on an enemy out of
+sight), and the lane opponent's kills on a friend who has none. A lane opponent is used only when
+both roles are given or likely. Each moment is made once per game, shows among the callouts as kind
+`moment` for `roast.moments.shown_seconds` in `tuning.json` when noticed within 30 seconds of
+happening, is never spoken, and has its own switch on the settings page. `/closing-line` gives the
+newest during a game, for ⌃⌥C. The lines, in `roast/moments.toml`, are the ones the owner approved, held to a fingerprint.
+
+Team calls (phase 11.9, `roast/team_calls.py`) are for the whole team, friends or not, to paste in
+team chat: an epic monster spawning in 60 to 90 seconds, two or more enemies dead for 20 seconds or
+more while three of us are up, a fight lost (three of us dead at once and fewer of them), a
+teammate's third death in four minutes, and being about 2k gold down while the win chance is still
+35% or more. A call blames no one and names no player (its id carries a scoreboard place, never a
+name); the gold lead is an estimate and is said as "about". At most one call a minute, shown as kind
+`team_call` for `roast.team_calls.shown_seconds`, never spoken, with its own switch; ⌃⌥C copies the
+newest call or moment. The thresholds are in `tuning.json` under `roast.team_calls`, and the lines,
+in `roast/team_calls.toml`, are the ones the owner approved, held to a fingerprint.
+
+Claude's take (phase 11.8, `roast/claude_take.py`) rewords the lines ⌃⌥C copies (the post-game
+closing line, each moment and each team call) with the `claude` command on the Mac, in print mode,
+with the owner's own login and the style set on the settings page (`claude-take.json`,
+`LEAGUEASYMODE_CLAUDE_TAKE`; the command is looked for on PATH and where it is usually installed,
+or named by `LEAGUEASYMODE_CLAUDE_COMMAND`). It is off until turned on. Every number and champion's
+name in the line becomes a slot before it is sent, so only the wording and the style leave the Mac;
+the answer must keep each slot once, add no digit and no capitalised name mid-sentence, be one line
+within the chat limit, and pass the safety floor and the moderation list (LDNOOBW's English list,
+kept as SHA-256 hashes in `roast/moderation_terms.sha256`); otherwise, or with no answer in 30
+seconds, the approved line stands. Takes are written in the background and kept for the run: the
+post-game window shows Claude's take under the closing line, marked as not approved, and `/case`
+says while one is being written; ⌃⌥C copies Claude's take once it is ready. Two parts of the plan
+are not built yet: the per-friend running jokes, and naming a model, which is left to the `claude`
+command's default unless the owner types one in.
+
 The engine's own settings come from the repository's `.env` in a clone. An installed app, which
 has no clone, reads `settings.env` in the application's directory instead; where both exist, the
 repository's wins, and a real environment variable wins over either.

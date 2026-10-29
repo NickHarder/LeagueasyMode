@@ -7,7 +7,7 @@ respawn. The numbers window follows from those alone, since a death to come cann
 from collections.abc import Mapping
 
 from leagueasymode.data_dragon import PatchStats
-from leagueasymode.game_state import GameSnapshot, ScoreboardPlayer
+from leagueasymode.game_state import RIOT_ID_SEPARATOR, GameSnapshot, ScoreboardPlayer
 from leagueasymode.inference.build_path import BUILD_RULES, BuildRules, next_item
 from leagueasymode.inference.combat_stats import combat_stats_of, move_speed_of
 from leagueasymode.inference.cooldowns import (
@@ -54,6 +54,7 @@ def player_cards(
     intel_rules: IntelRules = INTEL_RULES,
     position_rules: PositionRules = POSITION_RULES,
     build_rules: BuildRules = BUILD_RULES,
+    friend_riot_ids: frozenset[str] = frozenset(),
 ) -> list[PlayerCard]:
     """Return a card for every player, the player's own team first, each team in scoreboard order.
 
@@ -73,6 +74,7 @@ def player_cards(
         intel_rules: The intel's hand-set thresholds.
         position_rules: The positions'.
         build_rules: The build path's weights.
+        friend_riot_ids: The owner's friends' Riot IDs, in lower case, whose cards are marked.
 
     Returns:
         The cards.
@@ -93,6 +95,7 @@ def player_cards(
             champion_name=player.champion_name,
             side="ally" if player.team == ally_team else "enemy",
             is_you=snapshot.is_active_player(player),
+            is_friend=_riot_id_key(player) in friend_riot_ids,
             position=player.position,
             role=role_guesses[index].role,
             role_confidence=role_guesses[index].confidence,
@@ -433,3 +436,18 @@ def _dead_after(respawn_times_seconds: list[float], instant_seconds: float) -> i
         The count still dead.
     """
     return sum(1 for respawn_seconds in respawn_times_seconds if respawn_seconds > instant_seconds)
+
+
+def _riot_id_key(player: ScoreboardPlayer) -> str:
+    """Return a player's Riot ID in lower case, as the friends list is matched.
+
+    Args:
+        player: A player of the scoreboard.
+
+    Returns:
+        "name#tag" in lower case; empty when the scoreboard gives no Riot ID.
+    """
+    riot_id = next(
+        (name for name in (player.riot_id, player.summoner_name) if RIOT_ID_SEPARATOR in name), ""
+    )
+    return riot_id.lower()

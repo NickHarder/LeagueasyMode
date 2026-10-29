@@ -747,7 +747,7 @@ def score_jungle_habits(game: RecordedGame) -> list[EstimatorScore]:
     Returns:
         A score for the starts and one for 4:00, each left out without a jungler to score.
     """
-    timeline_payload = _this_games_resource(game.client_resources, TIMELINE_PATH_PREFIX)
+    timeline_payload = this_games_resource(game.client_resources, TIMELINE_PATH_PREFIX)
     positions = _details_positions(game)
     start_hits: list[bool] = []
     four_minute_hits: list[bool] = []
@@ -1673,13 +1673,13 @@ def _timeline_in(client_resources: Mapping[str, JsonValue]) -> GameTimeline | No
     """
     try:
         return GameTimeline.model_validate(
-            _this_games_resource(client_resources, TIMELINE_PATH_PREFIX)
+            this_games_resource(client_resources, TIMELINE_PATH_PREFIX)
         )
     except ValidationError:
         return None
 
 
-def _this_games_resource(client_resources: Mapping[str, JsonValue], path_prefix: str) -> JsonValue:
+def this_games_resource(client_resources: Mapping[str, JsonValue], path_prefix: str) -> JsonValue:
     """Return the client's answer about this game among those about any game.
 
     A recording also holds past games' timelines, which the player lookups read for where a
@@ -1712,7 +1712,7 @@ def _game_details(game: RecordedGame) -> GameDetails | None:
     """
     try:
         return GameDetails.model_validate(
-            _this_games_resource(game.client_resources, GAME_DETAILS_PATH_PREFIX)
+            this_games_resource(game.client_resources, GAME_DETAILS_PATH_PREFIX)
         )
     except ValidationError:
         return None

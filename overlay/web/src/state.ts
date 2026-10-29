@@ -193,6 +193,8 @@ export interface PlayerCard {
   readonly champion_name: string;
   readonly side: Side;
   readonly is_you: boolean;
+  // On the owner's friends list (phase 11.5).
+  readonly is_friend: boolean;
   readonly position: string;
   readonly role: string;
   readonly role_confidence: "given" | "likely" | "guess" | "unknown";
@@ -256,7 +258,9 @@ export type CalloutKind =
   | "jungle_four_minutes"
   | "one_trick"
   | "inhibitor_open"
-  | "suggestion";
+  | "suggestion"
+  | "moment"
+  | "team_call";
 
 /** A short notice shown for a few seconds when something happens; never an instruction. */
 export interface Callout {
@@ -371,6 +375,8 @@ export interface OverlayPreferences {
   readonly show_enemy_estimates: boolean;
   readonly show_callouts: boolean;
   readonly show_suggestions: boolean;
+  readonly show_moments: boolean;
+  readonly show_team_calls: boolean;
   readonly speak_callouts: boolean;
   readonly click_to_mark: boolean;
   readonly minimap_roamers_only: boolean;
@@ -386,6 +392,8 @@ export const PREFERENCE_NAMES = [
   "show_enemy_estimates",
   "show_callouts",
   "show_suggestions",
+  "show_moments",
+  "show_team_calls",
   "speak_callouts",
   "click_to_mark",
   "minimap_roamers_only",
@@ -459,6 +467,8 @@ const CALLOUT_KINDS: ReadonlySet<string> = new Set([
   "one_trick",
   "inhibitor_open",
   "suggestion",
+  "moment",
+  "team_call",
 ]);
 const START_SIDES: ReadonlySet<string> = new Set(["blue", "red"]);
 const MAP_HALVES: ReadonlySet<string> = new Set(["top", "bot"]);
@@ -703,6 +713,7 @@ export function isPlayerCard(value: unknown): value is PlayerCard {
     typeof value["champion_name"] === "string" &&
     isOneOf(value["side"], SIDES) &&
     typeof value["is_you"] === "boolean" &&
+    typeof value["is_friend"] === "boolean" &&
     typeof value["position"] === "string" &&
     typeof value["role"] === "string" &&
     isOneOf(value["role_confidence"], ROLE_CONFIDENCES) &&

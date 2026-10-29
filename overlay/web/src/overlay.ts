@@ -637,6 +637,15 @@ function enemyRowElement(
   const nameElement = document.createElement("span");
   nameElement.className = "enemy-name";
   nameElement.textContent = card.champion_name;
+  if (card.is_friend) {
+    // A friend on the other team (phase 11.5): marked, never named.
+    const friendElement = document.createElement("span");
+    friendElement.className = "enemy-friend";
+    friendElement.textContent = "★";
+    friendElement.title = "On your friends list";
+    friendElement.setAttribute("aria-label", "friend");
+    nameElement.append(friendElement);
+  }
   const ultimateText = formatUltimateRank(card.ultimate_rank);
   if (ultimateText !== null) {
     const ultimateElement = document.createElement("span");
@@ -927,8 +936,12 @@ function renderCallouts(nowMilliseconds: number): void {
       : received.state.callouts.filter(
           (callout) =>
             callout.shown_until_game_time_seconds > gameTimeSeconds &&
-            received.state.preferences.show_callouts &&
-            (callout.kind !== "suggestion" || received.state.preferences.show_suggestions),
+            (callout.kind === "moment"
+              ? received.state.preferences.show_moments
+              : callout.kind === "team_call"
+                ? received.state.preferences.show_team_calls
+                : received.state.preferences.show_callouts &&
+                  (callout.kind !== "suggestion" || received.state.preferences.show_suggestions)),
         );
   const shownIds = new Set(shownCallouts.map((callout) => callout.callout_id));
   for (const child of Array.from(list.children)) {
@@ -943,7 +956,12 @@ function renderCallouts(nowMilliseconds: number): void {
     if (!presentIds.has(callout.callout_id)) {
       list.append(calloutElement(callout));
       // Spoken as it first shows; kept on screen, it is not spoken again.
-      if (received?.state.preferences.speak_callouts === true) {
+      // A moment about a friend (11.6) or a team call (11.9) is never spoken: it is for chat.
+      if (
+        received?.state.preferences.speak_callouts === true &&
+        callout.kind !== "moment" &&
+        callout.kind !== "team_call"
+      ) {
         speak(callout.text);
       }
     }

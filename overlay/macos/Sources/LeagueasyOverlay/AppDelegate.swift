@@ -11,6 +11,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private static let toggleHotKeyIdentifier: UInt32 = 1
     private static let reportShortcutDescription = "⌃⌥⌘R"
     private static let reportHotKeyIdentifier: UInt32 = 2
+    // ⌃⌥C copies the last game's closing line for the player to paste; nothing is sent to chat.
+    private static let copyShortcutDescription = "⌃⌥C"
+    private static let copyHotKeyIdentifier: UInt32 = 3
     // How long the app waits before starting a stopped engine again, so its port is free.
     private static let engineRestartDelaySeconds: TimeInterval = 3
     // ⌃⌥1 to ⌃⌥5 pick an enemy in role order; ⌃⌥F, ⌃⌥D and ⌃⌥R name the spell they used.
@@ -48,6 +51,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var engineProcess: EngineProcess?
     private var toggleHotKey: GlobalHotKey?
     private var reportHotKey: GlobalHotKey?
+    private var copyHotKey: GlobalHotKey?
+    private var copyPresses = CopyPresses()
+    private lazy var toastPanel = ToastPanel()
     private var markHotKeys: [GlobalHotKey] = []
     private var markSequence = MarkSequence()
     private var overlayURL: URL?
@@ -116,6 +122,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         if reportHotKey == nil {
             NSLog("LeagueasyMode: the shortcut %@ is taken; use the menu", Self.reportShortcutDescription)
+        }
+        copyHotKey = GlobalHotKey(
+            identifier: Self.copyHotKeyIdentifier,
+            keyCode: UInt32(kVK_ANSI_C),
+            modifiers: Self.markModifiers
+        ) { [weak self] in
+            self?.copyClosingLine()
+        }
+        if copyHotKey == nil {
+            NSLog("LeagueasyMode: the shortcut %@ is taken by another app", Self.copyShortcutDescription)
         }
         registerMarkHotKeys()
         NotificationCenter.default.addObserver(
@@ -545,6 +561,45 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 NSLog("LeagueasyMode: the engine did not take the mark (HTTP %ld)", httpResponse.statusCode)
             }
         }.resume()
+    }
+
+    // MARK: - Copying the roast
+
+    /// Copies the closing line the post-game window shows, or, pressed again within five seconds,
+    /// the next take; a toast says what was copied. The player pastes it: nothing is sent to chat.
+    private func copyClosingLine() {
+        let laterTakes = copyPresses.press(atSeconds: ProcessInfo.processInfo.systemUptime)
+        guard let overlayURL else {
+            showToast(CopyOutcome.engineNotRunningText)
+            return
+        }
+        let request = ClosingLineRequest.make(overlayURL: overlayURL, laterTakes: laterTakes)
+        // On the main actor, as this method is; the request itself waits without holding it.
+        Task { [weak self] in
+            do {
+                let (body, response) = try await URLSession.shared.data(for: request)
+                let statusCode = (response as? HTTPURLResponse)?.statusCode ?? 0
+                self?.closingLineDidArrive(statusCode: statusCode, body: body)
+            } catch {
+                self?.showToast(CopyOutcome.engineNotRunningText)
+            }
+        }
+    }
+
+    private func closingLineDidArrive(statusCode: Int, body: Data) {
+        guard let line = CopyOutcome.line(statusCode: statusCode, body: body) else {
+            showToast(CopyOutcome.toastText(failedWith: statusCode))
+            return
+        }
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        pasteboard.setString(line.text, forType: .string)
+        showToast(CopyOutcome.toastText(copied: line))
+    }
+
+    private func showToast(_ text: String) {
+        let screenFrame = gamePlacement?.frame ?? NSScreen.main?.frame ?? .zero
+        toastPanel.show(text, over: screenFrame)
     }
 
     // MARK: - Problem reports

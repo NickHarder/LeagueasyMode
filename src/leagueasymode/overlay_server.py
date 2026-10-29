@@ -17,8 +17,13 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from leagueasymode.accuracy_history import read_accuracy_history
 from leagueasymode.engine import OverlayEngine
+from leagueasymode.friends import FriendsList, save_friends
 from leagueasymode.overlay_state import OverlayLayout, OverlayPreferences, OverlayState
 from leagueasymode.preferences import save_layout, save_preferences
+from leagueasymode.roast.case import CaseOptions
+from leagueasymode.roast.case_view import CaseView, case_options_of, case_view
+from leagueasymode.roast.claude_take import ClaudeTakeSettings, save_claude_take_settings
+from leagueasymode.roast.last_game import LastGameRoast, roast_path_beside
 
 ALLOWED_HOST_NAMES: Final = frozenset({"127.0.0.1", "localhost"})
 # The header the macOS app sends with a mark.
@@ -26,6 +31,10 @@ MARK_REQUEST_HEADER: Final = "X-LeagueasyMode-Request"
 MARK_REQUEST_VALUE: Final = "mark"
 # The same header's value for a change of preferences, from the settings page.
 PREFERENCES_REQUEST_VALUE: Final = "preferences"
+# And for a change of Claude's take's settings (phase 11.8), also from the settings page.
+CLAUDE_TAKE_REQUEST_VALUE: Final = "claude-take"
+# And for a change of the friends list, also from the settings page.
+FRIENDS_REQUEST_VALUE: Final = "friends"
 # And for a round of sending games, from the status page.
 SEND_GAMES_REQUEST_VALUE: Final = "send-games"
 # And for a problem report, from the macOS app.
@@ -73,6 +82,8 @@ WEB_ASSETS: Final = {
     "/summary.js": ("summary.js", "text/javascript"),
     "/summary_state.js": ("summary_state.js", "text/javascript"),
     "/summary.css": ("summary.css", "text/css"),
+    "/case_file.js": ("case_file.js", "text/javascript"),
+    "/case_state.js": ("case_state.js", "text/javascript"),
     "/settings.html": ("settings.html", "text/html"),
     "/settings.js": ("settings.js", "text/javascript"),
     "/status.html": ("status.html", "text/html"),
@@ -91,6 +102,8 @@ def create_overlay_application(
     history_path: Path | None = None,
     preferences_path: Path | None = None,
     layout_path: Path | None = None,
+    friends_path: Path | None = None,
+    claude_take_path: Path | None = None,
     send_games: Callable[[], Awaitable[None]] | None = None,
     make_report: Callable[[str, dict[str, str]], Awaitable[str]] | None = None,
 ) -> web.Application:
@@ -98,10 +111,13 @@ def create_overlay_application(
 
     Args:
         engine: The engine whose state is served.
-        summary_path: The last game's summary, served at `/summary`; None to serve none.
+        summary_path: The last game's summary, served at `/summary`; None to serve none. Its
+            case is built at `/case` from the file beside it (`roast_path_beside`).
         history_path: The accuracy history, served at `/history`; None to serve none.
         preferences_path: Where a change of preferences is kept; None to keep it for this run.
         layout_path: Where a move of the widgets is kept; None to keep it for this run.
+        friends_path: Where a change of the friends list is kept; None to keep it for this run.
+        claude_take_path: Where a change of Claude's take's settings is kept; None for this run.
         send_games: Sends the recorded games not yet sent (`recording/sender.py`), which the
             status page asks for at `POST /games/send`; None when games are not sent.
         make_report: Makes a problem report from the player's note and the app's lines and
@@ -162,9 +178,15 @@ def create_overlay_application(
 
     application.router.add_get("/status", status)
     _add_the_players_choices(
-        application, engine, preferences_path=preferences_path, layout_path=layout_path
+        application,
+        engine,
+        preferences_path=preferences_path,
+        layout_path=layout_path,
+        friends_path=friends_path,
+        claude_take_path=claude_take_path,
     )
     application.router.add_get("/summary", summary)
+    _add_the_last_games_case(application, engine, summary_path)
     application.router.add_get("/history", history)
     application.router.add_get("/state", state)
     application.router.add_get("/events", events)
@@ -227,12 +249,85 @@ def _add_game_sending(
     application.router.add_post("/games/send", send_games_now)
 
 
+def _add_the_last_games_case(
+    application: web.Application, engine: OverlayEngine, summary_path: Path | None
+) -> None:
+    """Serve the last game's case (`/case`) and the line the copy shortcut copies (`/closing-line`).
+
+    Args:
+        application: The overlay's web application.
+        engine: The engine, for its thresholds and whether a game is on.
+        summary_path: The last game's summary; its case is kept beside it. None to serve none.
+    """
+    # The case the post-game window last showed, which the copy shortcut copies (phase 11.4).
+    shown_case = ShownCase()
+    no_case_answer = {"message": "no case yet: no game recorded, or its details have not come"}
+
+    async def last_game_roast() -> LastGameRoast | None:
+        return await asyncio.to_thread(
+            _last_game_roast_or_none,
+            roast_path_beside(summary_path) if summary_path is not None else None,
+        )
+
+    async def case(request: web.Request) -> web.Response:
+        try:
+            options = case_options_of(request.query)
+        except ValueError as error:
+            return web.json_response({"message": str(error)}, status=400)
+        last_game = await last_game_roast()
+        if last_game is None:
+            return web.json_response(no_case_answer, status=404)
+        view = await asyncio.to_thread(case_view, last_game, options, engine.tuning.roast)
+        shown_case.options = options
+        take, is_pending = engine.claude_take.take_for(
+            view.closing_line, _champions_of(view), view.closing_line_limit
+        )
+        with_take = view.model_copy(update={"claude_take": take, "claude_take_pending": is_pending})
+        return web.json_response(text=with_take.model_dump_json())
+
+    async def closing_line(request: web.Request) -> web.Response:
+        # The app's ⌃⌥C asks for the line the window shows; pressed again, for the takes after it.
+        # During a game, for the newest moment or team call, and pressed again, the one before.
+        later_takes_text = request.query.get("next", "0")
+        if not later_takes_text.isdigit():
+            return web.json_response({"message": "next is a whole number"}, status=400)
+        if engine.current_state.is_game_running:
+            # During a game: the newest moment about a friend (11.6) or team call (11.9), then the
+            # ones before it.
+            lines = engine.lines_to_copy
+            if not lines:
+                return web.json_response(
+                    {"message": "nothing to copy during a game until a moment or a team call"},
+                    status=409,
+                )
+            earlier_lines = int(later_takes_text)
+            return web.json_response(
+                {"text": lines[-1 - earlier_lines % len(lines)], "take": earlier_lines}
+            )
+        last_game = await last_game_roast()
+        if last_game is None:
+            return web.json_response(no_case_answer, status=404)
+        take = shown_case.options.take + int(later_takes_text)
+        options = shown_case.options.model_copy(update={"take": take})
+        view = await asyncio.to_thread(case_view, last_game, options, engine.tuning.roast)
+        # Claude's take when it is on and ready, as the window shows it; else the approved line.
+        claude_take, _ = engine.claude_take.take_for(
+            view.closing_line, _champions_of(view), view.closing_line_limit
+        )
+        return web.json_response({"text": claude_take or view.closing_line, "take": take})
+
+    application.router.add_get("/case", case)
+    application.router.add_get("/closing-line", closing_line)
+
+
 def _add_the_players_choices(
     application: web.Application,
     engine: OverlayEngine,
     *,
     preferences_path: Path | None,
     layout_path: Path | None,
+    friends_path: Path | None,
+    claude_take_path: Path | None,
 ) -> None:
     """Serve and take the player's choices: what the overlay shows, and where its widgets are.
 
@@ -241,6 +336,8 @@ def _add_the_players_choices(
         engine: The engine, which sends the choices with its state.
         preferences_path: Where a change of preferences is kept; None to keep it for this run.
         layout_path: Where a move of the widgets is kept; None to keep it for this run.
+        friends_path: Where a change of the friends list is kept; None to keep it for this run.
+        claude_take_path: Where a change of Claude's take's settings is kept; None for this run.
     """
 
     async def preferences(_request: web.Request) -> web.Response:
@@ -278,6 +375,55 @@ def _add_the_players_choices(
             await asyncio.to_thread(save_layout, layout_path, moved)
         return web.json_response(text=moved.model_dump_json())
 
+    async def friends(_request: web.Request) -> web.Response:
+        return web.json_response(text=engine.friends.model_dump_json())
+
+    async def change_friends(request: web.Request) -> web.Response:
+        # As with preferences: only the settings page, served from here, can send this header.
+        if request.headers.get(MARK_REQUEST_HEADER) != FRIENDS_REQUEST_VALUE:
+            return web.json_response({"message": "friends come from the settings page"}, status=403)
+        try:
+            chosen = FriendsList.model_validate_json(await request.read())
+        except ValidationError as error:
+            # Pydantic writes "Value error, " before the validator's own words.
+            reasons = "; ".join(
+                str(problem["msg"]).removeprefix("Value error, ") for problem in error.errors()
+            )
+            return web.json_response({"message": reasons}, status=400)
+        engine.set_friends(chosen)
+        if friends_path is not None:
+            await asyncio.to_thread(save_friends, friends_path, chosen)
+        return web.json_response(text=chosen.model_dump_json())
+
+    async def claude_take(_request: web.Request) -> web.Response:
+        return web.json_response(
+            {
+                "settings": engine.claude_take.settings.model_dump(),
+                "is_available": engine.claude_take.is_available,
+            }
+        )
+
+    async def change_claude_take(request: web.Request) -> web.Response:
+        # As with preferences: only the settings page, served from here, can send this header.
+        if request.headers.get(MARK_REQUEST_HEADER) != CLAUDE_TAKE_REQUEST_VALUE:
+            return web.json_response(
+                {"message": "Claude's take's settings come from the settings page"}, status=403
+            )
+        try:
+            chosen = ClaudeTakeSettings.model_validate_json(await request.read())
+        except ValidationError:
+            return web.json_response({"message": "not Claude's take's settings"}, status=400)
+        engine.claude_take.set_settings(chosen)
+        if claude_take_path is not None:
+            await asyncio.to_thread(save_claude_take_settings, claude_take_path, chosen)
+        return web.json_response(
+            {"settings": chosen.model_dump(), "is_available": engine.claude_take.is_available}
+        )
+
+    application.router.add_get("/claude-take", claude_take)
+    application.router.add_put("/claude-take", change_claude_take)
+    application.router.add_get("/friends", friends)
+    application.router.add_put("/friends", change_friends)
     application.router.add_get("/layout", layout)
     application.router.add_put("/layout", change_layout)
     application.router.add_get("/preferences", preferences)
@@ -370,6 +516,36 @@ def _event_bytes(state: OverlayState) -> bytes:
         The event's bytes.
     """
     return b"data: " + state.model_dump_json().encode() + b"\n\n"
+
+
+def _champions_of(view: CaseView) -> frozenset[str]:
+    """Return the champions of a case's game, which Claude's take slots out of a line."""
+    return frozenset(player.champion for player in view.players)
+
+
+@dataclasses.dataclass
+class ShownCase:
+    """The options of the case the post-game window last showed; the defaults before it asks."""
+
+    options: CaseOptions = dataclasses.field(default_factory=CaseOptions)
+
+
+def _last_game_roast_or_none(roast_path: Path | None) -> LastGameRoast | None:
+    """Return what the last game's case is built from.
+
+    Args:
+        roast_path: The file it is kept in; None for none.
+
+    Returns:
+        It; None when there is no file, or one written by another version that cannot be read.
+    """
+    roast_text = _text_or_none(roast_path)
+    if roast_text is None:
+        return None
+    try:
+        return LastGameRoast.model_validate_json(roast_text)
+    except ValidationError:
+        return None
 
 
 def _text_or_none(file_path: Path | None) -> str | None:

@@ -15,6 +15,102 @@ skill has the format.
 
 ## 2026-10-28
 
+- Phase 11.8, Claude's take ("approved, keep building 11.8"). With its setting on, the lines ⌃⌥C
+  copies are reworded by the `claude` command on the Mac, in the owner's style, in the background;
+  the approved line stands until the take is ready, and whenever a take fails a check. Only the
+  wording and the style are sent: numbers and champions become slots and are filled back on the
+  Mac. A take must keep every slot, add no number or name, fit the chat, and pass the safety floor
+  and, newly, an established moderation list (LDNOOBW's, kept as hashes so the public repository
+  spells nothing out), as the plan required before any model writes text. The post-game window
+  shows Claude's take under the closing line, marked as not approved. Left for later: the
+  per-friend running jokes, which need the engine to know which friend played which champion; and
+  the model, which is the `claude` command's own default unless the owner types one in.
+- The owner approved the five lines of the team calls ("approved"); a test holds them to a
+  fingerprint, so a reworded line goes back to the owner.
+- Phase 11.9, team calls, as the owner approved them ("approved, keep building 11.9"): on for
+  everyone, with a switch, for team chat. Calm, constructive calls for the whole team, from what
+  the overlay already shows: an objective spawning in a minute or so (stay alive, ward, move), enemies
+  down long enough to take something, a lost fight (reset and group for the next objective), a
+  teammate's death streak (steady, naming no one), and being behind in gold but still winnable. At
+  most one a minute, never spoken; ⌃⌥C copies the newest call or moment. The five lines are drafts
+  for the owner's sign-off.
+- The owner approved the five lines of the moments about friends ("approved"); a test now holds
+  them to a fingerprint, as the case's lines are, so a reworded line goes back to the owner.
+- Phase 11.6, moments about friends. During a game the engine notices when a friend's game hands
+  over ammo: a second or third death to their lane opponent with no help, a death in the minute
+  before the enemy's dragon, Elder or Baron, first blood given up, being at least 20 CS behind at
+  10:00 or 30 at 14:00, and the lane opponent's third kill on them while they have none. Each is
+  made once per game, from exact facts only, and uses a lane pairing only when both roles are given
+  or likely. It shows beside the callouts for a few seconds, is never spoken, and ⌃⌥C copies the
+  newest, then the ones before. A "Moments about friends" switch turns them off. The thresholds
+  are in `tuning.json` under `roast.moments`; the five lines in `roast/moments.toml` are drafts for
+  the owner's sign-off.
+- Phase 11.5, the friends list. The settings page has a Friends box: Riot IDs, one a line, checked
+  as name#tag and saved with their own button, at most 50, kept in `friends.json` on the Mac
+  (`LEAGUEASYMODE_FRIENDS` moves it). They are kept apart from the preferences, which go to the
+  overlay with every state: only a flag, `is_friend`, leaves the engine, so friends' names stay
+  out of the overlay's state and the problem reports' status. In a game the cards are matched by
+  the scoreboard's Riot ID in any case, and a friend on the other team gets a ★ on the enemy
+  strip; after the game the case marks them from the game's details, and the post-game window's
+  chips show the ★. The moments about friends (11.6) read the same flag.
+- Phase 11.4, the copy shortcut. After a game, ⌃⌥C copies the closing line the post-game window
+  shows, and pressed again within five seconds the next take; a toast near the top of League's
+  window says "Copied: …". The app writes the clipboard itself and never sends anything to chat.
+  The engine serves the line at `/closing-line` from the case the window last asked for, and
+  refuses during a game until moments about friends come (11.6). The toast is a borderless panel
+  that does not activate the app and lets every click through, so it cannot take the keyboard or
+  the mouse from League, as the overlay once did. The How to use page lists the shortcut.
+- Phase 11.3, the case file in the post-game window. After each game, `leagueasymode run` keeps
+  the game's players and exhibits beside the last game's summary (`last-game-roast.json`: no
+  names, champions only; removed when a game has no case). The window's new section, under the
+  result, asks `/case` for a case and asks again for each pick: the whole team, the enemy team, a
+  lane, or any one of the ten players, at any of the four spice levels, with "Prove it" and
+  another take. It shows the verdict, the lane board at 14:00, the lines with each number's
+  exhibit letter, the closing line with its length, the risk warning at Tilted and above, and the
+  exhibits with their paths. The player on this machine is found by Riot ID, or else by team and
+  champion. Nothing is sent to chat; copying is 11.4.
+- Phase 11.2, a game from the client as a case: `roast/client_game.py` reads the game's details
+  (`/lol-match-history/v1/games/<id>`) into its ten players and the scoreboard's exhibits, and
+  `roast/client_timeline.py` reads its timeline into the lanes at 10:00 and 14:00, first blood,
+  solo deaths, deaths before an enemy objective, unspent gold and the Carry Impossibility Index.
+  Each exhibit cites its value's path in the client's own answer, with no converted copy in
+  between, and a test follows every path back to the value. Positions come from lane and role
+  when there is no team position, since the older shape the client serves has none; friends are
+  matched by Riot ID. These shapes have not yet been seen at the end of a real game (the
+  recordings hold only a Practice Tool game cancelled at 0:00), so a field the answer lacks gives
+  no exhibit rather than a zero, and slice 11.0 checks them against a real one.
+- Phase 11.1, the roast engine, ported from nothingsmyfault into `src/leagueasymode/roast/`:
+  exhibits, the verdict, the composer, the validator, the safety floor, the closing line and the
+  case. The 58 lines the owner approved are in `roast/templates.toml` word for word, as TOML
+  (Python reads it with no new dependency), and a test holds them to a fingerprint, so a reworded
+  line goes back to the owner. The verdict's counts, the lane thresholds and the chat line's
+  length are in `tuning.json` under `roast`. The chat line drops the exhibit letters and the
+  site's signature unless asked, and the Mutual Defense Pact is off by default. Nothing shows yet:
+  11.2 builds a game's exhibits from the client's answers.
+- Phase 11's plan adds slice 11.9, team calls: calm, constructive calls for teammates who are not
+  friends, to paste in team chat, such as staying alive and warding before a dragon, from the
+  timers and the win chance the engine already has. At the owner's request ("can you make a
+  constructive mode for non firnds") and word ("yes add team calls as 11.9"). Who gets them and
+  which chat are proposed for the owner to settle; the plan waits for approval again.
+- The roast plan is now phase 11, its slices 11.0 to 11.8: phase 10 on main became testing
+  on the Mac, with slices of its own, while the roast plan waited. Nothing else in it changed.
+- The owner approved phase 11's plan again, with slice 11.8 ("approved, keep building 10.2").
+- Phase 11's plan adds slice 11.8, Claude's take: lines reworded by the `claude` command on the
+  Mac in a style the owner sets, numbers still filled from exhibits and every line checked again,
+  the approved line used whenever one fails. At the owner's word, "yes add it as 10.8"; the plan
+  waits for approval again.
+- The owner approved phase 11's plan ("approved, start building phase 10").
+- Phase 11's plan now ports nothingsmyfault's engine into this project instead of depending on it,
+  at the owner's question "why do you want to make it public? can you build off of leagues mode?".
+  This repository must stay public for the app's update check, so depending on the private
+  project would need a token; most of nothingsmyfault besides its engine duplicates what is here.
+- A plan for phase 11, roasts with receipts ([the plan](/plans/phase-11-roasts.md)), at the
+  owner's request: "is there any way to put this in leagueasymode overlay so i can have ammo to
+  tease my friends". It brings nothingsmyfault's cited case file into the post-game window, for
+  anyone in the game. It adds short moments about friends during the game, copied with one
+  shortcut and never posted. The first recording in LeagueasyMode-recordings is a Practice Tool
+  game cancelled at 0:00, so the client's post-game answers are still unseen; one real game
+  recorded to the end comes first. The plan waits for the owner's approval and decisions.
 - The first automatic update on the Mac stopped at "the app's folder cannot be written": build 89
   ran from the read-only copy macOS makes of a downloaded app opened where it was unzipped (App
   Translocation). Such an app now installs its update into Applications instead, from where the

@@ -14,6 +14,10 @@ sources:
     resource: ../../overlay/macos/Sources/LeagueasyOverlay/AppDelegate.swift
   - id: hotkey
     resource: ../../overlay/macos/Sources/LeagueasyOverlay/GlobalHotKey.swift
+  - id: roast-copy
+    resource: ../../overlay/macos/Sources/OverlayCore/RoastCopy.swift
+  - id: toast
+    resource: ../../overlay/macos/Sources/LeagueasyOverlay/ToastPanel.swift
   - id: levels
     resource: ../../overlay/macos/Sources/LeagueasyOverlay/WindowLevelChoice.swift
   - id: engine-command
@@ -115,6 +119,17 @@ writes it to `reports/` beside the recordings and sends it to the games' reposit
 `problem_report.py`). An engine that stops is started again three seconds later, with a new log,
 at most five times in ten minutes; after that the menu says "Engine: stopped (exit 1) after
 repeated restarts" (`EngineRestartPolicy`).
+
+**Copying the roast.** After a game, ⌃⌥C puts the closing line the post-game window shows on the
+clipboard, for the player to paste in chat themselves; the app never sends anything to chat.
+Pressed again within five seconds of the press before, it copies the next take, then the one
+after (`CopyPresses`). The engine gives the line (`/closing-line`, from the last case the window
+showed, the whole team at Salty before it shows one). During a game it copies the newest moment
+about a friend (phase 11.6) or team call (11.9) instead, and pressed again the one before; with
+none yet, it says there is nothing to copy. A toast near the top of League's window says what was copied
+("Copied: …", the line cut at 60 characters) or why nothing was. The toast is a borderless panel
+that does not activate the app and lets every click through, so it never takes the mouse or the
+keyboard from League (`ToastPanel`).
 
 The menu shows whether the engine runs and whether the overlay page loaded in the overlay's
 window ("Overlay: page loaded", or "Overlay: the page did not load (…)" with the web view's

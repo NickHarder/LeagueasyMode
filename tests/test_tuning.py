@@ -67,6 +67,7 @@ def test_the_written_file_holds_every_value_and_reads_back_the_same(tmp_path: Pa
         "contests",
         "build_path",
         "you",
+        "roast",
     }
     assert load_tuning(tuning_path) == (Tuning(), None)
 
