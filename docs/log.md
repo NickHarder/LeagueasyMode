@@ -12,6 +12,16 @@ skill has the format.
 
 ## 2026-10-28
 
+- Phase 11.2, a game from the client as a case: `roast/client_game.py` reads the game's details
+  (`/lol-match-history/v1/games/<id>`) into its ten players and the scoreboard's exhibits, and
+  `roast/client_timeline.py` reads its timeline into the lanes at 10:00 and 14:00, first blood,
+  solo deaths, deaths before an enemy objective, unspent gold and the Carry Impossibility Index.
+  Each exhibit cites its value's path in the client's own answer, with no converted copy in
+  between, and a test follows every path back to the value. Positions come from lane and role
+  when there is no team position, since the older shape the client serves has none; friends are
+  matched by Riot ID. These shapes have not yet been seen at the end of a real game (the
+  recordings hold only a Practice Tool game cancelled at 0:00), so a field the answer lacks gives
+  no exhibit rather than a zero, and slice 11.0 checks them against a real one.
 - Phase 11.1, the roast engine, ported from nothingsmyfault into `src/leagueasymode/roast/`:
   exhibits, the verdict, the composer, the validator, the safety floor, the closing line and the
   case. The 58 lines the owner approved are in `roast/templates.toml` word for word, as TOML
