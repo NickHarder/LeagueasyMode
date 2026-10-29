@@ -115,6 +115,12 @@ In `AGENTS.md`. Also: a raw recording (it holds other players' names); only `ano
 - The overlay is quiet at a glance and shows details only while Tab or Option is held or the
   player is dead (the owner, 2026-10-29: "maybe extra details onyl show if i hit tab"; "if it is
   goign to take my eyes off fights, it needs to be wort while info"); `docs/log.md`.
+- No kit eval suite for now (the owner, 2026-10-29: "Do we need evals? You can run it if you
+  want"; Claude advised against it). The product is deterministic code with no model in the loop
+  but the opt-in Claude's take; pytest and the browser tests guard behavior, and the accuracy
+  history against each game's timeline, with CI's thresholds, is the eval of the estimators.
+  Revisit when the recorded games are many enough to pin as cases (`enable_evals` is false in
+  `.copier-answers.yml`).
 - The layout plan and its decisions: widgets dropped on League's HUD move off automatically; ARAM
   times the inhibitors only (the owner, 2026-10-29: "approved, move them off automatically, no
   ARAM timers except inhib"); [docs/plans/overlay-layout.md](docs/plans/overlay-layout.md).
