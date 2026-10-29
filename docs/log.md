@@ -6,6 +6,9 @@ skill has the format.
 
 ## 2026-10-29
 
+- The owner's volume, the last open field of P-01: "Some days I play zero. Others I will play 1-3
+  normals or 2-4 arams." DR-01's target drops from 10 to 5 games a week, every game played; the
+  20 Rift games the thresholds need take six to eight weeks.
 - The key metrics' computations, as `define-key-metrics` asks: the recordings counts (games, crash
   reports, problem reports in a window, from file names alone) and the accuracy score (an
   estimator's weighed mean over its newest games), each with its executor and a standard-library

@@ -4,7 +4,7 @@ title: Users, moments and use cases
 description: Who LeagueasyMode is for, the moments in a game when they reach for it, and the use cases each feature must serve, with who it refuses and what each use case beats.
 tags: [users, personas, use-cases]
 status: draft
-generated: { by: claude-code/cloud, at: 2026-10-29T06:25:12Z }
+generated: { by: claude-code/cloud, at: 2026-10-29T07:59:39Z }
 ---
 
 # Users, moments and use cases
@@ -33,9 +33,11 @@ owner's private repository, where a daily cloud session reads them.
 - **Setting:** alone, at a MacBook Pro (Apple silicon), League in **windowed** mode (1920 × 925
   seen on 2026-10-28), a Windows keyboard (⌃ is Ctrl, ⌥ is Alt, ⌘ is the Windows key). Plays with
   friends, in the same games or the same lobby.
-- **Volume:** long sessions of quick queues: "I just played a ton of arams and switfplays"
-  (2026-10-29). Seen: ARAM and its Mayhem, Swiftplay (on the Rift), Practice Tool; no ranked game
-  seen yet. **Open:** how many games on a usual day (asked 2026-10-29).
+- **Volume:** some days none; on a day they play, 1 to 3 normals or 2 to 4 ARAMs (the owner,
+  2026-10-29: "Some days I play zero. Others I will play 1-3 normals or 2-4 arams. But I honestly
+  don't have time to play that much"), with the odd longer session ("I just played a ton of arams
+  and switfplays"). Seen: ARAM and its Mayhem, Swiftplay and normals (on the Rift), Practice Tool;
+  no ranked game. So a handful of games a week, about half of them on the Rift.
 - **A full day, by the clock:** evenings into the night, as far as seen: the app's own log has
   games and reports around midnight on the Mac's clock (UTC−5) on 2026-10-28 and 29. **Open:** a
   usual day. A game's own clock is known: champion select (about 1:30), loading (about 1:00),
