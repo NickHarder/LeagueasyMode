@@ -63,6 +63,10 @@ const DESCRIPTIONS = {
         "Minimap: jungler and roamers only",
         "Marks only the enemy jungler, and laners likely away from their lane, on the minimap layer; a laner holding their wave is left off. Off unless turned on.",
     ],
+    details_on_hold: [
+        "Details only while Tab or ⌥ is held",
+        "At a glance, one short line an enemy and the newest two callouts; holding Tab or ⌥ Option shows the rest: win and fight chances, gold, the You panel, each enemy’s second line and the spell buttons. Off: always shown.",
+    ],
     click_to_mark: [
         "Click to mark spells",
         "Buttons on each enemy’s row that start their Flash, other summoner spell or ultimate timer in one click, beside the ⌃⌥ shortcuts. The overlay takes the clicks on those buttons only. Off unless turned on.",

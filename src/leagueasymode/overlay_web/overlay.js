@@ -85,6 +85,22 @@ const ROLE_SHORT_NAMES = {
 // A timer whose rule is not yet confirmed for this season is shown with this mark.
 const PROVISIONAL_MARK = "~";
 let latestReceivedState = null;
+// Whether Tab or Option is held, as the macOS app tells the page; the details show while it is.
+let isDetailsKeyHeld = false;
+// The callouts already read aloud, so that one held back at a glance is not spoken when it shows.
+const spokenCalloutIds = new Set();
+// At a glance, the newest callouts only; holding the key shows every one.
+const GLANCE_CALLOUT_COUNT = 2;
+/**
+ * Return whether the details show now: the win and fight chances, gold, the You panel, each
+ * enemy's second line, the spell buttons and every callout. With "Details only while Tab or ⌥ is
+ * held", the default, only while that key is held, or while the widgets are moved; at a glance the
+ * overlay is the timers, the newest callouts and one short line an enemy (the owner: "thers still
+ * too much visual clutter … maybe extra details onyl show if i hit tab").
+ */
+function areDetailsShown(state) {
+    return !state.preferences.details_on_hold || isDetailsKeyHeld || isEditingLayout();
+}
 /** Return the game's clock now, moved on from the last state by at most a couple of seconds. */
 function currentGameTimeSeconds(received, nowMilliseconds) {
     const reportedGameTimeSeconds = received.state.game_time_seconds;
@@ -534,7 +550,7 @@ export function formatUltimateRank(rank) {
     return rank === 0 ? "no R" : `R${String(rank)}`;
 }
 /** Return the row that draws one enemy: champion, level, item gold, the death timer and stats. */
-function enemyRowElement(card, gameTimeSeconds, cooldowns, junglePaths, hasMarkButtons, isDetailed) {
+function enemyRowElement(card, gameTimeSeconds, cooldowns, junglePaths, hasMarkButtons, isDetailed, isGlance) {
     const row = document.createElement("div");
     row.className = "enemy-row";
     row.dataset["dead"] = card.is_dead ? "true" : "false";
@@ -568,7 +584,7 @@ function enemyRowElement(card, gameTimeSeconds, cooldowns, junglePaths, hasMarkB
     levelElement.textContent = String(card.level);
     const goldElement = document.createElement("span");
     goldElement.className = "enemy-gold";
-    goldElement.textContent = card.item_gold === null ? "" : formatGold(card.item_gold);
+    goldElement.textContent = card.item_gold === null || isGlance ? "" : formatGold(card.item_gold);
     row.append(roleElement, nameElement, levelElement, goldElement);
     const respawnsAtSeconds = card.respawns_at_game_time_seconds;
     if (card.is_dead && respawnsAtSeconds !== null) {
@@ -583,6 +599,10 @@ function enemyRowElement(card, gameTimeSeconds, cooldowns, junglePaths, hasMarkB
         cooldownsElement.className = "enemy-cooldowns";
         cooldownsElement.replaceChildren(...runningCooldowns.map((timer) => cooldownBadgeElement(timer, gameTimeSeconds)));
         row.append(cooldownsElement);
+    }
+    // At a glance the row ends here: who, their R, their level, a respawn and the marked spells.
+    if (isGlance) {
+        return row;
     }
     // A dead enemy casts nothing, so their row has no buttons until they are back.
     const markButtons = hasMarkButtons && !card.is_dead ? markButtonsElement(card) : null;
@@ -742,7 +762,10 @@ export function formatLaneOpponent(panel) {
 function renderYouPanel() {
     const panelElement = requireElement("you-panel");
     const received = latestReceivedState;
-    const panel = received !== null && received.state.is_game_running && received.state.preferences.show_you_panel
+    const panel = received !== null &&
+        received.state.is_game_running &&
+        received.state.preferences.show_you_panel &&
+        areDetailsShown(received.state)
         ? received.state.you
         : null;
     const lines = panel === null
@@ -782,9 +805,15 @@ function renderEnemyStrip(nowMilliseconds) {
         .sort((first, second) => roleRank(first) - roleRank(second))
         .map((card) => (areEstimatesShown ? card : withoutEstimates(card)));
     strip.hidden = enemyCards.length === 0;
-    // While the widgets are being moved, a press drags the strip, so it shows no buttons.
-    const hasMarkButtons = received.state.preferences.click_to_mark && !isEditingLayout();
-    const rows = enemyCards.map((card) => enemyRowElement(card, gameTimeSeconds, received.state.cooldowns, areEstimatesShown ? received.state.jungle_paths : [], hasMarkButtons, received.state.preferences.detailed_enemy_rows));
+    const isGlance = !areDetailsShown(received.state);
+    // While the widgets are being moved, a press drags the strip, so it shows no buttons; at a
+    // glance there are none either, so the overlay takes no click, not even a right click to move.
+    const hasMarkButtons = received.state.preferences.click_to_mark && !isEditingLayout() && !isGlance;
+    const rows = enemyCards.map((card) => enemyRowElement(card, gameTimeSeconds, received.state.cooldowns, areEstimatesShown ? received.state.jungle_paths : [], hasMarkButtons, received.state.preferences.detailed_enemy_rows, isGlance));
+    if (isGlance) {
+        strip.replaceChildren(...rows);
+        return;
+    }
     const campTimersText = areEstimatesShown
         ? formatCampTimers(received.state.camp_timers, gameTimeSeconds)
         : null;
@@ -832,23 +861,37 @@ function renderCallouts(nowMilliseconds) {
                     ? received.state.preferences.show_team_calls
                     : received.state.preferences.show_callouts &&
                         (callout.kind !== "suggestion" || received.state.preferences.show_suggestions)));
-    const shownIds = new Set(shownCallouts.map((callout) => callout.callout_id));
+    // Spoken as it first comes, shown or held back; kept on screen, it is not spoken again.
+    // A moment about a friend (11.6) or a team call (11.9) is never spoken: it is for chat.
+    const currentIds = new Set(shownCallouts.map((callout) => callout.callout_id));
+    for (const spokenId of spokenCalloutIds) {
+        if (!currentIds.has(spokenId)) {
+            spokenCalloutIds.delete(spokenId);
+        }
+    }
+    for (const callout of shownCallouts) {
+        if (!spokenCalloutIds.has(callout.callout_id)) {
+            spokenCalloutIds.add(callout.callout_id);
+            if (received?.state.preferences.speak_callouts === true &&
+                callout.kind !== "moment" &&
+                callout.kind !== "team_call") {
+                speak(callout.text);
+            }
+        }
+    }
+    const visibleCallouts = received !== null && !areDetailsShown(received.state)
+        ? shownCallouts.slice(-GLANCE_CALLOUT_COUNT)
+        : shownCallouts;
+    const shownIds = new Set(visibleCallouts.map((callout) => callout.callout_id));
     for (const child of Array.from(list.children)) {
         if (child instanceof HTMLElement && !shownIds.has(child.dataset["calloutId"] ?? "")) {
             child.remove();
         }
     }
     const presentIds = new Set(Array.from(list.children).map((child) => (child instanceof HTMLElement ? (child.dataset["calloutId"] ?? "") : "")));
-    for (const callout of shownCallouts) {
+    for (const callout of visibleCallouts) {
         if (!presentIds.has(callout.callout_id)) {
             list.append(calloutElement(callout));
-            // Spoken as it first shows; kept on screen, it is not spoken again.
-            // A moment about a friend (11.6) or a team call (11.9) is never spoken: it is for chat.
-            if (received?.state.preferences.speak_callouts === true &&
-                callout.kind !== "moment" &&
-                callout.kind !== "team_call") {
-                speak(callout.text);
-            }
         }
     }
 }
@@ -972,6 +1015,10 @@ function listenToEngine() {
     });
 }
 startLayoutEditing();
+window.leagueasymodeSetDetailsHeld = (isHeld) => {
+    isDetailsKeyHeld = isHeld;
+    render();
+};
 listenForMarks(requireElement("enemy-strip"));
 listenToEngine();
 window.setInterval(render, RENDER_INTERVAL_MILLISECONDS);

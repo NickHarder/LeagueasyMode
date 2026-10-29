@@ -646,6 +646,11 @@ class OverlayPreferences(BaseModel):
     # and record in the first three minutes, next item when they can buy it, likely place for the
     # jungler and a roaming laner.
     detailed_enemy_rows: bool = False
+    # The details (win and fight chances, gold, the You panel, each enemy's second line, the spell
+    # buttons and callouts past the newest two) show only while Tab or Option is held; at a
+    # glance, one short line an enemy (the owner: "maybe extra details onyl show if i hit tab").
+    # Off, they always show.
+    details_on_hold: bool = True
 
 
 # The widgets the player can move; the minimap layer stays over League's minimap.

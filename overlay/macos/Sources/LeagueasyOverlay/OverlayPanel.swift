@@ -9,8 +9,9 @@ import WebKit
 /// take clicks, so its widgets can be dragged: then it is tinted, so that the player sees the
 /// layer that catches their clicks even when the page shows nothing, and Escape ends it. With
 /// "Click to mark spells" on, it also takes the clicks on the page's spell buttons, and those
-/// alone, while the pointer is over one (`ClickRegions`); it still never becomes key then. It
-/// joins every Space, the full-screen ones included.
+/// alone, while the pointer is over one (`ClickRegions`); it still never becomes key then. The page
+/// shows its buttons only while Tab or Option is held (`DetailsKey`), so at a glance the panel
+/// takes no click at all. It joins every Space, the full-screen ones included.
 final class OverlayPanel: NSPanel, WKNavigationDelegate {
     // How often the panel looks where the pointer is, to take a click on a spell button: 30 times
     // a second, so that the button is ready before a click lands on it.
@@ -20,6 +21,9 @@ final class OverlayPanel: NSPanel, WKNavigationDelegate {
     // The page's spell buttons, in its points from its top left; none unless the setting is on.
     private var clickRegions: [CGRect] = []
     private var pointerTimer: Timer?
+    // Looks whether Tab or Option is held, and tells the page when that changes.
+    private var detailsKeyTimer: Timer?
+    private var detailsKeyWatcher = DetailsKeyWatcher()
     // When the panel last gave the keyboard back; at most once a second, so that a panel AppKit
     // made key again on showing could never hide and show itself without end.
     private var lastKeyboardHandBack: Date?
@@ -62,6 +66,23 @@ final class OverlayPanel: NSPanel, WKNavigationDelegate {
         )
         webView.navigationDelegate = self
         contentView = webView
+        detailsKeyTimer = Timer.scheduledTimer(
+            timeInterval: DetailsKey.checkSeconds,
+            target: self,
+            selector: #selector(detailsKeyTimerFired(_:)),
+            userInfo: nil,
+            repeats: true
+        )
+    }
+
+    /// Tells the page whether Tab or Option is held, when that changes. It reads only whether the
+    /// keys are down; the keys still go to the game.
+    @objc private func detailsKeyTimerFired(_ timer: Timer) {
+        let isOptionDown = NSEvent.modifierFlags.contains(.option)
+        let isTabDown = CGEventSource.keyState(.combinedSessionState, key: DetailsKey.tabKeyCode)
+        if let script = detailsKeyWatcher.scriptForChange(isOptionDown: isOptionDown, isTabDown: isTabDown) {
+            webView.evaluateJavaScript(script)
+        }
     }
 
     override var canBecomeKey: Bool { isEditingLayout }
@@ -205,6 +226,8 @@ final class OverlayPanel: NSPanel, WKNavigationDelegate {
     }
 
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+        // A page loaded again does not know whether the key is held; the next check tells it.
+        detailsKeyWatcher.forget()
         onPageStateChange?(.loaded)
     }
 

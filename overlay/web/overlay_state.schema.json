@@ -1004,6 +1004,11 @@
           "default": false,
           "title": "Detailed Enemy Rows",
           "type": "boolean"
+        },
+        "details_on_hold": {
+          "default": true,
+          "title": "Details On Hold",
+          "type": "boolean"
         }
       },
       "title": "OverlayPreferences",
