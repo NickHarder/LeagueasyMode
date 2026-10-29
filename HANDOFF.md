@@ -128,6 +128,9 @@ In `AGENTS.md`. Also: a raw recording (it holds other players' names); only `ano
   `NickHarder/LeagueasyMode-recordings`, by themselves once a token is in the Keychain (the
   owner, 2026-10-28: "i want it automated if possible"; a private repository over a branch of the
   public one). Setup: `docs/references/recordings.md`, "Sending games".
+- A name the anonymizer could not remove does not hold a game back: names it knows are replaced,
+  the rest is sent (the owner, 2026-10-29: "i dont care about player names being anonmized tbh").
+  `leagueasymode anonymize`, for copies committed to the public repository, still fails closed.
 
 ## Known limitations
 

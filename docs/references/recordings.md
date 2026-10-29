@@ -4,7 +4,7 @@ title: Recordings
 description: What a recording of a game holds, how it is written and read, what is asked of the League client and when, and how a copy is anonymized before it may enter the repository.
 tags: [recording, data, privacy]
 status: draft
-generated: { by: claude-code/cloud, at: 2026-10-29T05:18:09Z }
+generated: { by: claude-code/cloud, at: 2026-10-29T18:47:15Z }
 sources:
   - id: file-format
     resource: ../../src/leagueasymode/recording/file_format.py
@@ -158,9 +158,11 @@ A recording holds other players' names, so only an anonymized copy is committed:
   feed and the client's answers alike, and a tag line becomes `ANON`.
 - Game content (champion, item, rune and spell names and their texts, turret names) is left alone,
   so a player named like a champion does not rename the champion.
-- It fails closed: the copy is searched again for every identity, and one found anywhere stops it
-  with the JSON Pointer of where, and nothing is written. A new field holding a name then has to be
-  added to `anonymize.py`.
+- The copy is searched again for every identity. `leagueasymode anonymize` fails closed: one found
+  anywhere stops it with the JSON Pointer of where, and nothing is written. Sending games and the
+  problem report do not (`is_strict=False`): the copy keeps it, and the log gives only the pointer,
+  never the name (the owner, 2026-10-29: "i dont care about player names being anonmized tbh").
+  A new field holding a name still belongs in `anonymize.py`.
 
 `recordings/` and `*.lgrec` are in `.gitignore`.
 
@@ -171,9 +173,10 @@ of theirs, in a private repository of their own: `NickHarder/LeagueasyMode-recor
 (`LEAGUEASYMODE_SEND_GAMES_TO`; empty sends nothing).[^sender] `leagueasymode run` sends every
 finished recording not yet sent when it starts and after each game, and "Send games now" on the
 status page sends a round at once. Only an anonymized copy is sent, as above, to
-`games/<name>-anonymized.jsonl.xz` through GitHub's contents API; a game whose copy cannot be made
-safely is withheld, and tried again only by the next build, which may fix the anonymizer (on
-2026-10-29 none of the owner's games had reached the repository). `sent-games.json` beside the
+`games/<name>-anonymized.jsonl.xz` through GitHub's contents API. A name the anonymizer could not
+remove no longer withholds a game (until 2026-10-29 it did, and the owner's game of 18:07 that day
+was held back that way); only a game that cannot be read is withheld, and tried again only by the
+next build. `sent-games.json` beside the
 recordings lists what was sent, what was withheld and by which build. A recording stays open after its game
 until the client gives the match timeline, up to ten minutes; an app quit or updated in that
 time left it open, so it never counted as finished, and none of the owner's ARAM and Swiftplay

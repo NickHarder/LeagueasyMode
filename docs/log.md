@@ -6,6 +6,12 @@ skill has the format.
 
 ## 2026-10-29
 
+- Games are sent even when the anonymizer leaves a name in the copy; the log says only where. The
+  owner: "i dont care about player names being anonmized tbh", after their game of 18:07 was
+  recorded and scored but never sent ("Nothing new to send"), most likely withheld for a leftover
+  name. Only an unreadable game is withheld now, and the next build retries withheld ones.
+  `leagueasymode anonymize`, whose copies may be committed to the public repository, still fails
+  closed.
 - No kit eval suite for now: asked "Do we need evals?", Claude advised against it, as the product
   has no model in the loop to replay and its tests and the accuracy history already do the work
   evals would; recorded in HANDOFF.md, Settled.

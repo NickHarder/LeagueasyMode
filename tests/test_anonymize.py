@@ -166,6 +166,23 @@ def test_a_name_left_in_free_text_stops_the_copy(tmp_path: Path) -> None:
     assert not (tmp_path / "anonymized.jsonl.xz").exists()
 
 
+def test_unless_strict_a_name_left_over_is_kept_and_only_where_it_is_logged(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    # The owner, 2026-10-29: "i dont care about player names being anonmized tbh". A game the
+    # anonymizer cannot fully clean is sent anyway; every name it knows is still replaced, and
+    # the log says where a name was left, never the name.
+    source_path = write_source_recording(
+        tmp_path, extra_payload={"body": "gg Shadow Step, well played"}
+    )
+    copy_path = anonymize_recording(source_path, tmp_path / "anonymized.jsonl", is_strict=False)
+    copy_text = lzma.decompress(copy_path.read_bytes()).decode()
+    assert "Shadow Step" in copy_text
+    assert "Gank Plz" not in copy_text
+    assert "/body" in caplog.text
+    assert "Shadow Step" not in caplog.text
+
+
 def test_each_players_looked_up_record_is_anonymized_path_and_all(tmp_path: Path) -> None:
     zed_puuid = puuid_of(DEFAULT_PLAYERS[7])
     history_path = f"/lol-match-history/v1/products/lol/{zed_puuid}/matches?begIndex=0&endIndex=20"

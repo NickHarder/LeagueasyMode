@@ -29,7 +29,7 @@ from pydantic import BaseModel, ConfigDict, JsonValue
 from leagueasymode.build_info import build_label
 from leagueasymode.crash_reports import CRASH_REPORTS_FOLDER
 from leagueasymode.engine_status import EngineStatus
-from leagueasymode.recording.anonymize import IdentityLeakError, anonymize_recording
+from leagueasymode.recording.anonymize import anonymize_recording
 from leagueasymode.recording.file_format import COMPRESSED_SUFFIX, PLAIN_SUFFIX
 
 REPORTS_FOLDER: Final = "reports"
@@ -217,10 +217,9 @@ def _copy_the_game_so_far(recordings_directory: Path, report_directory: Path) ->
     newest = max(games, key=lambda path: path.stat().st_mtime)
     with tempfile.TemporaryDirectory(prefix="leagueasymode-report-") as temporary_directory:
         try:
-            copy = anonymize_recording(newest, Path(temporary_directory) / "game-so-far.jsonl")
-        except IdentityLeakError:
-            logger.warning("left the game out of the report: a name could not be removed")
-            return
+            copy = anonymize_recording(
+                newest, Path(temporary_directory) / "game-so-far.jsonl", is_strict=False
+            )
         except Exception:
             logger.exception("left the game out of the report: it could not be read")
             return
