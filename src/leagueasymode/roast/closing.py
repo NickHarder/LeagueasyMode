@@ -12,7 +12,7 @@ from pydantic import BaseModel, ConfigDict
 
 from leagueasymode.roast.lines import CitedLine
 
-CHAT_OPENER: Final = "gg. "
+CHAT_OPENER: Final = "gg"
 SIGNATURE: Final = " \N{EN DASH} nothingsmyfault.lol"
 
 
@@ -32,7 +32,7 @@ def closing_line_candidates(
     letter_by_key: dict[str, str],
     *,
     limit_characters: int,
-    verdict_title: str = "",
+    verdict_words: str = "",
     cite_letters: bool = False,
     signature: bool = False,
 ) -> list[ClosingLine]:
@@ -42,7 +42,8 @@ def closing_line_candidates(
         lines: The case's lines, already checked.
         letter_by_key: The letter of each cited exhibit.
         limit_characters: The longest line chat takes.
-        verdict_title: The verdict's stamp, which opens a line when it fits.
+        verdict_words: The verdict as chat says it, such as "jg diff", which opens a line when
+            it fits.
         cite_letters: End each line with its exhibits' letters, as "(A)(B)".
         signature: End each line with the site's name, when it fits.
 
@@ -56,14 +57,14 @@ def closing_line_candidates(
             if cite_letters
             else ""
         )
-        verdict_opener = f"{verdict_title}. " if verdict_title else ""
+        verdict_opener = f"{CHAT_OPENER} {verdict_words}. " if verdict_words else f"{CHAT_OPENER}, "
         signed = (
-            [f"{CHAT_OPENER}{verdict_opener}{line.text}{citation}{SIGNATURE}"] if signature else []
+            [f"{verdict_opener}{line.text}{citation}{SIGNATURE}"] if signature else []
         )
         longest_first = [
             *signed,
-            f"{CHAT_OPENER}{verdict_opener}{line.text}{citation}",
-            f"{CHAT_OPENER}{line.text}{citation}",
+            f"{verdict_opener}{line.text}{citation}",
+            f"{CHAT_OPENER}, {line.text}{citation}",
         ]
         fitting_texts = [text for text in longest_first if len(text) <= limit_characters]
         if fitting_texts:

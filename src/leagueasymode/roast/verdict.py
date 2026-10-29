@@ -49,6 +49,22 @@ ROLE_NAME_BY_POSITION: Final = {
     "BOTTOM": "BOT",
     "UTILITY": "SUPPORT",
 }
+# How each verdict reads in chat, as a player would type it (the owner, 2026-10-29: "what a league
+# player might actually type not nerd stuff"); none for a verdict that is no ruling.
+CHAT_WORDS_BY_CODE: Final[dict[str, str]] = {
+    "carry_receipt": "wp",
+    "mutual_destruction": "every lane lost",
+    "enemy_smurf": "smurf diff",
+    "guilty": "my bad",
+    "team_diff": "team diff",
+}
+CHAT_ROLE_BY_ROLE_NAME: Final = {
+    "TOP": "top",
+    "JUNGLE": "jg",
+    "MID": "mid",
+    "BOT": "bot",
+    "SUPPORT": "sup",
+}
 HELD_OUTCOMES: Final = frozenset({"won", "even"})
 LOST_OUTCOMES: Final = frozenset({"lost", "gap"})
 
@@ -358,3 +374,18 @@ def _verdict(
         exhibit_keys=exhibit_keys,
         lanes=lanes,
     )
+
+
+def chat_words_of(verdict: Verdict) -> str:
+    """Return how a verdict reads in chat, such as "jg diff"; empty for one that is no ruling.
+
+    Args:
+        verdict: The verdict.
+
+    Returns:
+        The words, in lower case.
+    """
+    if verdict.code == "lane_diff":
+        role_name = verdict.title.split()[0]
+        return f"{CHAT_ROLE_BY_ROLE_NAME.get(role_name, role_name.lower())} diff"
+    return CHAT_WORDS_BY_CODE.get(verdict.code, "")

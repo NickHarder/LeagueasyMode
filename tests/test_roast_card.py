@@ -87,7 +87,7 @@ async def test_after_a_game_the_card_offers_three_lines_and_copies_one(tmp_path:
                 lines = card.locator(".roast-card-line")
                 await expect(lines).to_have_count(3, timeout=10000)
                 salty = await lines.all_text_contents()
-                assert all(line.startswith("gg. ") for line in salty)
+                assert all(line.startswith("gg") for line in salty)
                 await expect(card.locator(".roast-card-level[aria-pressed=true]")).to_have_text("2")
                 screenshot_directory = os.environ.get("OVERLAY_SCREENSHOT_DIRECTORY")
                 if screenshot_directory:

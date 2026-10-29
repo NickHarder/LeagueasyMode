@@ -249,7 +249,7 @@ async def test_claudes_take_shows_under_the_closing_line(tmp_path: Path) -> None
     async with open_summary(summary_path, history_path, take) as page:
         claude_take = page.locator(".case-claude-take")
         await expect(claude_take.locator(".case-closing-line")).to_have_text(
-            re.compile(r"^Yarr! gg\."), timeout=8000
+            re.compile(r"^Yarr! gg[ ,]"), timeout=8000
         )
         await expect(claude_take).to_contain_text("not one of your approved lines")
         closing = await page.locator(".case-closing > .case-closing-line").text_content()

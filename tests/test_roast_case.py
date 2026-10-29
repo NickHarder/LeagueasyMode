@@ -64,7 +64,7 @@ def test_the_approved_lines_come_out_word_for_word() -> None:
 
 def test_the_chat_line_states_its_numbers_without_letters_or_a_signature() -> None:
     closing = case_of().closing_line
-    assert closing.text.startswith("gg. TEAM DIFF. ")
+    assert closing.text.startswith("gg team diff. ")
     assert "(A)" not in closing.text
     assert "nothingsmyfault.lol" not in closing.text
     assert len(closing.text) <= RoastRules().chat_line_max_characters

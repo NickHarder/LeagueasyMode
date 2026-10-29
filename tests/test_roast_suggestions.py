@@ -39,7 +39,7 @@ def test_three_lines_the_teams_closing_line_first(tmp_path: Path) -> None:
     assert len(suggestions.lines) == SUGGESTION_COUNT
     assert len(set(suggestions.lines)) == SUGGESTION_COUNT
     assert all(len(line) <= rules.chat_line_max_characters for line in suggestions.lines)
-    assert all(line.startswith("gg. ") for line in suggestions.lines)
+    assert all(line.startswith("gg") for line in suggestions.lines)
     assert not suggestions.is_quick
 
 
@@ -59,4 +59,4 @@ def test_a_quick_case_with_no_lanes_still_offers_lines() -> None:
     assert 1 <= len(suggestions.lines) <= SUGGESTION_COUNT
     assert len(set(suggestions.lines)) == len(suggestions.lines)
     # "NO LANE VERDICT" is no ruling, so chat does not hear it.
-    assert all(line.startswith("gg. Our ") for line in suggestions.lines)
+    assert all(line.startswith("gg, ") for line in suggestions.lines)

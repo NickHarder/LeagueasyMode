@@ -18,9 +18,9 @@ from leagueasymode.roast.rules import RoastRules
 from leagueasymode.roast.targets import parse_target, subjects_for_target
 from leagueasymode.roast.templates import load_templates
 from leagueasymode.roast.validate import line_problems
-from leagueasymode.roast.verdict import Verdict, judge_case
+from leagueasymode.roast.verdict import Verdict, chat_words_of, judge_case
 
-FALLBACK_CLOSING_TEXT: Final = "gg. Nothing's my fault."
+FALLBACK_CLOSING_TEXT: Final = "gg"
 ALPHABET_SIZE: Final = 26
 # How many lines for chat the post-game window offers to pick from.
 CLOSING_OPTION_COUNT: Final = 5
@@ -127,8 +127,7 @@ def build_case(
         checked_lines,
         letter_by_key,
         limit_characters=rules.chat_line_max_characters,
-        # "NO LANE VERDICT" is no ruling, only that the lanes are unknown: chat need not hear it.
-        verdict_title="" if verdict.code == "no_lane_verdict" else verdict.title,
+        verdict_words=chat_words_of(verdict),
         cite_letters=options.cite_letters,
         signature=options.signature,
     )
@@ -230,8 +229,9 @@ def fallback_closing_line(verdict: Verdict, limit_characters: int) -> ClosingLin
         limit_characters: The longest line chat takes.
 
     Returns:
-        "gg." with the verdict's stamp and summary, which state no number, or a shorter line.
+        "gg" with the verdict as chat says it, which states no number, or "gg" alone.
     """
-    verdict_text = f"gg. {verdict.title}. {verdict.summary}"
+    verdict_words = chat_words_of(verdict)
+    verdict_text = f"gg {verdict_words}" if verdict_words else FALLBACK_CLOSING_TEXT
     fitting_text = verdict_text if len(verdict_text) <= limit_characters else FALLBACK_CLOSING_TEXT
     return ClosingLine(text=fitting_text, exhibit_keys=())
