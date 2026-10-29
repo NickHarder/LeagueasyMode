@@ -7,12 +7,12 @@ add-generic-password -s LeagueasyMode-GitHub -a recordings -w`, which asks for t
 it starts and after each game, and the status page can ask for a round at any time.
 
 Only an anonymized copy is sent (`anonymize.py`), never the recording itself: a game whose copy
-would still hold a name is withheld, and not tried again until the app is updated, since only a
-new build can fix the anonymizer (none of the owner's games reached the repository at first).
-The copy goes to `games/<name>-anonymized.jsonl.xz` in the repository `LEAGUEASYMODE_SEND_GAMES_TO` names, through
-GitHub's contents API; empty sends nothing. `sent-games.json` beside the recordings lists what was
-sent and what was withheld, so each game is sent once. The token is read from the Keychain for
-each round, and is never written anywhere, shown or logged.
+would still hold a name is withheld, and not tried again until the app is updated, since only a new
+build can fix the anonymizer (none of the owner's games reached the repository at first). The copy
+goes to `games/<name>-anonymized.jsonl.xz` in the repository that `LEAGUEASYMODE_SEND_GAMES_TO`
+names, through GitHub's contents API; empty sends nothing. `sent-games.json` beside the recordings
+lists what was sent and what was withheld, so each game is sent once. The token is read from the
+Keychain for each round, and is never written anywhere, shown or logged.
 """
 
 import asyncio
