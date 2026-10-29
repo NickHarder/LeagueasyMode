@@ -44,6 +44,7 @@ export const WIDGET_ELEMENT_IDS: Readonly<Record<MovableWidget, string>> = {
   callouts: "callouts",
   enemy_strip: "enemy-strip",
   you_panel: "you-panel",
+  overview: "overview",
 };
 
 export const WIDGET_TITLES: Readonly<Record<MovableWidget, string>> = {
@@ -51,6 +52,7 @@ export const WIDGET_TITLES: Readonly<Record<MovableWidget, string>> = {
   callouts: "Callouts",
   enemy_strip: "Enemy strip",
   you_panel: "You panel",
+  overview: "Tab overview",
 };
 
 const USUAL_PLACE: WidgetOffset = { x_share: 0, y_share: 0 };

@@ -1077,3 +1077,51 @@ async def test_with_details_always_shown_nothing_waits_for_the_key(tmp_path: Pat
     ) as page:
         await expect(page.locator("#enemy-strip .item-lead").first).to_be_visible(timeout=5000)
         await expect(page.locator("#you-panel")).to_be_visible()
+
+
+async def test_holding_tab_shows_both_teams_overview(tmp_path: Path) -> None:
+    # The owner, 2026-10-29, with Mobalytics' "Player Overview" in mind: "When tabbed we can show
+    # the detailed stats". Each team a column, a row a player: rank, record, their champion games
+    # and win rate, and tags; each lane's item-gold lead between them.
+    async with open_overlay(tmp_path, snapshot_count=60, speed=1.0, hold_details=False) as page:
+        overview = page.locator("#overview")
+        await expect(page.locator("#enemy-strip .enemy-row")).to_have_count(5, timeout=5000)
+        await expect(overview).to_be_hidden()
+        await hold_the_details_key(page, is_held=True)
+        await expect(overview).to_be_visible()
+        await expect(overview.locator(".overview-row")).to_have_count(10)
+        zed = overview.locator('.overview-row[data-champion="Zed"]')
+        await expect(zed.locator(".overview-rank")).to_have_text("P4", timeout=5000)
+        await expect(zed.locator(".overview-record")).to_have_text(f"3{EN_DASH}2")
+        await expect(zed.locator(".overview-champion-record")).to_have_text("3 games 100%")
+        await expect(zed.locator(".overview-tag")).to_have_text(["Main", "Won 3"])
+        await expect(overview.locator(".overview-lane")).to_have_count(5)
+        await keep_screenshot(page, "overview")
+        await hold_the_details_key(page, is_held=False)
+        await expect(overview).to_be_hidden()
+
+
+async def test_while_you_are_dead_the_overview_shows(tmp_path: Path) -> None:
+    async with open_overlay(
+        tmp_path,
+        snapshot_count=60,
+        speed=1.0,
+        respawn_at_by_champion={"Ahri": 1430.0},
+        hold_details=False,
+    ) as page:
+        await expect(page.locator("#overview")).to_be_visible(timeout=5000)
+
+
+async def test_off_the_rift_no_one_has_a_role(tmp_path: Path) -> None:
+    # The owner, 2026-10-29: "when in aram there is no bot jg top etc positions".
+    async with open_overlay(
+        tmp_path, snapshot_count=60, speed=1.0, map_number=12, hold_details=False
+    ) as page:
+        rows = page.locator("#enemy-strip .enemy-row")
+        await expect(rows).to_have_count(5, timeout=5000)
+        await expect(page.locator("#enemy-strip .enemy-role")).to_have_text([""] * 5)
+        await hold_the_details_key(page, is_held=True)
+        overview = page.locator("#overview")
+        await expect(overview.locator(".overview-role")).to_have_text([""] * 10)
+        await expect(overview.locator(".overview-lane")).to_have_count(0)
+        await expect(overview.locator(".overview-tag", has_text="Off-role")).to_have_count(0)
