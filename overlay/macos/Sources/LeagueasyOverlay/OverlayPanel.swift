@@ -221,11 +221,13 @@ final class OverlayPanel: NSPanel, WKNavigationDelegate {
         webView.evaluateJavaScript(LayoutEditing.resetScript)
     }
 
-    /// Puts the panel at a window level.
+    /// Puts the panel at a window level, or higher when the game's window needs it.
     ///
-    /// - Parameter levelChoice: The level.
-    func place(at levelChoice: WindowLevelChoice) {
-        level = levelChoice.windowLevel
+    /// - Parameters:
+    ///   - levelChoice: The level chosen in the menu.
+    ///   - lowestLevel: The level that clears League's window, when League raised it.
+    func place(at levelChoice: WindowLevelChoice, atLeast lowestLevel: Int? = nil) {
+        level = NSWindow.Level(rawValue: max(levelChoice.windowLevel.rawValue, lowestLevel ?? Int.min))
     }
 
     // MARK: - Whether the page loaded
