@@ -6,9 +6,10 @@ add-generic-password -s LeagueasyMode-GitHub -a recordings -w`, which asks for t
 `LEAGUEASYMODE_GITHUB_TOKEN`, `leagueasymode run` sends every finished recording not yet sent when
 it starts and after each game, and the status page can ask for a round at any time.
 
-Only an anonymized copy is sent (`anonymize.py`), never the recording itself: a game whose copy
-would still hold a name is withheld, and not tried again until the app is updated, since only a new
-build can fix the anonymizer (none of the owner's games reached the repository at first). The copy
+Only an anonymized copy is sent (`anonymize.py`), never the recording itself. Every name the
+anonymizer knows is replaced, but a name it could not remove no longer holds a game back (the owner,
+2026-10-29: "i dont care about player names being anonmized tbh"); the log says where it was left.
+A game that cannot be read is withheld, and not tried again until the app is updated. The copy
 goes to `games/<name>-anonymized.jsonl.xz` in the repository that `LEAGUEASYMODE_SEND_GAMES_TO`
 names, through GitHub's contents API; empty sends nothing. `sent-games.json` beside the recordings
 lists what was sent and what was withheld, so each game is sent once. The token is read from the
@@ -36,7 +37,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from leagueasymode.crash_reports import CRASH_REPORTS_FOLDER
 from leagueasymode.engine_status import PartState, StatusBoard
 from leagueasymode.problem_report import REPORTS_FOLDER
-from leagueasymode.recording.anonymize import IdentityLeakError, anonymize_recording
+from leagueasymode.recording.anonymize import anonymize_recording
 from leagueasymode.recording.file_format import (
     COMPRESSED_SUFFIX,
     PLAIN_SUFFIX,
@@ -370,11 +371,8 @@ class GameSender:
             plain_copy_path = Path(temporary_directory) / (copy_name.removesuffix(".xz"))
             try:
                 copy_path = await asyncio.to_thread(
-                    anonymize_recording, recording_path, plain_copy_path
+                    anonymize_recording, recording_path, plain_copy_path, is_strict=False
                 )
-            except IdentityLeakError:
-                logger.warning("withheld %s: a name could not be removed", recording_path.name)
-                return False
             except Exception:
                 logger.exception("withheld %s: it could not be read", recording_path.name)
                 return False
@@ -447,9 +445,7 @@ class GameSender:
             self._note("ok", f"Nothing new to send; {total_sent} sent to {self.repository} in all")
             return
         game_word = "game" if sent_count == 1 else "games"
-        withheld_text = (
-            f"; {withheld_count} withheld: no safe anonymized copy" if withheld_count else ""
-        )
+        withheld_text = f"; {withheld_count} withheld: could not be read" if withheld_count else ""
         self._note(
             "problem" if withheld_count else "ok",
             f"Sent {sent_count} {game_word} to {self.repository}; {total_sent} sent in all"

@@ -12,6 +12,7 @@ found anywhere stops the copy before anything is written. A field this module do
 then has to be added here, rather than slipping through.
 """
 
+import logging
 import re
 from collections.abc import Iterator
 from dataclasses import dataclass, field
@@ -31,6 +32,8 @@ from leagueasymode.recording.file_format import (
 )
 from leagueasymode.recording.reader import iter_recording_lines
 from leagueasymode.recording.writer import RecordingWriter
+
+logger = logging.getLogger(__name__)
 
 # Fields that hold a player's name, alone or as a Riot ID (`name#tag`).
 NAME_FIELDS: Final = frozenset(
@@ -173,19 +176,24 @@ class IdentityMap:
                 yield number_id, pseudonym_number
 
 
-def anonymize_recording(source_path: Path, destination_plain_path: Path) -> Path:
+def anonymize_recording(
+    source_path: Path, destination_plain_path: Path, *, is_strict: bool = True
+) -> Path:
     """Write an anonymized copy of a recording, compressed, and return its path.
 
     Args:
         source_path: The recording to copy.
         destination_plain_path: Where the copy is written while it is open; it ends in `.jsonl`
             and is compressed to `.jsonl.xz` when complete.
+        is_strict: Whether an identity left in the copy stops it. When not, the copy keeps it and
+            the log says where it is, never what it is.
 
     Returns:
         The compressed copy's path.
 
     Raises:
-        IdentityLeakError: An identity would still be in the copy; nothing is left behind.
+        IdentityLeakError: When strict, an identity would still be in the copy; nothing is left
+            behind.
         ValueError: The destination does not end in `.jsonl`.
     """
     if not destination_plain_path.name.endswith(PLAIN_SUFFIX):
@@ -193,7 +201,7 @@ def anonymize_recording(source_path: Path, destination_plain_path: Path) -> Path
     identity_map = collect_identities(source_path)
     writer = RecordingWriter(destination_plain_path)
     try:
-        _write_anonymized_lines(source_path, writer, identity_map)
+        _write_anonymized_lines(source_path, writer, identity_map, is_strict=is_strict)
     except IdentityLeakError:
         writer.abandon()
         destination_plain_path.unlink()
@@ -344,7 +352,7 @@ def _iter_payloads(source_path: Path) -> Iterator[JsonValue]:
 
 
 def _write_anonymized_lines(
-    source_path: Path, writer: RecordingWriter, identity_map: IdentityMap
+    source_path: Path, writer: RecordingWriter, identity_map: IdentityMap, *, is_strict: bool
 ) -> None:
     """Write each line of the source to the writer, anonymized, checking each for leaks first.
 
@@ -352,9 +360,10 @@ def _write_anonymized_lines(
         source_path: The recording to copy.
         writer: The copy's writer.
         identity_map: The identities and their pseudonyms.
+        is_strict: Whether a leak stops the copy rather than being logged.
 
     Raises:
-        IdentityLeakError: A line would still hold an identity.
+        IdentityLeakError: When strict, a line would still hold an identity.
     """
     current_payload: JsonValue = None
     for record in iter_recording_lines(source_path):
@@ -372,47 +381,80 @@ def _write_anonymized_lines(
             )
             writer.write_snapshot(
                 received_at_seconds=record.received_at_seconds,
-                payload=_anonymized_and_checked(current_payload, "snapshot", identity_map),
+                payload=_anonymized_and_checked(
+                    current_payload, "snapshot", identity_map, is_strict=is_strict
+                ),
             )
         elif isinstance(record, ClientResource):
             anonymized_path = identity_map.replace_text(record.path)
-            _raise_on_leaks(identity_map.leaks_in(anonymized_path), "client resource path")
+            _handle_leaks(
+                identity_map.leaks_in(anonymized_path),
+                "client resource path",
+                identity_map,
+                is_strict=is_strict,
+            )
             writer.write_client_resource(
                 received_at_seconds=record.received_at_seconds,
                 path=anonymized_path,
-                payload=_anonymized_and_checked(record.payload, anonymized_path, identity_map),
+                payload=_anonymized_and_checked(
+                    record.payload, anonymized_path, identity_map, is_strict=is_strict
+                ),
             )
         elif isinstance(record, RecordingEnded):
             writer.write_ended(received_at_seconds=record.received_at_seconds, reason=record.reason)
 
 
-def _anonymized_and_checked(payload: JsonValue, where: str, identity_map: IdentityMap) -> JsonValue:
+def _anonymized_and_checked(
+    payload: JsonValue, where: str, identity_map: IdentityMap, *, is_strict: bool
+) -> JsonValue:
     """Return a payload anonymized, after checking that no identity is left in it.
 
     Args:
         payload: The payload.
         where: What the payload is, for the error message.
         identity_map: The identities and their pseudonyms.
+        is_strict: Whether a leak stops the copy rather than being logged.
 
     Returns:
         The anonymized payload.
     """
     anonymized_payload = anonymize_value(payload, None, identity_map)
-    _raise_on_leaks(find_identity_leaks(anonymized_payload, "", identity_map), where)
+    _handle_leaks(
+        find_identity_leaks(anonymized_payload, "", identity_map),
+        where,
+        identity_map,
+        is_strict=is_strict,
+    )
     return anonymized_payload
 
 
-def _raise_on_leaks(leaks: list[str], where: str) -> None:
-    """Stop the copy when there is any leak.
+def _handle_leaks(
+    leaks: list[str], where: str, identity_map: IdentityMap, *, is_strict: bool
+) -> None:
+    """Stop the copy when there is any leak, or when not strict, log where each one is.
+
+    The log never holds an identity: each entry is cut to its pointer, and a pointer that itself
+    holds one (a key that is a name) is not shown.
 
     Args:
-        leaks: What was found, one entry each.
+        leaks: What was found, one entry each, as `<pointer>: <identity>`.
         where: What was searched, for the error message.
+        identity_map: The identities, to keep them out of the log.
+        is_strict: Whether a leak stops the copy rather than being logged.
 
     Raises:
-        IdentityLeakError: There is at least one leak.
+        IdentityLeakError: When strict, there is at least one leak.
     """
-    if leaks:
+    if leaks and not is_strict:
+        pointers = [leak.split(": ", 1)[0] for leak in leaks[:5]]
+        logger.warning(
+            "a name was left in the copy at %s",
+            ", ".join(
+                "(a pointer holding it)" if identity_map.leaks_in(pointer) else pointer
+                for pointer in pointers
+            ),
+        )
+    elif leaks:
         raise IdentityLeakError(
             f"an identity would stay in the copy ({where}): {'; '.join(leaks[:5])}"
         )

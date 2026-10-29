@@ -170,7 +170,10 @@ async def test_a_refused_token_stops_sending_and_is_never_shown(tmp_path: Path) 
     assert TOKEN not in board.report().model_dump_json()
 
 
-async def test_a_game_that_would_leak_a_name_is_withheld(tmp_path: Path) -> None:
+async def test_a_game_the_anonymizer_cannot_fully_clean_is_sent_anyway(tmp_path: Path) -> None:
+    # It was withheld, and never sent, until the owner's first real games were held back this
+    # way: "i dont care about player names being anonmized tbh" (2026-10-29). It goes, with every
+    # name the anonymizer knows replaced and the rest as it was.
     recordings = tmp_path / "recordings"
     write_games(recordings, ["game-1"])
     (tmp_path / "leaking").mkdir()
@@ -181,24 +184,14 @@ async def test_a_game_that_would_leak_a_name_is_withheld(tmp_path: Path) -> None
     github = FakeGitHub()
     board = StatusBoard(home_directory=tmp_path)
     await send_with(github, recordings, TOKEN, board)
-    assert set(github.puts) == {"games/game-1-anonymized.jsonl.xz"}
-    sent_log = json.loads((recordings / SENT_LOG_NAME).read_text())
-    # The build that withheld a game is kept with it, so that the next build tries it again.
-    assert sent_log == {
-        "sent": ["game-1"],
-        "withheld": ["game-2"],
-        "withheld_by": "0.1.0 (build 1, abc1234)",
-        "crash_reports": [],
-        "reports": [],
+    assert set(github.puts) == {
+        "games/game-1-anonymized.jsonl.xz",
+        "games/game-2-anonymized.jsonl.xz",
     }
-    assert sending_part(board) == (
-        "problem",
-        f"Sent 1 game to {REPOSITORY}; 1 sent in all; 1 withheld: no safe anonymized copy",
-    )
-    # A withheld game is not tried again by the same build.
-    github.puts.clear()
-    await send_with(github, recordings, TOKEN, board)
-    assert github.puts == {}
+    sent_log = json.loads((recordings / SENT_LOG_NAME).read_text())
+    assert sent_log["sent"] == ["game-1", "game-2"]
+    assert sent_log["withheld"] == []
+    assert sending_part(board) == ("ok", f"Sent 2 games to {REPOSITORY}; 2 sent in all")
 
 
 async def test_a_new_build_tries_the_withheld_games_again(tmp_path: Path) -> None:
