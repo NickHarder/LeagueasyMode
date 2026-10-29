@@ -326,3 +326,61 @@ def test_the_habit_thresholds_come_from_the_rules() -> None:
     assert [callout.kind for callout in lenient.update(state_at(20.0, [enemy_jungler(3, 5)]))] == [
         "jungle_start"
     ]
+
+
+def enemies_with_dead(dead_count: int, zed_level: int = 10) -> list[PlayerCard]:
+    """Five enemies, the first `dead_count` of them dead; Zed is the last."""
+    names = ["Darius", "Vi", "Caitlyn", "Lux", "Zed"]
+    return [
+        enemy(name, zed_level if name == "Zed" else 10).model_copy(
+            update={"is_dead": index < dead_count}
+        )
+        for index, name in enumerate(names)
+    ]
+
+
+def window_of(enemy_dead_count: int) -> NumbersWindow:
+    return NumbersWindow(
+        ally_dead_count=0, enemy_dead_count=enemy_dead_count, ends_at_game_time_seconds=940.0
+    )
+
+
+def test_a_team_fight_is_called_out_once_after_the_dying_stops() -> None:
+    # The owner, after a game: each death in a fight made a callout, "its like i know".
+    tracker = CalloutTracker()
+    tracker.update(state_at(900.0, enemies_with_dead(0)))
+    for game_time_seconds, dead_count in ((901.0, 1), (903.0, 2), (905.0, 3), (912.0, 3)):
+        during = tracker.update(
+            state_at(game_time_seconds, enemies_with_dead(dead_count), window_of(dead_count))
+        )
+        assert [callout.kind for callout in during] == [], game_time_seconds
+    after = tracker.update(state_at(914.0, enemies_with_dead(3), window_of(3)))
+    assert [callout.text for callout in after] == ["3 enemies down for 0:26"]
+
+
+def test_one_enemy_down_is_not_called_out() -> None:
+    tracker = CalloutTracker()
+    tracker.update(state_at(900.0, enemies_with_dead(0)))
+    first = tracker.update(state_at(901.0, enemies_with_dead(1), window_of(1)))
+    later = tracker.update(state_at(915.0, enemies_with_dead(1), window_of(1)))
+    assert [callout for callout in [*first, *later] if callout.kind == "numbers_window"] == []
+
+
+def test_a_level_spike_in_a_fight_shows_once_the_fight_is_over() -> None:
+    tracker = CalloutTracker()
+    tracker.update(state_at(900.0, enemies_with_dead(0, zed_level=10)))
+    tracker.update(state_at(901.0, enemies_with_dead(1, zed_level=10)))
+    assert tracker.update(state_at(902.0, enemies_with_dead(1, zed_level=11))) == []
+    after = tracker.update(state_at(910.0, enemies_with_dead(1, zed_level=11)))
+    assert [callout.text for callout in after] == ["Zed is level 11"]
+    assert after[0].shown_until_game_time_seconds == 910.0 + CALLOUT_RULES.shown_seconds
+
+
+def test_what_waited_too_long_in_a_fight_is_dropped() -> None:
+    rules = CalloutRules(held_callout_seconds=5.0)
+    tracker = CalloutTracker(rules=rules)
+    tracker.update(state_at(900.0, enemies_with_dead(0, zed_level=10)))
+    tracker.update(state_at(901.0, enemies_with_dead(1, zed_level=11)))
+    # A second death keeps the fight going; by its end, Zed's level 11 is old news.
+    tracker.update(state_at(906.0, enemies_with_dead(2, zed_level=11)))
+    assert tracker.update(state_at(915.0, enemies_with_dead(2, zed_level=11))) == []

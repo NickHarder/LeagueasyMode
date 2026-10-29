@@ -380,6 +380,7 @@ export interface OverlayPreferences {
   readonly speak_callouts: boolean;
   readonly click_to_mark: boolean;
   readonly minimap_roamers_only: boolean;
+  readonly detailed_enemy_rows: boolean;
 }
 
 /** The preferences' names, in the settings page's order. */
@@ -397,6 +398,7 @@ export const PREFERENCE_NAMES = [
   "speak_callouts",
   "click_to_mark",
   "minimap_roamers_only",
+  "detailed_enemy_rows",
 ] as const satisfies readonly (keyof OverlayPreferences)[];
 
 /** The widgets the player can move; the minimap layer stays over League's minimap. */

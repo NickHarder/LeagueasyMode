@@ -698,7 +698,13 @@ async def test_the_enemy_strip_shows_item_gold_and_the_lead(tmp_path: Path) -> N
 async def test_the_enemy_strip_shows_each_enemys_health_armor_and_magic_resist(
     tmp_path: Path,
 ) -> None:
-    async with open_overlay(tmp_path, snapshot_count=60, speed=1.0) as page:
+    # The detailed rows: the focused default keeps only what may change a decision now.
+    async with open_overlay(
+        tmp_path,
+        snapshot_count=60,
+        speed=1.0,
+        preferences=OverlayPreferences(detailed_enemy_rows=True),
+    ) as page:
         caitlyn_stats = page.locator("#enemy-strip .enemy-row", has_text="Caitlyn").locator(
             ".enemy-stats"
         )
@@ -711,7 +717,13 @@ async def test_the_enemy_strip_shows_each_enemys_health_armor_and_magic_resist(
 async def test_the_enemy_strip_shows_what_each_enemy_holds_and_the_gold_lead(
     tmp_path: Path,
 ) -> None:
-    async with open_overlay(tmp_path, snapshot_count=60, speed=1.0) as page:
+    # The detailed rows: the focused default keeps only what may change a decision now.
+    async with open_overlay(
+        tmp_path,
+        snapshot_count=60,
+        speed=1.0,
+        preferences=OverlayPreferences(detailed_enemy_rows=True),
+    ) as page:
         caitlyn_unspent = page.locator("#enemy-strip .enemy-row", has_text="Caitlyn").locator(
             ".enemy-unspent"
         )
@@ -780,8 +792,12 @@ async def test_before_ten_minutes_the_you_panel_shows_your_lane_opponent(tmp_pat
 
 
 async def test_what_the_player_turned_off_does_not_show(tmp_path: Path) -> None:
+    # With the detailed rows, to tell what is turned off from what the focused rows leave out.
     preferences = OverlayPreferences(
-        show_win_chance=False, show_you_panel=False, show_enemy_estimates=False
+        show_win_chance=False,
+        show_you_panel=False,
+        show_enemy_estimates=False,
+        detailed_enemy_rows=True,
     )
     async with open_overlay(
         tmp_path, snapshot_count=60, speed=1.0, preferences=preferences
@@ -796,8 +812,31 @@ async def test_what_the_player_turned_off_does_not_show(tmp_path: Path) -> None:
         await expect(caitlyn.locator(".enemy-stats")).to_be_visible()
 
 
-async def test_the_enemy_strip_shows_each_enemys_rank_and_record(tmp_path: Path) -> None:
+async def test_the_focused_rows_keep_only_what_may_change_a_decision(tmp_path: Path) -> None:
+    # The owner, after a game: "so much info a lot of it is useless 90% of the time". At 23:15,
+    # each row is one line of facts: no rank and record, no health, armor and magic resist, no
+    # unspent gold; the laners' likely places are left to the minimap.
     async with open_overlay(tmp_path, snapshot_count=60, speed=1.0) as page:
+        rows = page.locator("#enemy-strip .enemy-row")
+        await expect(rows).to_have_count(5, timeout=5000)
+        await expect(page.locator("#enemy-strip .enemy-ultimate").first).to_be_visible(
+            timeout=10000
+        )
+        for line in (".enemy-intel", ".enemy-stats", ".enemy-unspent"):
+            await expect(page.locator(f"#enemy-strip {line}")).to_have_count(0)
+        darius = page.locator("#enemy-strip .enemy-row", has_text="Darius")
+        await expect(darius.locator(".enemy-location")).to_have_count(0)
+        await keep_screenshot(page, "focused-enemy-rows")
+
+
+async def test_the_enemy_strip_shows_each_enemys_rank_and_record(tmp_path: Path) -> None:
+    # The detailed rows: the focused default keeps only what may change a decision now.
+    async with open_overlay(
+        tmp_path,
+        snapshot_count=60,
+        speed=1.0,
+        preferences=OverlayPreferences(detailed_enemy_rows=True),
+    ) as page:
         zed_intel = page.locator("#enemy-strip .enemy-row", has_text="Zed").locator(".enemy-intel")
         # Platinum IV; 3 wins and 2 losses lately, the last three in a row, all three on Zed, the
         # champion they played most; 76.4 creep score and 3,440 gold at 10:00 in their five games.
