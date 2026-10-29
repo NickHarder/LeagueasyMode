@@ -6,6 +6,13 @@ skill has the format.
 
 ## 2026-10-29
 
+- The audit (`AUDIT.md`, `audit/`), at the owner's ask to run the kit's skills: late, three weeks
+  after the first product commit. Five areas, every reproduction run. What matters most: the one
+  real recording (a Practice Tool game cancelled at 0:00) confirms almost nothing the estimators
+  assume, so a full Rift game with its timeline comes before more estimator work; the loading
+  screen's first answer hides two bugs (champion details never asked for, the player read as a
+  blank); the update channel and Riot's rules gate a public download; the anonymizer does not
+  search game-content keys. `src/leagueasymode/py.typed` lets the audit's profile script be typed.
 - `USERS.md` brought up to date with the night's feedback, at the owner's ask ("updating user
   personas and key metrics"): long sessions of ARAM and Swiftplay, evenings into the night, the
   mouse never taken, "worth" a look away from a fight, Mobalytics' overview as the model for Tab; a
