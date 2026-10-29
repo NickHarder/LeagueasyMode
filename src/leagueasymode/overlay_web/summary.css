@@ -653,6 +653,54 @@ body {
   font-size: 12px;
 }
 
+/* A line for chat to pick: its Copy button, and the other lines that fit below the closing one. */
+.case-copy {
+  margin-top: 6px;
+  padding: 3px 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--page);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.case-copy:focus-visible {
+  outline: 2px solid var(--series-1);
+  outline-offset: 2px;
+}
+
+.case-options {
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.case-option {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-top: 1px solid var(--border);
+}
+
+.case-option-line {
+  font-size: 14px;
+  user-select: all;
+}
+
+.case-option .case-copy {
+  flex: none;
+  margin-top: 0;
+}
+
+/* The roast only, as the app opens it when a game's case is ready. */
+.summary-roast-title {
+  margin: 0 0 4px;
+}
+
 .case-risk {
   margin: 0 0 12px;
   padding: 8px 10px;

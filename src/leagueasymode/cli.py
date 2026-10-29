@@ -112,6 +112,10 @@ ANONYMIZED_SUFFIX: Final = "-anonymized"
 LOCAL_HOST: Final = "127.0.0.1"
 # The line `leagueasymode run` prints for the macOS app, which reads the overlay's address from it.
 OVERLAY_URL_ANNOUNCEMENT: Final = "LEAGUEASYMODE_OVERLAY_URL="
+# The line printed when a game's case is kept, quick or full, with the game's id: the macOS app
+# opens the roast for it once (the owner, 2026-10-29: at the post-game screen, "a way to see roast
+# options and pick").
+CASE_READY_ANNOUNCEMENT: Final = "LEAGUEASYMODE_CASE_READY="
 
 logger = logging.getLogger("leagueasymode")
 
@@ -709,6 +713,7 @@ def _keep_quick_roast(
     roast = quick_game_roast(end_of_game_stats, friend_riot_ids=friend_riot_ids)
     if roast is not None:
         _write_whole(roast_path_beside(summary_path), roast.model_dump_json())
+        _announce_case_ready(roast.game.ledger.game_id)
 
 
 def _is_quick_roast_of(roast_path: Path, game_id: int | None) -> bool:
@@ -756,6 +761,20 @@ def _keep_last_game_roast(
             roast_path.unlink(missing_ok=True)
         return
     _write_whole(roast_path, roast.model_dump_json())
+    _announce_case_ready(roast.game.ledger.game_id)
+
+
+def _announce_case_ready(game_id: int) -> None:
+    """Print that a game's case is kept, on its own line, for the macOS app to read.
+
+    Args:
+        game_id: The game's id; the app opens the roast once for each. A case whose stats gave
+            none (0) is not announced, so the full case of the same game opens it, once.
+    """
+    if game_id <= 0:
+        return
+    sys.stdout.write(f"{CASE_READY_ANNOUNCEMENT}{game_id}\n")
+    sys.stdout.flush()
 
 
 def _tuning(settings: Settings, *, should_write: bool) -> int:

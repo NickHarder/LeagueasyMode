@@ -3,7 +3,13 @@ from typing import Final
 
 import pytest
 
-from leagueasymode.roast.case import Case, CaseOptions, build_case, exhibit_letter
+from leagueasymode.roast.case import (
+    CLOSING_OPTION_COUNT,
+    Case,
+    CaseOptions,
+    build_case,
+    exhibit_letter,
+)
 from leagueasymode.roast.rules import RoastRules
 from leagueasymode.roast.safety import floor_problems
 from leagueasymode.roast.targets import Target, parse_target
@@ -75,6 +81,19 @@ def test_another_take_gives_another_line_and_wraps() -> None:
     second = case_of(CaseOptions(take=1)).closing_line.text
     assert first != second
     assert case_of(CaseOptions(take=500)).closing_line.text
+
+
+def test_the_window_offers_lines_to_pick_from_the_closing_line_first() -> None:
+    # The owner, 2026-10-29: at the post-game screen, "a way to see roast options and pick".
+    case = case_of(CaseOptions(take=0))
+    texts = [option.text for option in case.closing_options]
+    assert 1 < len(texts) <= CLOSING_OPTION_COUNT
+    assert texts[0] == case.closing_line.text
+    assert len(set(texts)) == len(texts)
+    assert all(len(text) <= RoastRules().chat_line_max_characters for text in texts)
+    # Another take starts the options at the next line.
+    next_take = case_of(CaseOptions(take=1))
+    assert next_take.closing_options[0].text == texts[1]
 
 
 def test_the_chat_limit_comes_from_the_tuning() -> None:

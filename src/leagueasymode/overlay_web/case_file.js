@@ -35,6 +35,8 @@ const SOURCE_NAMES = {
 const CLAUDE_TAKE_RECHECK_MILLISECONDS = 1500;
 // How soon the window asks again while the case is the quick one, for the full case.
 const QUICK_CASE_RECHECK_MILLISECONDS = 15000;
+// How long a copy button says "Copied".
+const COPIED_MILLISECONDS = 2000;
 const QUICK_CASE_TEXT = "A quick case from the end-of-game scoreboard. The full case, with the lanes, replaces it when the match timeline comes.";
 const NO_CASE_TEXT = "No case for this game: its details have not come yet, or it was not two teams of five.";
 function htmlElement(name, className, text) {
@@ -153,6 +155,31 @@ function claudeTakeElement(view) {
     return take;
 }
 /** Draw the case's verdict, board, lines, closing line and exhibits. */
+/** A button that copies a line for chat, to paste with ⌘V; it says when it has. */
+function copyButtonElement(line) {
+    const button = htmlElement("button", "case-copy", "Copy");
+    button.type = "button";
+    button.setAttribute("aria-label", `Copy: ${line}`);
+    button.addEventListener("click", () => {
+        void copyText(line).then((isCopied) => {
+            button.textContent = isCopied ? "Copied" : "Select it to copy";
+            window.setTimeout(() => {
+                button.textContent = "Copy";
+            }, COPIED_MILLISECONDS);
+        });
+    });
+    return button;
+}
+/** Copies text to the clipboard; false when the browser refuses. */
+async function copyText(text) {
+    try {
+        await navigator.clipboard.writeText(text);
+        return true;
+    }
+    catch {
+        return false;
+    }
+}
 export function renderCaseBody(body, view) {
     const verdict = htmlElement("div", "case-verdict");
     verdict.dataset["acquitted"] = String(view.acquitted);
@@ -167,7 +194,18 @@ export function renderCaseBody(body, view) {
     const lines = htmlElement("ol", "case-lines");
     lines.append(...view.lines.map((line) => lineElement(line, openExhibits)));
     const closing = htmlElement("figure", "case-closing");
-    closing.append(htmlElement("blockquote", "case-closing-line", view.closing_line), htmlElement("figcaption", "case-closing-caption", `${String(view.closing_line.length)} / ${String(view.closing_line_limit)} characters · paste it yourself; nothing is sent to chat`));
+    closing.append(htmlElement("blockquote", "case-closing-line", view.closing_line), copyButtonElement(view.closing_line), htmlElement("figcaption", "case-closing-caption", `${String(view.closing_line.length)} / ${String(view.closing_line_limit)} characters · paste it yourself; nothing is sent to chat`));
+    const otherOptions = view.closing_options.slice(1);
+    if (otherOptions.length > 0) {
+        const options = htmlElement("ul", "case-options");
+        options.setAttribute("aria-label", "More lines for chat");
+        options.append(...otherOptions.map((option) => {
+            const item = htmlElement("li", "case-option");
+            item.append(htmlElement("span", "case-option-line", option), copyButtonElement(option));
+            return item;
+        }));
+        closing.append(options);
+    }
     const parts = view.is_quick ? [htmlElement("p", "case-quick", QUICK_CASE_TEXT), verdict] : [verdict];
     const claudeTake = claudeTakeElement(view);
     if (view.board.length > 0) {

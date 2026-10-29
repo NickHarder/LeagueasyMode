@@ -113,6 +113,8 @@ class CaseView(BaseModel):
     board: tuple[ViewLane, ...]
     lines: tuple[ViewLine, ...]
     closing_line: str
+    # Lines to pick from for chat, the closing line first; the window copies the one clicked.
+    closing_options: tuple[str, ...]
     closing_line_limit: int
     risk_warning: str | None
     exhibits: tuple[ViewExhibit, ...]
@@ -225,6 +227,7 @@ def case_view(last_game: LastGameRoast, options: CaseOptions, rules: RoastRules)
             for line in case.lines
         ),
         closing_line=case.closing_line.text,
+        closing_options=tuple(option.text for option in case.closing_options),
         closing_line_limit=rules.chat_line_max_characters,
         is_quick=last_game.is_quick,
         risk_warning=RISK_WARNING if options.spice >= RISKY_SPICE else None,

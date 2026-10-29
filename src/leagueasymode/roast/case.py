@@ -8,7 +8,7 @@ from typing import Final
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from leagueasymode.roast.closing import ClosingLine, write_closing_line
+from leagueasymode.roast.closing import ClosingLine, closing_line_candidates
 from leagueasymode.roast.compose import CaseContext, compose_lines
 from leagueasymode.roast.exhibits import Exhibit, ExhibitLedger
 from leagueasymode.roast.lanes import lane_opponents
@@ -22,6 +22,8 @@ from leagueasymode.roast.verdict import Verdict, judge_case
 
 FALLBACK_CLOSING_TEXT: Final = "gg. Nothing's my fault."
 ALPHABET_SIZE: Final = 26
+# How many lines for chat the post-game window offers to pick from.
+CLOSING_OPTION_COUNT: Final = 5
 
 
 class CaseOptions(BaseModel):
@@ -61,6 +63,8 @@ class Case(BaseModel):
     verdict: Verdict
     lines: tuple[CitedLine, ...]
     closing_line: ClosingLine
+    # Lines to pick from for chat, the closing line first, then the takes after it.
+    closing_options: tuple[ClosingLine, ...]
     exhibits: tuple[LetteredExhibit, ...]
 
 
@@ -119,21 +123,30 @@ def build_case(
     checked_lines = [line for line in composed_lines if not line_problems(line, ledger, players)]
     lettered_exhibits = letter_exhibits(verdict, checked_lines, ledger.exhibits)
     letter_by_key = {lettered.exhibit.key: lettered.letter for lettered in lettered_exhibits}
-    closing_line = write_closing_line(
+    candidates = closing_line_candidates(
         checked_lines,
         letter_by_key,
         limit_characters=rules.chat_line_max_characters,
-        take=options.take,
         verdict_title=verdict.title,
         cite_letters=options.cite_letters,
         signature=options.signature,
-    ) or fallback_closing_line(verdict, rules.chat_line_max_characters)
+    )
+    closing_options = (
+        tuple(
+            candidates[(options.take + offset) % len(candidates)]
+            for offset in range(min(len(candidates), CLOSING_OPTION_COUNT))
+        )
+        if candidates
+        else (fallback_closing_line(verdict, rules.chat_line_max_characters),)
+    )
+    closing_line = closing_options[0]
     return Case(
         game_id=ledger.game_id,
         defendant=defendant,
         verdict=verdict,
         lines=tuple(checked_lines),
         closing_line=closing_line,
+        closing_options=closing_options,
         exhibits=lettered_exhibits,
     )
 

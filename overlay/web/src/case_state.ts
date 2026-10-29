@@ -65,6 +65,8 @@ export interface CaseView {
   readonly board: readonly ViewLane[];
   readonly lines: readonly ViewLine[];
   readonly closing_line: string;
+  /** Lines to pick from for chat, the closing line first; the window copies the one clicked. */
+  readonly closing_options: readonly string[];
   readonly closing_line_limit: number;
   readonly risk_warning: string | null;
   readonly exhibits: readonly ViewExhibit[];
@@ -169,6 +171,7 @@ export function isCaseView(value: unknown): value is CaseView {
     isArrayOf(value["board"], isViewLane) &&
     isArrayOf(value["lines"], isViewLine) &&
     typeof value["closing_line"] === "string" &&
+    isArrayOf(value["closing_options"], (option): option is string => typeof option === "string") &&
     typeof value["closing_line_limit"] === "number" &&
     isTextOrNull(value["risk_warning"]) &&
     isArrayOf(value["exhibits"], isViewExhibit) &&

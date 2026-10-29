@@ -416,6 +416,14 @@ crosshair whose readout lists every line at the minute under the pointer, the sa
 keys once focused, and a table of its values beneath. Light or dark with the system; the two
 series colors pass every colorblindness and contrast check in both. Before any game it says so.
 
+Under the result, the case file offers up to five lines for chat (`closing_options` in `/case`):
+the closing line first, then the case's next lines that fit the chat limit, each with a Copy button
+that puts it on the clipboard for the player to paste; nothing is sent to chat. When a game's case
+is kept, quick or full, `leagueasymode run` prints `LEAGUEASYMODE_CASE_READY=<game id>`, and the
+macOS app opens `summary.html#roast` once for that game: the case alone, under "Roast this game",
+since that game's summary comes only with the match timeline and the one on file is an older
+game's (the owner, 2026-10-29: at the post-game screen, "a way to see roast options and pick").
+
 # The widgets
 
 TypeScript in `overlay/web/src/`, under `strict` and every stricter check TypeScript has,
