@@ -289,7 +289,9 @@ teammate's third death in four minutes, and being about 2k gold down while the w
 35% or more. A call blames no one and names no player (its id carries a scoreboard place, never a
 name); the gold lead is an estimate and is said as "about". At most one call a minute, shown as kind
 `team_call` for `roast.team_calls.shown_seconds`, never spoken, with its own switch; ⌃⌥C copies the
-newest call or moment. No call is made while a fight is on (a death in the last
+newest call or moment. At a glance (details only while Tab or Option is held), the newest moment
+or team call shows beside the two newest action callouts, without taking their place (the owner,
+2026-10-29: "make moments and team calls show at a glance"). No call is made while a fight is on (a death in the last
 `fight_quiet_seconds`, 8 as for the callouts), so a fight brings one call when it ends; while the
 numbers window callout shows, the "enemies down" call stays off the overlay (⌃⌥C still copies it).
 Off the Rift only "enemies down" is called: ARAM and the other maps have no recall and no epic

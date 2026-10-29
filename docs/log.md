@@ -6,6 +6,9 @@ skill has the format.
 
 ## 2026-10-29
 
+- Moments and team calls show at a glance again (the owner: "make moments and team calls show at
+  a glance"): the newest one shows beside the two newest action callouts without taking their
+  place, still never spoken; the rest wait for Tab or Option as before.
 - None of the owner's ARAM and Swiftplay games reached the recordings repository, though the token
   works: a crash report from build 170 did. The crash: the game gave the player's move speed as 0,
   and the jungle path divided by it; a speed of 0 now counts as none, and the usual 380 stands in.
