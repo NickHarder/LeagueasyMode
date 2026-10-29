@@ -469,15 +469,16 @@ async def test_two_enemies_down_open_a_numbers_window_and_show_in_the_enemy_stri
         await keep_screenshot(page, "numbers-and-enemies")
 
 
-async def test_an_enemy_reaching_level_six_is_called_out(tmp_path: Path) -> None:
+async def test_an_enemy_reaching_level_six_is_on_their_row_not_a_pop_up(tmp_path: Path) -> None:
+    # The owner, 2026-10-29: the level 6 and item callouts "can probably be refined so it's not a
+    # pop up". Zed's row shows his ultimate's rank instead.
     async with open_overlay(
         tmp_path, snapshot_count=60, speed=1.0, zed_reaches_six_at_seconds=1397.0
     ) as page:
-        callout = page.locator('#callouts .callout[data-kind="level_spike"]')
-        await expect(callout).to_have_text("Zed is level 6", timeout=5000)
-        await keep_screenshot(page, "callout")
-        # Shown for six seconds of game time, then gone.
-        await expect(callout).to_have_count(0, timeout=10000)
+        zed_row = page.locator("#enemy-strip .enemy-row", has_text="Zed")
+        await expect(zed_row).to_contain_text("R1", timeout=5000)
+        await expect(page.locator('#callouts .callout[data-kind="level_spike"]')).to_have_count(0)
+        await expect(page.locator('#callouts .callout[data-kind="item_soon"]')).to_have_count(0)
 
 
 # Stands in for the macOS app's voice: what the page hands it is kept to be read back.
@@ -492,22 +493,24 @@ window.webkit = {messageHandlers: {leagueasymodeSpeak: {
 async def test_a_new_callout_is_spoken_once_when_the_player_turned_speech_on(
     tmp_path: Path,
 ) -> None:
+    # At 18:30 Vi has been missing since 11:50.
     async with open_overlay(
         tmp_path,
         snapshot_count=60,
         speed=1.0,
-        zed_reaches_six_at_seconds=1397.0,
+        first_game_time_seconds=1110.0,
         preferences=OverlayPreferences(speak_callouts=True),
         init_script=APP_VOICE_STAND_IN,
     ) as page:
-        callout = page.locator('#callouts .callout[data-kind="level_spike"]')
-        await expect(callout).to_have_text("Zed is level 6", timeout=5000)
+        callout = page.locator('#callouts .callout[data-kind="missing"]')
+        await expect(callout).to_have_text(re.compile(r"^Vi missing "), timeout=5000)
         # Drawn again four times a second while it shows, and spoken once.
-        await expect(callout).to_have_count(0, timeout=10000)
+        await page.wait_for_timeout(2000)
         spoken = await page.evaluate("window.spokenCallouts")
     assert isinstance(spoken, list)
-    assert spoken.count("Zed is level 6") == 1
-    # Every callout shown is spoken once, the item ones at the start too.
+    assert len([text for text in spoken if text.startswith("Vi missing ")]) == 1
+    # A team call is made at 18:30 too, Baron in 1:30; it is never on screen, so never spoken.
+    assert not [text for text in spoken if text.startswith("Baron in ")]
     assert len(spoken) == len(set(spoken))
 
 
@@ -516,11 +519,11 @@ async def test_callouts_are_not_spoken_unless_the_player_turned_speech_on(tmp_pa
         tmp_path,
         snapshot_count=60,
         speed=1.0,
-        zed_reaches_six_at_seconds=1397.0,
+        first_game_time_seconds=1110.0,
         init_script=APP_VOICE_STAND_IN,
     ) as page:
-        callout = page.locator('#callouts .callout[data-kind="level_spike"]')
-        await expect(callout).to_have_text("Zed is level 6", timeout=5000)
+        callout = page.locator('#callouts .callout[data-kind="missing"]')
+        await expect(callout).to_have_text(re.compile(r"^Vi missing "), timeout=5000)
         spoken = await page.evaluate("window.spokenCallouts")
     assert spoken == []
 
@@ -1002,34 +1005,35 @@ async def test_at_a_glance_each_enemy_is_one_short_line_and_details_wait_for_the
 
 async def test_at_a_glance_only_callouts_to_act_on_now_show(tmp_path: Path) -> None:
     # The owner, 2026-10-29: "league is already a very bsy game so if it is goign to take my eyes
-    # off fights, it needs to be wort while info". Zed reaching 6 is; four enemies who can likely
-    # buy an item wait for the key (this test once saw two of those at a glance).
-    async with open_overlay(
-        tmp_path,
-        snapshot_count=60,
-        speed=1.0,
-        zed_reaches_six_at_seconds=1397.0,
-        hold_details=False,
-    ) as page:
-        level_six = page.locator('#callouts .callout[data-kind="level_spike"]')
-        await expect(level_six).to_have_text("Zed is level 6", timeout=5000)
-        items = page.locator('#callouts .callout[data-kind="item_soon"]')
-        await expect(items).to_have_count(0)
-        await hold_the_details_key(page, is_held=True)
-        await expect(items).to_have_count(4)
-
-
-async def test_at_a_glance_the_newest_line_for_chat_shows_too(tmp_path: Path) -> None:
-    # The owner, 2026-10-29: "make moments and team calls show at a glance". The newest one shows
-    # beside the action callouts, without taking their place. At 18:30 Baron spawns in 1:30, and
-    # Vi has been missing since 11:50.
+    # off fights, it needs to be wort while info". At 18:30 Vi has been missing since 11:50: that
+    # shows at a glance.
     async with open_overlay(
         tmp_path, snapshot_count=60, speed=1.0, first_game_time_seconds=1110.0, hold_details=False
     ) as page:
-        team_call = page.locator('#callouts .callout[data-kind="team_call"]')
-        await expect(team_call).to_have_text(re.compile(r"^Baron in 1:\d\d\. "), timeout=10000)
-        await expect(page.locator('#callouts .callout[data-kind="missing"]')).to_have_count(1)
-        await keep_screenshot(page, "chat-line-at-a-glance")
+        missing = page.locator('#callouts .callout[data-kind="missing"]')
+        await expect(missing).to_have_text(re.compile(r"^Vi missing "), timeout=5000)
+
+
+async def test_moments_and_team_calls_are_never_on_screen(tmp_path: Path) -> None:
+    # The owner, 2026-10-29: moments and team calls "should only be when I ask via a hotkey or
+    # during the end game screen. I don't want the extra clutter." At 18:30 the engine makes a team
+    # call, Baron in 1:30, for ⌃⌥C; the overlay shows it neither at a glance nor with the key held.
+    async with open_overlay(
+        tmp_path, snapshot_count=60, speed=1.0, first_game_time_seconds=1110.0, hold_details=False
+    ) as page:
+        await expect(page.locator('#callouts .callout[data-kind="missing"]')).to_have_count(
+            1, timeout=5000
+        )
+        state_response = await page.request.get(page.url + "state")
+        kinds = [callout["kind"] for callout in (await state_response.json())["callouts"]]
+        assert "team_call" in kinds
+        chat_lines = page.locator(
+            '#callouts .callout[data-kind="team_call"], #callouts .callout[data-kind="moment"]'
+        )
+        await expect(chat_lines).to_have_count(0)
+        await hold_the_details_key(page, is_held=True)
+        await page.wait_for_timeout(500)
+        await expect(chat_lines).to_have_count(0)
 
 
 async def test_while_you_are_dead_the_details_show_by_themselves(tmp_path: Path) -> None:
@@ -1044,8 +1048,6 @@ async def test_while_you_are_dead_the_details_show_by_themselves(tmp_path: Path)
     ) as page:
         leads = page.locator("#enemy-strip .item-lead")
         await expect(leads.first).to_be_visible(timeout=5000)
-        items = page.locator('#callouts .callout[data-kind="item_soon"]')
-        await expect(items.first).to_be_visible()
         await expect(leads).to_have_count(0, timeout=15000)
 
 

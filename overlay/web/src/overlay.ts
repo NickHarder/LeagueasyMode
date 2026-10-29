@@ -138,13 +138,11 @@ let isDetailsKeyHeld = false;
 const spokenCalloutIds = new Set<string>();
 // At a glance, the newest callouts only; holding the key shows every one.
 const GLANCE_CALLOUT_COUNT = 2;
-// The callouts worth a look away from a fight: each asks for an action now. The rest (an item
-// likely bought or finished, a level close, a trip to base, a one-trick) wait for the key or the
-// death screen, and are not spoken (the owner: "if it is goign to take my eyes off fights, it needs
-// to be wort while info").
+// The callouts worth a look away from a fight: each asks for an action now. The rest (a level
+// close, a trip to base, a one-trick) wait for the key or the death screen, and are not spoken (the
+// owner: "if it is goign to take my eyes off fights, it needs to be wort while info").
 const GLANCE_CALLOUT_KINDS: ReadonlySet<CalloutKind> = new Set<CalloutKind>([
   "numbers_window",
-  "level_spike",
   "objective_soon",
   "cooldown_ready",
   "missing",
@@ -153,20 +151,16 @@ const GLANCE_CALLOUT_KINDS: ReadonlySet<CalloutKind> = new Set<CalloutKind>([
   "inhibitor_open",
   "suggestion",
 ]);
-// A friend's moment (11.6) and a team call (11.9) are lines for chat: the newest shows at a glance
-// beside the action callouts, without taking their place (the owner: "make moments and team calls
-// show at a glance"), and neither is ever spoken.
-const CHAT_CALLOUT_KINDS: ReadonlySet<CalloutKind> = new Set<CalloutKind>(["moment", "team_call"]);
-const GLANCE_CHAT_CALLOUT_COUNT = 1;
-
-/** At a glance: the newest action callouts and the newest line for chat, in the order they came. */
-function glanceCallouts(callouts: readonly Callout[]): Callout[] {
-  const chosen = new Set([
-    ...callouts.filter((callout) => GLANCE_CALLOUT_KINDS.has(callout.kind)).slice(-GLANCE_CALLOUT_COUNT),
-    ...callouts.filter((callout) => CHAT_CALLOUT_KINDS.has(callout.kind)).slice(-GLANCE_CHAT_CALLOUT_COUNT),
-  ]);
-  return callouts.filter((callout) => chosen.has(callout));
-}
+// Never on screen (the owner, 2026-10-29: "I don't want the extra clutter"). A friend's moment
+// (11.6) and a team call (11.9) are lines for chat, copied with ⌃⌥C when asked for. A level 6 and
+// an item likely bought were pop-ups for what the enemy strip already shows, its R and its gold;
+// the item is a guess from components, recent games and class, not a build seen.
+const OFF_SCREEN_CALLOUT_KINDS: ReadonlySet<CalloutKind> = new Set<CalloutKind>([
+  "moment",
+  "team_call",
+  "level_spike",
+  "item_soon",
+]);
 
 declare global {
   interface Window {
@@ -1061,16 +1055,12 @@ function renderCallouts(nowMilliseconds: number): void {
       : received.state.callouts.filter(
           (callout) =>
             callout.shown_until_game_time_seconds > gameTimeSeconds &&
-            (callout.kind === "moment"
-              ? received.state.preferences.show_moments
-              : callout.kind === "team_call"
-                ? received.state.preferences.show_team_calls
-                : received.state.preferences.show_callouts &&
-                  (callout.kind !== "suggestion" || received.state.preferences.show_suggestions)),
+            !OFF_SCREEN_CALLOUT_KINDS.has(callout.kind) &&
+            received.state.preferences.show_callouts &&
+            (callout.kind !== "suggestion" || received.state.preferences.show_suggestions),
         );
   // Spoken as it first comes, shown or held back; kept on screen, it is not spoken again. Only
-  // the callouts worth a look away are spoken; a friend's moment (11.6) or a team call (11.9),
-  // which are for chat, never are.
+  // the callouts worth a look away are spoken.
   const currentIds = new Set(shownCallouts.map((callout) => callout.callout_id));
   for (const spokenId of spokenCalloutIds) {
     if (!currentIds.has(spokenId)) {
@@ -1087,7 +1077,7 @@ function renderCallouts(nowMilliseconds: number): void {
   }
   const visibleCallouts =
     received !== null && !areDetailsShown(received.state)
-      ? glanceCallouts(shownCallouts)
+      ? shownCallouts.filter((callout) => GLANCE_CALLOUT_KINDS.has(callout.kind)).slice(-GLANCE_CALLOUT_COUNT)
       : shownCallouts;
   const shownIds = new Set(visibleCallouts.map((callout) => callout.callout_id));
   for (const child of Array.from(list.children)) {

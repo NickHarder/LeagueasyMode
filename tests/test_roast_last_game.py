@@ -19,6 +19,7 @@ from leagueasymode.friends import FriendsList
 from leagueasymode.game_api import GameApiClient
 from leagueasymode.game_state import GameSnapshot
 from leagueasymode.overlay_server import create_overlay_application
+from leagueasymode.overlay_state import OverlayPreferences
 from leagueasymode.patch_data import CHAMPION_SUMMARY_PATH
 from leagueasymode.recorder import GAME_DETAILS_PATH_TEMPLATE, TIMELINE_PATH_TEMPLATE
 from leagueasymode.roast.case import CaseOptions
@@ -376,3 +377,33 @@ async def test_during_a_game_a_team_call_is_copied_too(tmp_path: Path) -> None:
         "take": 0,
     }
     assert "team_call" in shown
+
+
+async def test_a_team_call_is_not_copied_when_its_switch_is_off() -> None:
+    application_of_game = web.Application()
+
+    async def answer(_request: web.Request) -> web.Response:
+        # 3:45: the first dragon is up at 5:00, in 1:15, so a team call is made.
+        return web.json_response(all_game_data(225.0))
+
+    application_of_game.router.add_get("/liveclientdata/allgamedata", answer)
+    async with serve(application_of_game) as game_url, aiohttp.ClientSession() as session:
+        engine = OverlayEngine(
+            GameApiClient(session, game_url, tls_context=None), poll_interval_seconds=0.01
+        )
+        engine.set_preferences(OverlayPreferences(show_team_calls=False))
+        stop_requested = asyncio.Event()
+        engine_task = asyncio.create_task(engine.run(stop_requested))
+        for _ in range(200):
+            if any(callout.kind == "team_call" for callout in engine.current_state.callouts):
+                break
+            await asyncio.sleep(0.01)
+        try:
+            made = [callout.kind for callout in engine.current_state.callouts]
+            copied = engine.lines_to_copy
+        finally:
+            stop_requested.set()
+            await engine_task
+    # Made, since the switch only says whether ⌃⌥C copies it; never on screen either way.
+    assert "team_call" in made
+    assert copied == ()
