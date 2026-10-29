@@ -12,6 +12,30 @@ skill has the format.
 
 ## 2026-10-28
 
+- Phase 11's plan adds slice 11.9, team calls: calm, constructive calls for teammates who are not
+  friends, to paste in team chat, such as staying alive and warding before a dragon, from the
+  timers and the win chance the engine already has. At the owner's request ("can you make a
+  constructive mode for non firnds") and word ("yes add team calls as 11.9"). Who gets them and
+  which chat are proposed for the owner to settle; the plan waits for approval again.
+- The roast plan is now phase 11, its slices 11.0 to 11.8: phase 10 on main became testing
+  on the Mac, with slices of its own, while the roast plan waited. Nothing else in it changed.
+- The owner approved phase 11's plan again, with slice 11.8 ("approved, keep building 10.2").
+- Phase 11's plan adds slice 11.8, Claude's take: lines reworded by the `claude` command on the
+  Mac in a style the owner sets, numbers still filled from exhibits and every line checked again,
+  the approved line used whenever one fails. At the owner's word, "yes add it as 10.8"; the plan
+  waits for approval again.
+- The owner approved phase 11's plan ("approved, start building phase 10").
+- Phase 11's plan now ports nothingsmyfault's engine into this project instead of depending on it,
+  at the owner's question "why do you want to make it public? can you build off of leagues mode?".
+  This repository must stay public for the app's update check, so depending on the private
+  project would need a token; most of nothingsmyfault besides its engine duplicates what is here.
+- A plan for phase 11, roasts with receipts ([the plan](/plans/phase-11-roasts.md)), at the
+  owner's request: "is there any way to put this in leagueasymode overlay so i can have ammo to
+  tease my friends". It brings nothingsmyfault's cited case file into the post-game window, for
+  anyone in the game. It adds short moments about friends during the game, copied with one
+  shortcut and never posted. The first recording in LeagueasyMode-recordings is a Practice Tool
+  game cancelled at 0:00, so the client's post-game answers are still unseen; one real game
+  recorded to the end comes first. The plan waits for the owner's approval and decisions.
 - The first automatic update on the Mac stopped at "the app's folder cannot be written": build 89
   ran from the read-only copy macOS makes of a downloaded app opened where it was unzipped (App
   Translocation). Such an app now installs its update into Applications instead, from where the
