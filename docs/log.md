@@ -6,6 +6,10 @@ skill has the format.
 
 ## 2026-10-29
 
+- Layout slice L.5, hide from edit mode: the edit-mode notice has a Hide/Show button for each
+  widget, and Settings a "Shown" switch; a widget turned off never shows over the game, and stays
+  in sight, faded, while editing. In the notice rather than on the widget's label, as the plan had
+  it: the widgets redraw their contents four times a second, which would take a button away.
 - Layout slice L.4, see-through: an opacity slider in Settings fades the widgets' backgrounds and
   borders from 100% down to 40%, so the game shows through; the text stays as it is. Kept in
   `layout.json`; Reset layout leaves it.

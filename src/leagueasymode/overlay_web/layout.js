@@ -46,6 +46,7 @@ let currentOffsets = {};
 let currentScales = {};
 let currentMinimapFit = USUAL_MINIMAP_FIT;
 let currentOpacity = 1;
+let currentHidden = [];
 let draggedWidget = null;
 let wheelSaveTimer;
 function shareOf(value) {
@@ -55,7 +56,7 @@ function scaleOf(value) {
     return Math.round(Math.min(MAX_WIDGET_SCALE, Math.max(MIN_WIDGET_SCALE, value)) * SCALE_PRECISION) / SCALE_PRECISION;
 }
 function currentLayout() {
-    return { offsets: currentOffsets, scales: currentScales, minimap_fit: currentMinimapFit, opacity: currentOpacity };
+    return { offsets: currentOffsets, scales: currentScales, minimap_fit: currentMinimapFit, opacity: currentOpacity, hidden: currentHidden };
 }
 function placeWidget(widget, offset) {
     const element = document.getElementById(WIDGET_ELEMENT_IDS[widget]);
@@ -95,6 +96,10 @@ export function applyLayout(layout) {
     currentScales = { ...layout.scales };
     currentMinimapFit = layout.minimap_fit;
     currentOpacity = layout.opacity;
+    currentHidden = layout.hidden;
+    for (const widget of MOVABLE_WIDGETS) {
+        showOrHide(widget, layout.hidden.includes(widget));
+    }
     fitMinimap(layout.minimap_fit);
     // The widgets' backgrounds and borders fade; their text does not (overlay.css).
     document.documentElement.style.setProperty("--overlay-opacity", String(layout.opacity));
@@ -130,9 +135,38 @@ function resetLayout() {
         scales: {},
         minimap_fit: currentMinimapFit,
         opacity: currentOpacity,
+        hidden: currentHidden,
     };
     applyLayout(usualLayout);
     void saveLayout(usualLayout);
+}
+/**
+ * Turn a widget off or on (layout slice L.5): off, it never shows over the game; in edit mode it
+ * stays in sight, faded, and the notice's button for it says "Show" instead of "Hide".
+ */
+function showOrHide(widget, isHidden) {
+    const element = document.getElementById(WIDGET_ELEMENT_IDS[widget]);
+    if (element !== null) {
+        if (isHidden) {
+            element.dataset["layoutHidden"] = "true";
+        }
+        else {
+            delete element.dataset["layoutHidden"];
+        }
+    }
+    const toggle = document.querySelector(`.layout-editor [data-widget="${widget}"]`);
+    if (toggle !== null) {
+        toggle.textContent = `${isHidden ? "Show" : "Hide"} ${WIDGET_TITLES[widget]}`;
+    }
+}
+/** Turn a widget off, or on again, and keep that. */
+function toggleHidden(widget) {
+    const isHidden = !currentHidden.includes(widget);
+    currentHidden = isHidden
+        ? [...currentHidden, widget]
+        : currentHidden.filter((hiddenWidget) => hiddenWidget !== widget);
+    showOrHide(widget, isHidden);
+    void saveLayout(currentLayout());
 }
 /** Return whether a point is on a widget's handle, its bottom right corner. */
 function isOnHandle(element, clientX, clientY) {
@@ -220,7 +254,17 @@ export function startLayoutEditing() {
     resetButton.type = "button";
     resetButton.textContent = "Reset layout";
     resetButton.addEventListener("click", resetLayout);
-    notice.append(noticeText, resetButton);
+    const toggles = MOVABLE_WIDGETS.map((widget) => {
+        const toggle = document.createElement("button");
+        toggle.type = "button";
+        toggle.dataset["widget"] = widget;
+        toggle.textContent = `Hide ${WIDGET_TITLES[widget]}`;
+        toggle.addEventListener("click", () => {
+            toggleHidden(widget);
+        });
+        return toggle;
+    });
+    notice.append(noticeText, resetButton, ...toggles);
     document.body.append(notice);
     window.leagueasymodeSetEditing = setEditing;
     window.leagueasymodeResetLayout = resetLayout;

@@ -341,8 +341,21 @@ function layoutElement(startLayout) {
             change({ ...layout, offsets: otherOffsets, scales: otherScales });
             refresh();
         });
+        // Off, the widget never shows over the game; edit mode's notice turns it on and off too.
+        const shown = htmlElement("input", "");
+        shown.type = "checkbox";
+        shown.setAttribute("aria-label", `${title} shown`);
+        const shownLabel = htmlElement("label", "settings-layout-shown");
+        shownLabel.append(shown, document.createTextNode(" Shown"));
+        shown.addEventListener("change", () => {
+            const otherHidden = layout.hidden.filter((hiddenWidget) => hiddenWidget !== widget);
+            change({ ...layout, hidden: shown.checked ? otherHidden : [...otherHidden, widget] });
+        });
+        refreshers.push(() => {
+            shown.checked = !layout.hidden.includes(widget);
+        });
         const group = htmlElement("fieldset", "settings-layout-widget");
-        group.append(htmlElement("legend", "", title), across.row, down.row, size.row, reset);
+        group.append(htmlElement("legend", "", title), shownLabel, across.row, down.row, size.row, reset);
         return group;
     });
     const fitScaleRange = { min: MIN_MINIMAP_FIT_SCALE * PERCENT, max: MAX_MINIMAP_FIT_SCALE * PERCENT, step: 1 };

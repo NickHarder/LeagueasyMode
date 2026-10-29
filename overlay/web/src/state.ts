@@ -437,6 +437,7 @@ export interface OverlayLayout {
   readonly scales: Readonly<Partial<Record<MovableWidget, number>>>;
   readonly minimap_fit: MinimapFit;
   readonly opacity: number;
+  readonly hidden: readonly MovableWidget[];
 }
 
 /** The widgets' background opacity: 40% to 100%. */
@@ -978,6 +979,8 @@ export function isOverlayLayout(value: unknown): value is OverlayLayout {
     !isRecord(value["offsets"]) ||
     !isRecord(value["scales"]) ||
     !isMinimapFit(value["minimap_fit"]) ||
+    !Array.isArray(value["hidden"]) ||
+    !value["hidden"].every((widget) => (MOVABLE_WIDGETS as readonly unknown[]).includes(widget)) ||
     typeof value["opacity"] !== "number" ||
     value["opacity"] < MIN_OVERLAY_OPACITY ||
     value["opacity"] > 1

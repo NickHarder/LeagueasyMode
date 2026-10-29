@@ -479,6 +479,17 @@ body {
   cursor: grabbing;
 }
 
+/* A widget the player turned off never shows over the game; while editing it stays, faded, so it
+   can be turned on again (layout slice L.5). */
+[data-layout-hidden="true"] {
+  display: none !important;
+}
+
+.editing-layout [data-movable][data-layout-hidden="true"] {
+  display: flex !important;
+  opacity: 0.35;
+}
+
 /* A widget grows and shrinks from the side it is held to: the strips from the top's middle, the
    enemy strip from its top right, the You panel from its top left. */
 #objective-strip,
@@ -540,7 +551,10 @@ body {
   bottom: 24px;
   left: 50%;
   display: none;
-  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: center;
+  max-width: 90vw;
+  gap: 8px 12px;
   align-items: center;
   padding: 8px 12px;
   translate: -50% 0;
