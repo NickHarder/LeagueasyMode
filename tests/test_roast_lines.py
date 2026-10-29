@@ -13,9 +13,10 @@ NUMBER_WORDS: Final = re.compile(
     r"fifteen|twenty|thirty|forty|fifty|hundred|thousand|million|once|twice)\b",
     re.IGNORECASE,
 )
-# The lines the owner approved on 2026-10-08, ported from nothingsmyfault word for word. A change to
-# any line changes this; the new line goes to the owner before the fingerprint does.
-APPROVED_LINES_SHA256: Final = "88f4e6630c4bab2507f60f4bbdb2d6b540b9c6723a2df6e4d66a4db5d8b6e40c"
+# The lines the owner approved word for word: first on 2026-10-08 in nothingsmyfault, then the
+# rewrite with more flair on 2026-10-29 ("approved"). A change to any line changes this; the new
+# line goes to the owner before the fingerprint does.
+APPROVED_LINES_SHA256: Final = "3e3bd1eb07dc301ab562cbd3df482523e5d219e16719991bc570acff7316392b"
 
 
 def test_the_lines_are_the_ones_the_owner_approved() -> None:
