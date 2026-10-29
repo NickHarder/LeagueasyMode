@@ -4,7 +4,9 @@ import asyncio
 import base64
 import json
 import lzma
+import os
 import subprocess
+import time
 from collections.abc import Sequence
 from pathlib import Path
 from typing import Final
@@ -307,3 +309,28 @@ async def test_crash_reports_go_with_the_games_once(tmp_path: Path) -> None:
     github.puts.clear()
     await send_with(github, recordings, TOKEN, board)
     assert github.puts == {}
+
+
+def write_unfinished_game(directory: Path, name: str, *, minutes_ago: float) -> Path:
+    """A recording an engine stopped before it closed: plain, last written so long ago."""
+    finished = write_games(directory, [name])[0]
+    plain_path = directory / f"{name}.jsonl"
+    plain_path.write_bytes(lzma.decompress(finished.read_bytes()))
+    finished.unlink()
+    written_at = time.time() - minutes_ago * 60
+    os.utime(plain_path, (written_at, written_at))
+    return plain_path
+
+
+async def test_a_game_left_open_by_a_stopped_engine_is_closed_and_sent(tmp_path: Path) -> None:
+    # None of the owner's games reached the repository, and none was withheld: the recordings were
+    # left open when the app quit or updated before the match timeline came. One untouched for
+    # 20 minutes is no longer written by anyone, so it is closed and sent; a newer one may be.
+    recordings = tmp_path / "recordings"
+    write_unfinished_game(recordings, "game-old", minutes_ago=30)
+    recent = write_unfinished_game(recordings, "game-now", minutes_ago=1)
+    github = FakeGitHub()
+    await send_with(github, recordings, TOKEN, StatusBoard(home_directory=tmp_path))
+    assert set(github.puts) == {"games/game-old-anonymized.jsonl.xz"}
+    assert (recordings / "game-old.jsonl.xz").exists()
+    assert recent.exists()

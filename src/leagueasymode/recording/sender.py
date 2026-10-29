@@ -25,6 +25,7 @@ import ssl
 import subprocess
 import sys
 import tempfile
+import time
 from collections.abc import Callable
 from pathlib import Path
 from typing import Final
@@ -36,7 +37,12 @@ from leagueasymode.crash_reports import CRASH_REPORTS_FOLDER
 from leagueasymode.engine_status import PartState, StatusBoard
 from leagueasymode.problem_report import REPORTS_FOLDER
 from leagueasymode.recording.anonymize import IdentityLeakError, anonymize_recording
-from leagueasymode.recording.file_format import COMPRESSED_SUFFIX, PLAIN_SUFFIX
+from leagueasymode.recording.file_format import (
+    COMPRESSED_SUFFIX,
+    PLAIN_SUFFIX,
+    RecordingFormatError,
+)
+from leagueasymode.recording.writer import close_unfinished_recording
 
 GITHUB_API_BASE_URL: Final = "https://api.github.com"
 # The owner's private repository for the games (2026-10-28).
@@ -52,6 +58,9 @@ HTTP_OK: Final = 200
 # The contents API's answer when the file is already there.
 HTTP_UNPROCESSABLE: Final = 422
 HTTP_UNAUTHORIZED: Final = 401
+# A recording left open this long is written by no engine: the timeline is waited for ten minutes.
+STALE_RECORDING_SECONDS: Final = 20 * 60.0
+REASON_CLOSED_LATER: Final = "closed later: the engine stopped before it closed the recording"
 
 logger = logging.getLogger(__name__)
 
@@ -162,6 +171,38 @@ def finished_recordings(directory: Path) -> list[Path]:
     )
 
 
+def close_stale_recordings(directory: Path, now_seconds: float) -> list[Path]:
+    """Close the recordings an engine left open, so that they are finished and can be sent.
+
+    A recording stays open after its game until the League client gives the match timeline, up to
+    ten minutes; an app quit or updated in that time left it open for good, and none of the owner's
+    games was sent. One untouched for `STALE_RECORDING_SECONDS` is written by no engine any more.
+
+    Args:
+        directory: The recordings' folder.
+        now_seconds: The time now, as `time.time()` gives it.
+
+    Returns:
+        The recordings closed.
+    """
+    if not directory.is_dir():
+        return []
+    closed: list[Path] = []
+    for plain_path in sorted(directory.glob(f"*{PLAIN_SUFFIX}")):
+        stem = plain_path.name.removesuffix(PLAIN_SUFFIX)
+        if stem.endswith(ANONYMIZED_SUFFIX):
+            continue
+        try:
+            if now_seconds - plain_path.stat().st_mtime < STALE_RECORDING_SECONDS:
+                continue
+            closed.append(close_unfinished_recording(plain_path, REASON_CLOSED_LATER))
+        except (OSError, RecordingFormatError):
+            logger.warning("could not close the recording %s left open", plain_path.name)
+            continue
+        logger.info("closed %s, which an engine had left open", plain_path.name)
+    return closed
+
+
 class SendRefusedError(Exception):
     """GitHub would not take a game; the round stops, and the next one tries again."""
 
@@ -225,6 +266,7 @@ class GameSender:
         if not self.repository:
             self._note("off", "Off: LEAGUEASYMODE_SEND_GAMES_TO is empty")
             return
+        await asyncio.to_thread(close_stale_recordings, self.recordings_directory, time.time())
         log_path = self.recordings_directory / SENT_LOG_NAME
         sent_log = await asyncio.to_thread(_read_sent_log, log_path)
         if sent_log.withheld_by != self.build:

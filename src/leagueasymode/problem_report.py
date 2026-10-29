@@ -43,6 +43,16 @@ RIOT_ID_SEPARATOR: Final = "#"
 logger = logging.getLogger(__name__)
 
 
+class RecordingFile(BaseModel):
+    """A file in the recordings' folder, by name: a recording's name holds its time, no player."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    name: str
+    size_bytes: int
+    modified_at: datetime.datetime
+
+
 class ProblemReport(BaseModel):
     """What a problem report says, beside the logs and the game it carries."""
 
@@ -54,6 +64,8 @@ class ProblemReport(BaseModel):
     app_facts: dict[str, str]
     status: EngineStatus
     crash_reports: list[str]
+    # What was recorded, closed (`.jsonl.xz`) or left open (`.jsonl`), and the sent log.
+    recordings: list[RecordingFile] = []
 
 
 def player_identities(payload: JsonValue | None) -> set[str]:
@@ -135,6 +147,7 @@ def make_problem_report(
         crash_reports=sorted(path.name for path in crash_directory.glob("*.json"))
         if crash_directory.is_dir()
         else [],
+        recordings=_recording_files(recordings_directory),
     )
     (report_directory / "report.json").write_text(report.model_dump_json(indent=2) + "\n")
     if engine_log is not None:
@@ -148,6 +161,30 @@ def make_problem_report(
                 )
     _copy_the_game_so_far(recordings_directory, report_directory)
     return report_directory
+
+
+def _recording_files(recordings_directory: Path) -> list[RecordingFile]:
+    """Return the files directly in the recordings' folder, by name.
+
+    Args:
+        recordings_directory: The recordings' folder.
+
+    Returns:
+        Each file's name, size and time, by name.
+    """
+    files: list[RecordingFile] = []
+    for path in sorted(recordings_directory.iterdir()):
+        if not path.is_file():
+            continue
+        file_stat = path.stat()
+        files.append(
+            RecordingFile(
+                name=path.name,
+                size_bytes=file_stat.st_size,
+                modified_at=datetime.datetime.fromtimestamp(file_stat.st_mtime, tz=datetime.UTC),
+            )
+        )
+    return files
 
 
 def _tail(log_path: Path) -> str:
