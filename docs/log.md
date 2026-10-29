@@ -10,6 +10,14 @@ skill has the format.
   except inhib"). No source gives ARAM's respawn time, so the Rift's 5:00 stands in, marked "~"
   as unconfirmed; the game's "inhibitor respawned" event still ends the timer on time. The first
   recorded ARAM game sets the value.
+- The overlay layout plan is approved ("approved, move them off automatically"): resize, sliders,
+  keeping widgets off League's HUD (moved off automatically), opacity, and hiding from edit mode,
+  built in that order.
+- `USERS.md`, the users, moments and use cases (UC-01 to UC-08), at the owner's ask ("define user
+  personas and tie your plan to the use cases"), from what the owner has said and shown while
+  testing; three fields are open questions for them. With it, `plans/overlay-layout.md`, a plan
+  for approval to resize widgets, set them exactly with sliders, keep them off League's HUD and
+  see the game through them, tied to UC-06.
 - A focused overlay, after the owner's first screenshot of a game: "it covers some stuff and has
   so much info a lot of it is uselss 90% of the time. plus in a tf itll show the person die and
   then the next etc." Enemy rows are one line unless something may change a decision now
