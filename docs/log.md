@@ -13,6 +13,13 @@ skill has the format.
   undoes the at-a-glance change above; ⌃⌥C copies them, and their switches say whether it does.
   A level 6 and an item likely bought are no longer callouts: the enemy's row shows the rank of
   their ultimate and their gold, and the item was a guess from components, recent games and class.
+- Layout slice L.5, hide from edit mode: the edit-mode notice has a Hide/Show button for each
+  widget, and Settings a "Shown" switch; a widget turned off never shows over the game, and stays
+  in sight, faded, while editing. In the notice rather than on the widget's label, as the plan had
+  it: the widgets redraw their contents four times a second, which would take a button away.
+- Layout slice L.4, see-through: an opacity slider in Settings fades the widgets' backgrounds and
+  borders from 100% down to 40%, so the game shows through; the text stays as it is. Kept in
+  `layout.json`; Reset layout leaves it.
 - Moments and team calls show at a glance again (the owner: "make moments and team calls show at
   a glance"): the newest one shows beside the two newest action callouts without taking their
   place, still never spoken; the rest wait for Tab or Option as before.

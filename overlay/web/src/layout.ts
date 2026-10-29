@@ -68,6 +68,8 @@ declare global {
 let currentOffsets: Partial<Record<MovableWidget, WidgetOffset>> = {};
 let currentScales: Partial<Record<MovableWidget, number>> = {};
 let currentMinimapFit: MinimapFit = USUAL_MINIMAP_FIT;
+let currentOpacity = 1;
+let currentHidden: readonly MovableWidget[] = [];
 let draggedWidget: MovableWidget | null = null;
 let wheelSaveTimer: number | undefined;
 
@@ -80,7 +82,7 @@ function scaleOf(value: number): number {
 }
 
 function currentLayout(): OverlayLayout {
-  return { offsets: currentOffsets, scales: currentScales, minimap_fit: currentMinimapFit };
+  return { offsets: currentOffsets, scales: currentScales, minimap_fit: currentMinimapFit, opacity: currentOpacity, hidden: currentHidden };
 }
 
 function placeWidget(widget: MovableWidget, offset: WidgetOffset): void {
@@ -123,7 +125,14 @@ export function applyLayout(layout: OverlayLayout): void {
   currentOffsets = { ...layout.offsets };
   currentScales = { ...layout.scales };
   currentMinimapFit = layout.minimap_fit;
+  currentOpacity = layout.opacity;
+  currentHidden = layout.hidden;
+  for (const widget of MOVABLE_WIDGETS) {
+    showOrHide(widget, layout.hidden.includes(widget));
+  }
   fitMinimap(layout.minimap_fit);
+  // The widgets' backgrounds and borders fade; their text does not (overlay.css).
+  document.documentElement.style.setProperty("--overlay-opacity", String(layout.opacity));
   for (const widget of MOVABLE_WIDGETS) {
     if (widget !== draggedWidget) {
       placeWidget(widget, layout.offsets[widget] ?? USUAL_PLACE);
@@ -152,11 +161,46 @@ function setEditing(isEditing: boolean): void {
   document.body.classList.toggle(EDITING_CLASS, isEditing);
 }
 
-/** Put every widget back; the minimap layer's fit, which lines it up with League's, stays. */
+/** Put every widget back; the minimap layer's fit and the opacity, which are no widget's place, stay. */
 function resetLayout(): void {
-  const usualLayout: OverlayLayout = { offsets: {}, scales: {}, minimap_fit: currentMinimapFit };
+  const usualLayout: OverlayLayout = {
+    offsets: {},
+    scales: {},
+    minimap_fit: currentMinimapFit,
+    opacity: currentOpacity,
+    hidden: currentHidden,
+  };
   applyLayout(usualLayout);
   void saveLayout(usualLayout);
+}
+
+/**
+ * Turn a widget off or on (layout slice L.5): off, it never shows over the game; in edit mode it
+ * stays in sight, faded, and the notice's button for it says "Show" instead of "Hide".
+ */
+function showOrHide(widget: MovableWidget, isHidden: boolean): void {
+  const element = document.getElementById(WIDGET_ELEMENT_IDS[widget]);
+  if (element !== null) {
+    if (isHidden) {
+      element.dataset["layoutHidden"] = "true";
+    } else {
+      delete element.dataset["layoutHidden"];
+    }
+  }
+  const toggle = document.querySelector<HTMLButtonElement>(`.layout-editor [data-widget="${widget}"]`);
+  if (toggle !== null) {
+    toggle.textContent = `${isHidden ? "Show" : "Hide"} ${WIDGET_TITLES[widget]}`;
+  }
+}
+
+/** Turn a widget off, or on again, and keep that. */
+function toggleHidden(widget: MovableWidget): void {
+  const isHidden = !currentHidden.includes(widget);
+  currentHidden = isHidden
+    ? [...currentHidden, widget]
+    : currentHidden.filter((hiddenWidget) => hiddenWidget !== widget);
+  showOrHide(widget, isHidden);
+  void saveLayout(currentLayout());
 }
 
 /** Return whether a point is on a widget's handle, its bottom right corner. */
@@ -247,7 +291,17 @@ export function startLayoutEditing(): void {
   resetButton.type = "button";
   resetButton.textContent = "Reset layout";
   resetButton.addEventListener("click", resetLayout);
-  notice.append(noticeText, resetButton);
+  const toggles = MOVABLE_WIDGETS.map((widget) => {
+    const toggle = document.createElement("button");
+    toggle.type = "button";
+    toggle.dataset["widget"] = widget;
+    toggle.textContent = `Hide ${WIDGET_TITLES[widget]}`;
+    toggle.addEventListener("click", () => {
+      toggleHidden(widget);
+    });
+    return toggle;
+  });
+  notice.append(noticeText, resetButton, ...toggles);
   document.body.append(notice);
   window.leagueasymodeSetEditing = setEditing;
   window.leagueasymodeResetLayout = resetLayout;
