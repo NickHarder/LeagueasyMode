@@ -10,7 +10,7 @@ from leagueasymode.config import Settings
 from leagueasymode.engine import OverlayEngine
 from leagueasymode.game_api import GameApiClient
 from leagueasymode.overlay_server import LAYOUT_REQUEST_VALUE, create_overlay_application
-from leagueasymode.overlay_state import OverlayLayout, WidgetOffset
+from leagueasymode.overlay_state import MinimapFit, OverlayLayout, WidgetOffset
 from leagueasymode.preferences import load_layout, save_layout
 from local_servers import serve, unused_local_url
 
@@ -57,6 +57,32 @@ def test_a_widget_is_sized_from_60_to_160_percent() -> None:
     for out_of_range in (0.59, 1.61):
         try:
             OverlayLayout(scales={"you_panel": out_of_range})
+        except ValidationError:
+            continue
+        raise AssertionError(f"{out_of_range} was accepted")
+
+
+def test_the_minimap_layers_fit_is_kept_and_defaults_to_none(tmp_path: Path) -> None:
+    layout_path = tmp_path / "layout.json"
+    assert OverlayLayout().minimap_fit == MinimapFit(scale=1.0, x_share=0.0, y_share=0.0)
+    fitted = OverlayLayout(minimap_fit=MinimapFit(scale=1.1, x_share=-0.02, y_share=0.015))
+    save_layout(layout_path, fitted)
+    assert load_layout(layout_path) == fitted
+
+
+def test_the_minimap_layer_is_fitted_only_a_little() -> None:
+    # It must stay over League's minimap: half to one and a half times the size League's
+    # settings give, nudged at most a tenth of the window.
+    MinimapFit(scale=0.5, x_share=0.1, y_share=-0.1)
+    MinimapFit(scale=1.5, x_share=-0.1, y_share=0.1)
+    for out_of_range in (
+        {"scale": 0.49},
+        {"scale": 1.51},
+        {"x_share": 0.11},
+        {"y_share": -0.11},
+    ):
+        try:
+            MinimapFit.model_validate(out_of_range)
         except ValidationError:
             continue
         raise AssertionError(f"{out_of_range} was accepted")

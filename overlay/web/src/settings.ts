@@ -1,17 +1,41 @@
 /**
- * The settings page: what the overlay shows, and the friends list. Each change of what shows is
- * saved at once and reaches the overlay with its next state; the engine keeps it in
- * `preferences.json` for the next run. The friends' Riot IDs are saved with their own button and
+ * The settings page: what the overlay shows, where, and the friends list. Each change of what
+ * shows is saved at once and reaches the overlay with its next state; the engine keeps it in
+ * `preferences.json` for the next run. The layout's sliders place and size each widget, and fit
+ * the minimap layer, moving the overlay as they slide; the engine keeps them in `layout.json`,
+ * as it does a drag in edit mode (layout slice L.2). The friends' Riot IDs are saved with their own button and
  * kept in `friends.json`; the overlay and the post-game case mark those players (phase 11.5).
  */
 
-import { type OverlayPreferences, PREFERENCE_NAMES, isOverlayPreferences } from "./state.js";
+import { USUAL_MINIMAP_FIT, WIDGET_TITLES } from "./layout.js";
+import {
+  MAX_MINIMAP_FIT_SCALE,
+  MAX_MINIMAP_NUDGE_SHARE,
+  MAX_WIDGET_SCALE,
+  MIN_MINIMAP_FIT_SCALE,
+  MIN_WIDGET_SCALE,
+  MOVABLE_WIDGETS,
+  type MinimapFit,
+  type MovableWidget,
+  type OverlayLayout,
+  type OverlayPreferences,
+  PREFERENCE_NAMES,
+  type WidgetOffset,
+  isOverlayLayout,
+  isOverlayPreferences,
+} from "./state.js";
 
 // The header the server asks of a change, which a page elsewhere cannot send.
 const REQUEST_HEADER = "X-LeagueasyMode-Request";
 const REQUEST_VALUE = "preferences";
 const FRIENDS_REQUEST_VALUE = "friends";
 const CLAUDE_TAKE_REQUEST_VALUE = "claude-take";
+const LAYOUT_REQUEST_VALUE = "layout";
+// A slider's moves are sent once it rests this long, so the overlay follows without a request a step.
+const LAYOUT_SAVE_DELAY_MILLISECONDS = 100;
+const PERCENT = 100;
+// Shares are kept to four decimals, as a drag in edit mode keeps them.
+const SHARE_PRECISION = 10_000;
 
 /** Claude's take's settings (phase 11.8), and whether the `claude` command was found. */
 interface ClaudeTakeAnswer {
@@ -276,12 +300,202 @@ function claudeTakeElement(answer: ClaudeTakeAnswer): HTMLElement {
   return section;
 }
 
-/** Draw the form, one switch for each preference, the friends list and Claude's take. */
+function shareOfPercent(percent: number): number {
+  return Math.round((percent / PERCENT) * SHARE_PRECISION) / SHARE_PRECISION;
+}
+
+function percentText(percent: number): string {
+  return `${String(percent)}%`;
+}
+
+/** One slider, its visible label, and an output that says its value. */
+interface Slider {
+  readonly row: HTMLElement;
+  readonly input: HTMLInputElement;
+  readonly setValue: (percent: number) => void;
+}
+
+function sliderElement(
+  id: string,
+  visibleLabel: string,
+  accessibleName: string,
+  range: { readonly min: number; readonly max: number; readonly step: number },
+  onSlide: (percent: number) => void,
+): Slider {
+  const row = htmlElement("div", "settings-slider");
+  const label = htmlElement("label", "", visibleLabel);
+  label.htmlFor = id;
+  const input = htmlElement("input", "");
+  input.type = "range";
+  input.id = id;
+  input.min = String(range.min);
+  input.max = String(range.max);
+  input.step = String(range.step);
+  input.setAttribute("aria-label", accessibleName);
+  const output = htmlElement("output", "");
+  output.htmlFor.add(id);
+  const setValue = (percent: number): void => {
+    input.value = String(percent);
+    output.textContent = percentText(percent);
+  };
+  input.addEventListener("input", () => {
+    const percent = Number(input.value);
+    output.textContent = percentText(percent);
+    onSlide(percent);
+  });
+  row.append(label, input, output);
+  return { row, input, setValue };
+}
+
+/** Draw the layout's sliders: each widget's place and size, and the minimap layer's fit. */
+function layoutElement(startLayout: OverlayLayout): HTMLElement {
+  let layout = startLayout;
+  let saveTimer: number | undefined;
+  const section = htmlElement("section", "settings-layout");
+  const status = htmlElement("p", "settings-layout-status");
+  status.setAttribute("role", "status");
+  const saveLayout = async (): Promise<void> => {
+    try {
+      const response = await fetch("/layout", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", [REQUEST_HEADER]: LAYOUT_REQUEST_VALUE },
+        body: JSON.stringify(layout),
+      });
+      status.textContent = response.ok ? "Saved" : `Not saved: the engine answered ${String(response.status)}`;
+      status.dataset["state"] = response.ok ? "saved" : "failed";
+    } catch {
+      status.textContent = "Not saved: the engine is not running";
+      status.dataset["state"] = "failed";
+    }
+  };
+  const change = (changed: OverlayLayout): void => {
+    layout = changed;
+    window.clearTimeout(saveTimer);
+    saveTimer = window.setTimeout(() => {
+      saveTimer = undefined;
+      void saveLayout();
+    }, LAYOUT_SAVE_DELAY_MILLISECONDS);
+  };
+  const setOffset = (widget: MovableWidget, offset: WidgetOffset): void => {
+    const { [widget]: _previous, ...otherOffsets } = layout.offsets;
+    const isUsualPlace = offset.x_share === 0 && offset.y_share === 0;
+    change({ ...layout, offsets: isUsualPlace ? otherOffsets : { ...otherOffsets, [widget]: offset } });
+  };
+  const setScale = (widget: MovableWidget, scale: number): void => {
+    const { [widget]: _previous, ...otherScales } = layout.scales;
+    change({ ...layout, scales: scale === 1 ? otherScales : { ...otherScales, [widget]: scale } });
+  };
+  const setFit = (fit: MinimapFit): void => {
+    change({ ...layout, minimap_fit: fit });
+  };
+  const refreshers: (() => void)[] = [];
+  const widgetGroups = MOVABLE_WIDGETS.map((widget) => {
+    const title = WIDGET_TITLES[widget];
+    const placeRange = { min: -PERCENT, max: PERCENT, step: 0.5 };
+    const offsetOf = (): WidgetOffset => layout.offsets[widget] ?? { x_share: 0, y_share: 0 };
+    const across = sliderElement(`${widget}-x`, "X", `${title} X`, placeRange, (percent) => {
+      setOffset(widget, { ...offsetOf(), x_share: shareOfPercent(percent) });
+    });
+    const down = sliderElement(`${widget}-y`, "Y", `${title} Y`, placeRange, (percent) => {
+      setOffset(widget, { ...offsetOf(), y_share: shareOfPercent(percent) });
+    });
+    const sizeRange = { min: MIN_WIDGET_SCALE * PERCENT, max: MAX_WIDGET_SCALE * PERCENT, step: 1 };
+    const size = sliderElement(`${widget}-size`, "Size", `${title} size`, sizeRange, (percent) => {
+      setScale(widget, percent / PERCENT);
+    });
+    const refresh = (): void => {
+      across.setValue(Math.round(offsetOf().x_share * PERCENT * 2) / 2);
+      down.setValue(Math.round(offsetOf().y_share * PERCENT * 2) / 2);
+      size.setValue(Math.round((layout.scales[widget] ?? 1) * PERCENT));
+    };
+    refreshers.push(refresh);
+    const reset = htmlElement("button", "settings-layout-reset", "Reset");
+    reset.type = "button";
+    reset.setAttribute("aria-label", `Reset ${title}`);
+    reset.addEventListener("click", () => {
+      const { [widget]: _offset, ...otherOffsets } = layout.offsets;
+      const { [widget]: _scale, ...otherScales } = layout.scales;
+      change({ ...layout, offsets: otherOffsets, scales: otherScales });
+      refresh();
+    });
+    const group = htmlElement("fieldset", "settings-layout-widget");
+    group.append(htmlElement("legend", "", title), across.row, down.row, size.row, reset);
+    return group;
+  });
+  const fitScaleRange = { min: MIN_MINIMAP_FIT_SCALE * PERCENT, max: MAX_MINIMAP_FIT_SCALE * PERCENT, step: 1 };
+  const nudgeRange = { min: -MAX_MINIMAP_NUDGE_SHARE * PERCENT, max: MAX_MINIMAP_NUDGE_SHARE * PERCENT, step: 0.1 };
+  const fitSize = sliderElement("minimap-size", "Size", "Minimap size", fitScaleRange, (percent) => {
+    setFit({ ...layout.minimap_fit, scale: percent / PERCENT });
+  });
+  const fitAcross = sliderElement("minimap-x", "X", "Minimap X", nudgeRange, (percent) => {
+    setFit({ ...layout.minimap_fit, x_share: shareOfPercent(percent) });
+  });
+  const fitDown = sliderElement("minimap-y", "Y", "Minimap Y", nudgeRange, (percent) => {
+    setFit({ ...layout.minimap_fit, y_share: shareOfPercent(percent) });
+  });
+  const refreshFit = (): void => {
+    fitSize.setValue(Math.round(layout.minimap_fit.scale * PERCENT));
+    fitAcross.setValue(Math.round(layout.minimap_fit.x_share * PERCENT * 10) / 10);
+    fitDown.setValue(Math.round(layout.minimap_fit.y_share * PERCENT * 10) / 10);
+  };
+  refreshers.push(refreshFit);
+  const fitReset = htmlElement("button", "settings-layout-reset", "Reset");
+  fitReset.type = "button";
+  fitReset.setAttribute("aria-label", "Reset minimap fit");
+  fitReset.addEventListener("click", () => {
+    setFit(USUAL_MINIMAP_FIT);
+    refreshFit();
+  });
+  const fitGroup = htmlElement("fieldset", "settings-layout-widget");
+  fitGroup.append(
+    htmlElement("legend", "", "Minimap layer"),
+    htmlElement("p", "settings-description", "Fits the layer over League's minimap where the two do not line up."),
+    fitSize.row,
+    fitAcross.row,
+    fitDown.row,
+    fitReset,
+  );
+  for (const refresh of refreshers) {
+    refresh();
+  }
+  // Back on this page after a drag in edit mode: show where the widgets are now.
+  window.addEventListener("focus", () => {
+    void (async () => {
+      try {
+        const response = await fetch("/layout");
+        const answer: unknown = response.ok ? await response.json() : null;
+        if (isOverlayLayout(answer) && saveTimer === undefined) {
+          layout = answer;
+          for (const refresh of refreshers) {
+            refresh();
+          }
+        }
+      } catch {
+        // The engine has stopped; the sliders stay as they are.
+      }
+    })();
+  });
+  section.append(
+    htmlElement("h2", "", "Layout"),
+    htmlElement(
+      "p",
+      "settings-description",
+      "Where each widget sits, as a share of League's window from its usual place, and its size. The overlay moves as you slide; dragging in Edit layout does the same.",
+    ),
+    ...widgetGroups,
+    fitGroup,
+    status,
+  );
+  return section;
+}
+
+/** Draw the form, one switch for each preference, the layout, the friends list and Claude's take. */
 export function renderSettings(
   root: HTMLElement,
   preferences: OverlayPreferences,
   friendRiotIds: readonly string[] = [],
   claudeTake: ClaudeTakeAnswer | null = null,
+  layout: OverlayLayout | null = null,
 ): void {
   const form = htmlElement("form", "settings-form");
   const status = htmlElement("p", "settings-status");
@@ -313,6 +527,7 @@ export function renderSettings(
     htmlElement("p", "summary-detail", "Each change shows at once, and is kept for the next game."),
     form,
     status,
+    ...(layout === null ? [] : [layoutElement(layout)]),
     friendsElement(friendRiotIds),
     ...(claudeTake === null ? [] : [claudeTakeElement(claudeTake)]),
   );
@@ -324,12 +539,14 @@ async function start(): Promise<void> {
     return;
   }
   try {
-    const [response, friendsResponse, claudeResponse] = await Promise.all([
+    const [response, friendsResponse, claudeResponse, layoutResponse] = await Promise.all([
       fetch("/preferences"),
       fetch("/friends"),
       fetch("/claude-take"),
+      fetch("/layout"),
     ]);
     const preferences: unknown = response.ok ? await response.json() : null;
+    const layout: unknown = layoutResponse.ok ? await layoutResponse.json() : null;
     const friends: unknown = friendsResponse.ok ? await friendsResponse.json() : null;
     const claudeTake: unknown = claudeResponse.ok ? await claudeResponse.json() : null;
     if (isOverlayPreferences(preferences)) {
@@ -338,6 +555,7 @@ async function start(): Promise<void> {
         preferences,
         isFriendsList(friends) ? friends.riot_ids : [],
         isClaudeTakeAnswer(claudeTake) ? claudeTake : null,
+        isOverlayLayout(layout) ? layout : null,
       );
       return;
     }

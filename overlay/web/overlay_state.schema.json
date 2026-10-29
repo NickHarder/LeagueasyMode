@@ -663,6 +663,35 @@
       "title": "LevelEstimate",
       "type": "object"
     },
+    "MinimapFit": {
+      "additionalProperties": false,
+      "description": "How the player fitted the minimap layer to League's minimap, where the two do not line up.\n\n`scale` multiplies the size League's settings give; the shares nudge the layer right and down,\nas shares of the overlay's width and height. It must stay over League's minimap, so it is\nfitted only a little.",
+      "properties": {
+        "scale": {
+          "default": 1.0,
+          "maximum": 1.5,
+          "minimum": 0.5,
+          "title": "Scale",
+          "type": "number"
+        },
+        "x_share": {
+          "default": 0.0,
+          "maximum": 0.1,
+          "minimum": -0.1,
+          "title": "X Share",
+          "type": "number"
+        },
+        "y_share": {
+          "default": 0.0,
+          "maximum": 0.1,
+          "minimum": -0.1,
+          "title": "Y Share",
+          "type": "number"
+        }
+      },
+      "title": "MinimapFit",
+      "type": "object"
+    },
     "MinimapLayout": {
       "additionalProperties": false,
       "description": "Where League draws its minimap, from League's own settings (`game.cfg`).",
@@ -873,7 +902,7 @@
     },
     "OverlayLayout": {
       "additionalProperties": false,
-      "description": "Where the player moved the widgets, and how big they made them.\n\nA widget not named in `offsets` is in its usual place, and one not named in `scales` at its\nusual size.",
+      "description": "Where the player moved the widgets, how big they made them, and the minimap layer's fit.\n\nA widget not named in `offsets` is in its usual place, and one not named in `scales` at its\nusual size.",
       "properties": {
         "offsets": {
           "additionalProperties": {
@@ -894,6 +923,9 @@
           },
           "title": "Scales",
           "type": "object"
+        },
+        "minimap_fit": {
+          "$ref": "#/$defs/MinimapFit"
         }
       },
       "title": "OverlayLayout",

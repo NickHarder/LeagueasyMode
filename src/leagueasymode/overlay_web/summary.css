@@ -356,14 +356,16 @@ body {
 
 .settings-status,
 .settings-friends-status,
-.settings-claude-status {
+.settings-claude-status,
+.settings-layout-status {
   min-height: 1.45em;
   color: var(--text-secondary);
 }
 
 .settings-status[data-state="failed"],
 .settings-friends-status[data-state="failed"],
-.settings-claude-status[data-state="failed"] {
+.settings-claude-status[data-state="failed"],
+.settings-layout-status[data-state="failed"] {
   color: var(--bad);
 }
 
@@ -715,6 +717,46 @@ body {
 /* The friends list on the settings page (phase 11.5). */
 .settings-friends {
   margin-top: 24px;
+}
+
+/* The layout's sliders (layout slice L.2): a group a widget, a slider a line, its value beside it. */
+.settings-layout {
+  margin-top: 24px;
+}
+
+.settings-layout h2 {
+  margin: 0 0 4px;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.settings-layout-widget {
+  margin: 12px 0 0;
+  padding: 8px 12px 10px;
+  border: 1px solid var(--gridline);
+  border-radius: 8px;
+}
+
+.settings-layout-widget legend {
+  padding: 0 4px;
+  font-weight: 600;
+}
+
+.settings-slider {
+  display: grid;
+  grid-template-columns: 3em 1fr 4em;
+  gap: 8px;
+  align-items: center;
+  padding: 2px 0;
+}
+
+.settings-slider output {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.settings-layout-reset {
+  margin-top: 6px;
 }
 
 .settings-friends h2 {

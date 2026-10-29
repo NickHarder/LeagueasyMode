@@ -6,6 +6,11 @@ skill has the format.
 
 ## 2026-10-29
 
+- Layout slice L.2, sliders: the Settings page's Layout section places and sizes each widget with
+  X, Y and size sliders that move the overlay as they slide, with a Reset each, and fits the
+  minimap layer over League's minimap (size 50% to 150%, nudged up to a tenth of the window), kept
+  in `layout.json` as `minimap_fit`. Reset layout keeps that fit: it lines the layer up, it is not
+  a widget's place.
 - Layout slice L.1, resize: in edit mode each widget's bottom right corner is a handle that
   resizes it, and the scroll wheel over it does too, from 60% to 160%; the size is kept in
   `layout.json` beside the place, and a file from before sizes keeps its places.
