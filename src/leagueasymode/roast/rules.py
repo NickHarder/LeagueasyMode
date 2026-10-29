@@ -48,6 +48,9 @@ class TeamCallRules(BaseModel):
 
     # At most one call this often, in game seconds.
     least_gap_seconds: float = Field(default=60.0, gt=0)
+    # A death this recently is a fight still on, and a call waits for it to end, as the callouts do
+    # (`CalloutRules.fight_quiet_seconds`).
+    fight_quiet_seconds: float = Field(default=8.0, ge=0)
     # An epic monster spawning this soon, from the first figure to the second.
     objective_soon_from_seconds: float = Field(default=60.0, ge=0)
     objective_soon_until_seconds: float = Field(default=90.0, gt=0)
