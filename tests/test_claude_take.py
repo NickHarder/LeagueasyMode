@@ -126,7 +126,7 @@ def test_the_moderation_list_matches_whole_words_and_every_approved_line_passes(
         *load_moment_lines().model_dump().values(),
         *load_team_call_lines().model_dump().values(),
     ]
-    assert len(approved) == 68
+    assert len(approved) == 85
     assert [line for line in approved if moderation_problems(line)] == []
 
 
