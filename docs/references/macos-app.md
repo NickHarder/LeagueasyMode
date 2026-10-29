@@ -184,10 +184,9 @@ the engine is up. "Last game…" opens the post-game window, "Settings…" the s
 "Status…" what the engine sees, in the default browser, normal windows rather than the
 click-through overlay: the engine's pages `how-to-use.html`, `summary.html`, `settings.html` and
 `status.html` beside the overlay's (`EnginePage` in `OverlayCore` builds their addresses); each
-waits until the engine has announced its address. When the engine prints that a game's case is
-kept (`LEAGUEASYMODE_CASE_READY=<game id>`), the app opens the post-game window on the roast alone
-(`EnginePage.roastURL`), once for each game (`RoastOpening`), for the player to pick a line for
-post-game chat. A test checks that each key the app registers
+waits until the engine has announced its address. After a game the overlay's roast card hands
+the app a line the player clicked (`PickedRoastLine`), which the app copies with the same toast as
+⌃⌥C. A test checks that each key the app registers
 is on the How to use page (`tests/test_how_to_use_page.py`).
 
 `OverlayCore` holds what the app decides without AppKit (which engine to run, its command and

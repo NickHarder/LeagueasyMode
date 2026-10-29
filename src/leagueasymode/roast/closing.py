@@ -23,6 +23,8 @@ class ClosingLine(BaseModel):
 
     text: str
     exhibit_keys: tuple[str, ...]
+    # The template the line came from; empty for the fallback line.
+    template_id: str = ""
 
 
 def closing_line_candidates(
@@ -65,5 +67,11 @@ def closing_line_candidates(
         ]
         fitting_texts = [text for text in longest_first if len(text) <= limit_characters]
         if fitting_texts:
-            candidates.append(ClosingLine(text=fitting_texts[0], exhibit_keys=line.exhibit_keys))
+            candidates.append(
+                ClosingLine(
+                    text=fitting_texts[0],
+                    exhibit_keys=line.exhibit_keys,
+                    template_id=line.template_id,
+                )
+            )
     return candidates

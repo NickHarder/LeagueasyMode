@@ -709,3 +709,91 @@ body {
 
 .overview-lane[data-lead="ally"] { color: var(--widget-advantage); }
 .overview-lane[data-lead="enemy"] { color: var(--widget-enemy); }
+
+/* The roast card after a game: three lines for chat, a click copies one (roast_card.ts). */
+.roast-card {
+  position: fixed;
+  top: 30%;
+  right: 24px;
+  width: 380px;
+  padding: 12px 14px;
+  border: 1px solid var(--widget-border);
+  border-radius: 12px;
+  background: rgb(10 12 18 / 0.9);
+  color: var(--widget-text);
+  font: 500 14px/1.35 -apple-system, "SF Pro Text", system-ui, sans-serif;
+}
+
+.roast-card[hidden] {
+  display: none;
+}
+
+.roast-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.roast-card-title {
+  font-weight: 700;
+}
+
+.roast-card button {
+  border: 1px solid var(--widget-border);
+  border-radius: 8px;
+  background: rgb(255 255 255 / 0.06);
+  color: var(--widget-text);
+  font: inherit;
+  cursor: pointer;
+}
+
+.roast-card button:hover {
+  background: rgb(255 255 255 / 0.14);
+}
+
+.roast-card-close {
+  padding: 0 8px;
+}
+
+.roast-card-spice {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin-bottom: 10px;
+  color: var(--widget-muted);
+}
+
+.roast-card-level {
+  min-width: 28px;
+  padding: 2px 0;
+}
+
+.roast-card-level[aria-pressed="true"] {
+  border-color: var(--widget-ally);
+  background: rgb(111 180 255 / 0.25);
+}
+
+.roast-card-lines {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.roast-card-line {
+  width: 100%;
+  padding: 8px 10px;
+  text-align: left;
+}
+
+.roast-card-line[data-copied="true"] {
+  border-color: var(--widget-advantage);
+}
+
+.roast-card-hint {
+  margin: 8px 0 0;
+  color: var(--widget-muted);
+  font-size: 12px;
+}

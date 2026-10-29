@@ -81,7 +81,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var updateTimer: Timer?
     private var gamePlacement: GamePlacement?
     private var gameWindowTimer: Timer?
-    private var roastOpening = RoastOpening()
     // How often a stopped engine is started again; none once the app is quitting.
     private var restartPolicy = EngineRestartPolicy()
     private var isTerminating = false
@@ -100,6 +99,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         panel.onKeyboardHandedBack = { [weak self] in
             self?.keyboardWasHandedBack()
+        }
+        panel.onRoastLinePicked = { [weak self] text in
+            self?.copyPickedLine(text)
         }
         overlayPanel = panel
         gamePlacement = placement
@@ -195,9 +197,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             onOverlayURL: { [weak self] overlayURL in
                 self?.engineDidAnnounce(overlayURL)
             },
-            onCaseReady: { [weak self] gameID in
-                self?.caseIsReady(gameID: gameID)
-            },
             onExit: { [weak self] exitStatus in
                 self?.engineDidStop(exitStatus: exitStatus)
             }
@@ -222,20 +221,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         updateEngineStatus("Engine: running")
         showHowToUseOnce(overlayURL: overlayURL)
-    }
-
-    /// Opens the roast in the default browser when a game's case is ready, once for each game, for
-    /// the player to pick a line for post-game chat (the owner, 2026-10-29: "a way to see roast
-    /// options and pick").
-    private func caseIsReady(gameID: Int64) {
-        guard
-            roastOpening.shouldOpen(gameID: gameID),
-            let overlayURL,
-            let roastURL = EnginePage.roastURL(overlayURL: overlayURL)
-        else {
-            return
-        }
-        NSWorkspace.shared.open(roastURL)
     }
 
     /// Opens the How to use page the first time the engine is up, and never again by itself.
@@ -613,6 +598,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         pasteboard.clearContents()
         pasteboard.setString(line.text, forType: .string)
         showToast(CopyOutcome.toastText(copied: line))
+    }
+
+    /// Copies a line the player clicked on the overlay's roast card after a game; a toast says so.
+    private func copyPickedLine(_ text: String) {
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        pasteboard.setString(text, forType: .string)
+        showToast(CopyOutcome.toastText(copied: CopiedLine(text: text, take: 0)))
     }
 
     private func showToast(_ text: String) {

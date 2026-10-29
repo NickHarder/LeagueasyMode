@@ -278,13 +278,6 @@
       "title": "Closing Line",
       "type": "string"
     },
-    "closing_options": {
-      "items": {
-        "type": "string"
-      },
-      "title": "Closing Options",
-      "type": "array"
-    },
     "closing_line_limit": {
       "title": "Closing Line Limit",
       "type": "integer"
@@ -344,7 +337,6 @@
     "board",
     "lines",
     "closing_line",
-    "closing_options",
     "closing_line_limit",
     "risk_warning",
     "exhibits"

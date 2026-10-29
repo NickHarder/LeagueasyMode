@@ -272,10 +272,7 @@ async def test_a_quick_case_says_so_until_the_full_one_comes(tmp_path: Path) -> 
         assert await case_file.locator(".case-lines li").count() > 0
 
 
-async def test_the_roast_alone_offers_lines_to_pick_and_copy(tmp_path: Path) -> None:
-    # The owner, 2026-10-29: at the post-game screen, "a way to see roast options and pick + send
-    # one"; copied, for the owner to paste. The app opens this when a game's case is ready, before
-    # the summary of that game is: so the summary, an older game's, is not shown.
+async def test_the_closing_line_has_a_copy_button(tmp_path: Path) -> None:
     summary_path, history_path = write_summary_and_history(tmp_path)
     write_last_game_roast(tmp_path, summary_path)
     async with aiohttp.ClientSession() as session:
@@ -289,28 +286,16 @@ async def test_the_roast_alone_offers_lines_to_pick_and_copy(tmp_path: Path) -> 
             browser = await playwright.chromium.launch(
                 executable_path=os.environ.get("PLAYWRIGHT_CHROMIUM_EXECUTABLE")
             )
-            context = await browser.new_context(
-                viewport={"width": 900, "height": 1400},
-                permissions=["clipboard-read", "clipboard-write"],
-            )
+            context = await browser.new_context(permissions=["clipboard-read", "clipboard-write"])
             page = await context.new_page()
-            await page.goto(overlay_url + "/summary.html#roast")
+            await page.goto(overlay_url + "/summary.html")
             try:
-                await expect(page.locator(".summary-result")).to_have_text(
-                    "Roast this game", timeout=5000
-                )
-                await expect(page.locator(".summary-accuracy")).to_have_count(0)
                 closing = page.locator(".case-closing > .case-closing-line")
-                await expect(closing).not_to_be_empty()
-                options = page.locator(".case-option-line")
-                assert 1 <= await options.count() <= 4
-                second = await options.first.text_content()
-                assert second is not None
-                assert second != await closing.text_content()
-                copy = page.locator(".case-option .case-copy").first
+                await expect(closing).not_to_be_empty(timeout=5000)
+                copy = page.locator(".case-closing .case-copy")
                 await copy.click()
                 await expect(copy).to_have_text("Copied")
-                assert await page.evaluate("navigator.clipboard.readText()") == second
-                await keep_screenshot(page, "post-game-roast-alone")
+                copied = await page.evaluate("navigator.clipboard.readText()")
+                assert copied == await closing.text_content()
             finally:
                 await browser.close()

@@ -33,6 +33,8 @@ final class OverlayPanel: NSPanel, WKNavigationDelegate {
     var onPageStateChange: (@MainActor (OverlayPageState) -> Void)?
     /// Called when the panel found itself holding the keyboard outside edit mode and gave it back.
     var onKeyboardHandedBack: (@MainActor () -> Void)?
+    /// Called with a line the player clicked on the roast card after a game, to copy.
+    var onRoastLinePicked: (@MainActor (String) -> Void)?
 
     /// Creates the panel over a screen, hidden until `showOverlay` is called.
     ///
@@ -63,6 +65,13 @@ final class OverlayPanel: NSPanel, WKNavigationDelegate {
                 self?.clickRegionsDidChange(rectangles)
             },
             name: ClickRegions.messageName
+        )
+        // The roast card after a game hands over the line the player clicked, to copy.
+        webView.configuration.userContentController.add(
+            PickedRoastLineBridge { [weak self] text in
+                self?.onRoastLinePicked?(text)
+            },
+            name: PickedRoastLine.messageName
         )
         webView.navigationDelegate = self
         contentView = webView
@@ -257,6 +266,26 @@ final class OverlayWebView: WKWebView {
 }
 
 /// Hands the page's spell buttons, as `ClickRegions` reads them, to the panel.
+final class PickedRoastLineBridge: NSObject, WKScriptMessageHandler {
+    private let onText: @MainActor (String) -> Void
+
+    init(onText: @escaping @MainActor (String) -> Void) {
+        self.onText = onText
+    }
+
+    func userContentController(
+        _ userContentController: WKUserContentController, didReceive message: WKScriptMessage
+    ) {
+        guard let text = PickedRoastLine.text(fromMessageBody: message.body) else {
+            return
+        }
+        // WebKit hands the page's messages over on the main thread.
+        MainActor.assumeIsolated {
+            onText(text)
+        }
+    }
+}
+
 final class ClickRegionBridge: NSObject, WKScriptMessageHandler {
     private let onRectangles: @MainActor ([CGRect]) -> Void
 

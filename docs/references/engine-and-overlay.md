@@ -416,13 +416,18 @@ crosshair whose readout lists every line at the minute under the pointer, the sa
 keys once focused, and a table of its values beneath. Light or dark with the system; the two
 series colors pass every colorblindness and contrast check in both. Before any game it says so.
 
-Under the result, the case file offers up to five lines for chat (`closing_options` in `/case`):
-the closing line first, then the case's next lines that fit the chat limit, each with a Copy button
-that puts it on the clipboard for the player to paste; nothing is sent to chat. When a game's case
-is kept, quick or full, `leagueasymode run` prints `LEAGUEASYMODE_CASE_READY=<game id>`, and the
-macOS app opens `summary.html#roast` once for that game: the case alone, under "Roast this game",
-since that game's summary comes only with the match timeline and the one on file is an older
-game's (the owner, 2026-10-29: at the post-game screen, "a way to see roast options and pick").
+The case file's closing line has a Copy button. After a game the overlay itself offers the roast:
+once the page has seen the game end, it asks `/roast-suggestions?spice=N` every 5 seconds until a
+case kept after that end comes, then shows a card of three lines for chat
+(`overlay/web/src/roast_card.ts`, `roast/suggestions.py`): the team's closing line, the lane lost by
+the most gold, and the enemy team, no two from the same template, filled from the team's next lines
+when those would repeat or a quick case has no lanes. The card has the spice levels 1 to 4 and a
+close button; a click on a line hands it to the app (`leagueasymodeCopy`), which copies it and
+shows its toast; nothing is sent to chat. The card's buttons are click regions like the spell
+buttons, so the overlay still lets every other click through. It goes when closed or when the next
+game starts, and a quick case's lines are asked for again every 15 seconds until the full case
+replaces them. "NO LANE VERDICT" is left out of chat lines, being no ruling (the owner, 2026-10-29:
+the post-game window's options were "overwhelming"; "can it be done through the overlay").
 
 # The widgets
 

@@ -1,3 +1,13 @@
+/**
+ * Marking a spell with a click, the "Click to mark spells" setting. Each enemy's row gets a button
+ * for their Flash, their other summoner spell and their ultimate; a press posts the mark to the
+ * engine as the app's ⌃⌥ shortcuts do, naming the enemy by the same place in role order.
+ *
+ * The overlay lets every click through to the game. Inside the macOS app the page tells the app
+ * where the buttons are (`ClickRegions` in the app), and the app takes the clicks on them only,
+ * never the keyboard.
+ */
+import { TAKES_CLICKS_CLASS } from "./roast_card.js";
 const MARKS_PATH = "/marks";
 const REQUEST_HEADER = "X-LeagueasyMode-Request";
 const MARK_REQUEST_VALUE = "mark";
@@ -81,7 +91,7 @@ export function reportClickRegions() {
     if (appHandler === undefined) {
         return;
     }
-    const regions = [...document.querySelectorAll(`.${BUTTON_CLASS}`)]
+    const regions = [...document.querySelectorAll(`.${BUTTON_CLASS}, .${TAKES_CLICKS_CLASS}`)]
         .map((button) => button.getBoundingClientRect())
         .filter((rectangle) => rectangle.width > 0 && rectangle.height > 0)
         .map((rectangle) => [

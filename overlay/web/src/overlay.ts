@@ -38,6 +38,7 @@ import {
 } from "./state.js";
 import { applyLayout, isEditingLayout, startLayoutEditing } from "./layout.js";
 import { listenForMarks, markButtonsElement, reportClickRegions } from "./marking.js";
+import { updateRoastCard } from "./roast_card.js";
 import { speak } from "./speech.js";
 
 const EVENTS_PATH = "/events";
@@ -1335,6 +1336,7 @@ function render(): void {
   renderMinimap(nowMilliseconds);
   renderYouPanel();
   renderOverview();
+  updateRoastCard(latestReceivedState?.state.is_game_running ?? false);
   reportClickRegions();
 }
 

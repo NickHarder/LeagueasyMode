@@ -6,6 +6,13 @@ skill has the format.
 
 ## 2026-10-29
 
+- The roast after a game moves into the overlay (the owner: "there are too many options... its
+  overwhelming", and "can it be done through the overlay as opposed to opening its own window in
+  the browser"; the card's layout approved). After a game the overlay shows a card of three lines,
+  each about a different target, with the spice levels and a close button; a click copies a line
+  through the app, with its toast. The browser window opening by itself, its roast-only view and
+  the post-game window's list of more lines are gone; the closing line keeps its Copy button. "NO
+  LANE VERDICT" no longer opens a quick case's chat lines.
 - Games are sent even when the anonymizer leaves a name in the copy; the log says only where. The
   owner: "i dont care about player names being anonmized tbh", after their game of 18:07 was
   recorded and scored but never sent ("Nothing new to send"), most likely withheld for a leftover

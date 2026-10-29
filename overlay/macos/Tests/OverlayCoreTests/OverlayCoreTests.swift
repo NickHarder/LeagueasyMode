@@ -26,24 +26,6 @@ final class EngineAnnouncementTests: XCTestCase {
         )
         XCTAssertNil(EngineAnnouncement.overlayURL(fromLine: "LEAGUEASYMODE_OVERLAY_URL=http://127.0.0.1/"))
     }
-
-    func testTheCaseReadyLineGivesTheGamesID() {
-        XCTAssertEqual(
-            EngineAnnouncement.caseReadyGameID(fromLine: "LEAGUEASYMODE_CASE_READY=5123456789\n"),
-            5_123_456_789
-        )
-        XCTAssertNil(EngineAnnouncement.caseReadyGameID(fromLine: "LEAGUEASYMODE_CASE_READY=0"))
-        XCTAssertNil(EngineAnnouncement.caseReadyGameID(fromLine: "LEAGUEASYMODE_CASE_READY=soon"))
-        XCTAssertNil(EngineAnnouncement.caseReadyGameID(fromLine: "LEAGUEASYMODE_OVERLAY_URL=http://127.0.0.1:1/"))
-    }
-
-    func testTheRoastOpensOnceForEachGame() {
-        var opening = RoastOpening()
-        XCTAssertTrue(opening.shouldOpen(gameID: 7))
-        // The full case replacing the quick one does not open it again.
-        XCTAssertFalse(opening.shouldOpen(gameID: 7))
-        XCTAssertTrue(opening.shouldOpen(gameID: 8))
-    }
 }
 
 final class LineBufferTests: XCTestCase {
@@ -332,14 +314,23 @@ final class MarkRequestTests: XCTestCase {
     }
 }
 
-final class EnginePageTests: XCTestCase {
-    func testTheRoastIsThePostGameWindowWithItsFragment() {
+final class PickedRoastLineTests: XCTestCase {
+    func testALineOfTextIsCopied() {
         XCTAssertEqual(
-            EnginePage.roastURL(overlayURL: URL(string: "http://127.0.0.1:52011/")!),
-            URL(string: "http://127.0.0.1:52011/summary.html#roast")
+            PickedRoastLine.text(fromMessageBody: "  gg. TEAM DIFF. Our Jax died 10 times.\n"),
+            "gg. TEAM DIFF. Our Jax died 10 times."
         )
     }
 
+    func testAnythingElseIsRefused() {
+        XCTAssertNil(PickedRoastLine.text(fromMessageBody: 42))
+        XCTAssertNil(PickedRoastLine.text(fromMessageBody: "   "))
+        XCTAssertNil(PickedRoastLine.text(fromMessageBody: "two\nlines"))
+        XCTAssertNil(PickedRoastLine.text(fromMessageBody: String(repeating: "a", count: 501)))
+    }
+}
+
+final class EnginePageTests: XCTestCase {
     func testEachPageIsBesideTheOverlayPage() {
         let overlayURL = URL(string: "http://127.0.0.1:52011/")!
         XCTAssertEqual(

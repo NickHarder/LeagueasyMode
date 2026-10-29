@@ -11,11 +11,13 @@ interface MessageHandler {
 
 declare global {
   interface Window {
-    // The app's handlers: speech here, and where the click-to-mark buttons are (marking.ts).
+    // The app's handlers: speech here, where the buttons that take clicks are (marking.ts), and
+    // the roast card's line to copy (roast_card.ts).
     webkit?: {
       readonly messageHandlers?: {
         readonly leagueasymodeSpeak?: MessageHandler;
         readonly leagueasymodeClickRegions?: MessageHandler;
+        readonly leagueasymodeCopy?: MessageHandler;
       };
     };
   }
