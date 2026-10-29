@@ -19,6 +19,7 @@ from leagueasymode.accuracy_history import read_accuracy_history
 from leagueasymode.engine import OverlayEngine
 from leagueasymode.overlay_state import OverlayLayout, OverlayPreferences, OverlayState
 from leagueasymode.preferences import save_layout, save_preferences
+from leagueasymode.roast.case import CaseOptions
 from leagueasymode.roast.case_view import case_options_of, case_view
 from leagueasymode.roast.last_game import LastGameRoast, roast_path_beside
 
@@ -154,23 +155,6 @@ def create_overlay_application(
             return web.json_response({"message": "no game recorded yet"}, status=404)
         return web.json_response(text=summary_text)
 
-    async def case(request: web.Request) -> web.Response:
-        try:
-            options = case_options_of(request.query)
-        except ValueError as error:
-            return web.json_response({"message": str(error)}, status=400)
-        last_game = await asyncio.to_thread(
-            _last_game_roast_or_none,
-            roast_path_beside(summary_path) if summary_path is not None else None,
-        )
-        if last_game is None:
-            return web.json_response(
-                {"message": "no case yet: no game recorded, or its details have not come"},
-                status=404,
-            )
-        view = await asyncio.to_thread(case_view, last_game, options, engine.tuning.roast)
-        return web.json_response(text=view.model_dump_json())
-
     async def history(_request: web.Request) -> web.Response:
         games = (
             await asyncio.to_thread(read_accuracy_history, history_path)
@@ -187,7 +171,7 @@ def create_overlay_application(
         application, engine, preferences_path=preferences_path, layout_path=layout_path
     )
     application.router.add_get("/summary", summary)
-    application.router.add_get("/case", case)
+    _add_the_last_games_case(application, engine, summary_path)
     application.router.add_get("/history", history)
     application.router.add_get("/state", state)
     application.router.add_get("/events", events)
@@ -248,6 +232,60 @@ def _add_game_sending(
         return web.json_response({"message": "sending"}, status=202)
 
     application.router.add_post("/games/send", send_games_now)
+
+
+def _add_the_last_games_case(
+    application: web.Application, engine: OverlayEngine, summary_path: Path | None
+) -> None:
+    """Serve the last game's case (`/case`) and the line the copy shortcut copies (`/closing-line`).
+
+    Args:
+        application: The overlay's web application.
+        engine: The engine, for its thresholds and whether a game is on.
+        summary_path: The last game's summary; its case is kept beside it. None to serve none.
+    """
+    # The case the post-game window last showed, which the copy shortcut copies (phase 11.4).
+    shown_case = ShownCase()
+    no_case_answer = {"message": "no case yet: no game recorded, or its details have not come"}
+
+    async def last_game_roast() -> LastGameRoast | None:
+        return await asyncio.to_thread(
+            _last_game_roast_or_none,
+            roast_path_beside(summary_path) if summary_path is not None else None,
+        )
+
+    async def case(request: web.Request) -> web.Response:
+        try:
+            options = case_options_of(request.query)
+        except ValueError as error:
+            return web.json_response({"message": str(error)}, status=400)
+        last_game = await last_game_roast()
+        if last_game is None:
+            return web.json_response(no_case_answer, status=404)
+        view = await asyncio.to_thread(case_view, last_game, options, engine.tuning.roast)
+        shown_case.options = options
+        return web.json_response(text=view.model_dump_json())
+
+    async def closing_line(request: web.Request) -> web.Response:
+        # The app's ⌃⌥C asks for the line the window shows; pressed again, for the takes after it.
+        later_takes_text = request.query.get("next", "0")
+        if not later_takes_text.isdigit():
+            return web.json_response({"message": "next is a whole number"}, status=400)
+        if engine.current_state.is_game_running:
+            return web.json_response(
+                {"message": "nothing to copy during a game yet: moments about friends come later"},
+                status=409,
+            )
+        last_game = await last_game_roast()
+        if last_game is None:
+            return web.json_response(no_case_answer, status=404)
+        take = shown_case.options.take + int(later_takes_text)
+        options = shown_case.options.model_copy(update={"take": take})
+        view = await asyncio.to_thread(case_view, last_game, options, engine.tuning.roast)
+        return web.json_response({"text": view.closing_line, "take": take})
+
+    application.router.add_get("/case", case)
+    application.router.add_get("/closing-line", closing_line)
 
 
 def _add_the_players_choices(
@@ -393,6 +431,13 @@ def _event_bytes(state: OverlayState) -> bytes:
         The event's bytes.
     """
     return b"data: " + state.model_dump_json().encode() + b"\n\n"
+
+
+@dataclasses.dataclass
+class ShownCase:
+    """The options of the case the post-game window last showed; the defaults before it asks."""
+
+    options: CaseOptions = dataclasses.field(default_factory=CaseOptions)
 
 
 def _last_game_roast_or_none(roast_path: Path | None) -> LastGameRoast | None:
