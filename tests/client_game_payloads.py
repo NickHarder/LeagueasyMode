@@ -167,3 +167,47 @@ def timeline_payload(*, listed: bool = False) -> JsonValue:
             }
         )
     return {"frames": frames}
+
+
+def end_of_game_payload(
+    *, names_given: bool = True, blue_players: int = 5, local_puuid: str = "placeholder-puuid-3"
+) -> JsonValue:
+    """Return the end-of-game stats of the same game, as the client is documented to send them.
+
+    Args:
+        names_given: Whether each player's stats name their champion.
+        blue_players: How many players the blue team has.
+        local_puuid: The PUUID of the player on this machine.
+    """
+    teams: list[JsonValue] = []
+    for team_id, participant_ids in ((100, range(1, blue_players + 1)), (200, range(6, 11))):
+        players: list[JsonValue] = []
+        for participant_id in participant_ids:
+            lane, role = LANES[(participant_id - 1) % 5 + 1]
+            position = {"SOLO": lane, "NONE": lane, "CARRY": "BOTTOM", "SUPPORT": "UTILITY"}[role]
+            champion_id, champion = CHAMPIONS[participant_id]
+            players.append(
+                {
+                    "puuid": f"placeholder-puuid-{participant_id}",
+                    "riotIdGameName": f"Player {participant_id}",
+                    "riotIdTagLine": "TEST",
+                    "championId": champion_id,
+                    **({"championName": champion} if names_given else {}),
+                    "detectedTeamPosition": position,
+                    "stats": {
+                        "CHAMPIONS_KILLED": participant_id,
+                        "NUM_DEATHS": 11 - participant_id,
+                        "ASSISTS": 2,
+                        "VISION_SCORE": 10 + participant_id,
+                        "TOTAL_DAMAGE_DEALT_TO_CHAMPIONS": 1000 * participant_id,
+                        "TOTAL_TIME_SPENT_DEAD": 30 * (11 - participant_id),
+                    },
+                }
+            )
+        teams.append({"teamId": team_id, "isWinningTeam": team_id == 200, "players": players})
+    return {
+        "gameId": GAME_ID,
+        "gameLength": 1834,
+        "localPlayer": {"puuid": local_puuid},
+        "teams": teams,
+    }

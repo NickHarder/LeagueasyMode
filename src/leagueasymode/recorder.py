@@ -65,6 +65,8 @@ REASON_RECORDING_CANCELLED: Final = "recording cancelled"
 
 # Given a recording once it is closed, to score it or show it.
 type RecordingHandler = Callable[[Path], Awaitable[None]]
+# Given the end-of-game stats as soon as they come, before the timeline (phase 11.7).
+type EndOfGameHandler = Callable[[JsonValue], Awaitable[None]]
 
 logger = logging.getLogger(__name__)
 
@@ -175,6 +177,7 @@ async def record_one_game(
     stop_requested: asyncio.Event | None = None,
     *,
     on_recorded: RecordingHandler | None = None,
+    on_end_of_game: EndOfGameHandler | None = None,
     status: StatusBoard | None = None,
 ) -> Path | None:
     """Wait for a game, record it, wait for its timeline, and return the recording's path.
@@ -186,6 +189,7 @@ async def record_one_game(
         timings: How often to ask and how long to wait.
         stop_requested: Set to stop: a game being recorded is closed with what it has.
         on_recorded: Given the recording once it is closed, to score it; None for nothing.
+        on_end_of_game: Given the end-of-game stats as soon as they come; None for nothing.
         status: Told how the recording and the timeline stand; None to tell nothing.
 
     Returns:
@@ -197,7 +201,7 @@ async def record_one_game(
     )
     if game_over is None:
         return None
-    return await _finish_after_game(game_over, timings, stop_event, on_recorded)
+    return await _finish_after_game(game_over, timings, stop_event, on_recorded, on_end_of_game)
 
 
 async def record_games(
@@ -208,6 +212,7 @@ async def record_games(
     stop_requested: asyncio.Event,
     *,
     on_recorded: RecordingHandler | None = None,
+    on_end_of_game: EndOfGameHandler | None = None,
     status: StatusBoard | None = None,
 ) -> list[Path]:
     """Record every game until stopped; a game's timeline is waited for while the next is awaited.
@@ -219,6 +224,8 @@ async def record_games(
         timings: How often to ask and how long to wait.
         stop_requested: Set to stop.
         on_recorded: Given each recording once it is closed, to score it; None for nothing.
+        on_end_of_game: Given each game's end-of-game stats as soon as they come, for a quick
+            case before the timeline; None for nothing.
         status: Told how the recording and the timeline stand; None to tell nothing.
 
     Returns:
@@ -237,7 +244,9 @@ async def record_games(
         if game_over is None:
             break
         finishing_tasks.append(
-            asyncio.create_task(_finish_after_game(game_over, timings, stop_requested, on_recorded))
+            asyncio.create_task(
+                _finish_after_game(game_over, timings, stop_requested, on_recorded, on_end_of_game)
+            )
         )
     return list(await asyncio.gather(*finishing_tasks))
 
@@ -412,6 +421,7 @@ async def _finish_after_game(
     timings: RecorderTimings,
     stop_requested: asyncio.Event,
     on_recorded: RecordingHandler | None,
+    on_end_of_game: EndOfGameHandler | None = None,
 ) -> Path:
     """Write what the League client gives after a game, close the recording, and hand it on.
 
@@ -421,6 +431,7 @@ async def _finish_after_game(
         stop_requested: Set to stop waiting for the timeline.
         on_recorded: Given the closed recording; a failure in it is logged, and the recording
             stays as it is.
+        on_end_of_game: Given the end-of-game stats when they come; a failure in it is logged.
 
     Returns:
         The compressed recording's path.
@@ -443,7 +454,12 @@ async def _finish_after_game(
             "timeline", "waiting", "Not asked for: the recording stopped before the game ended"
         )
     else:
-        await _record_client_resource(recording, client, END_OF_GAME_STATS_PATH)
+        end_of_game_stats = await _record_client_resource(recording, client, END_OF_GAME_STATS_PATH)
+        if end_of_game_stats is not None and on_end_of_game is not None:
+            try:
+                await on_end_of_game(end_of_game_stats)
+            except Exception:
+                logger.exception("could not use the end-of-game stats")
         recording.note(
             "timeline", "waiting", "Asking the League client for the last game's timeline"
         )
