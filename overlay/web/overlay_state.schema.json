@@ -868,7 +868,7 @@
     },
     "OverlayLayout": {
       "additionalProperties": false,
-      "description": "Where the player moved the widgets; a widget not named is in its usual place.",
+      "description": "Where the player moved the widgets, and how big they made them.\n\nA widget not named in `offsets` is in its usual place, and one not named in `scales` at its\nusual size.",
       "properties": {
         "offsets": {
           "additionalProperties": {
@@ -878,6 +878,16 @@
             "$ref": "#/$defs/MovableWidget"
           },
           "title": "Offsets",
+          "type": "object"
+        },
+        "scales": {
+          "additionalProperties": {
+            "$ref": "#/$defs/WidgetScale"
+          },
+          "propertyNames": {
+            "$ref": "#/$defs/MovableWidget"
+          },
+          "title": "Scales",
           "type": "object"
         }
       },
@@ -1668,6 +1678,11 @@
       ],
       "title": "WidgetOffset",
       "type": "object"
+    },
+    "WidgetScale": {
+      "maximum": 1.6,
+      "minimum": 0.6,
+      "type": "number"
     },
     "WinChance": {
       "additionalProperties": false,

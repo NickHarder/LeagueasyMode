@@ -35,6 +35,33 @@ def test_a_file_that_cannot_be_read_puts_every_widget_back(tmp_path: Path) -> No
     assert load_layout(layout_path) == OverlayLayout()
 
 
+def test_a_size_is_kept_beside_the_place(tmp_path: Path) -> None:
+    layout_path = tmp_path / "layout.json"
+    resized = OverlayLayout(
+        offsets={"enemy_strip": WidgetOffset(x_share=-0.25, y_share=0.1)},
+        scales={"enemy_strip": 1.3, "callouts": 0.8},
+    )
+    save_layout(layout_path, resized)
+    assert load_layout(layout_path) == resized
+
+
+def test_a_file_from_before_sizes_keeps_its_places(tmp_path: Path) -> None:
+    layout_path = tmp_path / "layout.json"
+    layout_path.write_text('{"offsets": {"enemy_strip": {"x_share": -0.25, "y_share": 0.1}}}')
+    assert load_layout(layout_path) == moved_enemy_strip()
+    assert load_layout(layout_path).scales == {}
+
+
+def test_a_widget_is_sized_from_60_to_160_percent() -> None:
+    assert OverlayLayout(scales={"you_panel": 0.6, "callouts": 1.6}).scales["callouts"] == 1.6
+    for out_of_range in (0.59, 1.61):
+        try:
+            OverlayLayout(scales={"you_panel": out_of_range})
+        except ValidationError:
+            continue
+        raise AssertionError(f"{out_of_range} was accepted")
+
+
 def test_a_widget_moves_at_most_a_whole_screen() -> None:
     for out_of_reach in (1.5, -1.01):
         try:

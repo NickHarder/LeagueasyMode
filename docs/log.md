@@ -6,6 +6,9 @@ skill has the format.
 
 ## 2026-10-29
 
+- Layout slice L.1, resize: in edit mode each widget's bottom right corner is a handle that
+  resizes it, and the scroll wheel over it does too, from 60% to 160%; the size is kept in
+  `layout.json` beside the place, and a file from before sizes keeps its places.
 - A focused overlay, after the owner's first screenshot of a game: "it covers some stuff and has
   so much info a lot of it is uselss 90% of the time. plus in a tf itll show the person die and
   then the next etc." Enemy rows are one line unless something may change a decision now

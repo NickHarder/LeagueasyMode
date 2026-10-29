@@ -477,6 +477,35 @@ body {
   cursor: grabbing;
 }
 
+/* A widget grows and shrinks from the side it is held to: the strips from the top's middle, the
+   enemy strip from its top right, the You panel from its top left. */
+#objective-strip,
+#callouts {
+  transform-origin: top center;
+}
+
+#enemy-strip {
+  transform-origin: top right;
+}
+
+#you-panel {
+  transform-origin: top left;
+}
+
+/* The resize handle, at the bottom right corner: a drag there sizes the widget. It takes the
+   pointer itself, for the widget's rounded corner leaves the very corner outside the widget. */
+.editing-layout [data-movable]::after {
+  content: "";
+  position: absolute;
+  right: -4px;
+  bottom: -4px;
+  width: 12px;
+  height: 12px;
+  border-right: 3px solid var(--widget-alive);
+  border-bottom: 3px solid var(--widget-alive);
+  cursor: nwse-resize;
+}
+
 .editing-layout [data-movable][hidden] {
   display: flex !important;
   background: var(--widget-surface);
