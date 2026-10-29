@@ -6,6 +6,12 @@ skill has the format.
 
 ## 2026-10-29
 
+- The Tab overview, after the owner's photos of Mobalytics' "Player Overview": "When tabbed we can
+  show the detailed stats". While Tab or Option is held, or the player is dead: both teams side by
+  side, each player's rank, recent record, champion games and win rate, tags (one-trick, main,
+  off-role, a streak of 3) and item gold, and on the Rift each lane's item-gold lead between the
+  columns. It is a fifth movable widget. And off the Rift no one has a role: "when in aram there is
+  no bot jg top etc positions".
 - Layout slice L.3, keep off League's HUD ("move them off automatically"): in edit mode the score,
   kill feed, champion bar, chat, ally portraits and minimap are shaded and named; a widget dropped
   on one, or grown over it, moves the shortest way off it, and never out of the window. The regions

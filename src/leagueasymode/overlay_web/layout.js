@@ -33,12 +33,14 @@ export const WIDGET_ELEMENT_IDS = {
     callouts: "callouts",
     enemy_strip: "enemy-strip",
     you_panel: "you-panel",
+    overview: "overview",
 };
 export const WIDGET_TITLES = {
     objective_strip: "Objectives",
     callouts: "Callouts",
     enemy_strip: "Enemy strip",
     you_panel: "You panel",
+    overview: "Tab overview",
 };
 const USUAL_PLACE = { x_share: 0, y_share: 0 };
 export const USUAL_MINIMAP_FIT = { scale: 1, x_share: 0, y_share: 0 };

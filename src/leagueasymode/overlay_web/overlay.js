@@ -732,6 +732,23 @@ function cooldownBadgeElement(timer, gameTimeSeconds) {
     badge.textContent = `${timer.label} ${formatCountdown(timer.ready_at_game_time_seconds - gameTimeSeconds)}`;
     return badge;
 }
+/**
+ * Return one team's cards as the overlay shows them: in role order on the Rift; off it, as the game
+ * lists them and with no role, since ARAM and the other maps have no lanes (the owner: "when in
+ * aram there is no bot jg top etc positions"), nor anyone off their role.
+ */
+function teamCards(state, side) {
+    const cards = state.players.filter((card) => card.side === side);
+    if (!state.is_summoners_rift) {
+        return cards.map((card) => ({
+            ...card,
+            role: "",
+            role_confidence: "unknown",
+            intel: card.intel === null ? null : { ...card.intel, is_off_role: false },
+        }));
+    }
+    return [...cards].sort((first, second) => roleRank(first) - roleRank(second));
+}
 /** Return a card's place in role order, unknown roles last. */
 function roleRank(card) {
     const rank = ROLE_ORDER.indexOf(card.role);
@@ -833,9 +850,7 @@ function renderEnemyStrip(nowMilliseconds) {
         return;
     }
     const areEstimatesShown = received.state.preferences.show_enemy_estimates;
-    const enemyCards = [...received.state.players.filter((card) => card.side === "enemy")]
-        .sort((first, second) => roleRank(first) - roleRank(second))
-        .map((card) => (areEstimatesShown ? card : withoutEstimates(card)));
+    const enemyCards = teamCards(received.state, "enemy").map((card) => areEstimatesShown ? card : withoutEstimates(card));
     strip.hidden = enemyCards.length === 0;
     const isGlance = !areDetailsShown(received.state);
     // While the widgets are being moved, a press drags the strip, so it shows no buttons; at a
@@ -1022,6 +1037,119 @@ function renderMinimap(nowMilliseconds) {
     minimap.hidden = drawing.childElementCount === 0;
     minimap.replaceChildren(drawing);
 }
+// A streak this long is a tag in the overview.
+const OVERVIEW_STREAK = 3;
+/** Return a player's tags in the overview: "One-trick" or "Main", "Off-role", "Won 3". */
+function overviewTags(intel) {
+    const tags = [];
+    if (intel.is_one_trick) {
+        tags.push("One-trick");
+    }
+    else if (intel.is_main_champion) {
+        tags.push("Main");
+    }
+    if (intel.is_off_role) {
+        tags.push("Off-role");
+    }
+    if (Math.abs(intel.streak) >= OVERVIEW_STREAK) {
+        tags.push(`${intel.streak > 0 ? "Won" : "Lost"} ${String(Math.abs(intel.streak))}`);
+    }
+    return tags;
+}
+/** Return a player's row in the overview. */
+function overviewRowElement(card) {
+    const row = document.createElement("div");
+    row.className = "overview-row";
+    row.dataset["champion"] = card.champion_name;
+    row.dataset["side"] = card.side;
+    const intel = card.intel;
+    const recordText = intel === null || intel.recent_game_count === 0
+        ? ""
+        : `${String(intel.recent_win_count)}\u2013${String(intel.recent_game_count - intel.recent_win_count)}`;
+    const championRecordText = intel === null
+        ? ""
+        : intel.champion_game_count > 0
+            ? `${String(intel.champion_game_count)} games ${String(Math.round((intel.champion_win_count / intel.champion_game_count) * PERCENT))}%`
+            : intel.recent_game_count >= GAMES_TO_CALL_A_CHAMPION_NEW
+                ? "new on champ"
+                : "";
+    const cells = [
+        ["overview-role", ROLE_SHORT_NAMES[card.role] ?? ""],
+        ["overview-champion", `${card.champion_name}${card.is_friend ? " \u2605" : ""}${card.is_you ? " (you)" : ""}`],
+        ["overview-level", String(card.level)],
+        ["overview-rank", intel === null ? "" : formatRank(intel.ranked)],
+        ["overview-record", recordText],
+        ["overview-gold", card.item_gold === null ? "" : formatGold(card.item_gold)],
+    ];
+    row.append(...cells.map(([className, text]) => {
+        const cell = document.createElement("span");
+        cell.className = className;
+        cell.textContent = text;
+        return cell;
+    }));
+    // The second line: their games and win rate on this champion, then the tags.
+    const tagsElement = document.createElement("span");
+    tagsElement.className = "overview-tags";
+    const championRecordElement = document.createElement("span");
+    championRecordElement.className = "overview-champion-record";
+    championRecordElement.textContent = championRecordText;
+    tagsElement.append(championRecordElement);
+    tagsElement.append(...(intel === null ? [] : overviewTags(intel)).map((tag) => {
+        const tagElement = document.createElement("span");
+        tagElement.className = "overview-tag";
+        tagElement.textContent = tag;
+        return tagElement;
+    }));
+    row.append(tagsElement);
+    return row;
+}
+/**
+ * Draw the overview of both teams while Tab or Option is held, or while the player is dead: each
+ * player's rank, record, games and win rate on their champion, tags and item gold, and on the
+ * Rift each lane's item-gold lead between the two columns (the owner, after Mobalytics' "Player
+ * Overview": "When tabbed we can show the detailed stats").
+ */
+function renderOverview() {
+    const panel = requireElement("overview");
+    const received = latestReceivedState;
+    const state = received?.state ?? null;
+    if (state === null || !state.is_game_running || !(isDetailsKeyHeld || isYouDead(state))) {
+        panel.hidden = true;
+        panel.replaceChildren();
+        return;
+    }
+    const allyCards = teamCards(state, "ally");
+    const enemyCards = teamCards(state, "enemy");
+    const teamElement = (side, cards) => {
+        const column = document.createElement("div");
+        column.className = "overview-team";
+        column.dataset["side"] = side;
+        const heading = document.createElement("div");
+        heading.className = "overview-heading";
+        heading.textContent = side === "ally" ? "Your team" : "Enemy team";
+        column.append(heading, ...cards.map(overviewRowElement));
+        return column;
+    };
+    const lanes = document.createElement("div");
+    lanes.className = "overview-lanes";
+    const laneHeading = document.createElement("div");
+    laneHeading.className = "overview-heading";
+    lanes.append(laneHeading);
+    if (state.is_summoners_rift) {
+        lanes.append(...ROLE_ORDER.map((role) => {
+            const ally = allyCards.find((card) => card.role === role);
+            const enemy = enemyCards.find((card) => card.role === role);
+            const lane = document.createElement("div");
+            lane.className = "overview-lane";
+            const lead = ally?.item_gold == null || enemy?.item_gold == null ? null : ally.item_gold - enemy.item_gold;
+            lane.dataset["lead"] = lead === null ? "even" : lead > 0 ? "ally" : lead < 0 ? "enemy" : "even";
+            lane.textContent = lead === null ? "" : formatGoldLead(lead);
+            return lane;
+        }));
+    }
+    panel.hidden = false;
+    panel.replaceChildren(teamElement("ally", allyCards), lanes, teamElement("enemy", enemyCards));
+}
 function render() {
     const nowMilliseconds = performance.now();
     renderDragonWidget(nowMilliseconds);
@@ -1030,6 +1158,7 @@ function render() {
     renderCallouts(nowMilliseconds);
     renderMinimap(nowMilliseconds);
     renderYouPanel();
+    renderOverview();
     reportClickRegions();
 }
 /** Listen to the engine; the browser reconnects by itself when the stream drops. */

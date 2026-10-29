@@ -83,8 +83,9 @@ async def test_in_edit_mode_a_widget_is_dragged_and_kept(tmp_path: Path) -> None
         await expect(notice).to_be_hidden()
         await page.evaluate("window.leagueasymodeSetEditing(true)")
         await expect(notice).to_be_visible()
-        # Every movable widget is outlined and can be grabbed, the empty You panel too.
-        await expect(page.locator("[data-movable]")).to_have_count(4)
+        # Every movable widget is outlined and can be grabbed, the empty You panel too; five since
+        # the Tab overview (it was four).
+        await expect(page.locator("[data-movable]")).to_have_count(5)
         await expect(page.locator("#you-panel")).to_be_visible()
         await drag(page, "#you-panel", VIEWPORT_WIDTH * 0.25, VIEWPORT_HEIGHT * 0.1)
         assert await layout_when(engine, moved) == moved
