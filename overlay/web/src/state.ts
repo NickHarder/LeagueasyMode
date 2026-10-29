@@ -405,7 +405,7 @@ export const PREFERENCE_NAMES = [
 ] as const satisfies readonly (keyof OverlayPreferences)[];
 
 /** The widgets the player can move; the minimap layer stays over League's minimap. */
-export const MOVABLE_WIDGETS = ["objective_strip", "callouts", "enemy_strip", "you_panel"] as const;
+export const MOVABLE_WIDGETS = ["objective_strip", "callouts", "enemy_strip", "you_panel", "overview"] as const;
 
 export type MovableWidget = (typeof MOVABLE_WIDGETS)[number];
 

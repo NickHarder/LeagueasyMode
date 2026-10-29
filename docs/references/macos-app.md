@@ -4,7 +4,7 @@ title: The macOS overlay app
 description: What the menu bar app does, how to run it from a clone, how to build, release and open the app that carries its own engine, its update check and open at login, and the steps for the tracer bullet's test on a Mac over League in each display mode.
 tags: [macos, overlay, tracer-bullet]
 status: draft
-generated: { by: claude-code/cloud, at: 2026-10-29T05:52:05Z }
+generated: { by: claude-code/cloud, at: 2026-10-29T06:04:35Z }
 sources:
   - id: build-update
     resource: ../../overlay/macos/Sources/OverlayCore/BuildUpdate.swift
@@ -100,7 +100,11 @@ i hit tab"). The panel looks 20 times a second whether either key is down
 changes (`DetailsKey`); it only reads the keys' state, and the keys still reach League, so Tab
 shows League's scoreboard as well. Whether macOS lets an app read Tab's state without the Input
 Monitoring permission is to be seen on the Mac; Option needs none. "Details only while Tab or ⌥ is
-held" in Settings, on by default, turns this off.[^details-key]
+held" in Settings, on by default, turns this off.[^details-key] Holding the key, or being
+dead, also shows the Tab overview in the middle of the window: both teams side by side, each
+player's rank, recent record, games and win rate on their champion, tags and item gold, and on the
+Rift each lane's item-gold lead between them (the owner, with Mobalytics' "Player Overview" in mind:
+"When tabbed we can show the detailed stats"); it is a fifth movable widget.
 
 **Moving the widgets:** "Edit layout (Esc to finish)" in the menu makes the overlay take clicks,
 tints the whole overlay so that the layer catching them shows even when the page shows nothing,

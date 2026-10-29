@@ -23,7 +23,7 @@ export const PREFERENCE_NAMES = [
     "details_on_hold",
 ];
 /** The widgets the player can move; the minimap layer stays over League's minimap. */
-export const MOVABLE_WIDGETS = ["objective_strip", "callouts", "enemy_strip", "you_panel"];
+export const MOVABLE_WIDGETS = ["objective_strip", "callouts", "enemy_strip", "you_panel", "overview"];
 /** A widget's size as a share of its usual size: 60% to 160%. */
 export const MIN_WIDGET_SCALE = 0.6;
 export const MAX_WIDGET_SCALE = 1.6;

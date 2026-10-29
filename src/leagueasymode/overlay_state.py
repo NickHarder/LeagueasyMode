@@ -654,7 +654,7 @@ class OverlayPreferences(BaseModel):
 
 
 # The widgets the player can move; the minimap layer stays over League's minimap.
-type MovableWidget = Literal["objective_strip", "callouts", "enemy_strip", "you_panel"]
+type MovableWidget = Literal["objective_strip", "callouts", "enemy_strip", "you_panel", "overview"]
 
 
 class WidgetOffset(BaseModel):

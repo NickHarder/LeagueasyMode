@@ -717,7 +717,8 @@
         "objective_strip",
         "callouts",
         "enemy_strip",
-        "you_panel"
+        "you_panel",
+        "overview"
       ],
       "type": "string"
     },
