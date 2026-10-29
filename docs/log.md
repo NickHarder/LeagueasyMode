@@ -6,6 +6,9 @@ skill has the format.
 
 ## 2026-10-29
 
+- Handoff refreshed at `ff23895`: the layout plan built (#84, #85, #91, #92, #93), the overlay quiet
+  at a glance with details on Tab or Option (#87, #88) and the Tab overview (#94), fewer calls on
+  deaths (#86), and the owner's unsent games closed and sent (#89).
 - The Tab overview, after the owner's photos of Mobalytics' "Player Overview": "When tabbed we can
   show the detailed stats". While Tab or Option is held, or the player is dead: both teams side by
   side, each player's rank, recent record, champion games and win rate, tags (one-trick, main,
