@@ -607,6 +607,36 @@ final class LayoutEditingTests: XCTestCase {
     }
 }
 
+final class DetailsKeyTests: XCTestCase {
+    func testTabOrOptionShowsTheDetails() {
+        XCTAssertTrue(DetailsKey.isHeld(isOptionDown: false, isTabDown: true))
+        XCTAssertTrue(DetailsKey.isHeld(isOptionDown: true, isTabDown: false))
+        XCTAssertFalse(DetailsKey.isHeld(isOptionDown: false, isTabDown: false))
+        // 48 is the Tab key's code on every Mac keyboard layout.
+        XCTAssertEqual(DetailsKey.tabKeyCode, 48)
+    }
+
+    func testThePageIsToldOnlyWhenTheKeyChanges() {
+        var watcher = DetailsKeyWatcher()
+        XCTAssertEqual(
+            watcher.scriptForChange(isOptionDown: false, isTabDown: false),
+            "window.leagueasymodeSetDetailsHeld?.(false);"
+        )
+        XCTAssertNil(watcher.scriptForChange(isOptionDown: false, isTabDown: false))
+        XCTAssertEqual(
+            watcher.scriptForChange(isOptionDown: false, isTabDown: true),
+            "window.leagueasymodeSetDetailsHeld?.(true);"
+        )
+        XCTAssertNil(watcher.scriptForChange(isOptionDown: true, isTabDown: true))
+        // A page loaded again knows nothing, so it is told again.
+        watcher.forget()
+        XCTAssertEqual(
+            watcher.scriptForChange(isOptionDown: true, isTabDown: false),
+            "window.leagueasymodeSetDetailsHeld?.(true);"
+        )
+    }
+}
+
 final class KeyboardHandBackTests: XCTestCase {
     func testTheMenuSaysHowOftenTheKeyboardWasHandedBack() {
         XCTAssertNil(KeyboardHandBack.menuText(handBackCount: 0))

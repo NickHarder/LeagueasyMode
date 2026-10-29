@@ -4,7 +4,7 @@ title: The macOS overlay app
 description: What the menu bar app does, how to run it from a clone, how to build, release and open the app that carries its own engine, its update check and open at login, and the steps for the tracer bullet's test on a Mac over League in each display mode.
 tags: [macos, overlay, tracer-bullet]
 status: draft
-generated: { by: claude-code/cloud, at: 2026-10-29T03:33:38Z }
+generated: { by: claude-code/cloud, at: 2026-10-29T04:28:30Z }
 sources:
   - id: build-update
     resource: ../../overlay/macos/Sources/OverlayCore/BuildUpdate.swift
@@ -38,6 +38,8 @@ sources:
     resource: ../../overlay/macos/Sources/OverlayCore/GameWindow.swift
   - id: layout-editing
     resource: ../../overlay/web/src/layout.ts
+  - id: details-key
+    resource: ../../overlay/macos/Sources/OverlayCore/DetailsKey.swift
   - id: speech
     resource: ../../overlay/macos/Sources/LeagueasyOverlay/SpeechBridge.swift
   - id: release-workflow
@@ -84,6 +86,17 @@ while it is over a button, and lets every other click through to the game. The p
 becomes key, so League keeps the keyboard, and the page's view takes the first click on a panel
 that is not key. In edit mode the strip has no buttons, as a press there drags it.
 Quitting the app asks the engine to stop; the engine closes the game it is recording first.
+
+**Details on a key:** at a glance the overlay shows the timers, the newest two callouts and one
+short line an enemy; while Tab or Option is held it shows the rest, the spell buttons of "Click to
+mark spells" included, so at a glance the overlay takes no click at all (the owner, 2026-10-29:
+"thers still too much visual clutter and it messes with my mouse. maybe extra details onyl show if
+i hit tab"). The panel looks 20 times a second whether either key is down
+(`NSEvent.modifierFlags` for Option, `CGEventSource.keyState` for Tab) and tells the page when that
+changes (`DetailsKey`); it only reads the keys' state, and the keys still reach League, so Tab
+shows League's scoreboard as well. Whether macOS lets an app read Tab's state without the Input
+Monitoring permission is to be seen on the Mac; Option needs none. "Details only while Tab or ⌥ is
+held" in Settings, on by default, turns this off.[^details-key]
 
 **Moving the widgets:** "Edit layout (Esc to finish)" in the menu makes the overlay take clicks,
 tints the whole overlay so that the layer catching them shows even when the page shows nothing,
@@ -297,6 +310,7 @@ whether `KillerName` holds a game name or a Riot ID, and whether the client serv
 [^engine-command]: `overlay/macos/Sources/OverlayCore/EngineCommand.swift`
 [^game-window]: `overlay/macos/Sources/OverlayCore/GameWindow.swift`
 [^layout-editing]: `overlay/web/src/layout.ts`
+[^details-key]: `overlay/macos/Sources/OverlayCore/DetailsKey.swift`; the page's side is `areDetailsShown` in `overlay/web/src/overlay.ts`
 [^speech]: `overlay/macos/Sources/LeagueasyOverlay/SpeechBridge.swift`
 [^bundled-engine]: `overlay/macos/Sources/OverlayCore/BundledEngine.swift`
 [^build-app]: `overlay/macos/scripts/build_app.sh`

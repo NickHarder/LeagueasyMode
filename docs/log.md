@@ -6,6 +6,13 @@ skill has the format.
 
 ## 2026-10-29
 
+- Details on a key, at the owner's ask: "thers still too much visual clutter and it messes with my
+  mouse. maybe extra details onyl show if i hit tab or somethign". At a glance: the timers, the
+  newest two callouts, and one short line an enemy (role, name, R, level, respawn, marked
+  cooldowns). Holding Tab or Option shows the rest: win and fight chances, gold, the You panel,
+  each enemy's second line, every callout and the spell buttons. The buttons were what took the
+  mouse, right clicks to move included; at a glance there are none, so the overlay takes no click.
+  "Details only while Tab or ⌥ is held", on by default, turns it off.
 - Fewer calls on deaths, after the owner's ARAM game: "thers still a lot of death notificatiosn and
   i am getting stuff like reset for obj even in aram". Team calls now wait for a fight to end, as
   the callouts do; the "enemies down" call stays off the overlay while the numbers window callout

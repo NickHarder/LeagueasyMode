@@ -286,7 +286,10 @@ async def open_overlay(
     turret_kills: tuple[tuple[int, float, str], ...] = (),
     first_game_time_seconds: float = 1395.0,
     map_number: int = 11,
+    hold_details: bool = True,
 ) -> AsyncIterator[Page]:
+    # Details show only while Tab or Option is held (the owner: "maybe extra details onyl show if
+    # i hit tab"); the tests of what they show hold the key, as the app tells the page.
     if preferences is not None:
         save_preferences(tmp_path / "preferences.json", preferences)
     replay = RecordingReplay(
@@ -339,12 +342,20 @@ async def open_overlay(
             if init_script is not None:
                 await page.add_init_script(init_script)
             await page.goto(overlay_urls[0])
+            if hold_details:
+                await hold_the_details_key(page, is_held=True)
             try:
                 yield page
             finally:
                 await browser.close()
                 stop_requested.set()
                 await overlay_task
+
+
+async def hold_the_details_key(page: Page, *, is_held: bool) -> None:
+    """Do what the macOS app does while Tab or Option is held, or let go."""
+    await page.wait_for_function("window.leagueasymodeSetDetailsHeld !== undefined")
+    await page.evaluate(f"window.leagueasymodeSetDetailsHeld({'true' if is_held else 'false'})")
 
 
 async def keep_screenshot(page: Page, name: str) -> None:
@@ -962,3 +973,65 @@ async def test_a_marked_flash_brings_a_suggestion(tmp_path: Path) -> None:
             re.compile(r"^Zed has no Flash for (4:5\d|5:00): punish it$"), timeout=5000
         )
         await keep_screenshot(page, "suggestion")
+
+
+async def test_at_a_glance_each_enemy_is_one_short_line_and_details_wait_for_the_key(
+    tmp_path: Path,
+) -> None:
+    # The owner, 2026-10-29: "thers still too much visual clutter and it messes with my mouse.
+    # maybe extra details onyl show if i hit tab or somethign".
+    async with open_overlay(tmp_path, snapshot_count=60, speed=1.0, hold_details=False) as page:
+        rows = page.locator("#enemy-strip .enemy-row")
+        await expect(rows).to_have_count(5, timeout=5000)
+        # Role, name, R, level, a respawn and the marked cooldowns: no gold, no second line, no
+        # win chance or gold leads, no You panel.
+        await expect(page.locator("#enemy-strip .enemy-gold")).to_have_text([""] * 5)
+        await expect(page.locator("#enemy-strip .enemy-next-item")).to_have_count(0)
+        await expect(page.locator("#enemy-strip .item-lead")).to_have_count(0)
+        await expect(page.locator("#you-panel")).to_be_hidden()
+        await expect(page.locator("#objective-pills .pill").first).to_be_visible()
+        await keep_screenshot(page, "at-a-glance")
+        await hold_the_details_key(page, is_held=True)
+        await expect(page.locator("#enemy-strip .item-lead").first).to_be_visible()
+        await expect(page.locator("#you-panel")).to_be_visible()
+        await keep_screenshot(page, "details-held")
+        await hold_the_details_key(page, is_held=False)
+        await expect(page.locator("#enemy-strip .item-lead")).to_have_count(0)
+        await expect(page.locator("#you-panel")).to_be_hidden()
+
+
+async def test_at_a_glance_at_most_two_callouts_show(tmp_path: Path) -> None:
+    # Four enemies can likely buy an item at this moment of the replay: two show, the newest.
+    async with open_overlay(tmp_path, snapshot_count=60, speed=1.0, hold_details=False) as page:
+        callouts = page.locator('#callouts .callout[data-kind="item_soon"]')
+        await expect(callouts).to_have_count(2, timeout=8000)
+        await hold_the_details_key(page, is_held=True)
+        await expect(callouts).to_have_count(4)
+
+
+async def test_the_spell_buttons_show_only_while_the_key_is_held(tmp_path: Path) -> None:
+    # A button takes the clicks on it, a right click to move too; at a glance there are none, so
+    # the overlay takes no click at all.
+    async with open_overlay(
+        tmp_path,
+        snapshot_count=60,
+        speed=1.0,
+        preferences=OverlayPreferences(click_to_mark=True),
+        hold_details=False,
+    ) as page:
+        await expect(page.locator("#enemy-strip .enemy-row")).to_have_count(5, timeout=5000)
+        await expect(page.locator(".mark-button")).to_have_count(0)
+        await hold_the_details_key(page, is_held=True)
+        await expect(page.locator(".mark-button").first).to_be_visible()
+
+
+async def test_with_details_always_shown_nothing_waits_for_the_key(tmp_path: Path) -> None:
+    async with open_overlay(
+        tmp_path,
+        snapshot_count=60,
+        speed=1.0,
+        preferences=OverlayPreferences(details_on_hold=False),
+        hold_details=False,
+    ) as page:
+        await expect(page.locator("#enemy-strip .item-lead").first).to_be_visible(timeout=5000)
+        await expect(page.locator("#you-panel")).to_be_visible()
