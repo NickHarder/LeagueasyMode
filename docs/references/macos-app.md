@@ -4,7 +4,7 @@ title: The macOS overlay app
 description: What the menu bar app does, how to run it from a clone, how to build, release and open the app that carries its own engine, its update check and open at login, and the steps for the tracer bullet's test on a Mac over League in each display mode.
 tags: [macos, overlay, tracer-bullet]
 status: draft
-generated: { by: claude-code/cloud, at: 2026-10-28T23:55:00Z }
+generated: { by: claude-code/cloud, at: 2026-10-29T00:10:00Z }
 sources:
   - id: build-update
     resource: ../../overlay/macos/Sources/OverlayCore/BuildUpdate.swift
@@ -217,7 +217,8 @@ tried again by itself. Otherwise the menu item, once confirmed, downloads the zi
 release, checks one against the other, unpacks the app with `ditto`, checks it is LeagueasyMode
 and that its signature holds, puts it in place of the running app, starts it and quits
 (`UpdateInstaller`). A file the app downloads itself is not marked as from the internet, so the
-new build opens without "Open Anyway"; that is first seen on the Mac. An app the browser
+new build opens without "Open Anyway": seen on the owner's Mac on 2026-10-29, when build 107
+installed build 119 by itself, "flawlessly". An app the browser
 downloaded and that was opened where it was unzipped runs from a read-only copy macOS makes for
 it (App Translocation), which nothing can replace: the first try on the Mac said "the app's folder
 cannot be written". Such an app now puts the build in Applications instead (`UpdateTarget`), from

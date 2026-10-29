@@ -4,6 +4,12 @@ What changed in this project and why, newest first. A commit shows the differenc
 gives the reason. The `handoff` skill adds to it at every checkpoint, and the `write-okf-concept`
 skill has the format.
 
+## 2026-10-29
+
+- Updates install themselves on the Mac: build 107 found build 119, installed it with no game on
+  screen and started it again, without "Open Anyway" (the owner: "it updated to build 119
+  flawlessly"). Each merge to main now reaches the app on its own.
+
 ## 2026-10-28
 
 - Phase 11.1, the roast engine, ported from nothingsmyfault into `src/leagueasymode/roast/`:
