@@ -26,6 +26,24 @@ final class EngineAnnouncementTests: XCTestCase {
         )
         XCTAssertNil(EngineAnnouncement.overlayURL(fromLine: "LEAGUEASYMODE_OVERLAY_URL=http://127.0.0.1/"))
     }
+
+    func testTheCaseReadyLineGivesTheGamesID() {
+        XCTAssertEqual(
+            EngineAnnouncement.caseReadyGameID(fromLine: "LEAGUEASYMODE_CASE_READY=5123456789\n"),
+            5_123_456_789
+        )
+        XCTAssertNil(EngineAnnouncement.caseReadyGameID(fromLine: "LEAGUEASYMODE_CASE_READY=0"))
+        XCTAssertNil(EngineAnnouncement.caseReadyGameID(fromLine: "LEAGUEASYMODE_CASE_READY=soon"))
+        XCTAssertNil(EngineAnnouncement.caseReadyGameID(fromLine: "LEAGUEASYMODE_OVERLAY_URL=http://127.0.0.1:1/"))
+    }
+
+    func testTheRoastOpensOnceForEachGame() {
+        var opening = RoastOpening()
+        XCTAssertTrue(opening.shouldOpen(gameID: 7))
+        // The full case replacing the quick one does not open it again.
+        XCTAssertFalse(opening.shouldOpen(gameID: 7))
+        XCTAssertTrue(opening.shouldOpen(gameID: 8))
+    }
 }
 
 final class LineBufferTests: XCTestCase {
@@ -315,6 +333,13 @@ final class MarkRequestTests: XCTestCase {
 }
 
 final class EnginePageTests: XCTestCase {
+    func testTheRoastIsThePostGameWindowWithItsFragment() {
+        XCTAssertEqual(
+            EnginePage.roastURL(overlayURL: URL(string: "http://127.0.0.1:52011/")!),
+            URL(string: "http://127.0.0.1:52011/summary.html#roast")
+        )
+    }
+
     func testEachPageIsBesideTheOverlayPage() {
         let overlayURL = URL(string: "http://127.0.0.1:52011/")!
         XCTAssertEqual(

@@ -29,4 +29,18 @@ public enum EnginePage: String, CaseIterable, Sendable {
     public func url(overlayURL: URL) -> URL? {
         URL(string: rawValue, relativeTo: overlayURL)?.absoluteURL
     }
+
+    /// Returns the address of the post-game window showing the roast alone, which the app opens
+    /// when a game's case is ready: the rest of the summary comes later, with the match timeline.
+    ///
+    /// - Parameter overlayURL: The overlay page's address, as the engine announced it.
+    /// - Returns: The address, the post-game window's with `#roast`.
+    public static func roastURL(overlayURL: URL) -> URL? {
+        guard let pageURL = lastGame.url(overlayURL: overlayURL) else {
+            return nil
+        }
+        var components = URLComponents(url: pageURL, resolvingAgainstBaseURL: false)
+        components?.fragment = "roast"
+        return components?.url
+    }
 }

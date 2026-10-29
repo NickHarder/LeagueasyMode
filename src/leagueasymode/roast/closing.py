@@ -25,30 +25,27 @@ class ClosingLine(BaseModel):
     exhibit_keys: tuple[str, ...]
 
 
-def write_closing_line(
+def closing_line_candidates(
     lines: list[CitedLine],
     letter_by_key: dict[str, str],
     *,
     limit_characters: int,
-    take: int = 0,
     verdict_title: str = "",
     cite_letters: bool = False,
     signature: bool = False,
-) -> ClosingLine | None:
-    """Pick the line to close on and write it for chat.
+) -> list[ClosingLine]:
+    """Return every line of the case written for chat, in the case's order, that fits.
 
     Args:
         lines: The case's lines, already checked.
         letter_by_key: The letter of each cited exhibit.
         limit_characters: The longest line chat takes.
-        take: Which of the lines that fit to use, for a reroll; it wraps around.
-        verdict_title: The verdict's stamp, such as "TEAM DIFF", which opens the line when it
-            fits.
-        cite_letters: End the line with its exhibits' letters, as "(A)(B)".
-        signature: End the line with the site's name, when it fits.
+        verdict_title: The verdict's stamp, which opens a line when it fits.
+        cite_letters: End each line with its exhibits' letters, as "(A)(B)".
+        signature: End each line with the site's name, when it fits.
 
     Returns:
-        The closing line, or None when no line fits.
+        The lines that fit, one for each of the case's lines that does.
     """
     candidates: list[ClosingLine] = []
     for line in lines:
@@ -69,6 +66,4 @@ def write_closing_line(
         fitting_texts = [text for text in longest_first if len(text) <= limit_characters]
         if fitting_texts:
             candidates.append(ClosingLine(text=fitting_texts[0], exhibit_keys=line.exhibit_keys))
-    if not candidates:
-        return None
-    return candidates[take % len(candidates)]
+    return candidates
