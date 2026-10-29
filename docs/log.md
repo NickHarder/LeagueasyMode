@@ -6,6 +6,13 @@ skill has the format.
 
 ## 2026-10-29
 
+- `USERS.md` brought up to date with the night's feedback, at the owner's ask ("updating user
+  personas and key metrics"): long sessions of ARAM and Swiftplay, evenings into the night, the
+  mouse never taken, "worth" a look away from a fight, Mobalytics' overview as the model for Tab; a
+  moment M-08 (dead, or holding Tab) and a use case UC-09 (only what holds on this map). And the
+  first key metrics, `KEY_METRICS.md` and `metrics/`: the north star NS-01, games the overlay got
+  right; drivers for games scored, the jungler, fight and contest calls; guardrails for engine
+  stops and problem reports. None has a scored value yet: no game of the owner's has been scored.
 - Pick a roast after the game (the owner: "When a game ends though and we are looking at post
   game stats, that's when I want a way to see roast options and pick + send one"; asked, copy and
   paste rather than the app typing into League's chat, which Riot's rules for third-party apps
