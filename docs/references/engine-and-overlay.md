@@ -4,7 +4,7 @@ title: The engine and the overlay page
 description: How the engine turns the game's answers into the overlay's state, how that state reaches the widgets, how the page is built and tested, and how to run it all against a replay.
 tags: [engine, overlay, architecture]
 status: draft
-generated: { by: claude-code/cloud, at: 2026-10-29T04:00:00Z }
+generated: { by: claude-code/cloud, at: 2026-10-29T03:13:30Z }
 sources:
   - id: engine
     resource: ../../src/leagueasymode/engine.py
