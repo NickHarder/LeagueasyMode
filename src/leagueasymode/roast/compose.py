@@ -31,6 +31,9 @@ HEAD_TO_HEAD_FAMILIES: Final = frozenset({"lanes", "kills"})
 # so the case spreads its blame. The defendant's own lines are their excuses, and are not capped;
 # nor is a single lane or player the reader chose, who gets every receipt there is.
 MAXIMUM_LINES_PER_SUBJECT: Final = 3
+# Lines about a teammate that clear them rather than flame them: the defendant meeting their
+# conditions too is no fault.
+NOT_FLAMES: Final = frozenset({"carry-receipt-ally", "lane-held-ahead", "lane-held-behind"})
 
 
 @dataclass(frozen=True)
@@ -176,6 +179,31 @@ def fill_template(
     )
 
 
+def _is_a_glass_house(template: RoastTemplate, context: CaseContext) -> bool:
+    """Return whether a line would flame a teammate for what the defendant did too.
+
+    The owner, 2026-10-29: "you need to make roasts self aware ... cant do a roast if i am also
+    bad". A line about a teammate is not offered when the defendant meets its conditions as well:
+    six deaths, a lane lost by 1,500 gold, a low kill participation. A line clearing a teammate
+    is no flame, and stays.
+
+    Args:
+        template: The template.
+        context: The case, with its defendant.
+
+    Returns:
+        True when the line is not to be offered.
+    """
+    return (
+        template.subject == "ally"
+        and template.template_id not in NOT_FLAMES
+        and bool(template.when)
+        and all(
+            meets_condition(context, context.defendant, condition) for condition in template.when
+        )
+    )
+
+
 def compose_lines(
     templates: tuple[RoastTemplate, ...],
     context: CaseContext,
@@ -211,6 +239,8 @@ def compose_lines(
         if template.narrow_only and not target_is_narrow:
             continue
         if prove and template.family not in HEAD_TO_HEAD_FAMILIES:
+            continue
+        if _is_a_glass_house(template, context):
             continue
         qualified_subjects = [
             subject
