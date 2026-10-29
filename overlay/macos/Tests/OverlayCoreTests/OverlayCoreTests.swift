@@ -543,6 +543,28 @@ final class GameWindowLocatorTests: XCTestCase {
         XCTAssertNil(GameWindowLocator.gameWindow(in: windows))
     }
 
+    func testABorderlessGameRaisedAboveOrdinaryWindowsIsTheGameAndTheOverlayGoesAboveIt() {
+        // The owner, 2026-10-29, in borderless: the overlay was "behind the game almost".
+        let raisedGame = ListedWindow(
+            ownerName: "League of Legends", bounds: CGRect(x: 0, y: 0, width: 1920, height: 1080), layer: 25
+        )
+        let gameWindow = GameWindowLocator.gameWindow(in: [raisedGame])
+        XCTAssertEqual(gameWindow, raisedGame)
+        XCTAssertEqual(GameWindowLocator.levelAbove(gameWindow: gameWindow), 26)
+        XCTAssertEqual(
+            GameWindowLocator.placement(
+                gameWindow: gameWindow, screenFrames: [mainScreen, secondScreen], titleBarHeight: titleBarHeight
+            ),
+            .screen(mainScreen)
+        )
+    }
+
+    func testAGameOnTheOrdinaryLayerNeedsNoHigherLevel() {
+        let ordinaryGame = leagueWindow(CGRect(x: 0, y: 0, width: 1920, height: 1080))
+        XCTAssertNil(GameWindowLocator.levelAbove(gameWindow: ordinaryGame))
+        XCTAssertNil(GameWindowLocator.levelAbove(gameWindow: nil))
+    }
+
     func testOfSeveralWindowsTheLargestIsTheGame() {
         let windows = [
             leagueWindow(CGRect(x: 0, y: 0, width: 300, height: 200)),

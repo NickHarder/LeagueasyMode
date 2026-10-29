@@ -80,6 +80,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var failedBuildNumber: Int?
     private var updateTimer: Timer?
     private var gamePlacement: GamePlacement?
+    // The level that clears League's window when League raised it (borderless can); else nil.
+    private var gameWindowLevel: Int?
     private var gameWindowTimer: Timer?
     private var roastOpening = RoastOpening()
     // How often a stopped engine is started again; none once the app is quitting.
@@ -89,9 +91,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var reportStatusText: String?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        let placement = Self.currentGamePlacement()
+        let (placement, levelAboveGame) = Self.currentGameWindow()
         let panel = OverlayPanel(screenFrame: placement.frame)
-        panel.place(at: levelChoice)
+        panel.place(at: levelChoice, atLeast: levelAboveGame)
         panel.onEscape = { [weak self] in
             self?.endEditingLayout()
         }
@@ -103,6 +105,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         overlayPanel = panel
         gamePlacement = placement
+        gameWindowLevel = levelAboveGame
         statusItem = makeStatusItem()
         toggleHotKey = GlobalHotKey(
             identifier: Self.toggleHotKeyIdentifier,
@@ -692,6 +695,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if let gamePlacement {
             facts["game window"] = gamePlacement.menuText
         }
+        if let gameWindowLevel {
+            facts["raised above League's window"] = "level \(gameWindowLevel)"
+        }
         if let keyboardText = KeyboardHandBack.menuText(handBackCount: keyboardHandBackCount) {
             facts["keyboard"] = keyboardText
         }
@@ -928,7 +934,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
         levelChoice = choice
-        overlayPanel?.place(at: choice)
+        overlayPanel?.place(at: choice, atLeast: gameWindowLevel)
         statusItem?.menu = makeMenu()
     }
 
@@ -967,7 +973,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     /// Moves the overlay over League's window when it has moved, resized or changed screens.
     private func followGameWindow() {
-        let placement = Self.currentGamePlacement()
+        let (placement, levelAboveGame) = Self.currentGameWindow()
+        if levelAboveGame != gameWindowLevel {
+            gameWindowLevel = levelAboveGame
+            overlayPanel?.place(at: levelChoice, atLeast: levelAboveGame)
+        }
         guard placement != gamePlacement else {
             return
         }
@@ -977,17 +987,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     /// Where the overlay goes now: over League's game window when one is on screen, found by its
-    /// owner's name and bounds, which need no permission; otherwise over the main screen.
-    private static func currentGamePlacement() -> GamePlacement {
+    /// owner's name and bounds, which need no permission; otherwise over the main screen. Also
+    /// the level that clears the game's window, when League raised it.
+    private static func currentGameWindow() -> (placement: GamePlacement, levelAbove: Int?) {
         let windowInfos =
             CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID)
             as? [[String: Any]] ?? []
         let windows = windowInfos.compactMap { ListedWindow(windowInfo: $0) }
-        return GameWindowLocator.placement(
-            gameWindow: GameWindowLocator.gameWindow(in: windows),
+        let gameWindow = GameWindowLocator.gameWindow(in: windows)
+        let placement = GameWindowLocator.placement(
+            gameWindow: gameWindow,
             screenFrames: NSScreen.screens.map(\.frame),
             titleBarHeight: titleBarHeight
         )
+        return (placement, GameWindowLocator.levelAbove(gameWindow: gameWindow))
     }
 
     /// The height of an ordinary window's title bar, which League's window has when windowed.
