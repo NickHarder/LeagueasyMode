@@ -28,7 +28,7 @@ spice = [1, 2]
 rank_by = "kills"
 verdicts = ["carry_receipt"]
 when = [{ slot = "kills", at_least = 5 }]
-text = "Receipt: {kills}/{deaths}/{assists}. Tips appreciated."
+text = "Receipt: I went {kills}/{deaths}/{assists}."
 
 [[templates]]
 id = "carry-receipt-score-spicy"
@@ -38,7 +38,7 @@ spice = [3, 4]
 rank_by = "kills"
 verdicts = ["carry_receipt"]
 when = [{ slot = "kills", at_least = 5 }]
-text = "Receipt: {kills}/{deaths}/{assists}. I accept payment in LP and public apologies."
+text = "Receipt: I went {kills}/{deaths}/{assists}. You are welcome, all of you."
 
 [[templates]]
 id = "carry-receipt-damage"
@@ -48,7 +48,7 @@ spice = [1, 4]
 rank_by = "damage_share"
 verdicts = ["carry_receipt"]
 when = [{ slot = "damage_share", at_least = 0.25 }]
-text = "Receipt: I did {damage_share} of our team's damage to champions. Hope the backpack was comfy."
+text = "Receipt: I did {damage_share} of our team's damage to champions."
 
 [[templates]]
 id = "carry-receipt-ally"
@@ -58,7 +58,7 @@ spice = [1, 4]
 rank_by = "damage_share"
 verdicts = ["carry_receipt"]
 when = [{ slot = "damage_share", at_least = 0.25 }]
-text = "Fair is fair: our {champion} did {damage_share} of the damage too. Co-pilot of the year."
+text = "Fair is fair: our {champion} did {damage_share} of the damage too."
 
 # --- A lane that was a gap ---------------------------------------------------------------------------
 
@@ -70,7 +70,7 @@ spice = [1, 1]
 rank_by = "gold_behind_14"
 max_subjects = 2
 when = [{ slot = "gold_behind_14", at_least = 1500 }]
-text = "At {game.clock_14}, our {champion} was {gold_behind_14} gold behind {opponent_champion}. That lane wrote the ending early."
+text = "At {game.clock_14}, our {champion} was {gold_behind_14} gold behind {opponent_champion}. Respectfully, that lane decided it."
 
 [[templates]]
 id = "lane-gap-salty"
@@ -80,7 +80,7 @@ spice = [2, 2]
 rank_by = "gold_behind_14"
 max_subjects = 2
 when = [{ slot = "gold_behind_14", at_least = 1500 }]
-text = "At {game.clock_14}, our {champion} was {gold_behind_14} gold behind {opponent_champion}. Gap. Not mine."
+text = "At {game.clock_14}, our {champion} was {gold_behind_14} gold behind {opponent_champion}. That is not a me problem."
 
 [[templates]]
 id = "lane-gap-tilted"
@@ -90,7 +90,7 @@ spice = [3, 3]
 rank_by = "gold_behind_14"
 max_subjects = 2
 when = [{ slot = "gold_behind_14", at_least = 1500 }]
-text = "Our {champion} was {gold_behind_14} gold behind {opponent_champion} by {game.clock_14}. {opponent_champion} owes them a cut of the LP."
+text = "Our {champion} was {gold_behind_14} gold behind {opponent_champion} by {game.clock_14}. {opponent_champion} should send a thank-you card."
 
 [[templates]]
 id = "lane-gap-speedrun"
@@ -100,7 +100,7 @@ spice = [4, 4]
 rank_by = "gold_behind_14"
 max_subjects = 2
 when = [{ slot = "gold_behind_14", at_least = 1500 }]
-text = "Our {champion} handed {opponent_champion} {gold_behind_14} gold by {game.clock_14}. Not a lane, a charity drive."
+text = "Our {champion} handed {opponent_champion} a {gold_behind_14} gold lead by {game.clock_14}. Report the map, not me."
 
 # --- The defendant's own lane, when it held ----------------------------------------------------------
 
@@ -111,7 +111,7 @@ subject = "defendant"
 spice = [1, 1]
 rank_by = "gold_ahead_14"
 when = [{ slot = "gold_ahead_14", at_least = 500 }]
-text = "I was {gold_ahead_14} gold up on {opponent_champion} at {game.clock_14}. My lane held. Ask about the others."
+text = "I was {gold_ahead_14} gold up on {opponent_champion} at {game.clock_14}. My lane held."
 
 [[templates]]
 id = "defendant-ahead-salty"
@@ -120,7 +120,7 @@ subject = "defendant"
 spice = [2, 2]
 rank_by = "gold_ahead_14"
 when = [{ slot = "gold_ahead_14", at_least = 500 }]
-text = "I was {gold_ahead_14} gold up on {opponent_champion} at {game.clock_14}. Position diff? Check the other positions."
+text = "I was {gold_ahead_14} gold up on {opponent_champion} at {game.clock_14}. Position diff? Not mine."
 
 [[templates]]
 id = "defendant-ahead-spicy"
@@ -129,7 +129,7 @@ subject = "defendant"
 spice = [3, 4]
 rank_by = "gold_ahead_14"
 when = [{ slot = "gold_ahead_14", at_least = 500 }]
-text = "I was {gold_ahead_14} gold up on {opponent_champion} at {game.clock_14} and we still lost. I won my lane. The map had other plans."
+text = "I was {gold_ahead_14} gold up on {opponent_champion} at {game.clock_14} and we still lost. I cannot carry the whole team and a minion wave."
 
 # --- A lane that was lost ----------------------------------------------------------------------------
 
@@ -141,7 +141,7 @@ spice = [1, 1]
 rank_by = "gold_behind_14"
 max_subjects = 2
 when = [{ slot = "gold_behind_14", at_least = 500, at_most = 1499 }]
-text = "Our {champion} was {gold_behind_14} gold behind {opponent_champion} at {game.clock_14}. Rough lane. It happens."
+text = "Our {champion} was {gold_behind_14} gold behind {opponent_champion} at {game.clock_14}."
 
 [[templates]]
 id = "lane-lost-salty"
@@ -151,7 +151,7 @@ spice = [2, 3]
 rank_by = "gold_behind_14"
 max_subjects = 2
 when = [{ slot = "gold_behind_14", at_least = 500, at_most = 1499 }]
-text = "Our {champion} was {gold_behind_14} gold behind {opponent_champion} at {game.clock_14}. Lane diff, and it wasn't my lane."
+text = "Our {champion} was {gold_behind_14} gold behind {opponent_champion} at {game.clock_14}. Lane diff, and not my lane."
 
 [[templates]]
 id = "lane-lost-speedrun"
@@ -161,7 +161,7 @@ spice = [4, 4]
 rank_by = "gold_behind_14"
 max_subjects = 2
 when = [{ slot = "gold_behind_14", at_least = 500, at_most = 1499 }]
-text = "Our {champion} spotted {opponent_champion} {gold_behind_14} gold by {game.clock_14}. Free elo, gift-wrapped, wrong team."
+text = "Our {champion} spotted {opponent_champion} {gold_behind_14} gold by {game.clock_14}. Generous. Wrong team, though."
 
 # --- The enemy's lanes -------------------------------------------------------------------------------
 
@@ -173,7 +173,7 @@ spice = [1, 2]
 rank_by = "gold_ahead_14"
 max_subjects = 2
 when = [{ slot = "gold_ahead_14", at_least = 500 }]
-text = "Their {champion} was {gold_ahead_14} gold up on our {opponent_champion} at {game.clock_14}. Fed early, fed often."
+text = "Their {champion} was {gold_ahead_14} gold up on our {opponent_champion} at {game.clock_14}."
 
 [[templates]]
 id = "enemy-lane-won-spicy"
@@ -183,7 +183,7 @@ spice = [3, 4]
 rank_by = "gold_ahead_14"
 max_subjects = 2
 when = [{ slot = "gold_ahead_14", at_least = 500 }]
-text = "Their {champion} was {gold_ahead_14} gold up on our {opponent_champion} at {game.clock_14}. Our {opponent_champion} ran a food bank."
+text = "Their {champion} was {gold_ahead_14} gold up on our {opponent_champion} at {game.clock_14}. Our {opponent_champion} paid for that."
 
 # --- A targeted lane that held -----------------------------------------------------------------------
 
@@ -195,7 +195,7 @@ spice = [1, 4]
 rank_by = "gold_ahead_14"
 narrow_only = true
 when = [{ slot = "gold_ahead_14", at_least = 1 }]
-text = "Our {champion} was {gold_ahead_14} gold up on {opponent_champion} at {game.clock_14}. Acquitted. Not them either."
+text = "Our {champion} was {gold_ahead_14} gold up on {opponent_champion} at {game.clock_14}. Not them either."
 
 [[templates]]
 id = "lane-held-behind"
@@ -205,7 +205,7 @@ spice = [1, 4]
 rank_by = "gold_behind_14"
 narrow_only = true
 when = [{ slot = "gold_behind_14", at_most = 499 }]
-text = "Our {champion} was only {gold_behind_14} gold behind {opponent_champion} at {game.clock_14}. Close enough. Not them either."
+text = "Our {champion} was only {gold_behind_14} gold behind {opponent_champion} at {game.clock_14}. Not them either."
 
 # --- A targeted lane, minion by minion ---------------------------------------------------------------
 
@@ -217,7 +217,7 @@ spice = [1, 2]
 rank_by = "cs_behind_14"
 narrow_only = true
 when = [{ slot = "cs_behind_14", at_least = 15 }]
-text = "Our {champion} was {cs_behind_14} CS behind {opponent_champion} at {game.clock_14}. The wave was right there."
+text = "Our {champion} was {cs_behind_14} CS behind {opponent_champion} at {game.clock_14}."
 
 [[templates]]
 id = "lane-cs-behind-spicy"
@@ -227,7 +227,7 @@ spice = [3, 4]
 rank_by = "cs_behind_14"
 narrow_only = true
 when = [{ slot = "cs_behind_14", at_least = 15 }]
-text = "Our {champion} was {cs_behind_14} CS behind {opponent_champion} at {game.clock_14}. The minions walked in, waved, and left."
+text = "Our {champion} was {cs_behind_14} CS behind {opponent_champion} at {game.clock_14}. The minions were not the hard part."
 
 [[templates]]
 id = "lane-level-gap"
@@ -237,7 +237,7 @@ spice = [1, 2]
 rank_by = "levels_behind_14"
 narrow_only = true
 when = [{ slot = "levels_behind_14", at_least = 2 }]
-text = "At {game.clock_14}, our {champion} was level {level_at_14} and {opponent_champion} was level {opponent.level_at_14}. Experience is a stat."
+text = "At {game.clock_14}, our {champion} was level {level_at_14} and {opponent_champion} was level {opponent.level_at_14}."
 
 [[templates]]
 id = "lane-level-gap-spicy"
@@ -247,7 +247,7 @@ spice = [3, 4]
 rank_by = "levels_behind_14"
 narrow_only = true
 when = [{ slot = "levels_behind_14", at_least = 2 }]
-text = "Level {level_at_14} against level {opponent.level_at_14} at {game.clock_14}. Our {champion} was in that lane on a tourist visa."
+text = "Level {level_at_14} against level {opponent.level_at_14} at {game.clock_14}. Our {champion} was not in that matchup, just near it."
 
 [[templates]]
 id = "lane-solo-deaths"
@@ -257,7 +257,7 @@ spice = [1, 2]
 rank_by = "solo_deaths_to_opponent"
 narrow_only = true
 when = [{ slot = "solo_deaths_to_opponent", at_least = 2 }]
-text = "{opponent_champion} killed our {champion} alone {solo_deaths_to_opponent} times. No jungler required."
+text = "{opponent_champion} killed our {champion} alone {solo_deaths_to_opponent} times. No help needed."
 
 [[templates]]
 id = "lane-solo-deaths-spicy"
@@ -267,7 +267,7 @@ spice = [3, 4]
 rank_by = "solo_deaths_to_opponent"
 narrow_only = true
 when = [{ slot = "solo_deaths_to_opponent", at_least = 2 }]
-text = "{opponent_champion} killed our {champion} alone {solo_deaths_to_opponent} times. Not a matchup, a subscription with auto-renew."
+text = "{opponent_champion} killed our {champion} alone {solo_deaths_to_opponent} times. At some point that is a subscription."
 
 # --- The defendant's own farm ------------------------------------------------------------------------
 
@@ -279,7 +279,7 @@ spice = [1, 2]
 rank_by = "cs_ahead_14"
 verdicts = ["team_diff", "lane_diff", "mutual_destruction", "enemy_smurf", "hung_jury"]
 when = [{ slot = "cs_ahead_14", at_least = 15 }]
-text = "I was {cs_ahead_14} CS up on {opponent_champion} at {game.clock_14}. Farm secured, conscience clear."
+text = "I was {cs_ahead_14} CS up on {opponent_champion} at {game.clock_14}."
 
 [[templates]]
 id = "defendant-cs-ahead-spicy"
@@ -289,7 +289,7 @@ spice = [3, 4]
 rank_by = "cs_ahead_14"
 verdicts = ["team_diff", "lane_diff", "mutual_destruction", "enemy_smurf", "hung_jury"]
 when = [{ slot = "cs_ahead_14", at_least = 15 }]
-text = "I was {cs_ahead_14} CS up on {opponent_champion} at {game.clock_14}. I farmed my lane. I'm not farming yours too."
+text = "I was {cs_ahead_14} CS up on {opponent_champion} at {game.clock_14}. I farmed my lane. I cannot also farm everyone else's."
 
 # --- An enemy who killed everyone --------------------------------------------------------------------
 
@@ -311,7 +311,7 @@ spice = [3, 4]
 rank_by = "kills"
 verdicts = ["enemy_smurf"]
 when = [{ slot = "kills", at_least = 10 }, { slot = "distinct_victims", at_least = 4 }]
-text = "Their {champion} had {kills} kills on {distinct_victims} different players. Not a lane, a hostage situation. Send a negotiator."
+text = "Their {champion} had {kills} kills on {distinct_victims} different players. That is not a lane, that is a hostage situation."
 
 # --- When the data says it was the defendant ---------------------------------------------------------
 
@@ -323,7 +323,7 @@ spice = [1, 4]
 rank_by = "gold_behind_14"
 verdicts = ["guilty", "mutual_destruction", "enemy_smurf"]
 when = [{ slot = "gold_behind_14", at_least = 500 }]
-text = "Fine. I was {gold_behind_14} gold behind {opponent_champion} at {game.clock_14}. The defense objects, loudly, for the record."
+text = "Fine. I was {gold_behind_14} gold behind {opponent_champion} at {game.clock_14}. The defense notes the objection."
 
 # --- The scoreboard ----------------------------------------------------------------------------------
 
@@ -334,7 +334,7 @@ subject = "ally"
 spice = [1, 1]
 rank_by = "deaths"
 when = [{ slot = "deaths", at_least = 6 }]
-text = "Our {champion} died {deaths} times. The respawn timer got a workout."
+text = "Our {champion} died {deaths} times."
 
 [[templates]]
 id = "deaths-receipt-salty"
@@ -343,7 +343,7 @@ subject = "ally"
 spice = [2, 2]
 rank_by = "deaths"
 when = [{ slot = "deaths", at_least = 6 }]
-text = "Our {champion} died {deaths} times. Nothing's my fault, and it's on the record."
+text = "Our {champion} died {deaths} times. Nothing's my fault."
 
 [[templates]]
 id = "deaths-receipt-tilted"
@@ -361,7 +361,7 @@ subject = "ally"
 spice = [4, 4]
 rank_by = "deaths"
 when = [{ slot = "deaths", at_least = 6 }]
-text = "Our {champion} died {deaths} times. Their team should list them as a gold income."
+text = "Our {champion} died {deaths} times. That is not a champion, that is a respawn timer."
 
 # --- Deaths right before an enemy objective ----------------------------------------------------------
 
@@ -372,7 +372,7 @@ subject = "ally"
 spice = [1, 2]
 rank_by = "throw_seconds_before"
 when = [{ slot = "throw_seconds_before", at_least = 1 }]
-text = "Our {champion} died at {throw_death_clock}, {throw_seconds_before} seconds before their {throw_objective}. Impeccable timing."
+text = "Our {champion} died at {throw_death_clock}, {throw_seconds_before} seconds before their {throw_objective}."
 
 [[templates]]
 id = "throw-spicy"
@@ -381,7 +381,7 @@ subject = "ally"
 spice = [3, 4]
 rank_by = "throw_seconds_before"
 when = [{ slot = "throw_seconds_before", at_least = 1 }]
-text = "Our {champion} died at {throw_death_clock}. Their {throw_objective} came {throw_seconds_before} seconds later. Delivered on time."
+text = "Our {champion} died at {throw_death_clock}. Their {throw_objective} came {throw_seconds_before} seconds later. The timeline does not believe in coincidence."
 
 # --- The grey screen ---------------------------------------------------------------------------------
 
@@ -392,7 +392,7 @@ subject = "ally"
 spice = [1, 2]
 rank_by = "time_dead"
 when = [{ slot = "time_dead", at_least = 180 }]
-text = "Our {champion} spent {time_dead} of the game dead. Long time, no see."
+text = "Our {champion} spent {time_dead} of the game dead."
 
 [[templates]]
 id = "grey-screen-spicy"
@@ -401,7 +401,7 @@ subject = "ally"
 spice = [3, 4]
 rank_by = "time_dead"
 when = [{ slot = "time_dead", at_least = 180 }]
-text = "Our {champion} spent {time_dead} on a grey screen. Best seat in the house to watch us lose."
+text = "Our {champion} spent {time_dead} on a grey screen. Great view of the scoreboard, at least."
 
 # --- Vision ------------------------------------------------------------------------------------------
 
@@ -412,7 +412,7 @@ subject = "ally"
 spice = [1, 4]
 rank_by = "deaths"
 when = [{ slot = "control_wards", at_most = 0 }, { slot = "deaths", at_least = 6 }]
-text = "Our {champion} placed {control_wards} control wards and died {deaths} times. Wards are cheaper than deaths."
+text = "Our {champion} placed {control_wards} control wards and died {deaths} times. Those facts are related."
 
 [[templates]]
 id = "vision-diff"
@@ -421,7 +421,7 @@ subject = "ally"
 spice = [1, 4]
 rank_by = "opponent.vision_score"
 when = [{ slot = "vision_score", at_most = 10 }, { slot = "opponent.vision_score", at_least = 20 }]
-text = "Our {champion} had a vision score of {vision_score}. {opponent_champion} had {opponent.vision_score}. Playing on a dark map by choice."
+text = "Our {champion} had a vision score of {vision_score}. {opponent_champion} had {opponent.vision_score}."
 
 # --- Pings -------------------------------------------------------------------------------------------
 
@@ -432,7 +432,7 @@ subject = "ally"
 spice = [1, 2]
 rank_by = "enemy_missing_pings"
 when = [{ slot = "enemy_missing_pings", at_least = 10 }]
-text = "Our {champion} sent {enemy_missing_pings} question-mark pings. A curious mind."
+text = "Our {champion} sent {enemy_missing_pings} question-mark pings."
 
 [[templates]]
 id = "question-marks-spicy"
@@ -441,7 +441,7 @@ subject = "ally"
 spice = [3, 4]
 rank_by = "enemy_missing_pings"
 when = [{ slot = "enemy_missing_pings", at_least = 10 }]
-text = "Our {champion} sent {enemy_missing_pings} question-mark pings. All questions, no answers, no wards."
+text = "Our {champion} sent {enemy_missing_pings} question-mark pings. Lots of questions. None about their own map."
 
 # --- Damage ------------------------------------------------------------------------------------------
 
@@ -452,7 +452,7 @@ subject = "defendant"
 spice = [1, 2]
 rank_by = "damage_share"
 when = [{ slot = "damage_share", at_least = 0.28 }]
-text = "I did {damage_share} of our team's damage to champions. Someone had to."
+text = "I did {damage_share} of our team's damage to champions."
 
 [[templates]]
 id = "damage-share-spicy"
@@ -461,7 +461,7 @@ subject = "defendant"
 spice = [3, 4]
 rank_by = "damage_share"
 when = [{ slot = "damage_share", at_least = 0.28 }]
-text = "I did {damage_share} of our team's damage to champions. Backpack carry, unpaid, no reviews yet."
+text = "I did {damage_share} of our team's damage to champions. Carrying is a team sport, apparently not on this team."
 
 # --- Objectives --------------------------------------------------------------------------------------
 
@@ -472,7 +472,7 @@ subject = "defendant"
 spice = [1, 4]
 rank_by = "deaths"
 when = [{ slot = "enemy_team.dragons", at_least = 3 }, { slot = "team.dragons", at_most = 1 }]
-text = "They took {enemy_team.dragons} dragons. We took {team.dragons}. Dragons are a team objective, team."
+text = "They took {enemy_team.dragons} dragons. We took {team.dragons}. Dragons are a team objective."
 
 # --- First blood -------------------------------------------------------------------------------------
 
@@ -483,7 +483,7 @@ subject = "ally"
 spice = [1, 4]
 rank_by = "first_blood_clock"
 when = [{ slot = "first_blood_clock", at_least = 1 }]
-text = "Our {champion} gave up first blood at {first_blood_clock}. Set the tone, then the pace."
+text = "Our {champion} gave up first blood at {first_blood_clock}. The tone was set."
 
 # --- Dying with gold in the pocket -------------------------------------------------------------------
 
@@ -494,7 +494,7 @@ subject = "ally"
 spice = [1, 4]
 rank_by = "died_rich_gold"
 when = [{ slot = "died_rich_gold", at_least = 1500 }]
-text = "Our {champion} died holding {died_rich_gold} unspent gold. The shop was open. Died rich, built poor."
+text = "Our {champion} died holding {died_rich_gold} unspent gold. The shop was open."
 
 # --- The Carry Impossibility Index -------------------------------------------------------------------
 
@@ -506,7 +506,7 @@ spice = [1, 4]
 rank_by = "carry_impossibility_index"
 verdicts = ["team_diff", "lane_diff", "enemy_smurf", "hung_jury"]
 when = [{ slot = "carry_impossibility_index", at_least = 1 }]
-text = "Carry Impossibility Index: {carry_impossibility_index}. The formula is on file, and so is this team."
+text = "Carry Impossibility Index: {carry_impossibility_index}. The formula is ours and it is on file."
 
 # --- Kill participation ------------------------------------------------------------------------------
 
@@ -518,7 +518,7 @@ spice = [1, 2]
 rank_by = "kill_participation"
 verdicts = ["team_diff", "lane_diff", "mutual_destruction", "enemy_smurf", "hung_jury"]
 when = [{ slot = "kill_participation", at_least = 0.6 }]
-text = "I was in on {kill_participation} of our {team.team_kills} kills. Present and accounted for."
+text = "I was in on {kill_participation} of our {team.team_kills} kills."
 
 [[templates]]
 id = "defendant-kill-participation-spicy"
@@ -528,7 +528,7 @@ spice = [3, 4]
 rank_by = "kill_participation"
 verdicts = ["team_diff", "lane_diff", "mutual_destruction", "enemy_smurf", "hung_jury"]
 when = [{ slot = "kill_participation", at_least = 0.6 }]
-text = "I was in on {kill_participation} of our {team.team_kills} kills. I showed up. The rest treated fights as optional."
+text = "I was in on {kill_participation} of our {team.team_kills} kills. I showed up. Attendance was optional for the rest."
 
 [[templates]]
 id = "low-kill-participation"
@@ -537,7 +537,7 @@ subject = "ally"
 spice = [1, 2]
 rank_by = "deaths"
 when = [{ slot = "kill_participation", at_most = 0.35 }, { slot = "team.team_kills", at_least = 10 }]
-text = "Our {champion} was in on {kill_participation} of our {team.team_kills} kills. Missing in action, mostly."
+text = "Our {champion} was in on {kill_participation} of our {team.team_kills} kills."
 
 [[templates]]
 id = "low-kill-participation-spicy"
@@ -546,7 +546,7 @@ subject = "ally"
 spice = [3, 4]
 rank_by = "deaths"
 when = [{ slot = "kill_participation", at_most = 0.35 }, { slot = "team.team_kills", at_least = 10 }]
-text = "Our {champion} was in on {kill_participation} of our {team.team_kills} kills. On the scoreboard, off the map."
+text = "Our {champion} was in on {kill_participation} of our {team.team_kills} kills. Present in the game, absent from the fights."
 
 # --- Short lives -------------------------------------------------------------------------------------
 
@@ -557,7 +557,7 @@ subject = "ally"
 spice = [1, 2]
 rank_by = "deaths"
 when = [{ slot = "longest_alive", at_most = 420 }, { slot = "deaths", at_least = 6 }]
-text = "Our {champion}'s longest life lasted {longest_alive}. Live fast."
+text = "Our {champion}'s longest life lasted {longest_alive}."
 
 [[templates]]
 id = "short-lives-spicy"
@@ -566,7 +566,7 @@ subject = "ally"
 spice = [3, 4]
 rank_by = "deaths"
 when = [{ slot = "longest_alive", at_most = 420 }, { slot = "deaths", at_least = 6 }]
-text = "Our {champion}'s longest life lasted {longest_alive}. Mayfly energy."
+text = "Our {champion}'s longest life lasted {longest_alive}. Blink and you missed it."
 
 # --- All-in pings ------------------------------------------------------------------------------------
 
@@ -577,7 +577,7 @@ subject = "ally"
 spice = [1, 2]
 rank_by = "all_in_pings"
 when = [{ slot = "all_in_pings", at_least = 5 }, { slot = "deaths", at_least = 6 }]
-text = "Our {champion} pinged all in {all_in_pings} times and died {deaths} times. Big plans."
+text = "Our {champion} pinged all in {all_in_pings} times and died {deaths} times."
 
 [[templates]]
 id = "all-in-pings-spicy"
@@ -586,7 +586,7 @@ subject = "ally"
 spice = [3, 4]
 rank_by = "all_in_pings"
 when = [{ slot = "all_in_pings", at_least = 5 }, { slot = "deaths", at_least = 6 }]
-text = "Our {champion} pinged all in {all_in_pings} times and died {deaths} times. Shotcaller, no shots."
+text = "Our {champion} pinged all in {all_in_pings} times and died {deaths} times. Confident pings. Less confident fights."
 
 # --- The surrender -----------------------------------------------------------------------------------
 
@@ -597,7 +597,7 @@ subject = "defendant"
 spice = [1, 2]
 rank_by = "deaths"
 verdicts = ["team_diff", "lane_diff", "mutual_destruction", "enemy_smurf", "hung_jury", "guilty", "no_lane_verdict"]
-text = "We {game.surrender} at {game.game_length}. Dignity, partly preserved."
+text = "We {game.surrender} at {game.game_length}."
 
 [[templates]]
 id = "surrendered-spicy"
@@ -606,7 +606,7 @@ subject = "defendant"
 spice = [3, 4]
 rank_by = "deaths"
 verdicts = ["team_diff", "lane_diff", "mutual_destruction", "enemy_smurf", "hung_jury", "guilty", "no_lane_verdict"]
-text = "We {game.surrender} at {game.game_length}. Fastest rotation this team made all game."
+text = "We {game.surrender} at {game.game_length}. Quickest decision this team made all game."
 
 [[templates]]
 id = "they-surrendered"
@@ -615,4 +615,4 @@ subject = "defendant"
 spice = [1, 4]
 rank_by = "deaths"
 verdicts = ["carry_receipt"]
-text = "They {game.surrender} at {game.game_length}. Receipt stamped, case closed."
+text = "They {game.surrender} at {game.game_length}. Receipt stamped."
