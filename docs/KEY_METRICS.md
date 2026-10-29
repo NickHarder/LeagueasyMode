@@ -4,7 +4,7 @@ title: Key metrics
 description: One north star, four drivers and two guardrails that prove LeagueasyMode's promise to the player, each scored from the owner's recorded games against League's post-game timeline or counted from what the app sends.
 tags: [metrics]
 status: draft
-generated: { by: claude-code/cloud, at: 2026-10-29T06:26:10Z }
+generated: { by: claude-code/cloud, at: 2026-10-29T07:09:42Z }
 ---
 
 # Key metrics
@@ -48,5 +48,8 @@ There is no dashboard. The drivers' values print with `leagueasymode history` on
 the daily cloud session (13:52 UTC, P-03), which reads `games/`, `crash-reports/` and `reports/`
 and opens a pull request for what they show: that run is the alert for GR-01 and GR-02. Once
 `tests/accuracy_thresholds.json` holds thresholds (from 20 games), CI fails a push that drops an
-estimator below its own: the alert for NS-01's accuracy part. The metrics' attested computations
-(`docs/computations/`) are to write with the first scored games.
+estimator below its own: the alert for NS-01's accuracy part.
+
+The values are attested ([the recordings counts](/computations/recordings-counts.md) for DR-01,
+GR-01 and GR-02; [the accuracy score](/computations/accuracy-score.md) for DR-02 to DR-04). NS-01's
+computation, which joins the accuracy history to the reports by time, is still to write.

@@ -25,10 +25,11 @@ okf_version: "0.2"
 # Subdirectories
 
 * [audit](audit/index.md) - 5 concepts: Audit Area.
+* [computations](computations/index.md) - 2 concepts: Attested Computation.
 * [history](history/index.md) - 1 concept: Retrospective.
 * [metrics](metrics/index.md) - 7 concepts: Metric.
 * [plans](plans/index.md) - 12 concepts: Plan.
-* [references](references/index.md) - 4 concepts: Reference.
+* [references](references/index.md) - 6 concepts: Executor, Reference.
 * [rules](rules/index.md) - 1 concept: Rule.
 
 # History
