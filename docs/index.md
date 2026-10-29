@@ -2,6 +2,10 @@
 okf_version: "0.2"
 ---
 
+# Architecture
+
+* [Architecture](ARCHITECTURE.md) - How LeagueasyMode is built, from League's local APIs through the Python engine to the overlay drawn over the game, with its trust boundaries, failure behavior, deviations from the plan, and each capability traced to a use case, an audit finding and a key metric.
+
 # Audit
 
 * [Audit](AUDIT.md) - What LeagueasyMode builds on, audited in five areas (security, performance, architecture, data quality, compliance), the findings that matter most and what each one changes in the plan.
