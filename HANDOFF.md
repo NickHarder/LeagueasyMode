@@ -22,7 +22,7 @@ use cases in [docs/USERS.md](docs/USERS.md).
 | CI and builds | 11 jobs, none may fail; each green `main` publishes `build-<n>` | `.github/workflows/ci.yml`; GitHub releases |
 | App on the owner's Mac | Runs over League, installs updates itself (seen 107 → 119, then to 176) | the owner's messages; `reports/` in the recordings repository |
 | Overlay at a glance | Timers, the newest two callouts that ask for an action now, one short line an enemy | `tests/test_overlay_page.py` (glance tests) |
-| Details on a key | Tab or Option held, or the player dead: everything else, the spell buttons and the Tab overview of both teams | `overlay/macos/Sources/OverlayCore/DetailsKey.swift`; `areDetailsShown`, `renderOverview` in `overlay/web/src/overlay.ts` |
+| Details on a key | Tab or Option held, and only then: everything else, the spell buttons and the Tab overview of both teams | `overlay/macos/Sources/OverlayCore/DetailsKey.swift`; `areDetailsShown`, `renderOverview` in `overlay/web/src/overlay.ts` |
 | Layout | Drag, resize (60–160%), sliders, opacity, hide, kept off League's HUD | `tests/test_layout_page.py`, `tests/test_settings_page.py` |
 | Off the Rift (ARAM, Arena) | No roles; inhibitor timers only, marked "~"; the Rift's models hidden | `tests/test_other_maps.py` |
 | Recording and sending | Records each game; recordings left open are closed after 20 minutes and sent | `tests/test_sender.py`, `tests/test_recording_file.py` |
@@ -112,9 +112,11 @@ In `AGENTS.md`. Also: a raw recording (it holds other players' names); only `ano
   with this if the free developer key can handle this"; no developer key is used, and the pace
   would fit one's limits).
 
-- The overlay is quiet at a glance and shows details only while Tab or Option is held or the
-  player is dead (the owner, 2026-10-29: "maybe extra details onyl show if i hit tab"; "if it is
-  goign to take my eyes off fights, it needs to be wort while info"); `docs/log.md`.
+- The overlay is quiet at a glance and shows details only while Tab or Option is held, not while
+  the player is dead (the owner, 2026-10-29: "maybe extra details onyl show if i hit tab"; "if it
+  is goign to take my eyes off fights, it needs to be wort while info"; then, with the overview
+  over ARAM's augment cards, "i should only show when i tab"). The Tab overview stands at the left
+  edge, clear of League's scoreboard, augments and shop in the middle; `docs/log.md`.
 - No kit eval suite for now (the owner, 2026-10-29: "Do we need evals? You can run it if you
   want"; Claude advised against it). The product is deterministic code with no model in the loop
   but the opt-in Claude's take; pytest and the browser tests guard behavior, and the accuracy

@@ -4,7 +4,7 @@ title: Users, moments and use cases
 description: Who LeagueasyMode is for, the moments in a game when they reach for it, and the use cases each feature must serve, with who it refuses and what each use case beats.
 tags: [users, personas, use-cases]
 status: draft
-generated: { by: claude-code/cloud, at: 2026-10-29T07:59:39Z }
+generated: { by: claude-code/cloud, at: 2026-10-29T21:40:32Z }
 ---
 
 # Users, moments and use cases
@@ -221,7 +221,8 @@ is scored from the post-game timeline, so it has no value until the owner's game
 - **What a wrong answer costs:** a lane played too safe or too greedy; the player's.
 - **Why this and not the alternative:** a lookup site needs a browser, the names typed, and
   minutes; League's scoreboard has no rank or record; an Overwolf app's overview does not run on a
-  Mac. Here it is the Tab overview, both teams side by side, on Tab or while dead.
+  Mac. Here it is the Tab overview, both teams at the left edge beside League's own scoreboard,
+  on Tab only.
 - **Refusal behaviors:** an enemy the client has no games for shows nothing, not a guess; never
   a bare "Unranked" after 3:00.
 - **Several turns or chained tools:** no.

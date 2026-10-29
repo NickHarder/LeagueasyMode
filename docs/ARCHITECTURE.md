@@ -4,7 +4,7 @@ title: Architecture
 description: How LeagueasyMode is built, from League's local APIs through the Python engine to the overlay drawn over the game, with its trust boundaries, failure behavior, deviations from the plan, and each capability traced to a use case, an audit finding and a key metric.
 tags: [architecture]
 status: draft
-generated: { by: claude-code/cloud, at: 2026-10-29T07:05:50Z }
+generated: { by: claude-code/cloud, at: 2026-10-29T21:40:32Z }
 ---
 
 # Architecture
@@ -135,7 +135,7 @@ and run in threads while the next game may start (PERF-06).
 | DV-03 | Packaging: a signed app (phase 7) | The owner chose no signing (phase 7 plan, approved) | Ad hoc signature, "Open Anyway" once, auto-update from prereleases (SEC-01) |
 | DV-04 | Recordings anonymized before going into the public repo | The owner: a private repository (2026-10-28) | `NickHarder/LeagueasyMode-recordings`, anonymized copies only |
 | DV-05 | The kit's gate order: audit, personas, architecture before the build | The audit and this document were written after the product (ARCH-01) | Findings are backlog items, each with a slice |
-| DV-06 | Every estimate shown during a game, with a strict mode to hide them | The owner: "too much visual clutter", "maybe extra details onyl show if i hit tab" (2026-10-29) | At a glance: timers, two callouts, one line an enemy; the rest on Tab or Option, or while dead |
+| DV-06 | Every estimate shown during a game, with a strict mode to hide them | The owner: "too much visual clutter", "maybe extra details onyl show if i hit tab" (2026-10-29) | At a glance: timers, two callouts, one line an enemy; the rest on Tab or Option only, not while dead (augments, shop) |
 | DV-07 | Summoner's Rift only | The owner plays mostly ARAM and Swiftplay (USERS.md, P-01) | Off the Rift: no roles, inhibitor timers only, the Rift's models hidden (UC-09) |
 | DV-08 | Hotkeys with Carbon, no Accessibility permission | Tab and Option are read with `CGEventSource` and `NSEvent.modifierFlags`; whether Tab needs Input Monitoring is not yet seen | Option works without it |
 

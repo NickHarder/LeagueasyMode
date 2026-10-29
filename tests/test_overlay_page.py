@@ -1036,19 +1036,23 @@ async def test_moments_and_team_calls_are_never_on_screen(tmp_path: Path) -> Non
         await expect(chat_lines).to_have_count(0)
 
 
-async def test_while_you_are_dead_the_details_show_by_themselves(tmp_path: Path) -> None:
-    # Dead, the player's eyes are free: the death screen shows the details without a key, and
-    # they go when the player is back. Ahri is the player in these games.
+async def test_while_you_are_dead_the_details_still_wait_for_the_key(tmp_path: Path) -> None:
+    # Reversed from "the details show by themselves while dead": the owner, 2026-10-29, with the
+    # overview over ARAM's augment cards on the death screen, "i should only show when i tab".
+    # Ahri is the player in these games.
     async with open_overlay(
         tmp_path,
         snapshot_count=60,
         speed=1.0,
-        respawn_at_by_champion={"Ahri": 1405.0},
+        respawn_at_by_champion={"Ahri": 1430.0},
         hold_details=False,
     ) as page:
-        leads = page.locator("#enemy-strip .item-lead")
-        await expect(leads.first).to_be_visible(timeout=5000)
-        await expect(leads).to_have_count(0, timeout=15000)
+        await expect(page.locator("#enemy-strip .enemy-row")).to_have_count(5, timeout=5000)
+        await page.wait_for_timeout(1000)
+        await expect(page.locator("#enemy-strip .item-lead")).to_have_count(0)
+        await expect(page.locator("#overview")).to_be_hidden()
+        await hold_the_details_key(page, is_held=True)
+        await expect(page.locator("#overview")).to_be_visible()
 
 
 async def test_the_spell_buttons_show_only_while_the_key_is_held(tmp_path: Path) -> None:
@@ -1101,15 +1105,26 @@ async def test_holding_tab_shows_both_teams_overview(tmp_path: Path) -> None:
         await expect(overview).to_be_hidden()
 
 
-async def test_while_you_are_dead_the_overview_shows(tmp_path: Path) -> None:
-    async with open_overlay(
-        tmp_path,
-        snapshot_count=60,
-        speed=1.0,
-        respawn_at_by_champion={"Ahri": 1430.0},
-        hold_details=False,
-    ) as page:
-        await expect(page.locator("#overview")).to_be_visible(timeout=5000)
+async def test_the_overview_keeps_clear_of_leagues_scoreboard_in_the_middle(tmp_path: Path) -> None:
+    # The owner, 2026-10-29: "by default it should fit correctly and not block out the actual tab
+    # info", nor the augments or the shop, all in the middle of the screen. The overview stands
+    # at the left edge, clear of the ally portraits, with its teams one above the other.
+    async with open_overlay(tmp_path, snapshot_count=60, speed=1.0, hold_details=False) as page:
+        await expect(page.locator("#enemy-strip .enemy-row")).to_have_count(5, timeout=5000)
+        await hold_the_details_key(page, is_held=True)
+        overview = page.locator("#overview")
+        await expect(overview).to_be_visible()
+        box = await overview.bounding_box()
+        viewport = page.viewport_size
+        assert box is not None
+        assert viewport is not None
+        assert box["x"] >= 0.045 * viewport["width"]
+        assert box["x"] + box["width"] <= 0.3 * viewport["width"] + 64
+        ally = await overview.locator('.overview-team[data-side="ally"]').bounding_box()
+        enemy = await overview.locator('.overview-team[data-side="enemy"]').bounding_box()
+        assert ally is not None
+        assert enemy is not None
+        assert enemy["y"] >= ally["y"] + ally["height"]
 
 
 async def test_off_the_rift_no_one_has_a_role(tmp_path: Path) -> None:
