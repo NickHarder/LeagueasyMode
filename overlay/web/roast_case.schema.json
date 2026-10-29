@@ -316,6 +316,11 @@
       "default": false,
       "title": "Claude Take Pending",
       "type": "boolean"
+    },
+    "is_quick": {
+      "default": false,
+      "title": "Is Quick",
+      "type": "boolean"
     }
   },
   "required": [

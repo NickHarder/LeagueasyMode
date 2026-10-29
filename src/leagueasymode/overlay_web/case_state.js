@@ -75,7 +75,8 @@ export function isCaseView(value) {
         isTextOrNull(value["risk_warning"]) &&
         isArrayOf(value["exhibits"], isViewExhibit) &&
         isTextOrNull(value["claude_take"]) &&
-        typeof value["claude_take_pending"] === "boolean");
+        typeof value["claude_take_pending"] === "boolean" &&
+        typeof value["is_quick"] === "boolean");
 }
 /** Return the path that asks `/case` for a choice. */
 export function casePath(choice) {

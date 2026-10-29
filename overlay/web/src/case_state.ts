@@ -71,6 +71,8 @@ export interface CaseView {
   // Claude's take of the closing line (phase 11.8), and whether one is still being written.
   readonly claude_take: string | null;
   readonly claude_take_pending: boolean;
+  // A quick case from the end-of-game stats (phase 11.7), until the full one comes.
+  readonly is_quick: boolean;
 }
 
 /** What the window asks `/case` for. */
@@ -171,7 +173,8 @@ export function isCaseView(value: unknown): value is CaseView {
     isTextOrNull(value["risk_warning"]) &&
     isArrayOf(value["exhibits"], isViewExhibit) &&
     isTextOrNull(value["claude_take"]) &&
-    typeof value["claude_take_pending"] === "boolean"
+    typeof value["claude_take_pending"] === "boolean" &&
+    typeof value["is_quick"] === "boolean"
   );
 }
 

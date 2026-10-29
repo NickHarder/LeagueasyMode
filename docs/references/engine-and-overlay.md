@@ -306,6 +306,17 @@ says while one is being written; ⌃⌥C copies Claude's take once it is ready. 
 are not built yet: the per-friend running jokes, and naming a model, which is left to the `claude`
 command's default unless the owner types one in.
 
+A quick case (phase 11.7, `roast/end_of_game.py`) comes before the timeline: as soon as the
+recorder has the client's end-of-game stats (`/lol-end-of-game/v1/eog-stats-block`), it hands them
+on, and the engine keeps a case built from them beside the summary, marked quick: the same players
+and scoreboard exhibits as the details give (kills, deaths, assists, vision score, damage, time
+dead, the shares and the game's length), each citing its path in the stats, and no lane verdict.
+The post-game window says it is quick and asks again every 15 seconds; the full case replaces it
+when the details and the timeline come, and when they never do, the quick case of that game stays.
+The stats' shape is read as the client is documented to send it, not yet as seen in a real game
+(slice 11.0); a field they lack gives no exhibit, and a game whose champions cannot be named gives
+no quick case.
+
 The engine's own settings come from the repository's `.env` in a clone. An installed app, which
 has no clone, reads `settings.env` in the application's directory instead; where both exist, the
 repository's wins, and a real environment variable wins over either.

@@ -13,6 +13,7 @@ from typing import Final
 
 import aiohttp
 from aiohttp import web
+from pydantic import JsonValue
 
 from leagueasymode.accuracy_history import (
     append_game_accuracy,
@@ -57,10 +58,12 @@ from leagueasymode.game_api import GameApiClient
 from leagueasymode.game_summary import game_summary
 from leagueasymode.league_client import (
     DEFAULT_LOCKFILE_PATHS,
+    GAMEFLOW_SESSION_PATH,
     ClientConnector,
     LeagueClient,
     SharedAnswers,
     find_client_credentials,
+    game_id_of,
 )
 from leagueasymode.league_settings import DEFAULT_GAME_CONFIG_PATH, read_minimap_layout
 from leagueasymode.overlay_server import create_overlay_application
@@ -92,7 +95,8 @@ from leagueasymode.roast.claude_take import (
     find_claude_command,
     load_claude_take_settings,
 )
-from leagueasymode.roast.last_game import last_game_roast, roast_path_beside
+from leagueasymode.roast.end_of_game import quick_game_roast
+from leagueasymode.roast.last_game import LastGameRoast, last_game_roast, roast_path_beside
 from leagueasymode.scoring import (
     RecordedGame,
     fight_samples,
@@ -285,6 +289,7 @@ async def run_overlay(
                 ),
                 stop_requested,
                 on_recorded=score_recorded_game,
+                on_end_of_game=_quick_case_keeper(summary_path, engine),
                 status=status,
             )
 
@@ -669,6 +674,59 @@ async def after_the_game(
     logger.info("scored %s: %d estimators", recording_path.name, len(scores))
 
 
+def _quick_case_keeper(
+    summary_path: Path, engine: OverlayEngine
+) -> Callable[[JsonValue], Awaitable[None]]:
+    """Return what keeps a quick case when a game's end-of-game stats come (phase 11.7).
+
+    Args:
+        summary_path: The last game's summary; the case is kept beside it.
+        engine: The engine, for the owner's friends as they are when the game ends.
+
+    Returns:
+        The handler the recorder calls.
+    """
+
+    async def keep_quick_case(end_of_game_stats: JsonValue) -> None:
+        await asyncio.to_thread(
+            _keep_quick_roast, end_of_game_stats, summary_path, engine.friends.riot_id_keys
+        )
+
+    return keep_quick_case
+
+
+def _keep_quick_roast(
+    end_of_game_stats: JsonValue, summary_path: Path, friend_riot_ids: frozenset[str]
+) -> None:
+    """Keep a quick case from the end-of-game stats beside the summary, until the full one comes.
+
+    Args:
+        end_of_game_stats: The client's end-of-game stats.
+        summary_path: The last game's summary.
+        friend_riot_ids: The owner's friends' Riot IDs, in lower case, marked in the case.
+    """
+    roast = quick_game_roast(end_of_game_stats, friend_riot_ids=friend_riot_ids)
+    if roast is not None:
+        _write_whole(roast_path_beside(summary_path), roast.model_dump_json())
+
+
+def _is_quick_roast_of(roast_path: Path, game_id: int | None) -> bool:
+    """Return whether the kept case is a quick case of this game.
+
+    Args:
+        roast_path: The kept case.
+        game_id: The game's id; None when unknown.
+
+    Returns:
+        Whether it is; never when the file is missing or cannot be read.
+    """
+    try:
+        kept = LastGameRoast.model_validate_json(roast_path.read_text())
+    except (OSError, ValueError):
+        return False
+    return game_id is not None and kept.is_quick and kept.game.ledger.game_id == game_id
+
+
 def _keep_last_game_roast(
     game: RecordedGame, summary_path: Path, tuning: Tuning, friend_riot_ids: frozenset[str]
 ) -> None:
@@ -691,7 +749,10 @@ def _keep_last_game_roast(
         friend_riot_ids=friend_riot_ids,
     )
     if roast is None:
-        roast_path.unlink(missing_ok=True)
+        # A quick case of this very game stays when its details never came; any other goes.
+        game_id = game_id_of(game.client_resources.get(GAMEFLOW_SESSION_PATH))
+        if not _is_quick_roast_of(roast_path, game_id):
+            roast_path.unlink(missing_ok=True)
         return
     _write_whole(roast_path, roast.model_dump_json())
 

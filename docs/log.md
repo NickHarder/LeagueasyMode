@@ -9,6 +9,13 @@ skill has the format.
 - "Minimap: jungler and roamers only", a setting the owner asked for: the minimap layer marks the
   enemy jungler and only those laners likely away from their lane (at least 50%, a tuning
   value), so a top laner freezing a wave no longer has a circle to watch. Off unless turned on.
+- Phase 11.7, a quick case ("approved, keep building 11.7"). Right after a game, the client's
+  end-of-game stats are handed on before the timeline is waited for, and the post-game window gets
+  a case at once from the scoreboard: kills, deaths, assists, vision, damage and time dead, with
+  their shares, and no lane verdict, since lanes need the timeline. It says it is a quick case and
+  is replaced by the full case when the details and timeline come; if they never come, it stays.
+  The stats' shape is still unseen in a real game, so it is read as the client is documented to
+  send it, and anything missing gives no line rather than a guess.
 - Updates install themselves on the Mac: build 107 found build 119, installed it with no game on
   screen and started it again, without "Open Anyway" (the owner: "it updated to build 119
   flawlessly"). Each merge to main now reaches the app on its own.
