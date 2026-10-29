@@ -417,10 +417,23 @@ export interface WidgetOffset {
 export const MIN_WIDGET_SCALE = 0.6;
 export const MAX_WIDGET_SCALE = 1.6;
 
+/** The minimap layer's fit: half to one and a half times League's size, nudged a tenth at most. */
+export const MIN_MINIMAP_FIT_SCALE = 0.5;
+export const MAX_MINIMAP_FIT_SCALE = 1.5;
+export const MAX_MINIMAP_NUDGE_SHARE = 0.1;
+
+/** How the player fitted the minimap layer to League's minimap. */
+export interface MinimapFit {
+  readonly scale: number;
+  readonly x_share: number;
+  readonly y_share: number;
+}
+
 /** Where the player moved the widgets and how big they made them; a widget not named is as usual. */
 export interface OverlayLayout {
   readonly offsets: Readonly<Partial<Record<MovableWidget, WidgetOffset>>>;
   readonly scales: Readonly<Partial<Record<MovableWidget, number>>>;
+  readonly minimap_fit: MinimapFit;
 }
 
 /** Everything the overlay shows at one moment. */
@@ -939,9 +952,27 @@ function isWidgetScale(value: unknown): value is number {
   return typeof value === "number" && value >= MIN_WIDGET_SCALE && value <= MAX_WIDGET_SCALE;
 }
 
+function isMinimapFit(value: unknown): value is MinimapFit {
+  return (
+    isRecord(value) &&
+    typeof value["scale"] === "number" &&
+    typeof value["x_share"] === "number" &&
+    typeof value["y_share"] === "number" &&
+    value["scale"] >= MIN_MINIMAP_FIT_SCALE &&
+    value["scale"] <= MAX_MINIMAP_FIT_SCALE &&
+    Math.abs(value["x_share"]) <= MAX_MINIMAP_NUDGE_SHARE &&
+    Math.abs(value["y_share"]) <= MAX_MINIMAP_NUDGE_SHARE
+  );
+}
+
 /** Return whether a value is a layout as the engine sends it. */
 export function isOverlayLayout(value: unknown): value is OverlayLayout {
-  if (!isRecord(value) || !isRecord(value["offsets"]) || !isRecord(value["scales"])) {
+  if (
+    !isRecord(value) ||
+    !isRecord(value["offsets"]) ||
+    !isRecord(value["scales"]) ||
+    !isMinimapFit(value["minimap_fit"])
+  ) {
     return false;
   }
   const movable: ReadonlySet<string> = new Set(MOVABLE_WIDGETS);

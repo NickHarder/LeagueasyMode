@@ -17,7 +17,7 @@ from playwright.async_api import Page, async_playwright, expect
 from leagueasymode.engine import OverlayEngine
 from leagueasymode.game_api import GameApiClient
 from leagueasymode.overlay_server import create_overlay_application
-from leagueasymode.overlay_state import OverlayLayout, WidgetOffset
+from leagueasymode.overlay_state import MinimapFit, OverlayLayout, WidgetOffset
 from leagueasymode.preferences import load_layout
 from local_servers import serve, unused_local_url
 
@@ -203,3 +203,36 @@ async def test_reset_puts_every_widget_back_to_its_usual_size(tmp_path: Path) ->
         await page.get_by_role("button", name="Reset layout").click()
         assert await layout_when(engine, OverlayLayout()) == OverlayLayout()
         await expect(page.locator("#callouts")).to_have_css("scale", "none")
+
+
+async def test_the_minimap_layers_fit_sizes_and_nudges_it(tmp_path: Path) -> None:
+    layout_path = tmp_path / "layout.json"
+    layout_path.write_text(
+        OverlayLayout(
+            minimap_fit=MinimapFit(scale=1.1, x_share=-0.02, y_share=0.015)
+        ).model_dump_json()
+    )
+    async with open_overlay(layout_path) as (page, _engine):
+        minimap = page.locator("#minimap")
+        # Two hundredths of 1000 pixels left, fifteen thousandths of 800 down.
+        await expect(minimap).to_have_css("translate", "-20px 12px")
+        assert (
+            await minimap.evaluate(
+                "element => getComputedStyle(element).getPropertyValue('--minimap-fit').trim()"
+            )
+            == "1.1"
+        )
+
+
+async def test_reset_layout_keeps_the_minimap_layers_fit(tmp_path: Path) -> None:
+    layout_path = tmp_path / "layout.json"
+    fitted = OverlayLayout(minimap_fit=MinimapFit(scale=1.1, x_share=0.0, y_share=0.0))
+    layout_path.write_text(
+        OverlayLayout(scales={"callouts": 1.4}, minimap_fit=fitted.minimap_fit).model_dump_json()
+    )
+    async with open_overlay(layout_path) as (page, engine):
+        await page.evaluate("window.leagueasymodeSetEditing(true)")
+        await expect(page.locator("#callouts")).to_have_css("scale", "1.4")
+        await page.get_by_role("button", name="Reset layout").click()
+        # The fit lines the layer up with League's minimap; it is not a widget's place.
+        assert await layout_when(engine, fitted) == fitted

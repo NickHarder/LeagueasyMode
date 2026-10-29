@@ -669,8 +669,23 @@ class WidgetOffset(BaseModel):
 type WidgetScale = Annotated[float, Field(ge=0.6, le=1.6)]
 
 
+class MinimapFit(BaseModel):
+    """How the player fitted the minimap layer to League's minimap, where the two do not line up.
+
+    `scale` multiplies the size League's settings give; the shares nudge the layer right and down,
+    as shares of the overlay's width and height. It must stay over League's minimap, so it is
+    fitted only a little.
+    """
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    scale: float = Field(default=1.0, ge=0.5, le=1.5)
+    x_share: float = Field(default=0.0, ge=-0.1, le=0.1)
+    y_share: float = Field(default=0.0, ge=-0.1, le=0.1)
+
+
 class OverlayLayout(BaseModel):
-    """Where the player moved the widgets, and how big they made them.
+    """Where the player moved the widgets, how big they made them, and the minimap layer's fit.
 
     A widget not named in `offsets` is in its usual place, and one not named in `scales` at its
     usual size.
@@ -680,6 +695,7 @@ class OverlayLayout(BaseModel):
 
     offsets: dict[MovableWidget, WidgetOffset] = Field(default_factory=dict)
     scales: dict[MovableWidget, WidgetScale] = Field(default_factory=dict)
+    minimap_fit: MinimapFit = Field(default_factory=MinimapFit)
 
 
 class OverlayState(BaseModel):

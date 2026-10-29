@@ -14,6 +14,7 @@ import {
   MAX_WIDGET_SCALE,
   MIN_WIDGET_SCALE,
   MOVABLE_WIDGETS,
+  type MinimapFit,
   type MovableWidget,
   type OverlayLayout,
   type WidgetOffset,
@@ -45,7 +46,7 @@ export const WIDGET_ELEMENT_IDS: Readonly<Record<MovableWidget, string>> = {
   you_panel: "you-panel",
 };
 
-const WIDGET_TITLES: Readonly<Record<MovableWidget, string>> = {
+export const WIDGET_TITLES: Readonly<Record<MovableWidget, string>> = {
   objective_strip: "Objectives",
   callouts: "Callouts",
   enemy_strip: "Enemy strip",
@@ -53,6 +54,7 @@ const WIDGET_TITLES: Readonly<Record<MovableWidget, string>> = {
 };
 
 const USUAL_PLACE: WidgetOffset = { x_share: 0, y_share: 0 };
+export const USUAL_MINIMAP_FIT: MinimapFit = { scale: 1, x_share: 0, y_share: 0 };
 
 declare global {
   interface Window {
@@ -65,6 +67,7 @@ declare global {
 
 let currentOffsets: Partial<Record<MovableWidget, WidgetOffset>> = {};
 let currentScales: Partial<Record<MovableWidget, number>> = {};
+let currentMinimapFit: MinimapFit = USUAL_MINIMAP_FIT;
 let draggedWidget: MovableWidget | null = null;
 let wheelSaveTimer: number | undefined;
 
@@ -77,7 +80,7 @@ function scaleOf(value: number): number {
 }
 
 function currentLayout(): OverlayLayout {
-  return { offsets: currentOffsets, scales: currentScales };
+  return { offsets: currentOffsets, scales: currentScales, minimap_fit: currentMinimapFit };
 }
 
 function placeWidget(widget: MovableWidget, offset: WidgetOffset): void {
@@ -104,10 +107,23 @@ function sizeWidget(widget: MovableWidget, scale: number): void {
     : `${WIDGET_TITLES[widget]} · ${String(Math.round(scale * 100))}%`;
 }
 
+/** Fit the minimap layer to League's minimap: its size beside League's, and a nudge. */
+function fitMinimap(fit: MinimapFit): void {
+  const minimap = document.getElementById("minimap");
+  if (minimap === null) {
+    return;
+  }
+  minimap.style.setProperty("--minimap-fit", String(fit.scale));
+  const isUsualPlace = fit.x_share === 0 && fit.y_share === 0;
+  minimap.style.translate = isUsualPlace ? "" : `${String(fit.x_share * 100)}vw ${String(fit.y_share * 100)}vh`;
+}
+
 /** Put each widget where the layout says, at the size it says, but the one being dragged. */
 export function applyLayout(layout: OverlayLayout): void {
   currentOffsets = { ...layout.offsets };
   currentScales = { ...layout.scales };
+  currentMinimapFit = layout.minimap_fit;
+  fitMinimap(layout.minimap_fit);
   for (const widget of MOVABLE_WIDGETS) {
     if (widget !== draggedWidget) {
       placeWidget(widget, layout.offsets[widget] ?? USUAL_PLACE);
@@ -136,9 +152,11 @@ function setEditing(isEditing: boolean): void {
   document.body.classList.toggle(EDITING_CLASS, isEditing);
 }
 
+/** Put every widget back; the minimap layer's fit, which lines it up with League's, stays. */
 function resetLayout(): void {
-  applyLayout({ offsets: {}, scales: {} });
-  void saveLayout({ offsets: {}, scales: {} });
+  const usualLayout: OverlayLayout = { offsets: {}, scales: {}, minimap_fit: currentMinimapFit };
+  applyLayout(usualLayout);
+  void saveLayout(usualLayout);
 }
 
 /** Return whether a point is on a widget's handle, its bottom right corner. */

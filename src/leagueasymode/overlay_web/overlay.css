@@ -416,13 +416,14 @@ body {
 }
 
 /* The minimap layer sits where League draws its minimap. Its size at League's scale 1, a share of
-   the window's height, is a first guess to check on the Mac. */
+   the window's height, is a first guess to check on the Mac; the player's fit in Settings
+   (--minimap-fit, and a nudge) lines it up where it does not. */
 .minimap {
   position: fixed;
   right: 0;
   bottom: 0;
-  width: calc(22vh * var(--minimap-scale, 1));
-  height: calc(22vh * var(--minimap-scale, 1));
+  width: calc(22vh * var(--minimap-scale, 1) * var(--minimap-fit, 1));
+  height: calc(22vh * var(--minimap-scale, 1) * var(--minimap-fit, 1));
   pointer-events: none;
 }
 

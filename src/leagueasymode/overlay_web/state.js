@@ -26,6 +26,10 @@ export const MOVABLE_WIDGETS = ["objective_strip", "callouts", "enemy_strip", "y
 /** A widget's size as a share of its usual size: 60% to 160%. */
 export const MIN_WIDGET_SCALE = 0.6;
 export const MAX_WIDGET_SCALE = 1.6;
+/** The minimap layer's fit: half to one and a half times League's size, nudged a tenth at most. */
+export const MIN_MINIMAP_FIT_SCALE = 0.5;
+export const MAX_MINIMAP_FIT_SCALE = 1.5;
+export const MAX_MINIMAP_NUDGE_SHARE = 0.1;
 const DRAGON_OBJECTIVES = new Set(["dragon", "elder_dragon"]);
 const DRAGON_STATUSES = new Set(["not_spawned", "respawning", "alive"]);
 const SIDES = new Set(["ally", "enemy"]);
@@ -408,9 +412,22 @@ function isWidgetOffset(value) {
 function isWidgetScale(value) {
     return typeof value === "number" && value >= MIN_WIDGET_SCALE && value <= MAX_WIDGET_SCALE;
 }
+function isMinimapFit(value) {
+    return (isRecord(value) &&
+        typeof value["scale"] === "number" &&
+        typeof value["x_share"] === "number" &&
+        typeof value["y_share"] === "number" &&
+        value["scale"] >= MIN_MINIMAP_FIT_SCALE &&
+        value["scale"] <= MAX_MINIMAP_FIT_SCALE &&
+        Math.abs(value["x_share"]) <= MAX_MINIMAP_NUDGE_SHARE &&
+        Math.abs(value["y_share"]) <= MAX_MINIMAP_NUDGE_SHARE);
+}
 /** Return whether a value is a layout as the engine sends it. */
 export function isOverlayLayout(value) {
-    if (!isRecord(value) || !isRecord(value["offsets"]) || !isRecord(value["scales"])) {
+    if (!isRecord(value) ||
+        !isRecord(value["offsets"]) ||
+        !isRecord(value["scales"]) ||
+        !isMinimapFit(value["minimap_fit"])) {
         return false;
     }
     const movable = new Set(MOVABLE_WIDGETS);

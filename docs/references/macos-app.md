@@ -4,7 +4,7 @@ title: The macOS overlay app
 description: What the menu bar app does, how to run it from a clone, how to build, release and open the app that carries its own engine, its update check and open at login, and the steps for the tracer bullet's test on a Mac over League in each display mode.
 tags: [macos, overlay, tracer-bullet]
 status: draft
-generated: { by: claude-code/cloud, at: 2026-10-29T03:20:01Z }
+generated: { by: claude-code/cloud, at: 2026-10-29T03:33:38Z }
 sources:
   - id: build-update
     resource: ../../overlay/macos/Sources/OverlayCore/BuildUpdate.swift
@@ -95,7 +95,12 @@ changes size. To resize one, drag its bottom right corner, the handle drawn in e
 pixels out, right and down together, is a fifth bigger), or scroll over it (5 points a step); it
 grows and shrinks from the side it is held to, from 60% to 160% of its usual size, its name says
 its size ("You panel · 120%"), and the size is kept in `layout.json` beside its place (layout
-slice L.1). Escape, ⌃⌥⌘L, the menu item again, hiding the overlay, or two minutes end it, and
+slice L.1). The same places and sizes can be set exactly, without edit mode, in the Settings
+page's Layout section: for each widget an X and a Y slider (a share of League's window from its
+usual place) and a size slider, moving the overlay as they slide, and a Reset; under them the
+minimap layer's fit, a size beside League's own (50% to 150%) and a nudge of up to a tenth of the
+window, for where the layer and League's minimap do not line up. "Reset layout" leaves that fit
+as it is (layout slice L.2). Escape, ⌃⌥⌘L, the menu item again, hiding the overlay, or two minutes end it, and
 every click goes to the game again; "Reset layout", in the menu or on the notice at the bottom of
 the overlay while editing, puts every widget back in its usual place and size.[^layout-editing]
 

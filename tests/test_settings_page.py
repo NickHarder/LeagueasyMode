@@ -1,8 +1,9 @@
-"""The settings page in Chromium (phase 7.1): each switch changes what the overlay shows.
+"""The settings page in Chromium (phase 7.1, L.2): what the overlay shows, and where.
 
 Run with `uv run pytest -m browser`. Set OVERLAY_SCREENSHOT_DIRECTORY to keep a screenshot.
 """
 
+import asyncio
 import contextlib
 import os
 from collections.abc import AsyncIterator
@@ -16,7 +17,7 @@ from leagueasymode.engine import OverlayEngine
 from leagueasymode.friends import FriendsList, load_friends, save_friends
 from leagueasymode.game_api import GameApiClient
 from leagueasymode.overlay_server import create_overlay_application
-from leagueasymode.overlay_state import OverlayPreferences
+from leagueasymode.overlay_state import MinimapFit, OverlayLayout, OverlayPreferences, WidgetOffset
 from leagueasymode.preferences import load_preferences
 from leagueasymode.roast.claude_take import ClaudeTakeSettings, load_claude_take_settings
 from local_servers import serve, unused_local_url
@@ -26,7 +27,10 @@ pytestmark = pytest.mark.browser
 
 @contextlib.asynccontextmanager
 async def open_settings(
-    preferences_path: Path, friends_path: Path | None = None, claude_take_path: Path | None = None
+    preferences_path: Path,
+    friends_path: Path | None = None,
+    claude_take_path: Path | None = None,
+    layout: OverlayLayout | None = None,
 ) -> AsyncIterator[tuple[Page, OverlayEngine]]:
     async with aiohttp.ClientSession() as session:
         engine = OverlayEngine(
@@ -34,6 +38,7 @@ async def open_settings(
             poll_interval_seconds=1,
             preferences=load_preferences(preferences_path),
             friends=load_friends(friends_path) if friends_path is not None else None,
+            layout=layout,
         )
         application = create_overlay_application(
             engine,
@@ -130,3 +135,57 @@ async def test_claudes_take_is_turned_on_with_a_style(tmp_path: Path) -> None:
     assert load_claude_take_settings(claude_take_path) == ClaudeTakeSettings(
         enabled=True, style="pirate"
     )
+
+
+async def layout_when(engine: OverlayEngine, expected: OverlayLayout) -> OverlayLayout:
+    for _ in range(100):
+        if engine.layout == expected:
+            break
+        await asyncio.sleep(0.02)
+    return engine.layout
+
+
+async def test_the_layout_sliders_place_and_size_each_widget_as_they_move(tmp_path: Path) -> None:
+    moved_you_panel = WidgetOffset(x_share=0.25, y_share=0.1)
+    async with open_settings(
+        tmp_path / "preferences.json",
+        layout=OverlayLayout(offsets={"you_panel": moved_you_panel}, scales={"you_panel": 1.2}),
+    ) as (page, engine):
+        section = page.locator(".settings-layout")
+        # The sliders start where the widget is, as percents of League's window and of its size.
+        await expect(section.get_by_label("You panel X")).to_have_value("25", timeout=5000)
+        await expect(section.get_by_label("You panel Y")).to_have_value("10")
+        await expect(section.get_by_label("You panel size")).to_have_value("120")
+        await section.get_by_label("Enemy strip X").fill("-20")
+        await section.get_by_label("Enemy strip size").fill("130")
+        await expect(section.locator("output[for='enemy_strip-x']")).to_have_text("-20%")
+        both = OverlayLayout(
+            offsets={
+                "you_panel": moved_you_panel,
+                "enemy_strip": WidgetOffset(x_share=-0.2, y_share=0.0),
+            },
+            scales={"you_panel": 1.2, "enemy_strip": 1.3},
+        )
+        assert await layout_when(engine, both) == both
+        await section.get_by_role("button", name="Reset You panel").click()
+        enemy_strip_only = OverlayLayout(
+            offsets={"enemy_strip": WidgetOffset(x_share=-0.2, y_share=0.0)},
+            scales={"enemy_strip": 1.3},
+        )
+        assert await layout_when(engine, enemy_strip_only) == enemy_strip_only
+        await expect(section.get_by_label("You panel X")).to_have_value("0")
+        await expect(section.get_by_label("You panel size")).to_have_value("100")
+        screenshot_directory = os.environ.get("OVERLAY_SCREENSHOT_DIRECTORY")
+        if screenshot_directory:
+            await section.screenshot(path=str(Path(screenshot_directory) / "settings-layout.png"))
+
+
+async def test_the_minimap_layer_is_fitted_from_the_settings(tmp_path: Path) -> None:
+    async with open_settings(tmp_path / "preferences.json") as (page, engine):
+        section = page.locator(".settings-layout")
+        await expect(section.get_by_label("Minimap size")).to_have_value("100", timeout=5000)
+        await section.get_by_label("Minimap size").fill("110")
+        await section.get_by_label("Minimap X").fill("-2")
+        await section.get_by_label("Minimap Y").fill("1.5")
+        fitted = OverlayLayout(minimap_fit=MinimapFit(scale=1.1, x_share=-0.02, y_share=0.015))
+        assert await layout_when(engine, fitted) == fitted
