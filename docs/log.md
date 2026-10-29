@@ -12,6 +12,15 @@ skill has the format.
 
 ## 2026-10-28
 
+- Phase 11.3, the case file in the post-game window. After each game, `leagueasymode run` keeps
+  the game's players and exhibits beside the last game's summary (`last-game-roast.json`: no
+  names, champions only; removed when a game has no case). The window's new section, under the
+  result, asks `/case` for a case and asks again for each pick: the whole team, the enemy team, a
+  lane, or any one of the ten players, at any of the four spice levels, with "Prove it" and
+  another take. It shows the verdict, the lane board at 14:00, the lines with each number's
+  exhibit letter, the closing line with its length, the risk warning at Tilted and above, and the
+  exhibits with their paths. The player on this machine is found by Riot ID, or else by team and
+  champion. Nothing is sent to chat; copying is 11.4.
 - Phase 11.2, a game from the client as a case: `roast/client_game.py` reads the game's details
   (`/lol-match-history/v1/games/<id>`) into its ten players and the scoreboard's exhibits, and
   `roast/client_timeline.py` reads its timeline into the lanes at 10:00 and 14:00, first blood,

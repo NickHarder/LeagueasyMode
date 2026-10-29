@@ -84,7 +84,14 @@ from leagueasymode.refit import (
 )
 from leagueasymode.replay import DEFAULT_REPLAY_PORT, RecordingReplay, create_replay_application
 from leagueasymode.riot_tls import create_riot_tls_context
-from leagueasymode.scoring import fight_samples, read_recorded_game, score_game, win_samples
+from leagueasymode.roast.last_game import last_game_roast, roast_path_beside
+from leagueasymode.scoring import (
+    RecordedGame,
+    fight_samples,
+    read_recorded_game,
+    score_game,
+    win_samples,
+)
 from leagueasymode.tuning import Tuning, load_tuning, note_tuning, write_tuning
 
 EXIT_SUCCESS: Final = 0
@@ -638,7 +645,31 @@ async def after_the_game(
     )
     summary = await asyncio.to_thread(game_summary, recording_path.name, game, scores)
     await asyncio.to_thread(_write_whole, summary_path, summary.model_dump_json())
+    await asyncio.to_thread(_keep_last_game_roast, game, summary_path, tuning or Tuning())
     logger.info("scored %s: %d estimators", recording_path.name, len(scores))
+
+
+def _keep_last_game_roast(game: RecordedGame, summary_path: Path, tuning: Tuning) -> None:
+    """Keep what the last game's case is built from beside its summary, or forget the one before.
+
+    A game with no case (no details yet, or not two teams of five) leaves no older game's case in
+    the post-game window.
+
+    Args:
+        game: The recorded game.
+        summary_path: The last game's summary.
+        tuning: The hand-set thresholds, among them the lanes' for the roast.
+    """
+    roast_path = roast_path_beside(summary_path)
+    roast = last_game_roast(
+        game.client_resources,
+        game.minute_snapshots[-1] if game.minute_snapshots else None,
+        lane_rules=tuning.roast.lanes,
+    )
+    if roast is None:
+        roast_path.unlink(missing_ok=True)
+        return
+    _write_whole(roast_path, roast.model_dump_json())
 
 
 def _tuning(settings: Settings, *, should_write: bool) -> int:

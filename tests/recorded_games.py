@@ -127,10 +127,12 @@ def write_scored_recording(
     feed_events: list[dict[str, JsonValue]] | None = None,
     past_timelines: dict[int, JsonValue] | None = None,
     client_answers: dict[str, JsonValue] | None = None,
+    details: JsonValue | None = None,
 ) -> Path:
     """A recording of a built game, one answer a minute to 15:00; the feed shows each event from
     its time on. Past games' timelines, by game id, and other answers of the client, by path, are
-    recorded at the start, as the player lookups ask for them."""
+    recorded at the start, as the player lookups ask for them. The game's details are built from
+    the positions unless given."""
     writer = RecordingWriter(directory / "game.jsonl", keyframe_interval_seconds=60.0)
     writer.write_started(
         started_at=datetime.datetime(2026, 10, 8, tzinfo=datetime.UTC),
@@ -189,7 +191,9 @@ def write_scored_recording(
     writer.write_client_resource(
         received_at_seconds=1000.0,
         path=GAME_DETAILS_PATH_TEMPLATE.format(game_id=GAME_ID),
-        payload=game_details(details_positions, winning_team_id),
+        payload=details
+        if details is not None
+        else game_details(details_positions, winning_team_id),
     )
     if timeline is not None:
         writer.write_client_resource(
