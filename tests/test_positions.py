@@ -8,10 +8,16 @@ from leagueasymode.engine import compute_overlay_state
 from leagueasymode.game_state import ScoreboardPlayer
 from leagueasymode.inference.callouts import CalloutTracker
 from leagueasymode.inference.clues import ClueTracker
-from leagueasymode.inference.positions import PositionRules, point_chances, position_estimate
+from leagueasymode.inference.positions import (
+    PositionRules,
+    is_roaming,
+    point_chances,
+    position_estimate,
+)
 from leagueasymode.inference.rift_map import RIFT_MAP, region_center
 from leagueasymode.jungle_starts import MAP_HALF_BY_REGION, FourMinuteSides
 from leagueasymode.overlay_state import (
+    OverlayPreferences,
     OverlayState,
     PlayerCard,
     PositionClue,
@@ -294,3 +300,43 @@ def test_the_four_minute_window_comes_from_the_rules() -> None:
         rules=narrow,
     )
     assert with_habit == vi_point_chances(240.0, None)
+
+
+def location_with_away_chance(away_chance: float) -> PositionEstimate:
+    return PositionEstimate(
+        regions=[
+            RegionChance(
+                region="top_river",
+                label="top river",
+                chance=0.6,
+                x_position=4700.0,
+                y_position=9800.0,
+            )
+        ],
+        away_chance=away_chance,
+        unseen_seconds=20.0,
+        reach_top_seconds=30.0,
+        reach_mid_seconds=20.0,
+        reach_bot_seconds=40.0,
+    )
+
+
+def test_a_laner_likelier_away_from_their_lane_than_in_it_is_roaming() -> None:
+    rules = PositionRules()
+    assert is_roaming("MIDDLE", location_with_away_chance(0.7), rules)
+    assert not is_roaming("MIDDLE", location_with_away_chance(0.3), rules)
+    # A jungler roams by trade: the minimap's "jungler and roamers" shows them as the jungler.
+    assert not is_roaming("JUNGLE", location_with_away_chance(0.9), rules)
+    # Dead, or with no estimate, no one is anywhere.
+    assert not is_roaming("TOP", None, rules)
+    assert is_roaming("UTILITY", location_with_away_chance(0.5), rules)
+
+
+def test_each_card_says_whether_they_are_roaming() -> None:
+    state = compute_overlay_state(all_game_data(600.0), clue_tracker=ClueTracker())
+    for card in state.players:
+        assert card.is_roaming == is_roaming(card.role, card.location, PositionRules())
+
+
+def test_the_minimap_shows_everyone_until_the_player_narrows_it() -> None:
+    assert OverlayPreferences().minimap_roamers_only is False

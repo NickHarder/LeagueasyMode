@@ -1063,8 +1063,12 @@ function renderMinimap(nowMilliseconds: number): void {
         transform: `rotate(45 ${String(ward.x_position)} ${mapY(ward.y_position)})`,
       }),
     );
-  // An enemy in sight is on League's own minimap: no likely place is drawn for them.
-  const unseenEnemyCards = enemyCards.filter((card) => !card.is_seen);
+  // An enemy in sight is on League's own minimap: no likely place is drawn for them. With "jungler
+  // and roamers only", neither is a laner likely in their lane.
+  const unseenEnemyCards = enemyCards.filter(
+    (card) =>
+      !card.is_seen && (!state.preferences.minimap_roamers_only || card.role === "JUNGLE" || card.is_roaming),
+  );
   drawing.replaceChildren(...camps, ...wards, ...unseenEnemyCards.flatMap(enemyMarks));
   minimap.hidden = drawing.childElementCount === 0;
   minimap.replaceChildren(drawing);

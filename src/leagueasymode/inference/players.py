@@ -17,7 +17,12 @@ from leagueasymode.inference.cooldowns import (
 )
 from leagueasymode.inference.gold import PlayerKey, player_key
 from leagueasymode.inference.intel import INTEL_RULES, IntelRules, player_intel
-from leagueasymode.inference.positions import POSITION_RULES, PositionRules, position_estimate
+from leagueasymode.inference.positions import (
+    POSITION_RULES,
+    PositionRules,
+    is_roaming,
+    position_estimate,
+)
 from leagueasymode.inference.roles import RoleGuess, assign_roles
 from leagueasymode.overlay_state import (
     BackEstimate,
@@ -85,7 +90,7 @@ def player_cards(
         player_key(enemy): slot
         for slot, enemy in enumerate(enemies_in_role_order(snapshot), start=1)
     }
-    return [
+    cards = [
         PlayerCard(
             champion_name=player.champion_name,
             side="ally" if player.team == ally_team else "enemy",
@@ -132,6 +137,10 @@ def player_cards(
             ),
         )
         for index, player in [*allies, *enemies]
+    ]
+    return [
+        card.model_copy(update={"is_roaming": is_roaming(card.role, card.location, position_rules)})
+        for card in cards
     ]
 
 

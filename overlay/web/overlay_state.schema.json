@@ -947,6 +947,11 @@
           "default": false,
           "title": "Click To Mark",
           "type": "boolean"
+        },
+        "minimap_roamers_only": {
+          "default": false,
+          "title": "Minimap Roamers Only",
+          "type": "boolean"
         }
       },
       "title": "OverlayPreferences",
@@ -1171,6 +1176,11 @@
           ],
           "default": null,
           "title": "Ultimate Rank"
+        },
+        "is_roaming": {
+          "default": false,
+          "title": "Is Roaming",
+          "type": "boolean"
         }
       },
       "required": [

@@ -220,6 +220,8 @@ export interface PlayerCard {
   readonly marked_spell_names: readonly string[];
   /** Their ultimate's rank from their level: 0 before it is learned; null while not known. */
   readonly ultimate_rank: number | null;
+  /** A laner likely away from their lane, whom "jungler and roamers only" keeps on the minimap. */
+  readonly is_roaming: boolean;
 }
 
 /** What each team's items are worth: gold earned and spent, not gold in hand. */
@@ -377,6 +379,7 @@ export interface OverlayPreferences {
   readonly show_team_calls: boolean;
   readonly speak_callouts: boolean;
   readonly click_to_mark: boolean;
+  readonly minimap_roamers_only: boolean;
 }
 
 /** The preferences' names, in the settings page's order. */
@@ -393,6 +396,7 @@ export const PREFERENCE_NAMES = [
   "show_team_calls",
   "speak_callouts",
   "click_to_mark",
+  "minimap_roamers_only",
 ] as const satisfies readonly (keyof OverlayPreferences)[];
 
 /** The widgets the player can move; the minimap layer stays over League's minimap. */
@@ -730,7 +734,8 @@ export function isPlayerCard(value: unknown): value is PlayerCard {
     typeof value["is_seen"] === "boolean" &&
     isNumberOrNull(value["enemy_slot"]) &&
     isArrayOf(value["marked_spell_names"], (name: unknown): name is string => typeof name === "string") &&
-    isNumberOrNull(value["ultimate_rank"])
+    isNumberOrNull(value["ultimate_rank"]) &&
+    typeof value["is_roaming"] === "boolean"
   );
 }
 

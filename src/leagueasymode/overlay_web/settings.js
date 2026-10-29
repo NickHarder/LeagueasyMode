@@ -46,6 +46,10 @@ const DESCRIPTIONS = {
         "Calm calls for the whole team, such as staying alive and warding before a dragon, to paste in team chat. Never spoken; ⌃⌥C copies it.",
     ],
     speak_callouts: ["Speak callouts", "Each new callout read aloud in macOS’s voice, as it shows. Off unless turned on."],
+    minimap_roamers_only: [
+        "Minimap: jungler and roamers only",
+        "Marks only the enemy jungler, and laners likely away from their lane, on the minimap layer; a laner holding their wave is left off. Off unless turned on.",
+    ],
     click_to_mark: [
         "Click to mark spells",
         "Buttons on each enemy’s row that start their Flash, other summoner spell or ultimate timer in one click, beside the ⌃⌥ shortcuts. The overlay takes the clicks on those buttons only. Off unless turned on.",

@@ -6,6 +6,9 @@ skill has the format.
 
 ## 2026-10-29
 
+- "Minimap: jungler and roamers only", a setting the owner asked for: the minimap layer marks the
+  enemy jungler and only those laners likely away from their lane (at least 50%, a tuning
+  value), so a top laner freezing a wave no longer has a circle to watch. Off unless turned on.
 - Phase 11.7, a quick case ("approved, keep building 11.7"). Right after a game, the client's
   end-of-game stats are handed on before the timeline is waited for, and the post-game window gets
   a case at once from the scoreboard: kills, deaths, assists, vision, damage and time dead, with
