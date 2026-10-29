@@ -7,8 +7,9 @@ a main or a one-trick (`inference/intel.py`), whom the lookups read timelines fo
 (`player_intel.py`), the jungle path's camp timings and weights (`inference/jungle_path.py`), the
 positions' (`inference/positions.py`), and the estimators' priors and the season's numbers that
 recordings will correct: experience rates, dragon timings, trips to base, gold, the monsters'
-health and Smite's damage, the build path's weights, and the You panel's thresholds. This module
-gathers them under one name each.
+health and Smite's damage, the build path's weights, the You panel's thresholds, and the roast's
+(`roast/rules.py`): the lane thresholds, the verdict's counts and the chat line's length. This
+module gathers them under one name each.
 
 `tuning.json` in the application's directory (`LEAGUEASYMODE_TUNING` moves it) names only what it
 changes; anything it leaves out keeps its default. `leagueasymode tuning` prints every value the
@@ -39,6 +40,7 @@ from leagueasymode.inference.positions import PositionRules
 from leagueasymode.inference.suggestions import SuggestionRules
 from leagueasymode.inference.you import YouRules
 from leagueasymode.player_intel import LookupRules
+from leagueasymode.roast.rules import RoastRules
 
 
 class Tuning(BaseModel):
@@ -59,6 +61,7 @@ class Tuning(BaseModel):
     contests: ContestRules = Field(default_factory=ContestRules)
     build_path: BuildRules = Field(default_factory=BuildRules)
     you: YouRules = Field(default_factory=YouRules)
+    roast: RoastRules = Field(default_factory=RoastRules)
 
 
 DEFAULT_TUNING: Final = Tuning()

@@ -12,6 +12,14 @@ skill has the format.
 
 ## 2026-10-28
 
+- Phase 11.1, the roast engine, ported from nothingsmyfault into `src/leagueasymode/roast/`:
+  exhibits, the verdict, the composer, the validator, the safety floor, the closing line and the
+  case. The 58 lines the owner approved are in `roast/templates.toml` word for word, as TOML
+  (Python reads it with no new dependency), and a test holds them to a fingerprint, so a reworded
+  line goes back to the owner. The verdict's counts, the lane thresholds and the chat line's
+  length are in `tuning.json` under `roast`. The chat line drops the exhibit letters and the
+  site's signature unless asked, and the Mutual Defense Pact is off by default. Nothing shows yet:
+  11.2 builds a game's exhibits from the client's answers.
 - Phase 11's plan adds slice 11.9, team calls: calm, constructive calls for teammates who are not
   friends, to paste in team chat, such as staying alive and warding before a dragon, from the
   timers and the win chance the engine already has. At the owner's request ("can you make a
