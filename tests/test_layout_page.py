@@ -265,3 +265,74 @@ async def test_in_edit_mode_a_widget_is_hidden_and_shown_again(tmp_path: Path) -
         await page.get_by_role("button", name="Show You panel").click()
         assert await layout_when(engine, OverlayLayout()) == OverlayLayout()
     assert load_layout(layout_path) == OverlayLayout()
+
+
+async def test_in_edit_mode_leagues_hud_is_shaded_and_named(tmp_path: Path) -> None:
+    # Layout slice L.3: what a widget dropped there would cover.
+    async with open_overlay(tmp_path / "layout.json") as (page, _engine):
+        regions = page.locator(".hud-region")
+        await expect(regions).to_have_count(0)
+        await page.evaluate("window.leagueasymodeSetEditing(true)")
+        await expect(regions).to_have_text(
+            ["Score", "Kill feed", "Champion bar", "Chat", "Ally portraits", "Minimap"]
+        )
+        await expect(regions.first).to_be_visible()
+        await keep_screenshot(page, "layout-hud-regions")
+        await page.evaluate("window.leagueasymodeSetEditing(false)")
+        await expect(regions.first).to_be_hidden()
+
+
+async def test_a_widget_dropped_on_leagues_hud_is_moved_off_it(tmp_path: Path) -> None:
+    # The owner, 2026-10-29: "move them off automatically". The You panel dropped on the champion
+    # bar (bottom middle, from 83% of the height down) goes just above it.
+    async with open_overlay(tmp_path / "layout.json") as (page, engine):
+        await page.evaluate("window.leagueasymodeSetEditing(true)")
+        await drag(page, "#you-panel", 400, 640)
+        for _ in range(100):
+            if "you_panel" in engine.layout.offsets:
+                break
+            await asyncio.sleep(0.02)
+        box = await page.locator("#you-panel").bounding_box()
+        assert box is not None
+        champion_bar_top = 0.83 * VIEWPORT_HEIGHT
+        assert box["y"] + box["height"] <= champion_bar_top
+        assert box["y"] + box["height"] >= champion_bar_top - 10
+        # Kept where it was moved to, not where it was dropped.
+        moved = engine.layout.offsets["you_panel"]
+        assert 64 + moved.y_share * VIEWPORT_HEIGHT + box["height"] <= champion_bar_top + 1
+
+
+async def test_a_widget_dragged_past_the_window_stays_inside_it(tmp_path: Path) -> None:
+    async with open_overlay(tmp_path / "layout.json") as (page, _engine):
+        await page.evaluate("window.leagueasymodeSetEditing(true)")
+        await drag(page, "#you-panel", -300, 0)
+        await asyncio.sleep(0.2)
+        box = await page.locator("#you-panel").bounding_box()
+        assert box is not None
+        assert box["x"] >= 0
+
+
+async def test_the_usual_places_cover_none_of_leagues_hud(tmp_path: Path) -> None:
+    # The plan: "The usual places stay clear of League's HUD". The enemy strip sat on the kill
+    # feed until it was moved below it.
+    async with open_overlay(tmp_path / "layout.json") as (page, _engine):
+        await page.evaluate("window.leagueasymodeSetEditing(true)")
+        await expect(page.locator(".hud-region").first).to_be_visible()
+        overlaps = await page.evaluate(
+            """() => {
+                const regions = [...document.querySelectorAll('.hud-region')]
+                    .map((region) => [region.textContent, region.getBoundingClientRect()]);
+                const found = [];
+                for (const id of ['you-panel', 'enemy-strip']) {
+                    const box = document.getElementById(id).getBoundingClientRect();
+                    for (const [name, region] of regions) {
+                        if (box.left < region.right && box.right > region.left
+                            && box.top < region.bottom && box.bottom > region.top) {
+                            found.push(`${id} on ${name}`);
+                        }
+                    }
+                }
+                return found;
+            }"""
+        )
+        assert overlaps == []
