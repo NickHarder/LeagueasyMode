@@ -13,6 +13,13 @@ skill has the format.
   first key metrics, `KEY_METRICS.md` and `metrics/`: the north star NS-01, games the overlay got
   right; drivers for games scored, the jungler, fight and contest calls; guardrails for engine
   stops and problem reports. None has a scored value yet: no game of the owner's has been scored.
+- Less on screen (the owner: moments and team calls "should only be when I ask via a hotkey or
+  during the end game screen. I don't want the extra clutter. I don't need team calls on my
+  screen", and the level 6 and item callouts "can probably be refined so it's not a pop up").
+  Moments and team calls are never on screen now, at a glance, with the key or while dead, which
+  undoes the at-a-glance change above; ⌃⌥C copies them, and their switches say whether it does.
+  A level 6 and an item likely bought are no longer callouts: the enemy's row shows the rank of
+  their ultimate and their gold, and the item was a guess from components, recent games and class.
 - Handoff refreshed at `ff23895`: the layout plan built (#84, #85, #91, #92, #93), the overlay quiet
   at a glance with details on Tab or Option (#87, #88) and the Tab overview (#94), fewer calls on
   deaths (#86), and the owner's unsent games closed and sent (#89).

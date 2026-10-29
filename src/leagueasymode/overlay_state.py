@@ -630,9 +630,10 @@ class OverlayPreferences(BaseModel):
     show_callouts: bool = True
     # Callouts that name an action, such as "take it".
     show_suggestions: bool = True
-    # Moments about friends (phase 11.6), shown beside the callouts and never spoken.
+    # Moments about friends (phase 11.6), never on screen: whether ⌃⌥C copies them.
     show_moments: bool = True
-    # Calls for the team, to paste in team chat (phase 11.9); never spoken.
+    # Calls for the team, to paste in team chat (phase 11.9), never on screen: whether ⌃⌥C
+    # copies them.
     show_team_calls: bool = True
     # Each new callout shown is read aloud in macOS's voice; off unless the player turns it on.
     speak_callouts: bool = False

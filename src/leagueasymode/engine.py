@@ -416,10 +416,23 @@ class OverlayEngine:
         )
 
     def _approved_lines_to_copy(self) -> list[str]:
-        """Return this game's moments and team calls as approved, in the order they were made."""
+        """Return this game's moments and team calls as approved, in the order they were made.
+
+        Each kind only while its switch is on; neither is ever on screen, so the switch says
+        whether ⌃⌥C copies it.
+        """
+        preferences = self.preferences
         made = [
-            *((moment.made_at_game_time_seconds, moment.text) for moment in self._moments.moments),
-            *((call.made_at_game_time_seconds, call.text) for call in self._team_calls.calls),
+            *(
+                (moment.made_at_game_time_seconds, moment.text)
+                for moment in self._moments.moments
+                if preferences.show_moments
+            ),
+            *(
+                (call.made_at_game_time_seconds, call.text)
+                for call in self._team_calls.calls
+                if preferences.show_team_calls
+            ),
         ]
         return [text for _, text in sorted(made, key=lambda pair: pair[0])]
 
