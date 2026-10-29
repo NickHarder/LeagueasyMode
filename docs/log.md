@@ -6,6 +6,11 @@ skill has the format.
 
 ## 2026-10-29
 
+- The case lines in League-chat voice (the owner: "make good roasts dont be lame. like what a
+  league player might actually type not nerd stuff"; the draft "approve"). All 75 lines redrafted,
+  short and mostly lower case, with the slots and spice levels as before; the chat opener reads as
+  chat ("gg jg diff.", "gg team diff.", "gg every lane lost.", "gg,") instead of the verdict's
+  stamp, which the post-game window still shows.
 - The roast after a game moves into the overlay (the owner: "there are too many options... its
   overwhelming", and "can it be done through the overlay as opposed to opening its own window in
   the browser"; the card's layout approved). After a game the overlay shows a card of three lines,
