@@ -11,6 +11,7 @@ import {
   type BuffTimer,
   type CampTimer,
   type Callout,
+  type CalloutKind,
   type CombatStats,
   type CooldownTimer,
   type DragonTimer,
@@ -137,6 +138,21 @@ let isDetailsKeyHeld = false;
 const spokenCalloutIds = new Set<string>();
 // At a glance, the newest callouts only; holding the key shows every one.
 const GLANCE_CALLOUT_COUNT = 2;
+// The callouts worth a look away from a fight: each asks for an action now. The rest (an item
+// likely bought or finished, a level close, a trip to base, a one-trick, a friend's moment, a team
+// call) wait for the key or the death screen, and are not spoken (the owner: "if it is goign to
+// take my eyes off fights, it needs to be wort while info").
+const GLANCE_CALLOUT_KINDS: ReadonlySet<CalloutKind> = new Set<CalloutKind>([
+  "numbers_window",
+  "level_spike",
+  "objective_soon",
+  "cooldown_ready",
+  "missing",
+  "jungle_start",
+  "jungle_four_minutes",
+  "inhibitor_open",
+  "suggestion",
+]);
 
 declare global {
   interface Window {
@@ -153,7 +169,12 @@ declare global {
  * too much visual clutter … maybe extra details onyl show if i hit tab").
  */
 function areDetailsShown(state: OverlayState): boolean {
-  return !state.preferences.details_on_hold || isDetailsKeyHeld || isEditingLayout();
+  return !state.preferences.details_on_hold || isDetailsKeyHeld || isEditingLayout() || isYouDead(state);
+}
+
+/** Return whether the player is dead: their eyes are free, so the details show by themselves. */
+function isYouDead(state: OverlayState): boolean {
+  return state.players.some((card) => card.is_you && card.is_dead);
 }
 
 /** Return the game's clock now, moved on from the last state by at most a couple of seconds. */
@@ -1015,8 +1036,9 @@ function renderCallouts(nowMilliseconds: number): void {
                 : received.state.preferences.show_callouts &&
                   (callout.kind !== "suggestion" || received.state.preferences.show_suggestions)),
         );
-  // Spoken as it first comes, shown or held back; kept on screen, it is not spoken again.
-  // A moment about a friend (11.6) or a team call (11.9) is never spoken: it is for chat.
+  // Spoken as it first comes, shown or held back; kept on screen, it is not spoken again. Only
+  // the callouts worth a look away are spoken; a friend's moment (11.6) or a team call (11.9),
+  // which are for chat, never are.
   const currentIds = new Set(shownCallouts.map((callout) => callout.callout_id));
   for (const spokenId of spokenCalloutIds) {
     if (!currentIds.has(spokenId)) {
@@ -1026,18 +1048,14 @@ function renderCallouts(nowMilliseconds: number): void {
   for (const callout of shownCallouts) {
     if (!spokenCalloutIds.has(callout.callout_id)) {
       spokenCalloutIds.add(callout.callout_id);
-      if (
-        received?.state.preferences.speak_callouts === true &&
-        callout.kind !== "moment" &&
-        callout.kind !== "team_call"
-      ) {
+      if (received?.state.preferences.speak_callouts === true && GLANCE_CALLOUT_KINDS.has(callout.kind)) {
         speak(callout.text);
       }
     }
   }
   const visibleCallouts =
     received !== null && !areDetailsShown(received.state)
-      ? shownCallouts.slice(-GLANCE_CALLOUT_COUNT)
+      ? shownCallouts.filter((callout) => GLANCE_CALLOUT_KINDS.has(callout.kind)).slice(-GLANCE_CALLOUT_COUNT)
       : shownCallouts;
   const shownIds = new Set(visibleCallouts.map((callout) => callout.callout_id));
   for (const child of Array.from(list.children)) {
