@@ -6,6 +6,10 @@ skill has the format.
 
 ## 2026-10-29
 
+- An automatic update waits while League's game app runs, not only while its window is on
+  screen: build 222 installed itself at 22:02:22 in the middle of the owner's ARAM, and the game's
+  recording stopped that second and went up in two halves (6:49 and 2:17). A game in another
+  Space or behind another app has no window on screen, which the window check took for no game.
 - Self-aware roasts (the owner: "you need to make roasts self aware ... cant do a roast if i am
   also bad"; the draft "approved"). No line flames a teammate for what the defendant did too:
   a line about a teammate is not offered when the defendant meets its conditions as well (six

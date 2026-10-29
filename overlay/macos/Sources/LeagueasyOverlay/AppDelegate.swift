@@ -377,6 +377,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             AutomaticUpdate.canInstallNow(
                 isOn: installsUpdatesAutomatically,
                 placement: gamePlacement,
+                isGameRunning: Self.isLeaguesGameRunning,
                 isEditingLayout: isEditingLayout,
                 isInstalling: isInstallingUpdate
             )
@@ -384,6 +385,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
         startInstalling(build)
+    }
+
+    /// Whether League's game app runs, its window on screen or not: in another Space or behind
+    /// another app, the window list does not show it.
+    private static var isLeaguesGameRunning: Bool {
+        NSWorkspace.shared.runningApplications.contains { app in
+            [app.localizedName, app.executableURL?.lastPathComponent]
+                .compactMap { $0 }
+                .contains { GameWindowLocator.isGameApp(named: $0) }
+        }
     }
 
     /// After a restart, says which build an install put in place, or that it did not take.

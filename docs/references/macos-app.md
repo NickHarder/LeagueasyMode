@@ -4,7 +4,7 @@ title: The macOS overlay app
 description: What the menu bar app does, how to run it from a clone, how to build, release and open the app that carries its own engine, its update check and open at login, and the steps for the tracer bullet's test on a Mac over League in each display mode.
 tags: [macos, overlay, tracer-bullet]
 status: draft
-generated: { by: claude-code/cloud, at: 2026-10-29T20:01:28Z }
+generated: { by: claude-code/cloud, at: 2026-10-29T22:59:03Z }
 sources:
   - id: build-update
     resource: ../../overlay/macos/Sources/OverlayCore/BuildUpdate.swift
@@ -272,8 +272,11 @@ release's page; the page's address is always built from the tag on this reposito
 GitHub's answer says. The same check, one at every start and one every hour ask for the newest
 builds of main: one with a higher build number and a version no lower than the app's adds "Install
 update: build 75 (0.1.0)…". With "Install updates automatically (not during a game)" on, as it is
-unless turned off, the app installs it by itself as soon as no game window of League's is on
-screen, the widgets are not being moved and no install runs (`AutomaticUpdate`), and after the
+unless turned off, the app installs it by itself as soon as League's game app is not running
+and no game window of League's is on screen, the widgets are not being moved and no install runs
+(`AutomaticUpdate`). The game's process is asked too since build 222 installed itself in the
+middle of the owner's game of 2026-10-29 22:02 and cut its recording in two: a game in another
+Space or behind another app has no window on screen. After the
 restart the menu says "Update: build 75 installed"; a build whose automatic install failed is not
 tried again by itself. Otherwise the menu item, once confirmed, downloads the zip and its checksum from this repository's
 release, checks one against the other, unpacks the app with `ditto`, checks it is LeagueasyMode
