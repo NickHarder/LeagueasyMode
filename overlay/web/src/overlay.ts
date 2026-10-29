@@ -238,9 +238,10 @@ export function inhibitorPill(timer: InhibitorTimer, gameTimeSeconds: number): P
     return null;
   }
   const sideText = timer.side === "ally" ? "Your" : "Enemy";
+  const provisionalMark = timer.is_rule_verified ? "" : PROVISIONAL_MARK;
   return {
     label: `${sideText} ${LANE_NAMES[timer.lane]} inhib`,
-    timeText: formatCountdown(remainingSeconds),
+    timeText: `${provisionalMark}${formatCountdown(remainingSeconds)}`,
     kind: "inhibitor",
     side: timer.side,
     isUp: false,

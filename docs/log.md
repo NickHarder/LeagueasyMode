@@ -6,6 +6,10 @@ skill has the format.
 
 ## 2026-10-29
 
+- Off the Rift, inhibitor timers come back, the only timers there (the owner: "no ARAM timers
+  except inhib"). No source gives ARAM's respawn time, so the Rift's 5:00 stands in, marked "~"
+  as unconfirmed; the game's "inhibitor respawned" event still ends the timer on time. The first
+  recorded ARAM game sets the value.
 - A focused overlay, after the owner's first screenshot of a game: "it covers some stuff and has
   so much info a lot of it is uselss 90% of the time. plus in a tf itll show the person die and
   then the next etc." Enemy rows are one line unless something may change a decision now

@@ -39,11 +39,12 @@ export interface BuffTimer {
   readonly ends_at_game_time_seconds: number;
 }
 
-/** A destroyed inhibitor, and when it comes back. */
+/** A destroyed inhibitor, and when it comes back; unverified where the map's respawn time is unconfirmed. */
 export interface InhibitorTimer {
   readonly side: Side;
   readonly lane: Lane;
   readonly respawns_at_game_time_seconds: number;
+  readonly is_rule_verified: boolean;
 }
 
 /** One side's lane that has lost a turret: how many, and whether its inhibitor is open. Exact. */
@@ -546,7 +547,8 @@ export function isInhibitorTimer(value: unknown): value is InhibitorTimer {
     isRecord(value) &&
     isOneOf(value["side"], SIDES) &&
     isOneOf(value["lane"], LANES) &&
-    typeof value["respawns_at_game_time_seconds"] === "number"
+    typeof value["respawns_at_game_time_seconds"] === "number" &&
+    typeof value["is_rule_verified"] === "boolean"
   );
 }
 

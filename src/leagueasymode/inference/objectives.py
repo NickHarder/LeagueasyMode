@@ -246,7 +246,9 @@ def buff_timers(snapshot: GameSnapshot) -> list[BuffTimer]:
     ]
 
 
-def inhibitor_timers(snapshot: GameSnapshot) -> list[InhibitorTimer]:
+def inhibitor_timers(
+    snapshot: GameSnapshot, *, is_rule_verified: bool = True
+) -> list[InhibitorTimer]:
     """Return the inhibitors that are down, with when each comes back.
 
     An inhibitor is back when its respawn time passes or the feed says it respawned, whichever
@@ -254,6 +256,8 @@ def inhibitor_timers(snapshot: GameSnapshot) -> list[InhibitorTimer]:
 
     Args:
         snapshot: The game's state.
+        is_rule_verified: Whether the Rift's respawn time is known to hold on this map; off the
+            Rift it stands in, unconfirmed.
 
     Returns:
         The inhibitors down, in the order they fell.
@@ -283,6 +287,7 @@ def inhibitor_timers(snapshot: GameSnapshot) -> list[InhibitorTimer]:
                 side="ally" if owner_team == ally_team else "enemy",
                 lane=LANE_BY_LETTER[name_match.group("lane")],
                 respawns_at_game_time_seconds=respawns_at_seconds,
+                is_rule_verified=is_rule_verified,
             )
         )
     return timers

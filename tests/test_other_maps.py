@@ -9,6 +9,7 @@ from game_payloads import (
     all_game_data,
     dragon_kill_event,
     game_start_event,
+    inhibitor_killed_event,
     turret_killed_event,
 )
 from leagueasymode.engine import compute_overlay_state
@@ -29,6 +30,7 @@ def answer(map_number: int, game_mode: str) -> JsonValue:
         game_start_event(),
         dragon_kill_event(1, 300.0, ENEMY_KILLER),
         turret_killed_event(2, 400.0, "Turret_T1_L_03_A", ENEMY_KILLER),
+        inhibitor_killed_event(3, 500.0, "Barracks_T1_C1", ENEMY_KILLER),
     ]
     return all_game_data(600.0, events, map_number=map_number, game_mode=game_mode)
 
@@ -64,7 +66,6 @@ def test_off_the_rift_only_what_holds_everywhere_is_shown() -> None:
     assert state.dragon is None
     assert state.objectives == []
     assert state.buffs == []
-    assert state.inhibitors == []
     assert state.structures == []
     assert state.jungle_paths == []
     assert state.camp_timers == []
@@ -80,6 +81,21 @@ def test_off_the_rift_only_what_holds_everywhere_is_shown() -> None:
     assert all(card.last_back is None for card in state.players)
     assert state.team_gold is None
     assert state.win_chance is None
+
+
+def test_on_the_rift_an_inhibitors_timer_is_confirmed() -> None:
+    (timer,) = state_of(11, "CLASSIC").inhibitors
+    assert timer.is_rule_verified
+
+
+def test_off_the_rift_the_inhibitors_timer_shows_unconfirmed() -> None:
+    # The owner, 2026-10-29: "no ARAM timers except inhib". No source gives ARAM's respawn time,
+    # so the Rift's 5:00 stands in, marked unconfirmed until a recorded ARAM game sets it.
+    (timer,) = state_of(HOWLING_ABYSS, "ARAM").inhibitors
+    assert timer.side == "ally"
+    assert timer.lane == "mid"
+    assert timer.respawns_at_game_time_seconds == 800.0
+    assert not timer.is_rule_verified
 
 
 def test_an_answer_without_a_map_counts_as_the_rift() -> None:
