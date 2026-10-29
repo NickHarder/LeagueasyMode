@@ -26,6 +26,10 @@ const DESCRIPTIONS: Readonly<Record<PreferenceName, readonly [string, string]>> 
   ],
   show_callouts: ["Callouts", "Short notices when something happens, such as an enemy reaching level 6."],
   show_suggestions: ["Suggestions", "Callouts that name an action, such as “take it”."],
+  show_moments: [
+    "Moments about friends",
+    "A notice when a friend's game hands over ammo, such as a second death to their lane opponent. Never spoken; ⌃⌥C copies it.",
+  ],
   speak_callouts: ["Speak callouts", "Each new callout read aloud in macOS’s voice, as it shows. Off unless turned on."],
   click_to_mark: [
     "Click to mark spells",

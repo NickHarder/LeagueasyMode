@@ -59,6 +59,7 @@ from leagueasymode.player_intel import (
 )
 from leagueasymode.problem_report import player_identities
 from leagueasymode.refit import ModelWeights
+from leagueasymode.roast.moments import Moment, MomentTracker
 from leagueasymode.tuning import DEFAULT_TUNING, Tuning
 
 NOT_RUNNING: Final = OverlayState(is_game_running=False)
@@ -364,6 +365,7 @@ class OverlayEngine:
         self._callouts: Final = CalloutTracker(
             rules=tuning.callouts, suggestion_rules=tuning.suggestions
         )
+        self._moments: Final = MomentTracker(rules=tuning.roast.moments)
         self._subscribers: Final[set[asyncio.Queue[OverlayState]]] = set()
 
     @property
@@ -385,6 +387,11 @@ class OverlayEngine:
     def preferences(self) -> OverlayPreferences:
         """What the player chose to see."""
         return self._preferences
+
+    @property
+    def moments(self) -> tuple[Moment, ...]:
+        """This game's moments about friends, oldest first (phase 11.6)."""
+        return self._moments.moments
 
     @property
     def friends(self) -> FriendsList:
@@ -516,9 +523,16 @@ class OverlayEngine:
         self._last_payload = payload if answer_state.is_game_running else None
         if answer_state.is_game_running and not self._current_state.is_game_running:
             self._start_loading_the_games_data()
+        self._moments.update(
+            _snapshot_or_none(payload) if answer_state.is_game_running else None,
+            answer_state.players,
+        )
         new_state = answer_state.model_copy(
             update={
-                "callouts": self._callouts.update(answer_state),
+                "callouts": [
+                    *self._callouts.update(answer_state),
+                    *self._moments.callouts(answer_state.game_time_seconds),
+                ],
                 "preferences": self._preferences,
                 "layout": self._layout,
             }
@@ -687,3 +701,20 @@ class OverlayEngine:
             if updates.full():
                 updates.get_nowait()
             updates.put_nowait(new_state)
+
+
+def _snapshot_or_none(payload: JsonValue | None) -> GameSnapshot | None:
+    """Return the game's answer as a snapshot, for the moments.
+
+    Args:
+        payload: The answer.
+
+    Returns:
+        The snapshot; None when there is none or it cannot be read.
+    """
+    if payload is None:
+        return None
+    try:
+        return GameSnapshot.model_validate(payload)
+    except ValidationError:
+        return None

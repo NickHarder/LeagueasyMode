@@ -97,7 +97,8 @@
         "jungle_four_minutes",
         "one_trick",
         "inhibitor_open",
-        "suggestion"
+        "suggestion",
+        "moment"
       ],
       "type": "string"
     },
@@ -924,6 +925,11 @@
         "show_suggestions": {
           "default": true,
           "title": "Show Suggestions",
+          "type": "boolean"
+        },
+        "show_moments": {
+          "default": true,
+          "title": "Show Moments",
           "type": "boolean"
         },
         "speak_callouts": {

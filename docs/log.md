@@ -12,6 +12,17 @@ skill has the format.
 
 ## 2026-10-28
 
+- The owner approved the five lines of the moments about friends ("approved"); a test now holds
+  them to a fingerprint, as the case's lines are, so a reworded line goes back to the owner.
+- Phase 11.6, moments about friends. During a game the engine notices when a friend's game hands
+  over ammo: a second or third death to their lane opponent with no help, a death in the minute
+  before the enemy's dragon, Elder or Baron, first blood given up, being at least 20 CS behind at
+  10:00 or 30 at 14:00, and the lane opponent's third kill on them while they have none. Each is
+  made once per game, from exact facts only, and uses a lane pairing only when both roles are given
+  or likely. It shows beside the callouts for a few seconds, is never spoken, and ⌃⌥C copies the
+  newest, then the ones before. A "Moments about friends" switch turns them off. The thresholds
+  are in `tuning.json` under `roast.moments`; the five lines in `roast/moments.toml` are drafts for
+  the owner's sign-off.
 - Phase 11.5, the friends list. The settings page has a Friends box: Riot IDs, one a line, checked
   as name#tag and saved with their own button, at most 50, kept in `friends.json` on the Mac
   (`LEAGUEASYMODE_FRIENDS` moves it). They are kept apart from the preferences, which go to the

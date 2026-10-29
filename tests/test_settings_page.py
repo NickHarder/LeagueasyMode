@@ -53,10 +53,11 @@ async def test_each_switch_starts_as_its_default_and_a_change_is_kept(tmp_path: 
     preferences_path = tmp_path / "preferences.json"
     async with open_settings(preferences_path) as (page, engine):
         switches = page.locator(".settings-row input")
-        # Ten switches: "Click to mark spells" is the tenth, added beside the app's shortcuts.
-        await expect(switches).to_have_count(10, timeout=5000)
+        # Eleven switches: "Click to mark spells", beside the app's shortcuts, and "Moments about
+        # friends" (phase 11.6), on by default like the others.
+        await expect(switches).to_have_count(11, timeout=5000)
         # Everything shows; speaking the callouts and clicking to mark wait to be turned on.
-        for index in range(8):
+        for index in range(9):
             await expect(switches.nth(index)).to_be_checked()
         await expect(page.get_by_label("Speak callouts")).not_to_be_checked()
         await expect(page.get_by_label("Click to mark spells")).not_to_be_checked()
@@ -89,7 +90,7 @@ async def test_the_friends_list_is_saved_and_a_wrong_line_is_explained(tmp_path:
     friends_path = tmp_path / "friends.json"
     save_friends(friends_path, FriendsList(riot_ids=("Zed Main#NA1",)))
     async with open_settings(tmp_path / "preferences.json", friends_path) as (page, engine):
-        box = page.get_by_label("Friends")
+        box = page.get_by_role("textbox", name="Friends")
         await expect(box).to_have_value("Zed Main#NA1", timeout=5000)
         await box.fill("Zed Main#NA1\n\n  Lux Enjoyer#EUW  \nnot a riot id")
         await page.get_by_role("button", name="Save friends").click()

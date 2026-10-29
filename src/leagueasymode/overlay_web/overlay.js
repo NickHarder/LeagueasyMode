@@ -798,8 +798,10 @@ function renderCallouts(nowMilliseconds) {
     const shownCallouts = received === null || gameTimeSeconds === null || !received.state.is_game_running
         ? []
         : received.state.callouts.filter((callout) => callout.shown_until_game_time_seconds > gameTimeSeconds &&
-            received.state.preferences.show_callouts &&
-            (callout.kind !== "suggestion" || received.state.preferences.show_suggestions));
+            (callout.kind === "moment"
+                ? received.state.preferences.show_moments
+                : received.state.preferences.show_callouts &&
+                    (callout.kind !== "suggestion" || received.state.preferences.show_suggestions)));
     const shownIds = new Set(shownCallouts.map((callout) => callout.callout_id));
     for (const child of Array.from(list.children)) {
         if (child instanceof HTMLElement && !shownIds.has(child.dataset["calloutId"] ?? "")) {
@@ -811,7 +813,8 @@ function renderCallouts(nowMilliseconds) {
         if (!presentIds.has(callout.callout_id)) {
             list.append(calloutElement(callout));
             // Spoken as it first shows; kept on screen, it is not spoken again.
-            if (received?.state.preferences.speak_callouts === true) {
+            // A moment about a friend is never spoken (phase 11.6).
+            if (received?.state.preferences.speak_callouts === true && callout.kind !== "moment") {
                 speak(callout.text);
             }
         }

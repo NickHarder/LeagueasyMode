@@ -541,3 +541,8 @@ body {
   color: #f2c94c;
   font-size: 0.85em;
 }
+
+/* A moment about a friend (phase 11.6): its own color beside the callouts. */
+.callout[data-kind="moment"] {
+  border-left: 3px solid #f2c94c;
+}

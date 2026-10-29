@@ -270,6 +270,16 @@ against the scoreboard's Riot ID in any case, and an enemy who is a friend has a
 strip. After the game the case's players are marked the same way, from the Riot IDs in the game's
 details, and the post-game window's chips show the ★.
 
+Moments about friends (phase 11.6, `roast/moments.py`) read each answer of the game with the cards'
+`is_friend` and roles: a friend's second and third deaths to their lane opponent with no help, a
+death shortly before the enemy takes a dragon, the Elder or Baron, first blood given up, a creep
+score deficit at 10:00 or 14:00 ("at least", since the scoreboard can lag on an enemy out of
+sight), and the lane opponent's kills on a friend who has none. A lane opponent is used only when
+both roles are given or likely. Each moment is made once per game, shows among the callouts as kind
+`moment` for `roast.moments.shown_seconds` in `tuning.json` when noticed within 30 seconds of
+happening, is never spoken, and has its own switch on the settings page. `/closing-line` gives the
+newest during a game, for ⌃⌥C. The lines, in `roast/moments.toml`, are the ones the owner approved, held to a fingerprint.
+
 The engine's own settings come from the repository's `.env` in a clone. An installed app, which
 has no clone, reads `settings.env` in the application's directory instead; where both exist, the
 repository's wins, and a real environment variable wins over either.
