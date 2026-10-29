@@ -13,11 +13,10 @@ NUMBER_WORDS: Final = re.compile(
     r"fifteen|twenty|thirty|forty|fifty|hundred|thousand|million|once|twice)\b",
     re.IGNORECASE,
 )
-# The lines the owner approved word for word: first on 2026-10-08 in nothingsmyfault, then the
-# rewrite with more flair on 2026-10-29 ("approved"), then harsher Speedrun-only lines the same day
-# ("approved, ship the speedrun lines"). A change to any line changes this; the new line goes to
-# the owner before the fingerprint does.
-APPROVED_LINES_SHA256: Final = "07fc7a4c639520145467d538b61500523bdc96ba0da6d502d37c634173dd7b30"
+# The lines the owner approved word for word: first on 2026-10-08 in nothingsmyfault, then with
+# more flair and harsher Speedrun lines, and on 2026-10-29 in League-chat voice ("approve"). A
+# change to any line changes this; the new line goes to the owner before the fingerprint does.
+APPROVED_LINES_SHA256: Final = "ea9dfda5df261c2379deedaa476b599337842b6b67afb2332768491f7c492559"
 
 
 def test_the_lines_are_the_ones_the_owner_approved() -> None:
