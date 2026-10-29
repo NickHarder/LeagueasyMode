@@ -1,4 +1,4 @@
-"""Moving the widgets in Chromium (phase 8.3): drag in edit mode, kept, and reset.
+"""Moving and sizing the widgets in Chromium (phase 8.3, L.1): drag in edit mode, kept, and reset.
 
 Run with `uv run pytest -m browser`. Set OVERLAY_SCREENSHOT_DIRECTORY to keep a screenshot.
 """
@@ -120,3 +120,86 @@ async def test_reset_puts_every_widget_back(tmp_path: Path) -> None:
         await page.get_by_role("button", name="Reset layout").click()
         assert await layout_when(engine, OverlayLayout()) == OverlayLayout()
         await expect(page.locator("#enemy-strip")).to_have_css("translate", "none")
+
+
+async def drag_corner(page: Page, widget_selector: str, right: float, down: float) -> None:
+    # The handle is the widget's bottom right corner, drawn in edit mode.
+    bounds = await page.locator(widget_selector).bounding_box()
+    assert bounds is not None
+    start_x = bounds["x"] + bounds["width"] - 4
+    start_y = bounds["y"] + bounds["height"] - 4
+    await page.mouse.move(start_x, start_y)
+    await page.mouse.down()
+    await page.mouse.move(start_x + right, start_y + down, steps=5)
+    await page.mouse.up()
+
+
+async def test_in_edit_mode_a_widgets_handle_resizes_it_and_the_size_is_kept(
+    tmp_path: Path,
+) -> None:
+    layout_path = tmp_path / "layout.json"
+    resized = OverlayLayout(scales={"you_panel": 1.2})
+    async with open_overlay(layout_path) as (page, engine):
+        await page.evaluate("window.leagueasymodeSetEditing(true)")
+        # 50 pixels out from the corner, right and down together, is a fifth bigger; the widget
+        # stays where it was, and its name says its size.
+        await drag_corner(page, "#you-panel", 25, 25)
+        assert await layout_when(engine, resized) == resized
+        await expect(page.locator("#you-panel")).to_have_css("scale", "1.2")
+        await expect(page.locator("#you-panel")).to_have_css("translate", "none")
+        await expect(page.locator("#you-panel")).to_have_attribute(
+            "data-movable", "You panel · 120%"
+        )
+        await keep_screenshot(page, "layout-resized")
+    assert load_layout(layout_path) == resized
+    async with open_overlay(layout_path) as (reopened_page, _reopened_engine):
+        await expect(reopened_page.locator("#you-panel")).to_have_css("scale", "1.2")
+
+
+async def test_a_widget_is_never_sized_past_its_limits(tmp_path: Path) -> None:
+    async with open_overlay(tmp_path / "layout.json") as (page, engine):
+        await page.evaluate("window.leagueasymodeSetEditing(true)")
+        await drag_corner(page, "#you-panel", 300, 300)
+        largest = OverlayLayout(scales={"you_panel": 1.6})
+        assert await layout_when(engine, largest) == largest
+        await drag_corner(page, "#you-panel", -250, 0)
+        smallest = OverlayLayout(scales={"you_panel": 0.6})
+        assert await layout_when(engine, smallest) == smallest
+
+
+async def test_in_edit_mode_scrolling_over_a_widget_resizes_it(tmp_path: Path) -> None:
+    async with open_overlay(tmp_path / "layout.json") as (page, engine):
+        await page.evaluate("window.leagueasymodeSetEditing(true)")
+        bounds = await page.locator("#enemy-strip").bounding_box()
+        assert bounds is not None
+        await page.mouse.move(bounds["x"] + bounds["width"] / 2, bounds["y"] + bounds["height"] / 2)
+        # Each step of the wheel down is 5 points smaller.
+        await page.mouse.wheel(0, 100)
+        await page.mouse.wheel(0, 100)
+        smaller = OverlayLayout(scales={"enemy_strip": 0.9})
+        assert await layout_when(engine, smaller) == smaller
+        await expect(page.locator("#enemy-strip")).to_have_css("scale", "0.9")
+
+
+async def test_out_of_edit_mode_scrolling_sizes_nothing(tmp_path: Path) -> None:
+    async with open_overlay(tmp_path / "layout.json") as (page, engine):
+        await page.evaluate("window.leagueasymodeSetEditing(true)")
+        await page.evaluate("window.leagueasymodeSetEditing(false)")
+        await page.evaluate("document.getElementById('enemy-strip').hidden = false")
+        bounds = await page.locator("#enemy-strip").bounding_box()
+        assert bounds is not None
+        await page.mouse.move(bounds["x"] + bounds["width"] / 2, bounds["y"] + bounds["height"] / 2)
+        await page.mouse.wheel(0, -100)
+        await asyncio.sleep(0.6)
+        assert engine.layout == OverlayLayout()
+
+
+async def test_reset_puts_every_widget_back_to_its_usual_size(tmp_path: Path) -> None:
+    layout_path = tmp_path / "layout.json"
+    layout_path.write_text(OverlayLayout(scales={"callouts": 1.4}).model_dump_json())
+    async with open_overlay(layout_path) as (page, engine):
+        await page.evaluate("window.leagueasymodeSetEditing(true)")
+        await expect(page.locator("#callouts")).to_have_css("scale", "1.4")
+        await page.get_by_role("button", name="Reset layout").click()
+        assert await layout_when(engine, OverlayLayout()) == OverlayLayout()
+        await expect(page.locator("#callouts")).to_have_css("scale", "none")

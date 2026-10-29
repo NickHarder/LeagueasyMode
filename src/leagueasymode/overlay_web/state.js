@@ -23,6 +23,9 @@ export const PREFERENCE_NAMES = [
 ];
 /** The widgets the player can move; the minimap layer stays over League's minimap. */
 export const MOVABLE_WIDGETS = ["objective_strip", "callouts", "enemy_strip", "you_panel"];
+/** A widget's size as a share of its usual size: 60% to 160%. */
+export const MIN_WIDGET_SCALE = 0.6;
+export const MAX_WIDGET_SCALE = 1.6;
 const DRAGON_OBJECTIVES = new Set(["dragon", "elder_dragon"]);
 const DRAGON_STATUSES = new Set(["not_spawned", "respawning", "alive"]);
 const SIDES = new Set(["ally", "enemy"]);
@@ -402,14 +405,17 @@ function isWidgetOffset(value) {
         Math.abs(value["x_share"]) <= 1 &&
         Math.abs(value["y_share"]) <= 1);
 }
+function isWidgetScale(value) {
+    return typeof value === "number" && value >= MIN_WIDGET_SCALE && value <= MAX_WIDGET_SCALE;
+}
 /** Return whether a value is a layout as the engine sends it. */
 export function isOverlayLayout(value) {
-    if (!isRecord(value) || !isRecord(value["offsets"])) {
+    if (!isRecord(value) || !isRecord(value["offsets"]) || !isRecord(value["scales"])) {
         return false;
     }
-    const offsets = value["offsets"];
     const movable = new Set(MOVABLE_WIDGETS);
-    return Object.entries(offsets).every(([widget, offset]) => movable.has(widget) && isWidgetOffset(offset));
+    return (Object.entries(value["offsets"]).every(([widget, offset]) => movable.has(widget) && isWidgetOffset(offset)) &&
+        Object.entries(value["scales"]).every(([widget, scale]) => movable.has(widget) && isWidgetScale(scale)));
 }
 /** Return whether a value is an overlay state as the engine sends it. */
 export function isOverlayState(value) {

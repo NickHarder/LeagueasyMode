@@ -6,6 +6,9 @@ skill has the format.
 
 ## 2026-10-29
 
+- Layout slice L.1, resize: in edit mode each widget's bottom right corner is a handle that
+  resizes it, and the scroll wheel over it does too, from 60% to 160%; the size is kept in
+  `layout.json` beside the place, and a file from before sizes keeps its places.
 - Off the Rift, inhibitor timers come back, the only timers there (the owner: "no ARAM timers
   except inhib"). No source gives ARAM's respawn time, so the Rift's 5:00 stands in, marked "~"
   as unconfirmed; the game's "inhibitor respawned" event still ends the timer on time. The first

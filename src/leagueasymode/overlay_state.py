@@ -8,7 +8,7 @@ shows up in review next to the TypeScript that has to follow it.
 
 import json
 import sys
-from typing import Literal
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -665,12 +665,21 @@ class WidgetOffset(BaseModel):
     y_share: float = Field(ge=-1.0, le=1.0)
 
 
+# A widget's size, as a share of its usual size: 60% to 160%.
+type WidgetScale = Annotated[float, Field(ge=0.6, le=1.6)]
+
+
 class OverlayLayout(BaseModel):
-    """Where the player moved the widgets; a widget not named is in its usual place."""
+    """Where the player moved the widgets, and how big they made them.
+
+    A widget not named in `offsets` is in its usual place, and one not named in `scales` at its
+    usual size.
+    """
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     offsets: dict[MovableWidget, WidgetOffset] = Field(default_factory=dict)
+    scales: dict[MovableWidget, WidgetScale] = Field(default_factory=dict)
 
 
 class OverlayState(BaseModel):

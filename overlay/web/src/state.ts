@@ -413,9 +413,14 @@ export interface WidgetOffset {
   readonly y_share: number;
 }
 
-/** Where the player moved the widgets; a widget not named is in its usual place. */
+/** A widget's size as a share of its usual size: 60% to 160%. */
+export const MIN_WIDGET_SCALE = 0.6;
+export const MAX_WIDGET_SCALE = 1.6;
+
+/** Where the player moved the widgets and how big they made them; a widget not named is as usual. */
 export interface OverlayLayout {
   readonly offsets: Readonly<Partial<Record<MovableWidget, WidgetOffset>>>;
+  readonly scales: Readonly<Partial<Record<MovableWidget, number>>>;
 }
 
 /** Everything the overlay shows at one moment. */
@@ -930,14 +935,20 @@ function isWidgetOffset(value: unknown): value is WidgetOffset {
   );
 }
 
+function isWidgetScale(value: unknown): value is number {
+  return typeof value === "number" && value >= MIN_WIDGET_SCALE && value <= MAX_WIDGET_SCALE;
+}
+
 /** Return whether a value is a layout as the engine sends it. */
 export function isOverlayLayout(value: unknown): value is OverlayLayout {
-  if (!isRecord(value) || !isRecord(value["offsets"])) {
+  if (!isRecord(value) || !isRecord(value["offsets"]) || !isRecord(value["scales"])) {
     return false;
   }
-  const offsets = value["offsets"];
   const movable: ReadonlySet<string> = new Set(MOVABLE_WIDGETS);
-  return Object.entries(offsets).every(([widget, offset]) => movable.has(widget) && isWidgetOffset(offset));
+  return (
+    Object.entries(value["offsets"]).every(([widget, offset]) => movable.has(widget) && isWidgetOffset(offset)) &&
+    Object.entries(value["scales"]).every(([widget, scale]) => movable.has(widget) && isWidgetScale(scale))
+  );
 }
 
 /** Return whether a value is an overlay state as the engine sends it. */

@@ -4,7 +4,7 @@ title: The macOS overlay app
 description: What the menu bar app does, how to run it from a clone, how to build, release and open the app that carries its own engine, its update check and open at login, and the steps for the tracer bullet's test on a Mac over League in each display mode.
 tags: [macos, overlay, tracer-bullet]
 status: draft
-generated: { by: claude-code/cloud, at: 2026-10-29T00:10:00Z }
+generated: { by: claude-code/cloud, at: 2026-10-29T03:20:01Z }
 sources:
   - id: build-update
     resource: ../../overlay/macos/Sources/OverlayCore/BuildUpdate.swift
@@ -91,9 +91,13 @@ and outlines each movable widget with its name, an empty one too: the objective 
 callouts, the enemy strip and the You panel (the minimap layer stays over League's minimap). Drag
 one and drop it; it stays there, kept by the engine in `layout.json` in the application's
 directory as shares of the overlay's width and height, so it keeps its place when League's window
-changes size. Escape, ⌃⌥⌘L, the menu item again, hiding the overlay, or two minutes end it, and
+changes size. To resize one, drag its bottom right corner, the handle drawn in edit mode (50
+pixels out, right and down together, is a fifth bigger), or scroll over it (5 points a step); it
+grows and shrinks from the side it is held to, from 60% to 160% of its usual size, its name says
+its size ("You panel · 120%"), and the size is kept in `layout.json` beside its place (layout
+slice L.1). Escape, ⌃⌥⌘L, the menu item again, hiding the overlay, or two minutes end it, and
 every click goes to the game again; "Reset layout", in the menu or on the notice at the bottom of
-the overlay while editing, puts every widget back.[^layout-editing]
+the overlay while editing, puts every widget back in its usual place and size.[^layout-editing]
 
 **Spoken callouts:** with "Speak callouts" turned on in the settings (it is off until then),
 the overlay page hands each new callout to the app as it shows, and the app speaks it once in
