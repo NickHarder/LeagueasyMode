@@ -53,7 +53,7 @@ def test_every_number_in_every_line_is_in_an_exhibit_the_line_cites(spice_level:
 
 def test_the_approved_lines_come_out_word_for_word() -> None:
     texts = [line.text for line in case_of(CaseOptions(spice=2)).lines]
-    assert "At 14:00, our Lee Sin was 1,661 gold behind Vi. That is not a me problem." in texts
+    assert "At 14:00, our Lee Sin was 1,661 gold behind Vi. Gap. Not mine." in texts
 
 
 def test_the_chat_line_states_its_numbers_without_letters_or_a_signature() -> None:

@@ -6,6 +6,10 @@ skill has the format.
 
 ## 2026-10-29
 
+- The case lines get more flair (the owner: "these roasts seems lame. you have to add some
+  flair to them"; the draft "approved"). All 58 are reworded so that each ends on a punchline,
+  the plain ones at Honor-eligible and Salty included; the slots, spice levels and conditions are
+  unchanged, and every line still passes the floor, the moderation list and the no-number rule.
 - "Minimap: jungler and roamers only", a setting the owner asked for: the minimap layer marks the
   enemy jungler and only those laners likely away from their lane (at least 50%, a tuning
   value), so a top laner freezing a wave no longer has a circle to watch. Off unless turned on.
