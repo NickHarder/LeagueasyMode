@@ -3,8 +3,7 @@ import OverlayCore
 
 /// Runs the engine (`leagueasymode run`) as a child process and reports what it announces.
 ///
-/// The engine's standard output is read for the line with the overlay's address, and for the
-/// lines saying a game's case is kept. Its log, its
+/// The engine's standard output is read for the line with the overlay's address. Its log, its
 /// standard error and output both, goes to this run's `engine.log` (`EngineLog`), or to the app's
 /// standard error, as under `swift run`, when there is no log file.
 final class EngineProcess {
@@ -16,14 +15,12 @@ final class EngineProcess {
     /// - Parameters:
     ///   - command: How to run the engine.
     ///   - onOverlayURL: Called on the main actor with the overlay's address, once the engine is up.
-    ///   - onCaseReady: Called on the main actor with a game's id when its case is kept.
     ///   - onExit: Called on the main actor with the engine's exit status, when it stops.
     init(
         command: EngineCommand,
         logURL: URL?,
         extraEnvironment: [String: String],
         onOverlayURL: @escaping @MainActor @Sendable (URL) -> Void,
-        onCaseReady: @escaping @MainActor @Sendable (Int64) -> Void,
         onExit: @escaping @MainActor @Sendable (Int32) -> Void
     ) {
         process.executableURL = command.executableURL
@@ -42,8 +39,6 @@ final class EngineProcess {
             for outputLine in outputLines.append(newBytes) {
                 if let overlayURL = EngineAnnouncement.overlayURL(fromLine: outputLine) {
                     Task { @MainActor in onOverlayURL(overlayURL) }
-                } else if let gameID = EngineAnnouncement.caseReadyGameID(fromLine: outputLine) {
-                    Task { @MainActor in onCaseReady(gameID) }
                 }
             }
         }

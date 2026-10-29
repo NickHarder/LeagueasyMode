@@ -30,44 +30,4 @@ public enum EngineAnnouncement {
         }
         return components.url
     }
-
-    /// What the line the engine prints when a game's case is kept starts with; the game's id
-    /// follows it.
-    public static let caseReadyPrefix = "LEAGUEASYMODE_CASE_READY="
-
-    /// Returns the id of the game whose case the engine has just kept.
-    ///
-    /// - Parameter outputLine: One line the engine printed, with or without its newline.
-    /// - Returns: The game's id, or nil for any other line and for an id that is not a positive
-    ///   whole number, which the engine never announces.
-    public static func caseReadyGameID(fromLine outputLine: String) -> Int64? {
-        let trimmedLine = outputLine.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard trimmedLine.hasPrefix(caseReadyPrefix) else {
-            return nil
-        }
-        guard let gameID = Int64(trimmedLine.dropFirst(caseReadyPrefix.count)), gameID > 0 else {
-            return nil
-        }
-        return gameID
-    }
-}
-
-/// Opens the roast once for each game: the engine announces a game's case when the quick case is
-/// kept and again when the full one replaces it, and the page already open picks up the full one.
-public struct RoastOpening: Sendable {
-    private var lastOpenedGameID: Int64?
-
-    public init() {}
-
-    /// Returns whether to open the roast for a game whose case was just kept, and notes it.
-    ///
-    /// - Parameter gameID: The game's id, as the engine announced it.
-    /// - Returns: True the first time for each game in a row, false after.
-    public mutating func shouldOpen(gameID: Int64) -> Bool {
-        guard gameID != lastOpenedGameID else {
-            return false
-        }
-        lastOpenedGameID = gameID
-        return true
-    }
 }

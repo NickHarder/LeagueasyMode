@@ -24,6 +24,7 @@ from leagueasymode.roast.case import CaseOptions
 from leagueasymode.roast.case_view import CaseView, case_options_of, case_view
 from leagueasymode.roast.claude_take import ClaudeTakeSettings, save_claude_take_settings
 from leagueasymode.roast.last_game import LastGameRoast, roast_path_beside
+from leagueasymode.roast.suggestions import roast_suggestions
 
 ALLOWED_HOST_NAMES: Final = frozenset({"127.0.0.1", "localhost"})
 # The header the macOS app sends with a mark.
@@ -77,6 +78,7 @@ WEB_ASSETS: Final = {
     "/layout.js": ("layout.js", "text/javascript"),
     "/speech.js": ("speech.js", "text/javascript"),
     "/marking.js": ("marking.js", "text/javascript"),
+    "/roast_card.js": ("roast_card.js", "text/javascript"),
     "/overlay.css": ("overlay.css", "text/css"),
     "/summary.html": ("summary.html", "text/html"),
     "/summary.js": ("summary.js", "text/javascript"),
@@ -316,8 +318,28 @@ def _add_the_last_games_case(
         )
         return web.json_response({"text": claude_take or view.closing_line, "take": take})
 
+    async def roast_suggestions_route(request: web.Request) -> web.Response:
+        # The overlay's roast card after a game: three lines at one spice level, and when the case
+        # was kept, so the card shows only a case kept after the game it saw end.
+        try:
+            spice = case_options_of({"spice": request.query.get("spice", "2")}).spice
+        except ValueError as error:
+            return web.json_response({"message": str(error)}, status=400)
+        roast_path = roast_path_beside(summary_path) if summary_path is not None else None
+        kept = await asyncio.to_thread(_kept_roast_or_none, roast_path)
+        if kept is None:
+            return web.json_response(no_case_answer, status=404)
+        last_game, kept_at = kept
+        suggestions = await asyncio.to_thread(
+            roast_suggestions, last_game, spice, engine.tuning.roast
+        )
+        return web.json_response(
+            {"kept_at_seconds": kept_at, **suggestions.model_dump(mode="json")}
+        )
+
     application.router.add_get("/case", case)
     application.router.add_get("/closing-line", closing_line)
+    application.router.add_get("/roast-suggestions", roast_suggestions_route)
 
 
 def _add_the_players_choices(
@@ -546,6 +568,26 @@ def _last_game_roast_or_none(roast_path: Path | None) -> LastGameRoast | None:
         return LastGameRoast.model_validate_json(roast_text)
     except ValidationError:
         return None
+
+
+def _kept_roast_or_none(roast_path: Path | None) -> tuple[LastGameRoast, float] | None:
+    """Return what the last game's case is built from, and when it was kept.
+
+    Args:
+        roast_path: The file it is kept in; None for none.
+
+    Returns:
+        It and its file's modification time, in seconds since the epoch; None as
+        `_last_game_roast_or_none` gives none, or when the file went in between.
+    """
+    last_game = _last_game_roast_or_none(roast_path)
+    if last_game is None or roast_path is None:
+        return None
+    try:
+        kept_at = roast_path.stat().st_mtime
+    except OSError:
+        return None
+    return last_game, kept_at
 
 
 def _text_or_none(file_path: Path | None) -> str | None:

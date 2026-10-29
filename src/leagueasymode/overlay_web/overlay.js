@@ -8,6 +8,7 @@
 import { isOverlayState, } from "./state.js";
 import { applyLayout, isEditingLayout, startLayoutEditing } from "./layout.js";
 import { listenForMarks, markButtonsElement, reportClickRegions } from "./marking.js";
+import { updateRoastCard } from "./roast_card.js";
 import { speak } from "./speech.js";
 const EVENTS_PATH = "/events";
 const RENDER_INTERVAL_MILLISECONDS = 250;
@@ -1150,6 +1151,7 @@ function render() {
     renderMinimap(nowMilliseconds);
     renderYouPanel();
     renderOverview();
+    updateRoastCard(latestReceivedState?.state.is_game_running ?? false);
     reportClickRegions();
 }
 /** Listen to the engine; the browser reconnects by itself when the stream drops. */

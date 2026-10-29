@@ -12,8 +12,6 @@ const SECONDS_PER_MINUTE = 60;
 const PERCENT = 100;
 const ONE_THOUSAND = 1000;
 const MINUS_SIGN = "−";
-// The page's address ends with this when the app opens it for the roast alone.
-const ROAST_ONLY_HASH = "#roast";
 const CHART_WIDTH = 640;
 const CHART_HEIGHT = 200;
 const MARGIN_LEFT = 44;
@@ -388,17 +386,9 @@ async function fetchJson(path) {
     const response = await fetch(path);
     return response.ok ? (await response.json()) : null;
 }
-/** Show only the case, as the app opens it when a game's case is ready, before its summary is. */
-function renderRoastOnly(root) {
-    root.replaceChildren(htmlElement("h1", "summary-result summary-roast-title", "Roast this game"), htmlElement("p", "summary-detail", "Pick a line, copy it, and paste it into the post-game chat. The rest of this game's summary is under Last game… in the app's menu once the match timeline arrives."), caseSectionElement(fetchJson));
-}
 async function start() {
     const root = document.getElementById("summary");
     if (root === null) {
-        return;
-    }
-    if (window.location.hash === ROAST_ONLY_HASH) {
-        renderRoastOnly(root);
         return;
     }
     const [summary, history] = await Promise.all([fetchJson("/summary"), fetchJson("/history")]);

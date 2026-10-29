@@ -7,6 +7,7 @@
  * where the buttons are (`ClickRegions` in the app), and the app takes the clicks on them only,
  * never the keyboard.
  */
+import { TAKES_CLICKS_CLASS } from "./roast_card.js";
 import type { PlayerCard } from "./state.js";
 
 export type MarkedSpell = "flash" | "summoner" | "ultimate";
@@ -101,7 +102,7 @@ export function reportClickRegions(): void {
   if (appHandler === undefined) {
     return;
   }
-  const regions = [...document.querySelectorAll<HTMLElement>(`.${BUTTON_CLASS}`)]
+  const regions = [...document.querySelectorAll<HTMLElement>(`.${BUTTON_CLASS}, .${TAKES_CLICKS_CLASS}`)]
     .map((button) => button.getBoundingClientRect())
     .filter((rectangle) => rectangle.width > 0 && rectangle.height > 0)
     .map((rectangle) => [

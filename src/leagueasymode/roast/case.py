@@ -127,7 +127,8 @@ def build_case(
         checked_lines,
         letter_by_key,
         limit_characters=rules.chat_line_max_characters,
-        verdict_title=verdict.title,
+        # "NO LANE VERDICT" is no ruling, only that the lanes are unknown: chat need not hear it.
+        verdict_title="" if verdict.code == "no_lane_verdict" else verdict.title,
         cite_letters=options.cite_letters,
         signature=options.signature,
     )

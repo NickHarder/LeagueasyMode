@@ -264,19 +264,6 @@ export function renderCaseBody(body: HTMLElement, view: CaseView): void {
       `${String(view.closing_line.length)} / ${String(view.closing_line_limit)} characters · paste it yourself; nothing is sent to chat`,
     ),
   );
-  const otherOptions = view.closing_options.slice(1);
-  if (otherOptions.length > 0) {
-    const options = htmlElement("ul", "case-options");
-    options.setAttribute("aria-label", "More lines for chat");
-    options.append(
-      ...otherOptions.map((option) => {
-        const item = htmlElement("li", "case-option");
-        item.append(htmlElement("span", "case-option-line", option), copyButtonElement(option));
-        return item;
-      }),
-    );
-    closing.append(options);
-  }
   const parts: HTMLElement[] = view.is_quick ? [htmlElement("p", "case-quick", QUICK_CASE_TEXT), verdict] : [verdict];
   const claudeTake = claudeTakeElement(view);
   if (view.board.length > 0) {
