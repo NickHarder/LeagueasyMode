@@ -6,6 +6,11 @@ skill has the format.
 
 ## 2026-10-29
 
+- None of the owner's ARAM and Swiftplay games reached the recordings repository, though the token
+  works: a crash report from build 170 did. The crash: the game gave the player's move speed as 0,
+  and the jungle path divided by it; a speed of 0 now counts as none, and the usual 380 stands in.
+  A game withheld because its anonymized copy would hold a name is now tried again by each new
+  build, so that the build that fixes the cause sends the games already played.
 - Details on a key, at the owner's ask: "thers still too much visual clutter and it messes with my
   mouse. maybe extra details onyl show if i hit tab or somethign". At a glance: the timers, the
   newest two callouts, and one short line an enemy (role, name, R, level, respawn, marked

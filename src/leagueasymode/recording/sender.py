@@ -7,8 +7,9 @@ add-generic-password -s LeagueasyMode-GitHub -a recordings -w`, which asks for t
 it starts and after each game, and the status page can ask for a round at any time.
 
 Only an anonymized copy is sent (`anonymize.py`), never the recording itself: a game whose copy
-would still hold a name is withheld, and never tried again. The copy goes to
-`games/<name>-anonymized.jsonl.xz` in the repository `LEAGUEASYMODE_SEND_GAMES_TO` names, through
+would still hold a name is withheld, and not tried again until the app is updated, since only a
+new build can fix the anonymizer (none of the owner's games reached the repository at first).
+The copy goes to `games/<name>-anonymized.jsonl.xz` in the repository `LEAGUEASYMODE_SEND_GAMES_TO` names, through
 GitHub's contents API; empty sends nothing. `sent-games.json` beside the recordings lists what was
 sent and what was withheld, so each game is sent once. The token is read from the Keychain for
 each round, and is never written anywhere, shown or logged.
@@ -64,6 +65,8 @@ class SentLog(BaseModel):
 
     sent: list[str] = Field(default_factory=list)
     withheld: list[str] = Field(default_factory=list)
+    # The build that withheld them: another build tries them again.
+    withheld_by: str = ""
     # The crash reports sent (`crash_reports.py`), by file name.
     crash_reports: list[str] = Field(default_factory=list)
     # The problem reports' files sent (`problem_report.py`), as `report-<time>/<file>`.
@@ -176,6 +179,7 @@ class GameSender:
         api_base_url: str = GITHUB_API_BASE_URL,
         tls_context: ssl.SSLContext | None = None,
         status: StatusBoard | None = None,
+        build: str = "",
     ) -> None:
         """Keep where the games are and where they go.
 
@@ -188,6 +192,8 @@ class GameSender:
             tls_context: The context for HTTPS, which trusts the system's certificates; None for
                 a stand-in over plain HTTP.
             status: Told how sending stands; None to tell nothing.
+            build: The running build (`build_info.build_label`); the games another build withheld
+                are tried again.
         """
         self.session: Final = session
         self.recordings_directory: Final = recordings_directory
@@ -196,6 +202,7 @@ class GameSender:
         self.api_base_url: Final = api_base_url.rstrip("/")
         self.tls_context: Final = tls_context
         self.status: Final = status
+        self.build: Final = build
         self._round_lock: Final = asyncio.Lock()
 
     async def send_unsent(self) -> None:
@@ -220,6 +227,10 @@ class GameSender:
             return
         log_path = self.recordings_directory / SENT_LOG_NAME
         sent_log = await asyncio.to_thread(_read_sent_log, log_path)
+        if sent_log.withheld_by != self.build:
+            # Another build may hold the fix that this one's anonymizer lacked: try them again.
+            sent_log.withheld = []
+            sent_log.withheld_by = self.build
         done = {*sent_log.sent, *sent_log.withheld}
         unsent = [
             path

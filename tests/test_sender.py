@@ -68,7 +68,12 @@ def write_games(directory: Path, names: Sequence[str]) -> list[Path]:
 
 
 async def send_with(
-    github: FakeGitHub, recordings: Path, token: str | None, board: StatusBoard
+    github: FakeGitHub,
+    recordings: Path,
+    token: str | None,
+    board: StatusBoard,
+    *,
+    build: str = "0.1.0 (build 1, abc1234)",
 ) -> None:
     async with serve(github.application()) as github_url, aiohttp.ClientSession() as session:
         sender = GameSender(
@@ -78,6 +83,7 @@ async def send_with(
             token_source=lambda: token,
             api_base_url=github_url,
             status=board,
+            build=build,
         )
         await sender.send_unsent()
 
@@ -175,9 +181,11 @@ async def test_a_game_that_would_leak_a_name_is_withheld(tmp_path: Path) -> None
     await send_with(github, recordings, TOKEN, board)
     assert set(github.puts) == {"games/game-1-anonymized.jsonl.xz"}
     sent_log = json.loads((recordings / SENT_LOG_NAME).read_text())
+    # The build that withheld a game is kept with it, so that the next build tries it again.
     assert sent_log == {
         "sent": ["game-1"],
         "withheld": ["game-2"],
+        "withheld_by": "0.1.0 (build 1, abc1234)",
         "crash_reports": [],
         "reports": [],
     }
@@ -185,10 +193,38 @@ async def test_a_game_that_would_leak_a_name_is_withheld(tmp_path: Path) -> None
         "problem",
         f"Sent 1 game to {REPOSITORY}; 1 sent in all; 1 withheld: no safe anonymized copy",
     )
-    # A withheld game is not tried again.
+    # A withheld game is not tried again by the same build.
     github.puts.clear()
     await send_with(github, recordings, TOKEN, board)
     assert github.puts == {}
+
+
+async def test_a_new_build_tries_the_withheld_games_again(tmp_path: Path) -> None:
+    # None of the owner's games reached the repository; when one is withheld, the build that
+    # fixes the anonymizer must send it, rather than leave it on the Mac for good.
+    recordings = tmp_path / "recordings"
+    write_games(recordings, ["game-1"])
+    (recordings / SENT_LOG_NAME).write_text(
+        json.dumps({"sent": [], "withheld": ["game-1"], "withheld_by": "0.1.0 (build 1, abc1234)"})
+    )
+    github = FakeGitHub()
+    board = StatusBoard(home_directory=tmp_path)
+    await send_with(github, recordings, TOKEN, board, build="0.1.0 (build 2, def5678)")
+    assert set(github.puts) == {"games/game-1-anonymized.jsonl.xz"}
+    sent_log = json.loads((recordings / SENT_LOG_NAME).read_text())
+    assert sent_log["sent"] == ["game-1"]
+    assert sent_log["withheld"] == []
+
+
+async def test_a_log_from_before_builds_were_kept_tries_its_withheld_games_once(
+    tmp_path: Path,
+) -> None:
+    recordings = tmp_path / "recordings"
+    write_games(recordings, ["game-1"])
+    (recordings / SENT_LOG_NAME).write_text(json.dumps({"sent": [], "withheld": ["game-1"]}))
+    github = FakeGitHub()
+    await send_with(github, recordings, TOKEN, StatusBoard(home_directory=tmp_path))
+    assert set(github.puts) == {"games/game-1-anonymized.jsonl.xz"}
 
 
 async def test_with_no_repository_sending_is_off(tmp_path: Path) -> None:
