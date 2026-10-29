@@ -100,9 +100,32 @@ class PositionRules(BaseModel):
     four_minute_habit_until_seconds: float = 300.0
     # An enemy seen this recently (`sightings.py`) is in sight: the minimap draws no likely place.
     seen_for_seconds: float = 3.0
+    # A laner at least this likely to be away from their lane is roaming: the minimap's "jungler
+    # and roamers only" setting shows them, and the jungler.
+    roaming_chance: float = 0.5
+
+
+# The roles that play in a lane; the jungler roams by trade.
+LANE_ROLES: Final = frozenset({"TOP", "MIDDLE", "BOTTOM", "UTILITY"})
 
 
 POSITION_RULES: Final = PositionRules()
+
+
+def is_roaming(role: str, location: PositionEstimate | None, rules: PositionRules) -> bool:
+    """Return whether a laner is likely away from their lane, as a lane gank or a roam is.
+
+    Args:
+        role: Their role.
+        location: Where they likely are; None while dead or not estimated.
+        rules: The positions' rules, for how likely is roaming.
+
+    Returns:
+        Whether they are a laner at least `rules.roaming_chance` likely to be away from it.
+    """
+    return (
+        role in LANE_ROLES and location is not None and location.away_chance >= rules.roaming_chance
+    )
 
 
 def position_estimate(

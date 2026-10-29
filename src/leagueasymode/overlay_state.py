@@ -342,6 +342,9 @@ class PlayerCard(BaseModel):
     # The rank of their ultimate from their level: 0 before it is learned; None while the patch's
     # files are unknown, or for an ultimate that ranks like a basic ability.
     ultimate_rank: int | None = None
+    # A laner likely away from their lane (`inference/positions.py`), whom the minimap's "jungler
+    # and roamers only" setting shows; never the jungler, shown as the jungler.
+    is_roaming: bool = False
 
 
 class TeamItemGold(BaseModel):
@@ -621,6 +624,9 @@ class OverlayPreferences(BaseModel):
     # Buttons on each enemy's row that mark a spell in one click, beside the app's shortcuts; off
     # unless the player turns it on, as the overlay then takes the clicks on those buttons.
     click_to_mark: bool = False
+    # The minimap layer marks only the enemy jungler and laners likely away from their lane (a
+    # top laner freezing a wave stays off it); every enemy unless the player narrows it.
+    minimap_roamers_only: bool = False
 
 
 # The widgets the player can move; the minimap layer stays over League's minimap.

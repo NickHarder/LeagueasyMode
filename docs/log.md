@@ -6,6 +6,9 @@ skill has the format.
 
 ## 2026-10-29
 
+- "Minimap: jungler and roamers only", a setting the owner asked for: the minimap layer marks the
+  enemy jungler and only those laners likely away from their lane (at least 50%, a tuning
+  value), so a top laner freezing a wave no longer has a circle to watch. Off unless turned on.
 - Updates install themselves on the Mac: build 107 found build 119, installed it with no game on
   screen and started it again, without "Open Anyway" (the owner: "it updated to build 119
   flawlessly"). Each merge to main now reaches the app on its own.

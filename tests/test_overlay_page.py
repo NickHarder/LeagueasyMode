@@ -593,6 +593,37 @@ async def test_an_enemy_control_ward_shows_where_it_likely_is(tmp_path: Path) ->
         await keep_screenshot(page, "control-wards")
 
 
+async def test_jungler_and_roamers_only_leaves_laners_in_lane_off_the_minimap(
+    tmp_path: Path,
+) -> None:
+    async with open_overlay(
+        tmp_path,
+        snapshot_count=60,
+        speed=1.0,
+        preferences=OverlayPreferences(minimap_roamers_only=True),
+    ) as page:
+        minimap = page.locator("#minimap")
+        # The jungler always shows.
+        await expect(minimap.locator('circle[data-champion="Vi"]')).to_have_count(1, timeout=5000)
+        state_response = await page.request.get(page.url + "state")
+        enemies = [
+            card for card in (await state_response.json())["players"] if card["side"] == "enemy"
+        ]
+        shown = {
+            card["champion_name"]
+            for card in enemies
+            if card["location"] is not None and (card["role"] == "JUNGLE" or card["is_roaming"])
+        }
+        hidden = {card["champion_name"] for card in enemies} - shown
+        # The replay has laners in their lanes, so the setting has someone to leave off.
+        assert hidden
+        for champion_name in hidden:
+            await expect(minimap.locator(f'circle[data-champion="{champion_name}"]')).to_have_count(
+                0
+            )
+        await keep_screenshot(page, "minimap-roamers-only")
+
+
 async def test_the_minimap_layer_marks_where_each_enemy_likely_is(tmp_path: Path) -> None:
     async with open_overlay(tmp_path, snapshot_count=60, speed=1.0) as page:
         minimap = page.locator("#minimap")
