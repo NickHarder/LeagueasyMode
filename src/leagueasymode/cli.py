@@ -32,6 +32,7 @@ from leagueasymode.config import (
     REPOSITORY_ROOT,
     Settings,
     default_accuracy_history_path,
+    default_friends_path,
     default_last_game_summary_path,
     default_layout_path,
     default_model_weights_path,
@@ -50,6 +51,7 @@ from leagueasymode.data_dragon import (
 )
 from leagueasymode.engine import OverlayEngine, PatchStatsLoader
 from leagueasymode.engine_status import StatusBoard
+from leagueasymode.friends import load_friends
 from leagueasymode.game_api import GameApiClient
 from leagueasymode.game_summary import game_summary
 from leagueasymode.league_client import (
@@ -205,6 +207,7 @@ async def run_overlay(
             model_weights=model_weights,
             preferences=await asyncio.to_thread(load_preferences, preferences_path),
             layout=await asyncio.to_thread(load_layout, layout_path),
+            friends=await asyncio.to_thread(load_friends, _friends_path(settings)),
             status=status,
             tuning=tuning,
             on_error=reporter.report,
@@ -219,6 +222,7 @@ async def run_overlay(
                 history_path=history_path,
                 preferences_path=preferences_path,
                 layout_path=layout_path,
+                friends_path=_friends_path(settings),
                 send_games=game_sender.send_unsent,
                 make_report=_report_maker(engine, status, game_sender, settings),
             )
@@ -239,6 +243,7 @@ async def run_overlay(
                     history_path=history_path,
                     summary_path=summary_path,
                     tuning=tuning,
+                    friend_riot_ids=engine.friends.riot_id_keys,
                 )
             except Exception as error:
                 status.set_part(
@@ -623,6 +628,7 @@ async def after_the_game(
     history_path: Path,
     summary_path: Path,
     tuning: Tuning | None = None,
+    friend_riot_ids: frozenset[str] = frozenset(),
 ) -> None:
     """Score a recorded game, add its scores to the accuracy history, and write its summary.
 
@@ -632,6 +638,7 @@ async def after_the_game(
         history_path: The accuracy history.
         summary_path: The last game's summary, for the post-game window.
         tuning: The hand-set thresholds the engine ran with; None for the defaults.
+        friend_riot_ids: The owner's friends' Riot IDs, in lower case, marked in the case.
     """
     game = await asyncio.to_thread(read_recorded_game, recording_path, tuning or Tuning())
     patch_stats = await load_patch_stats(
@@ -645,11 +652,15 @@ async def after_the_game(
     )
     summary = await asyncio.to_thread(game_summary, recording_path.name, game, scores)
     await asyncio.to_thread(_write_whole, summary_path, summary.model_dump_json())
-    await asyncio.to_thread(_keep_last_game_roast, game, summary_path, tuning or Tuning())
+    await asyncio.to_thread(
+        _keep_last_game_roast, game, summary_path, tuning or Tuning(), friend_riot_ids
+    )
     logger.info("scored %s: %d estimators", recording_path.name, len(scores))
 
 
-def _keep_last_game_roast(game: RecordedGame, summary_path: Path, tuning: Tuning) -> None:
+def _keep_last_game_roast(
+    game: RecordedGame, summary_path: Path, tuning: Tuning, friend_riot_ids: frozenset[str]
+) -> None:
     """Keep what the last game's case is built from beside its summary, or forget the one before.
 
     A game with no case (no details yet, or not two teams of five) leaves no older game's case in
@@ -659,12 +670,14 @@ def _keep_last_game_roast(game: RecordedGame, summary_path: Path, tuning: Tuning
         game: The recorded game.
         summary_path: The last game's summary.
         tuning: The hand-set thresholds, among them the lanes' for the roast.
+        friend_riot_ids: The owner's friends' Riot IDs, in lower case, marked in the case.
     """
     roast_path = roast_path_beside(summary_path)
     roast = last_game_roast(
         game.client_resources,
         game.minute_snapshots[-1] if game.minute_snapshots else None,
         lane_rules=tuning.roast.lanes,
+        friend_riot_ids=friend_riot_ids,
     )
     if roast is None:
         roast_path.unlink(missing_ok=True)
@@ -713,6 +726,18 @@ def _tuning_of(settings: Settings) -> Tuning:
     if problem is not None:
         logger.warning("could not read %s (%s); the hand-set values stand", tuning_path, problem)
     return tuning
+
+
+def _friends_path(settings: Settings) -> Path:
+    """Return where the owner's friends list is kept.
+
+    Args:
+        settings: The settings, which can move it.
+
+    Returns:
+        The file.
+    """
+    return settings.friends or default_friends_path()
 
 
 def _write_whole(file_path: Path, file_text: str) -> None:

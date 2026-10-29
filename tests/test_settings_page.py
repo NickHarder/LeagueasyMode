@@ -13,6 +13,7 @@ import pytest
 from playwright.async_api import Page, async_playwright, expect
 
 from leagueasymode.engine import OverlayEngine
+from leagueasymode.friends import FriendsList, load_friends, save_friends
 from leagueasymode.game_api import GameApiClient
 from leagueasymode.overlay_server import create_overlay_application
 from leagueasymode.overlay_state import OverlayPreferences
@@ -23,14 +24,19 @@ pytestmark = pytest.mark.browser
 
 
 @contextlib.asynccontextmanager
-async def open_settings(preferences_path: Path) -> AsyncIterator[tuple[Page, OverlayEngine]]:
+async def open_settings(
+    preferences_path: Path, friends_path: Path | None = None
+) -> AsyncIterator[tuple[Page, OverlayEngine]]:
     async with aiohttp.ClientSession() as session:
         engine = OverlayEngine(
             GameApiClient(session, unused_local_url(), tls_context=None),
             poll_interval_seconds=1,
             preferences=load_preferences(preferences_path),
+            friends=load_friends(friends_path) if friends_path is not None else None,
         )
-        application = create_overlay_application(engine, preferences_path=preferences_path)
+        application = create_overlay_application(
+            engine, preferences_path=preferences_path, friends_path=friends_path
+        )
         async with serve(application) as overlay_url, async_playwright() as playwright:
             browser = await playwright.chromium.launch(
                 executable_path=os.environ.get("PLAYWRIGHT_CHROMIUM_EXECUTABLE")
@@ -77,3 +83,22 @@ async def test_the_page_shows_what_was_kept(tmp_path: Path) -> None:
     async with open_settings(preferences_path) as (page, _engine):
         await expect(page.get_by_label("Minimap layer")).not_to_be_checked(timeout=5000)
         await expect(page.get_by_label("Callouts", exact=True)).to_be_checked()
+
+
+async def test_the_friends_list_is_saved_and_a_wrong_line_is_explained(tmp_path: Path) -> None:
+    friends_path = tmp_path / "friends.json"
+    save_friends(friends_path, FriendsList(riot_ids=("Zed Main#NA1",)))
+    async with open_settings(tmp_path / "preferences.json", friends_path) as (page, engine):
+        box = page.get_by_label("Friends")
+        await expect(box).to_have_value("Zed Main#NA1", timeout=5000)
+        await box.fill("Zed Main#NA1\n\n  Lux Enjoyer#EUW  \nnot a riot id")
+        await page.get_by_role("button", name="Save friends").click()
+        status = page.locator(".settings-friends-status")
+        await expect(status).to_contain_text("Not saved: not a Riot ID")
+        await expect(status).to_contain_text("'not a riot id'")
+        assert engine.friends == FriendsList(riot_ids=("Zed Main#NA1",))
+        await box.fill("Zed Main#NA1\n\n  Lux Enjoyer#EUW  ")
+        await page.get_by_role("button", name="Save friends").click()
+        await expect(status).to_have_text("Saved: 2 friends")
+        await expect(box).to_have_value("Zed Main#NA1\nLux Enjoyer#EUW")
+    assert load_friends(friends_path) == FriendsList(riot_ids=("Zed Main#NA1", "Lux Enjoyer#EUW"))

@@ -262,6 +262,14 @@ with `PUT /layout` only with the header `X-LeagueasyMode-Request: layout`, sent 
 state, and kept in `layout.json` (`LEAGUEASYMODE_LAYOUT` moves it). A file that cannot be read
 puts every widget in its usual place.
 
+The owner's friends list (phase 11.5) is kept apart from both: their Riot IDs, written on the
+settings page one a line and saved with `PUT /friends` (header `X-LeagueasyMode-Request:
+friends`), are kept in `friends.json` (`LEAGUEASYMODE_FRIENDS` moves it), at most 50, each checked
+as name#tag. They never travel with the state: each player card carries only `is_friend`, matched
+against the scoreboard's Riot ID in any case, and an enemy who is a friend has a ★ on the enemy
+strip. After the game the case's players are marked the same way, from the Riot IDs in the game's
+details, and the post-game window's chips show the ★.
+
 The engine's own settings come from the repository's `.env` in a clone. An installed app, which
 has no clone, reads `settings.env` in the application's directory instead; where both exist, the
 repository's wins, and a real environment variable wins over either.

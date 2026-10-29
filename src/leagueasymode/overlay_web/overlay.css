@@ -534,3 +534,10 @@ body {
   white-space: nowrap;
   cursor: pointer;
 }
+
+/* A friend on the other team (phase 11.5). */
+.enemy-friend {
+  margin-left: 4px;
+  color: #f2c94c;
+  font-size: 0.85em;
+}

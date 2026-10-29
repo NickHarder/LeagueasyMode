@@ -27,6 +27,10 @@
         "is_defendant": {
           "title": "Is Defendant",
           "type": "boolean"
+        },
+        "is_friend": {
+          "title": "Is Friend",
+          "type": "boolean"
         }
       },
       "required": [
@@ -34,7 +38,8 @@
         "champion",
         "position",
         "side",
-        "is_defendant"
+        "is_defendant",
+        "is_friend"
       ],
       "title": "CasePlayer",
       "type": "object"

@@ -232,6 +232,7 @@ export function isPlayerCard(value) {
         typeof value["champion_name"] === "string" &&
         isOneOf(value["side"], SIDES) &&
         typeof value["is_you"] === "boolean" &&
+        typeof value["is_friend"] === "boolean" &&
         typeof value["position"] === "string" &&
         typeof value["role"] === "string" &&
         isOneOf(value["role_confidence"], ROLE_CONFIDENCES) &&

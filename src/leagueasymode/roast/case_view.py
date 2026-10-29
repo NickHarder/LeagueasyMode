@@ -42,6 +42,8 @@ class CasePlayer(BaseModel):
     # From the player on this machine's side.
     side: Literal["ally", "enemy"]
     is_defendant: bool
+    # On the owner's friends list (phase 11.5); never their name.
+    is_friend: bool
 
 
 class ViewPart(BaseModel):
@@ -180,6 +182,7 @@ def case_view(last_game: LastGameRoast, options: CaseOptions, rules: RoastRules)
                 position=player.position,
                 side="ally" if player.team_id == case.defendant.team_id else "enemy",
                 is_defendant=player.participant_id == case.defendant.participant_id,
+                is_friend=player.is_friend,
             )
             for player in players
         ),

@@ -22,7 +22,8 @@ function isCasePlayer(value) {
         typeof value["position"] === "string" &&
         typeof value["side"] === "string" &&
         SIDES.has(value["side"]) &&
-        typeof value["is_defendant"] === "boolean");
+        typeof value["is_defendant"] === "boolean" &&
+        typeof value["is_friend"] === "boolean");
 }
 function isViewPart(value) {
     return isRecord(value) && typeof value["text"] === "string" && isTextOrNull(value["letter"]);
