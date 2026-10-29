@@ -71,6 +71,7 @@ export function isCaseView(value) {
         isArrayOf(value["board"], isViewLane) &&
         isArrayOf(value["lines"], isViewLine) &&
         typeof value["closing_line"] === "string" &&
+        isArrayOf(value["closing_options"], (option) => typeof option === "string") &&
         typeof value["closing_line_limit"] === "number" &&
         isTextOrNull(value["risk_warning"]) &&
         isArrayOf(value["exhibits"], isViewExhibit) &&

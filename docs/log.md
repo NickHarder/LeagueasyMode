@@ -13,6 +13,12 @@ skill has the format.
   first key metrics, `KEY_METRICS.md` and `metrics/`: the north star NS-01, games the overlay got
   right; drivers for games scored, the jungler, fight and contest calls; guardrails for engine
   stops and problem reports. None has a scored value yet: no game of the owner's has been scored.
+- Pick a roast after the game (the owner: "When a game ends though and we are looking at post
+  game stats, that's when I want a way to see roast options and pick + send one"; asked, copy and
+  paste rather than the app typing into League's chat, which Riot's rules for third-party apps
+  forbid, and the window opening by itself). The case offers up to five lines that fit chat, each
+  with a Copy button. When a game's case is kept the engine says so on its output, and the app
+  opens the roast alone, once a game, before that game's summary exists.
 - Less on screen (the owner: moments and team calls "should only be when I ask via a hotkey or
   during the end game screen. I don't want the extra clutter. I don't need team calls on my
   screen", and the level 6 and item callouts "can probably be refined so it's not a pop up").

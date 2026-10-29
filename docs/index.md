@@ -16,6 +16,7 @@ okf_version: "0.2"
 
 # Subdirectories
 
+* [audit](audit/index.md) - 1 file.
 * [history](history/index.md) - 1 concept: Retrospective.
 * [metrics](metrics/index.md) - 7 concepts: Metric.
 * [plans](plans/index.md) - 12 concepts: Plan.

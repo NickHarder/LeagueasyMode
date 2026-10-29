@@ -4,12 +4,13 @@ import re
 from pathlib import Path
 from typing import Final
 
+import pytest
 from pydantic import JsonValue
 
 from client_game_payloads import CHAMPIONS, GAME_ID, MIDDLE_ID, end_of_game_payload
 from data_dragon_fixtures import fixture_patch_stats
 from game_payloads import GAME_ID as RECORDED_GAME_ID
-from leagueasymode.cli import _keep_quick_roast, after_the_game
+from leagueasymode.cli import CASE_READY_ANNOUNCEMENT, _keep_quick_roast, after_the_game
 from leagueasymode.data_dragon import PatchStats
 from leagueasymode.friends import FriendsList
 from leagueasymode.roast.case import CaseOptions, build_case
@@ -99,15 +100,20 @@ def test_without_names_teams_of_five_or_the_player_here_there_is_no_quick_case()
     assert quick_game_roast(None) is None
 
 
-def test_the_quick_case_is_kept_beside_the_summary(tmp_path: Path) -> None:
+def test_the_quick_case_is_kept_beside_the_summary(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
     summary_path = tmp_path / "last-game.json"
     _keep_quick_roast(end_of_game_payload(), summary_path, frozenset())
     kept = LastGameRoast.model_validate_json(roast_path_beside(summary_path).read_text())
     assert kept.is_quick
-    # Nothing is kept from stats that give no quick case.
+    # The macOS app is told, so it opens the roast for this game.
+    assert capsys.readouterr().out == f"{CASE_READY_ANNOUNCEMENT}{kept.game.ledger.game_id}\n"
+    # Nothing is kept, or announced, from stats that give no quick case.
     other = tmp_path / "other.json"
     _keep_quick_roast(end_of_game_payload(blue_players=4), other, frozenset())
     assert not roast_path_beside(other).exists()
+    assert capsys.readouterr().out == ""
 
 
 async def test_the_full_case_replaces_the_quick_one(tmp_path: Path) -> None:
