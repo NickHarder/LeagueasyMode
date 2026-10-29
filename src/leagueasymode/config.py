@@ -69,6 +69,15 @@ def default_last_game_summary_path() -> Path:
     return default_application_directory() / "last-game.json"
 
 
+def default_claude_take_path() -> Path:
+    """Return where Claude's take's settings are kept when no setting says otherwise.
+
+    Returns:
+        `claude-take.json` in the application's directory (`default_application_directory`).
+    """
+    return default_application_directory() / "claude-take.json"
+
+
 def default_friends_path() -> Path:
     """Return where the owner's friends list is kept when no setting says otherwise.
 
@@ -184,6 +193,11 @@ class Settings(BaseSettings):
     # The owner's friends' Riot IDs, which the settings page changes; empty for the default
     # (`default_friends_path`).
     friends: Path | None = None
+    # Claude's take's settings, which the settings page changes; empty for the default
+    # (`default_claude_take_path`).
+    claude_take: Path | None = None
+    # The `claude` command; empty to look for it on PATH and where it is usually installed.
+    claude_command: Path | None = None
     # Where the player moved the widgets, which the overlay's edit mode changes; empty for the
     # default (`default_layout_path`).
     layout: Path | None = None

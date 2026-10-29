@@ -8,12 +8,16 @@ Matching is on words after normalising: case is ignored, common letter swaps are
 "mom"), and single letters spaced apart are joined ("k y s" is "kys"), but a term inside a longer
 word does not match ("skyscraper" is not "kys").
 
-Every line today comes from templates the owner approved, so this list guards against a template
-slip. Before any model writes text, an established moderation list of slurs is to be added here;
-this list does not spell them out.
+The approved lines come from templates the owner signed off, so this list guards against a
+template slip. A line a model writes (Claude's take, phase 11.8) must also pass an established
+moderation list: LDNOOBW's English list, kept as the SHA-256 of each normalised term in
+`moderation_terms.sha256` (`scripts/make_moderation_list.py`), so no term is spelled out here.
 """
 
+import functools
+import hashlib
 import re
+from importlib import resources
 from typing import Final
 
 LETTER_SWAPS: Final = str.maketrans(
@@ -57,6 +61,8 @@ IDENTITY_TERMS: Final = (
     "virgin",
 )
 FLOOR_TERMS: Final = (*SELF_HARM_TERMS, *FAMILY_TERMS, *LOOKS_TERMS, *IDENTITY_TERMS)
+# The longest term on the moderation list, in words; every run of words up to this long is checked.
+MODERATION_LONGEST_TERM_WORDS: Final = 6
 
 
 def normalized_words(text: str) -> list[str]:
@@ -98,3 +104,52 @@ def floor_problems(text: str) -> list[str]:
         for term in FLOOR_TERMS
         if " " + " ".join(normalized_words(term)) + " " in padded_text
     ]
+
+
+def moderation_key(term: str) -> str:
+    """Return a term as the moderation list keeps it: its normalised words, joined by spaces.
+
+    Args:
+        term: A term, or a run of a line's words.
+
+    Returns:
+        The key; empty for a term with no words.
+    """
+    return " ".join(normalized_words(term))
+
+
+@functools.cache
+def _moderation_hashes() -> frozenset[str]:
+    """Return the moderation list's hashes, read once.
+
+    Returns:
+        The SHA-256 of each normalised term.
+    """
+    list_text = resources.files(__package__).joinpath("moderation_terms.sha256").read_text("utf-8")
+    return frozenset(
+        line.strip() for line in list_text.splitlines() if line.strip() and not line.startswith("#")
+    )
+
+
+def moderation_problems(text: str) -> list[str]:
+    """Return a problem when a text holds a term on the moderation list; empty when it holds none.
+
+    Every run of up to `MODERATION_LONGEST_TERM_WORDS` normalised words is checked, so a term of
+    several words matches as a whole and a term inside a longer word does not.
+
+    Args:
+        text: A line a model wrote.
+
+    Returns:
+        One description, which does not repeat the term, or none.
+    """
+    words = normalized_words(text)
+    hashes = _moderation_hashes()
+    runs = (
+        " ".join(words[start : start + length])
+        for length in range(1, MODERATION_LONGEST_TERM_WORDS + 1)
+        for start in range(len(words) - length + 1)
+    )
+    if any(hashlib.sha256(run.encode()).hexdigest() in hashes for run in runs):
+        return ["the line holds a term on the moderation list"]
+    return []

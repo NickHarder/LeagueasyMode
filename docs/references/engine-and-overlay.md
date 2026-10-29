@@ -4,7 +4,7 @@ title: The engine and the overlay page
 description: How the engine turns the game's answers into the overlay's state, how that state reaches the widgets, how the page is built and tested, and how to run it all against a replay.
 tags: [engine, overlay, architecture]
 status: draft
-generated: { by: claude-code/cloud, at: 2026-10-28T23:35:06Z }
+generated: { by: claude-code/cloud, at: 2026-10-28T23:51:15Z }
 generated: { by: claude-code/cloud, at: 2026-10-28T23:40:00Z }
 sources:
   - id: engine
@@ -289,6 +289,21 @@ name); the gold lead is an estimate and is said as "about". At most one call a m
 `team_call` for `roast.team_calls.shown_seconds`, never spoken, with its own switch; ⌃⌥C copies the
 newest call or moment. The thresholds are in `tuning.json` under `roast.team_calls`, and the lines,
 in `roast/team_calls.toml`, are the ones the owner approved, held to a fingerprint.
+
+Claude's take (phase 11.8, `roast/claude_take.py`) rewords the lines ⌃⌥C copies (the post-game
+closing line, each moment and each team call) with the `claude` command on the Mac, in print mode,
+with the owner's own login and the style set on the settings page (`claude-take.json`,
+`LEAGUEASYMODE_CLAUDE_TAKE`; the command is looked for on PATH and where it is usually installed,
+or named by `LEAGUEASYMODE_CLAUDE_COMMAND`). It is off until turned on. Every number and champion's
+name in the line becomes a slot before it is sent, so only the wording and the style leave the Mac;
+the answer must keep each slot once, add no digit and no capitalised name mid-sentence, be one line
+within the chat limit, and pass the safety floor and the moderation list (LDNOOBW's English list,
+kept as SHA-256 hashes in `roast/moderation_terms.sha256`); otherwise, or with no answer in 30
+seconds, the approved line stands. Takes are written in the background and kept for the run: the
+post-game window shows Claude's take under the closing line, marked as not approved, and `/case`
+says while one is being written; ⌃⌥C copies Claude's take once it is ready. Two parts of the plan
+are not built yet: the per-friend running jokes, and naming a model, which is left to the `claude`
+command's default unless the owner types one in.
 
 The engine's own settings come from the repository's `.env` in a clone. An installed app, which
 has no clone, reads `settings.env` in the application's directory instead; where both exist, the

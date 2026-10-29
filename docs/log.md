@@ -12,6 +12,16 @@ skill has the format.
 
 ## 2026-10-28
 
+- Phase 11.8, Claude's take ("approved, keep building 11.8"). With its setting on, the lines ⌃⌥C
+  copies are reworded by the `claude` command on the Mac, in the owner's style, in the background;
+  the approved line stands until the take is ready, and whenever a take fails a check. Only the
+  wording and the style are sent: numbers and champions become slots and are filled back on the
+  Mac. A take must keep every slot, add no number or name, fit the chat, and pass the safety floor
+  and, newly, an established moderation list (LDNOOBW's, kept as hashes so the public repository
+  spells nothing out), as the plan required before any model writes text. The post-game window
+  shows Claude's take under the closing line, marked as not approved. Left for later: the
+  per-friend running jokes, which need the engine to know which friend played which champion; and
+  the model, which is the `claude` command's own default unless the owner types one in.
 - The owner approved the five lines of the team calls ("approved"); a test holds them to a
   fingerprint, so a reworded line goes back to the owner.
 - Phase 11.9, team calls, as the owner approved them ("approved, keep building 11.9"): on for

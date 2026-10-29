@@ -31,6 +31,8 @@ const SOURCE_NAMES = {
     live: "the live game",
     computation: "worked out here",
 };
+// How soon the window asks again while Claude's take is being written.
+const CLAUDE_TAKE_RECHECK_MILLISECONDS = 1500;
 const NO_CASE_TEXT = "No case for this game: its details have not come yet, or it was not two teams of five.";
 function htmlElement(name, className, text) {
     const element = document.createElement(name);
@@ -134,6 +136,19 @@ function exhibitsElement(view) {
     }
     return details;
 }
+/** Draw Claude's take of the closing line (phase 11.8), or that it is being written; null when off. */
+function claudeTakeElement(view) {
+    if (view.claude_take === null && !view.claude_take_pending) {
+        return null;
+    }
+    const take = htmlElement("figure", "case-claude-take");
+    if (view.claude_take === null) {
+        take.append(htmlElement("p", "case-claude-take-label", "Claude is rewording the closing line…"));
+        return take;
+    }
+    take.append(htmlElement("p", "case-claude-take-label", "Claude's take · not one of your approved lines · ⌃⌥C copies this one"), htmlElement("blockquote", "case-closing-line", view.claude_take), htmlElement("figcaption", "case-closing-caption", `${String(view.claude_take.length)} / ${String(view.closing_line_limit)} characters`));
+    return take;
+}
 /** Draw the case's verdict, board, lines, closing line and exhibits. */
 export function renderCaseBody(body, view) {
     const verdict = htmlElement("div", "case-verdict");
@@ -151,10 +166,14 @@ export function renderCaseBody(body, view) {
     const closing = htmlElement("figure", "case-closing");
     closing.append(htmlElement("blockquote", "case-closing-line", view.closing_line), htmlElement("figcaption", "case-closing-caption", `${String(view.closing_line.length)} / ${String(view.closing_line_limit)} characters · paste it yourself; nothing is sent to chat`));
     const parts = [verdict];
+    const claudeTake = claudeTakeElement(view);
     if (view.board.length > 0) {
         parts.push(boardElement(view, openExhibits));
     }
     parts.push(view.lines.length > 0 ? lines : htmlElement("p", "case-empty", "No line fits this target."), closing);
+    if (claudeTake !== null) {
+        parts.push(claudeTake);
+    }
     if (view.risk_warning !== null) {
         const warning = htmlElement("p", "case-risk", view.risk_warning);
         warning.setAttribute("role", "note");
@@ -226,6 +245,14 @@ export function caseSectionElement(fetchCase) {
         }
         markChoice();
         renderCaseBody(body, answer);
+        if (answer.claude_take_pending) {
+            // Ask again for the same choice until Claude's take arrives; a new pick replaces this.
+            window.setTimeout(() => {
+                if (request === latestRequest) {
+                    void load();
+                }
+            }, CLAUDE_TAKE_RECHECK_MILLISECONDS);
+        }
     };
     void load();
     return section;

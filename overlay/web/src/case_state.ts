@@ -68,6 +68,9 @@ export interface CaseView {
   readonly closing_line_limit: number;
   readonly risk_warning: string | null;
   readonly exhibits: readonly ViewExhibit[];
+  // Claude's take of the closing line (phase 11.8), and whether one is still being written.
+  readonly claude_take: string | null;
+  readonly claude_take_pending: boolean;
 }
 
 /** What the window asks `/case` for. */
@@ -166,7 +169,9 @@ export function isCaseView(value: unknown): value is CaseView {
     typeof value["closing_line"] === "string" &&
     typeof value["closing_line_limit"] === "number" &&
     isTextOrNull(value["risk_warning"]) &&
-    isArrayOf(value["exhibits"], isViewExhibit)
+    isArrayOf(value["exhibits"], isViewExhibit) &&
+    isTextOrNull(value["claude_take"]) &&
+    typeof value["claude_take_pending"] === "boolean"
   );
 }
 

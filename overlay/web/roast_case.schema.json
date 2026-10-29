@@ -299,6 +299,23 @@
       },
       "title": "Exhibits",
       "type": "array"
+    },
+    "claude_take": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Claude Take"
+    },
+    "claude_take_pending": {
+      "default": false,
+      "title": "Claude Take Pending",
+      "type": "boolean"
     }
   },
   "required": [
