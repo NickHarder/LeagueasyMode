@@ -4,7 +4,7 @@ title: The engine and the overlay page
 description: How the engine turns the game's answers into the overlay's state, how that state reaches the widgets, how the page is built and tested, and how to run it all against a replay.
 tags: [engine, overlay, architecture]
 status: draft
-generated: { by: claude-code/cloud, at: 2026-10-28T23:40:00Z }
+generated: { by: claude-code/cloud, at: 2026-10-28T23:35:06Z }
 generated: { by: claude-code/cloud, at: 2026-10-28T23:40:00Z }
 sources:
   - id: engine
@@ -279,6 +279,16 @@ both roles are given or likely. Each moment is made once per game, shows among t
 `moment` for `roast.moments.shown_seconds` in `tuning.json` when noticed within 30 seconds of
 happening, is never spoken, and has its own switch on the settings page. `/closing-line` gives the
 newest during a game, for ⌃⌥C. The lines, in `roast/moments.toml`, are the ones the owner approved, held to a fingerprint.
+
+Team calls (phase 11.9, `roast/team_calls.py`) are for the whole team, friends or not, to paste in
+team chat: an epic monster spawning in 60 to 90 seconds, two or more enemies dead for 20 seconds or
+more while three of us are up, a fight lost (three of us dead at once and fewer of them), a
+teammate's third death in four minutes, and being about 2k gold down while the win chance is still
+35% or more. A call blames no one and names no player (its id carries a scoreboard place, never a
+name); the gold lead is an estimate and is said as "about". At most one call a minute, shown as kind
+`team_call` for `roast.team_calls.shown_seconds`, never spoken, with its own switch; ⌃⌥C copies the
+newest call or moment. The thresholds are in `tuning.json` under `roast.team_calls`, and the lines,
+in `roast/team_calls.toml`, are the ones the owner approved, held to a fingerprint.
 
 The engine's own settings come from the repository's `.env` in a clone. An installed app, which
 has no clone, reads `settings.env` in the application's directory instead; where both exist, the

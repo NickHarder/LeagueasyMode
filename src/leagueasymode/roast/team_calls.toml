@@ -1,0 +1,15 @@
+# The team calls (phase 11.9): one line for each kind, its slots in braces, for team chat.
+#
+# The owner approved these on 2026-10-28 ("approved"); a test holds them to a fingerprint, so a new
+# or reworded line goes back to the owner first. A call blames no one,
+# names no player, and states a number only from what the overlay shows; the gold is an estimate,
+# so it is "about". Slots: {monster} an epic monster; {clock} a game clock such as 1:25; {count}
+# and {seconds} numbers; {target} what to take; {next} the next objective and its time, such as
+# "Dragon at 18:40"; {gold} rounded gold, such as 2.5k.
+
+[lines]
+objective_soon = "{monster} in {clock}. Let's not die, ward around it and start moving."
+enemies_down = "{count} of theirs are down for {seconds}s. Let's take {target} now."
+fight_lost = "Reset and buy. Next up is {next}, let's group for it."
+death_streak = "We're fine. Next up is {next}, let's play for that."
+behind_but_winnable = "About {gold} gold down, but this is winnable. Let's play safe and fight on our terms."

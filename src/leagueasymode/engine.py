@@ -60,6 +60,7 @@ from leagueasymode.player_intel import (
 from leagueasymode.problem_report import player_identities
 from leagueasymode.refit import ModelWeights
 from leagueasymode.roast.moments import Moment, MomentTracker
+from leagueasymode.roast.team_calls import TeamCallTracker
 from leagueasymode.tuning import DEFAULT_TUNING, Tuning
 
 NOT_RUNNING: Final = OverlayState(is_game_running=False)
@@ -366,6 +367,7 @@ class OverlayEngine:
             rules=tuning.callouts, suggestion_rules=tuning.suggestions
         )
         self._moments: Final = MomentTracker(rules=tuning.roast.moments)
+        self._team_calls: Final = TeamCallTracker(rules=tuning.roast.team_calls)
         self._subscribers: Final[set[asyncio.Queue[OverlayState]]] = set()
 
     @property
@@ -392,6 +394,15 @@ class OverlayEngine:
     def moments(self) -> tuple[Moment, ...]:
         """This game's moments about friends, oldest first (phase 11.6)."""
         return self._moments.moments
+
+    @property
+    def lines_to_copy(self) -> tuple[str, ...]:
+        """This game's moments and team calls, in the order they were made, for ⌃⌥C."""
+        made = [
+            *((moment.made_at_game_time_seconds, moment.text) for moment in self._moments.moments),
+            *((call.made_at_game_time_seconds, call.text) for call in self._team_calls.calls),
+        ]
+        return tuple(text for _, text in sorted(made, key=lambda pair: pair[0]))
 
     @property
     def friends(self) -> FriendsList:
@@ -523,15 +534,15 @@ class OverlayEngine:
         self._last_payload = payload if answer_state.is_game_running else None
         if answer_state.is_game_running and not self._current_state.is_game_running:
             self._start_loading_the_games_data()
-        self._moments.update(
-            _snapshot_or_none(payload) if answer_state.is_game_running else None,
-            answer_state.players,
-        )
+        snapshot = _snapshot_or_none(payload) if answer_state.is_game_running else None
+        self._moments.update(snapshot, answer_state.players)
+        self._team_calls.update(answer_state, snapshot)
         new_state = answer_state.model_copy(
             update={
                 "callouts": [
                     *self._callouts.update(answer_state),
                     *self._moments.callouts(answer_state.game_time_seconds),
+                    *self._team_calls.callouts(answer_state.game_time_seconds),
                 ],
                 "preferences": self._preferences,
                 "layout": self._layout,

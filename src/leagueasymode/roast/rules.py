@@ -41,6 +41,32 @@ class MomentRules(BaseModel):
     shown_seconds: float = Field(default=8.0, gt=0)
 
 
+class TeamCallRules(BaseModel):
+    """When the team gets a call (roast/team_calls.py, phase 11.9)."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    # At most one call this often, in game seconds.
+    least_gap_seconds: float = Field(default=60.0, gt=0)
+    # An epic monster spawning this soon, from the first figure to the second.
+    objective_soon_from_seconds: float = Field(default=60.0, ge=0)
+    objective_soon_until_seconds: float = Field(default=90.0, gt=0)
+    # This many enemies dead, each for at least this much longer, with this many of us alive.
+    enemies_down_count: int = Field(default=2, ge=1)
+    enemies_down_seconds: float = Field(default=20.0, gt=0)
+    enemies_down_allies_alive: int = Field(default=3, ge=1)
+    # A fight lost: this many of us dead at once, and fewer of them.
+    fight_lost_allies_dead: int = Field(default=3, ge=1)
+    # A teammate's deaths within this long.
+    death_streak_deaths: int = Field(default=3, ge=2)
+    death_streak_seconds: float = Field(default=240.0, gt=0)
+    # Behind by at least this much estimated gold, with at least this win chance.
+    behind_gold: int = Field(default=2000, ge=1)
+    winnable_chance: float = Field(default=0.35, ge=0.0, le=1.0)
+    # How long a call shows on the overlay, in game seconds.
+    shown_seconds: float = Field(default=8.0, gt=0)
+
+
 class RoastRules(BaseModel):
     """Every hand-set threshold of the roast."""
 
@@ -49,5 +75,6 @@ class RoastRules(BaseModel):
     lanes: LaneRules = Field(default_factory=LaneRules)
     verdict: VerdictRules = Field(default_factory=VerdictRules)
     moments: MomentRules = Field(default_factory=MomentRules)
+    team_calls: TeamCallRules = Field(default_factory=TeamCallRules)
     # The longest line chat takes; Riot publishes none, so it is a guess until measured in a game.
     chat_line_max_characters: int = Field(default=140, ge=20)

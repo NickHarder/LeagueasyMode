@@ -938,8 +938,10 @@ function renderCallouts(nowMilliseconds: number): void {
             callout.shown_until_game_time_seconds > gameTimeSeconds &&
             (callout.kind === "moment"
               ? received.state.preferences.show_moments
-              : received.state.preferences.show_callouts &&
-                (callout.kind !== "suggestion" || received.state.preferences.show_suggestions)),
+              : callout.kind === "team_call"
+                ? received.state.preferences.show_team_calls
+                : received.state.preferences.show_callouts &&
+                  (callout.kind !== "suggestion" || received.state.preferences.show_suggestions)),
         );
   const shownIds = new Set(shownCallouts.map((callout) => callout.callout_id));
   for (const child of Array.from(list.children)) {
@@ -954,8 +956,12 @@ function renderCallouts(nowMilliseconds: number): void {
     if (!presentIds.has(callout.callout_id)) {
       list.append(calloutElement(callout));
       // Spoken as it first shows; kept on screen, it is not spoken again.
-      // A moment about a friend is never spoken (phase 11.6).
-      if (received?.state.preferences.speak_callouts === true && callout.kind !== "moment") {
+      // A moment about a friend (11.6) or a team call (11.9) is never spoken: it is for chat.
+      if (
+        received?.state.preferences.speak_callouts === true &&
+        callout.kind !== "moment" &&
+        callout.kind !== "team_call"
+      ) {
         speak(callout.text);
       }
     }

@@ -546,3 +546,8 @@ body {
 .callout[data-kind="moment"] {
   border-left: 3px solid #f2c94c;
 }
+
+/* A call for the team (phase 11.9): calm, its own color. */
+.callout[data-kind="team_call"] {
+  border-left: 3px solid #56ccf2;
+}

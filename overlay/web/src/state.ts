@@ -257,7 +257,8 @@ export type CalloutKind =
   | "one_trick"
   | "inhibitor_open"
   | "suggestion"
-  | "moment";
+  | "moment"
+  | "team_call";
 
 /** A short notice shown for a few seconds when something happens; never an instruction. */
 export interface Callout {
@@ -373,6 +374,7 @@ export interface OverlayPreferences {
   readonly show_callouts: boolean;
   readonly show_suggestions: boolean;
   readonly show_moments: boolean;
+  readonly show_team_calls: boolean;
   readonly speak_callouts: boolean;
   readonly click_to_mark: boolean;
 }
@@ -388,6 +390,7 @@ export const PREFERENCE_NAMES = [
   "show_callouts",
   "show_suggestions",
   "show_moments",
+  "show_team_calls",
   "speak_callouts",
   "click_to_mark",
 ] as const satisfies readonly (keyof OverlayPreferences)[];
@@ -461,6 +464,7 @@ const CALLOUT_KINDS: ReadonlySet<string> = new Set([
   "inhibitor_open",
   "suggestion",
   "moment",
+  "team_call",
 ]);
 const START_SIDES: ReadonlySet<string> = new Set(["blue", "red"]);
 const MAP_HALVES: ReadonlySet<string> = new Set(["top", "bot"]);
