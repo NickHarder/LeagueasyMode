@@ -6,6 +6,15 @@ skill has the format.
 
 ## 2026-10-29
 
+- None of the owner's ARAM and Swiftplay games reached the recordings repository, though the token
+  works: a crash report from build 170 did. The crash: the game gave the player's move speed as 0,
+  and the jungle path divided by it; a speed of 0 now counts as none, and the usual 380 stands in.
+  A game withheld because its anonymized copy would hold a name is now tried again by each new
+  build, so that the build that fixes the cause sends the games already played. The owner's problem
+  report then showed none was withheld: "Nothing new to send". The games were left open, as a
+  recording is closed only once the match timeline comes, up to ten minutes after the game, and
+  the app quit or updated before that (it updated after nearly every game that day). A recording
+  untouched for 20 minutes is now closed and sent; the reports list the recordings' folder.
 - Worth a look away, after the owner: "league is already a very bsy game so if it is goign to take
   my eyes off fights, it needs to be wort while info". At a glance only the callouts that ask for
   an action now show and are spoken (objective soon, numbers window, level 6, a laner missing, the

@@ -7,11 +7,12 @@ add-generic-password -s LeagueasyMode-GitHub -a recordings -w`, which asks for t
 it starts and after each game, and the status page can ask for a round at any time.
 
 Only an anonymized copy is sent (`anonymize.py`), never the recording itself: a game whose copy
-would still hold a name is withheld, and never tried again. The copy goes to
-`games/<name>-anonymized.jsonl.xz` in the repository `LEAGUEASYMODE_SEND_GAMES_TO` names, through
-GitHub's contents API; empty sends nothing. `sent-games.json` beside the recordings lists what was
-sent and what was withheld, so each game is sent once. The token is read from the Keychain for
-each round, and is never written anywhere, shown or logged.
+would still hold a name is withheld, and not tried again until the app is updated, since only a new
+build can fix the anonymizer (none of the owner's games reached the repository at first). The copy
+goes to `games/<name>-anonymized.jsonl.xz` in the repository that `LEAGUEASYMODE_SEND_GAMES_TO`
+names, through GitHub's contents API; empty sends nothing. `sent-games.json` beside the recordings
+lists what was sent and what was withheld, so each game is sent once. The token is read from the
+Keychain for each round, and is never written anywhere, shown or logged.
 """
 
 import asyncio
@@ -24,6 +25,7 @@ import ssl
 import subprocess
 import sys
 import tempfile
+import time
 from collections.abc import Callable
 from pathlib import Path
 from typing import Final
@@ -35,7 +37,12 @@ from leagueasymode.crash_reports import CRASH_REPORTS_FOLDER
 from leagueasymode.engine_status import PartState, StatusBoard
 from leagueasymode.problem_report import REPORTS_FOLDER
 from leagueasymode.recording.anonymize import IdentityLeakError, anonymize_recording
-from leagueasymode.recording.file_format import COMPRESSED_SUFFIX, PLAIN_SUFFIX
+from leagueasymode.recording.file_format import (
+    COMPRESSED_SUFFIX,
+    PLAIN_SUFFIX,
+    RecordingFormatError,
+)
+from leagueasymode.recording.writer import close_unfinished_recording
 
 GITHUB_API_BASE_URL: Final = "https://api.github.com"
 # The owner's private repository for the games (2026-10-28).
@@ -51,6 +58,9 @@ HTTP_OK: Final = 200
 # The contents API's answer when the file is already there.
 HTTP_UNPROCESSABLE: Final = 422
 HTTP_UNAUTHORIZED: Final = 401
+# A recording left open this long is written by no engine: the timeline is waited for ten minutes.
+STALE_RECORDING_SECONDS: Final = 20 * 60.0
+REASON_CLOSED_LATER: Final = "closed later: the engine stopped before it closed the recording"
 
 logger = logging.getLogger(__name__)
 
@@ -64,6 +74,8 @@ class SentLog(BaseModel):
 
     sent: list[str] = Field(default_factory=list)
     withheld: list[str] = Field(default_factory=list)
+    # The build that withheld them: another build tries them again.
+    withheld_by: str = ""
     # The crash reports sent (`crash_reports.py`), by file name.
     crash_reports: list[str] = Field(default_factory=list)
     # The problem reports' files sent (`problem_report.py`), as `report-<time>/<file>`.
@@ -159,6 +171,38 @@ def finished_recordings(directory: Path) -> list[Path]:
     )
 
 
+def close_stale_recordings(directory: Path, now_seconds: float) -> list[Path]:
+    """Close the recordings an engine left open, so that they are finished and can be sent.
+
+    A recording stays open after its game until the League client gives the match timeline, up to
+    ten minutes; an app quit or updated in that time left it open for good, and none of the owner's
+    games was sent. One untouched for `STALE_RECORDING_SECONDS` is written by no engine any more.
+
+    Args:
+        directory: The recordings' folder.
+        now_seconds: The time now, as `time.time()` gives it.
+
+    Returns:
+        The recordings closed.
+    """
+    if not directory.is_dir():
+        return []
+    closed: list[Path] = []
+    for plain_path in sorted(directory.glob(f"*{PLAIN_SUFFIX}")):
+        stem = plain_path.name.removesuffix(PLAIN_SUFFIX)
+        if stem.endswith(ANONYMIZED_SUFFIX):
+            continue
+        try:
+            if now_seconds - plain_path.stat().st_mtime < STALE_RECORDING_SECONDS:
+                continue
+            closed.append(close_unfinished_recording(plain_path, REASON_CLOSED_LATER))
+        except (OSError, RecordingFormatError):
+            logger.warning("could not close the recording %s left open", plain_path.name)
+            continue
+        logger.info("closed %s, which an engine had left open", plain_path.name)
+    return closed
+
+
 class SendRefusedError(Exception):
     """GitHub would not take a game; the round stops, and the next one tries again."""
 
@@ -176,6 +220,7 @@ class GameSender:
         api_base_url: str = GITHUB_API_BASE_URL,
         tls_context: ssl.SSLContext | None = None,
         status: StatusBoard | None = None,
+        build: str = "",
     ) -> None:
         """Keep where the games are and where they go.
 
@@ -188,6 +233,8 @@ class GameSender:
             tls_context: The context for HTTPS, which trusts the system's certificates; None for
                 a stand-in over plain HTTP.
             status: Told how sending stands; None to tell nothing.
+            build: The running build (`build_info.build_label`); the games another build withheld
+                are tried again.
         """
         self.session: Final = session
         self.recordings_directory: Final = recordings_directory
@@ -196,6 +243,7 @@ class GameSender:
         self.api_base_url: Final = api_base_url.rstrip("/")
         self.tls_context: Final = tls_context
         self.status: Final = status
+        self.build: Final = build
         self._round_lock: Final = asyncio.Lock()
 
     async def send_unsent(self) -> None:
@@ -218,8 +266,13 @@ class GameSender:
         if not self.repository:
             self._note("off", "Off: LEAGUEASYMODE_SEND_GAMES_TO is empty")
             return
+        await asyncio.to_thread(close_stale_recordings, self.recordings_directory, time.time())
         log_path = self.recordings_directory / SENT_LOG_NAME
         sent_log = await asyncio.to_thread(_read_sent_log, log_path)
+        if sent_log.withheld_by != self.build:
+            # Another build may hold the fix that this one's anonymizer lacked: try them again.
+            sent_log.withheld = []
+            sent_log.withheld_by = self.build
         done = {*sent_log.sent, *sent_log.withheld}
         unsent = [
             path

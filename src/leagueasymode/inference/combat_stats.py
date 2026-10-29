@@ -201,7 +201,9 @@ def move_speed_of(
         patch_stats: The patch's stats; None while unknown.
 
     Returns:
-        The speed, in game units a second; 380 when it cannot be estimated.
+        The speed, in game units a second; 380 when it cannot be estimated, or when the game or
+        the estimate gives none (the game gave 0 for the player on the owner's Mac, which a walk's
+        time was then divided by).
     """
     active_player = snapshot.active_player
     if (
@@ -209,9 +211,11 @@ def move_speed_of(
         and active_player.champion_stats is not None
         and snapshot.is_active_player(player)
     ):
-        return active_player.champion_stats.move_speed
-    estimate = estimated_combat_stats(player, patch_stats) if patch_stats is not None else None
-    return estimate.move_speed if estimate is not None else DEFAULT_MOVE_SPEED
+        speed = active_player.champion_stats.move_speed
+    else:
+        estimate = estimated_combat_stats(player, patch_stats) if patch_stats is not None else None
+        speed = estimate.move_speed if estimate is not None else DEFAULT_MOVE_SPEED
+    return speed if speed > 0 else DEFAULT_MOVE_SPEED
 
 
 def combat_stats_of(

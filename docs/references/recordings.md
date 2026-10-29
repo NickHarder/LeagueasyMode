@@ -4,7 +4,7 @@ title: Recordings
 description: What a recording of a game holds, how it is written and read, what is asked of the League client and when, and how a copy is anonymized before it may enter the repository.
 tags: [recording, data, privacy]
 status: draft
-generated: { by: claude-code/cloud, at: 2026-10-28T22:10:00Z }
+generated: { by: claude-code/cloud, at: 2026-10-29T05:18:09Z }
 sources:
   - id: file-format
     resource: ../../src/leagueasymode/recording/file_format.py
@@ -172,8 +172,15 @@ of theirs, in a private repository of their own: `NickHarder/LeagueasyMode-recor
 finished recording not yet sent when it starts and after each game, and "Send games now" on the
 status page sends a round at once. Only an anonymized copy is sent, as above, to
 `games/<name>-anonymized.jsonl.xz` through GitHub's contents API; a game whose copy cannot be made
-safely is withheld and never tried again. `sent-games.json` beside the recordings lists what was
-sent and what was withheld. The status page's "Sending games" says what happened.
+safely is withheld, and tried again only by the next build, which may fix the anonymizer (on
+2026-10-29 none of the owner's games had reached the repository). `sent-games.json` beside the
+recordings lists what was sent, what was withheld and by which build. A recording stays open after its game
+until the client gives the match timeline, up to ten minutes; an app quit or updated in that
+time left it open, so it never counted as finished, and none of the owner's ARAM and Swiftplay
+games was sent (the problem report of 2026-10-29: "Nothing new to send", none withheld). Each
+round now first closes a recording left untouched for 20 minutes: its whole lines kept, a last
+line saying it was closed later, and compressed (`close_stale_recordings`). A problem report lists
+the recordings' folder, by file name, size and time. The status page's "Sending games" says what happened.
 
 It needs a GitHub token that may write to that repository, once:
 

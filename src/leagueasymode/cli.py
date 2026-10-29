@@ -28,7 +28,7 @@ from leagueasymode.accuracy_thresholds import (
     save_thresholds,
     stricter_thresholds,
 )
-from leagueasymode.build_info import engine_log_path
+from leagueasymode.build_info import build_label, engine_log_path
 from leagueasymode.config import (
     REPOSITORY_ROOT,
     Settings,
@@ -380,6 +380,7 @@ def _game_sender(
         api_base_url=api_base_url,
         tls_context=create_system_tls_context() if api_base_url.startswith("https") else None,
         status=status,
+        build=build_label(),
     )
 
 
