@@ -119,7 +119,7 @@ game API ─▶ GameApiClient ─▶ GameSnapshot ─▶ estimators ─▶ Overl
 | Baron and Elder buffs | exact | to the team of the player who took the monster: Baron 3:00, Elder 2:30 |
 | Players and death timers | exact | each player's side, role as the game names it, level, and, while dead, when they respawn (`respawnTimer` added to the clock) |
 | Numbers window | exact | open while more enemies than allies are dead; it closes at the first respawn after which no more enemies than allies are dead; a death to come cannot be known, so it is never counted |
-| Callouts | exact: each states a fact at the moment it becomes true | "Zed is level 6" when an enemy crosses 6, 11 or 16 between two answers (not for levels already reached when the overlay starts); "2 enemies down for 0:24" when a numbers window opens or widens; "Baron in 1:00" (with "~" when the spawn time is provisional) when an objective comes within a minute; each once per game, shown for six game seconds; a clock that runs back more than five seconds starts a new game |
+| Callouts | exact: each states a fact at the moment it becomes true | "Zed is level 6" when an enemy crosses 6, 11 or 16 between two answers (not for levels already reached when the overlay starts); "2 enemies down for 0:24" when a numbers window opens or widens; "Baron in 1:00" (with "~" when the spawn time is provisional) when an objective comes within a minute; each once per game, shown for six game seconds; a clock that runs back more than five seconds starts a new game. The page never shows a level ("Zed is level 6") or an item likely bought as a callout, nor a moment or a team call (the owner, 2026-10-29: "I don't want the extra clutter"): the enemy's row shows the rank of their ultimate and their gold, and the item is a guess, not a build seen |
 | Callouts in a fight | a rule over the callouts | a fight is on until 8 seconds after the last death on either side (`callouts.fight_quiet_seconds`). Meanwhile, news about an enemy's level, items, trip to base or absence waits, and is shown when the fight ends if it waited no more than 15 seconds (`held_callout_seconds`); an objective, an inhibitor open, a marked spell back and a suggestion are shown at once. A numbers window is called out once, when the fight ends, and only with at least 2 enemies down (`numbers_window_min_enemies`). The owner, after a game: each death made a callout, "its like i know" |
 | Focused enemy rows | a rule over the strip | by default each enemy's row is one line of facts; a second line shows only what may change a decision now: rank and record before 3:00 and never a bare "Unranked", the next item when it is likely and they can likely afford it, the likely place of the jungler or a roaming laner, a power level soon, a jungle path, a recent clue, a trip to base. "Detailed enemy rows" in Settings shows every line. The fight chance shows only with at least 2 alive on each side; the You panel's creep score pace only on the Rift |
 | Item gold, finished items, each team's item gold | exact, at the patch's prices | each player's inventory priced at the catalog's total price (the scoreboard's price for an item the catalog lacks); a finished item is built from parts and into nothing, is not boots or a consumable, and costs at least 2000 gold, a floor to check on real data; a team's item gold is gold earned and spent, not gold in hand |
@@ -277,9 +277,10 @@ Moments about friends (phase 11.6, `roast/moments.py`) read each answer of the g
 death shortly before the enemy takes a dragon, the Elder or Baron, first blood given up, a creep
 score deficit at 10:00 or 14:00 ("at least", since the scoreboard can lag on an enemy out of
 sight), and the lane opponent's kills on a friend who has none. A lane opponent is used only when
-both roles are given or likely. Each moment is made once per game, shows among the callouts as kind
-`moment` for `roast.moments.shown_seconds` in `tuning.json` when noticed within 30 seconds of
-happening, is never spoken, and has its own switch on the settings page. `/closing-line` gives the
+both roles are given or likely. Each moment is made once per game, is in the state's callouts as
+kind `moment` for `roast.moments.shown_seconds` in `tuning.json` when noticed within 30 seconds of
+happening, and is never on screen or spoken: the owner asks for it with ⌃⌥C. Its switch on the
+settings page says whether ⌃⌥C copies it. `/closing-line` gives the
 newest during a game, for ⌃⌥C. The lines, in `roast/moments.toml`, are the ones the owner approved, held to a fingerprint.
 
 Team calls (phase 11.9, `roast/team_calls.py`) are for the whole team, friends or not, to paste in
@@ -288,10 +289,9 @@ more while three of us are up, a fight lost (three of us dead at once and fewer 
 teammate's third death in four minutes, and being about 2k gold down while the win chance is still
 35% or more. A call blames no one and names no player (its id carries a scoreboard place, never a
 name); the gold lead is an estimate and is said as "about". At most one call a minute, shown as kind
-`team_call` for `roast.team_calls.shown_seconds`, never spoken, with its own switch; ⌃⌥C copies the
-newest call or moment. At a glance (details only while Tab or Option is held), the newest moment
-or team call shows beside the two newest action callouts, without taking their place (the owner,
-2026-10-29: "make moments and team calls show at a glance"). No call is made while a fight is on (a death in the last
+`team_call` for `roast.team_calls.shown_seconds`, never on screen or spoken (the owner, 2026-10-29:
+"I don't need team calls on my screen"); ⌃⌥C copies the newest call or moment, and the call's
+switch says whether it does. No call is made while a fight is on (a death in the last
 `fight_quiet_seconds`, 8 as for the callouts), so a fight brings one call when it ends; while the
 numbers window callout shows, the "enemies down" call stays off the overlay (⌃⌥C still copies it).
 Off the Rift only "enemies down" is called: ARAM and the other maps have no recall and no epic

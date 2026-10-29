@@ -73,15 +73,15 @@ const DESCRIPTIONS: Readonly<Record<PreferenceName, readonly [string, string]>> 
     "Enemy estimates",
     "Each enemy's unspent gold, next item, last trip to base and likely place; the camps down and their wards.",
   ],
-  show_callouts: ["Callouts", "Short notices when something happens, such as an enemy reaching level 6."],
+  show_callouts: ["Callouts", "Short notices when something asks for action, such as a numbers advantage or an objective soon."],
   show_suggestions: ["Suggestions", "Callouts that name an action, such as “take it”."],
   show_moments: [
     "Moments about friends",
-    "A notice when a friend's game hands over ammo, such as a second death to their lane opponent. Never spoken; ⌃⌥C copies it.",
+    "A line for chat when a friend's game hands over ammo, such as a second death to their lane opponent. Never on screen; ⌃⌥C copies the newest.",
   ],
   show_team_calls: [
     "Team calls",
-    "Calm calls for the whole team, such as staying alive and warding before a dragon, to paste in team chat. Never spoken; ⌃⌥C copies it.",
+    "Calm calls for the whole team, such as staying alive and warding before a dragon, to paste in team chat. Never on screen; ⌃⌥C copies the newest.",
   ],
   speak_callouts: ["Speak callouts", "Each new callout read aloud in macOS’s voice, as it shows. Off unless turned on."],
   detailed_enemy_rows: [

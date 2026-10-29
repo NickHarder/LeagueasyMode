@@ -6,6 +6,13 @@ skill has the format.
 
 ## 2026-10-29
 
+- Less on screen (the owner: moments and team calls "should only be when I ask via a hotkey or
+  during the end game screen. I don't want the extra clutter. I don't need team calls on my
+  screen", and the level 6 and item callouts "can probably be refined so it's not a pop up").
+  Moments and team calls are never on screen now, at a glance, with the key or while dead, which
+  undoes the at-a-glance change above; ⌃⌥C copies them, and their switches say whether it does.
+  A level 6 and an item likely bought are no longer callouts: the enemy's row shows the rank of
+  their ultimate and their gold, and the item was a guess from components, recent games and class.
 - Moments and team calls show at a glance again (the owner: "make moments and team calls show at
   a glance"): the newest one shows beside the two newest action callouts without taking their
   place, still never spoken; the rest wait for Tab or Option as before.
