@@ -46,6 +46,10 @@ const DESCRIPTIONS = {
         "Calm calls for the whole team, such as staying alive and warding before a dragon, to paste in team chat. Never spoken; ⌃⌥C copies it.",
     ],
     speak_callouts: ["Speak callouts", "Each new callout read aloud in macOS’s voice, as it shows. Off unless turned on."],
+    detailed_enemy_rows: [
+        "Detailed enemy rows",
+        "Every line on each enemy’s row: rank and record all game, health, armor and magic resist, unspent gold, next item and likely place. Off: only what may change a decision now.",
+    ],
     minimap_roamers_only: [
         "Minimap: jungler and roamers only",
         "Marks only the enemy jungler, and laners likely away from their lane, on the minimap layer; a laner holding their wave is left off. Off unless turned on.",

@@ -6,6 +6,12 @@ skill has the format.
 
 ## 2026-10-29
 
+- A focused overlay, after the owner's first screenshot of a game: "it covers some stuff and has
+  so much info a lot of it is uselss 90% of the time. plus in a tf itll show the person die and
+  then the next etc." Enemy rows are one line unless something may change a decision now
+  ("Detailed enemy rows" restores every line); a fight's deaths make one callout when it is over,
+  with news that can wait held until then; the fight chance hides with fewer than 2 alive a side;
+  creep score pace hides off the Rift.
 - Speedrun gets lines of its own (the owner: "make them spicier at speedrun"; the draft
   "approved, ship the speedrun lines"). Each line offered at Tilted and Speedrun is split: Tilted
   keeps the approved wording and a harsher copy takes Speedrun, 17 new lines, and the 3 lines

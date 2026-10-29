@@ -81,6 +81,12 @@ const ONE_THOUSAND = 1000;
 const LIKELY_NEXT_ITEM = 0.5;
 // From this chance an enemy is taken to be able to afford their next item.
 const LIKELY_TO_AFFORD = 0.75;
+// The enemy strip shows each enemy's rank and record until then, when it matters for the laning
+// phase; later it is the same line in every row, and only "Detailed enemy rows" keeps it.
+const INTEL_SHOWN_UNTIL_SECONDS = 180;
+const UNRANKED_TEXT = "Unranked";
+// The fight chance shows only with at least this many alive on each side: "0v1" says nothing.
+const FEWEST_FIGHTERS_SHOWN = 2;
 const PERCENT = 100;
 // A win chance above this leans to the player's team.
 const EVEN_CHANCE = 0.5;
@@ -515,7 +521,13 @@ function leadElements(state: OverlayState): HTMLElement[] {
     const leaning = Math.round((winChance.ally_chance - EVEN_CHANCE) * PERCENT);
     headers.push(leadElement("win-chance", "Win", leaning, formatWinChance(winChance)));
   }
-  const fight = state.preferences.show_fight_chance ? state.fight : null;
+  const shownFight = state.preferences.show_fight_chance ? state.fight : null;
+  const fight =
+    shownFight !== null &&
+    shownFight.ally_fighters >= FEWEST_FIGHTERS_SHOWN &&
+    shownFight.enemy_fighters >= FEWEST_FIGHTERS_SHOWN
+      ? shownFight
+      : null;
   if (fight !== null) {
     const fightLeaning = Math.round((fight.ally_chance - EVEN_CHANCE) * PERCENT);
     headers.push(leadElement("fight-chance", "Fight now", fightLeaning, formatFight(fight)));
@@ -625,6 +637,7 @@ function enemyRowElement(
   cooldowns: readonly CooldownTimer[],
   junglePaths: readonly JunglePath[],
   hasMarkButtons: boolean,
+  isDetailed: boolean,
 ): HTMLElement {
   const row = document.createElement("div");
   row.className = "enemy-row";
@@ -685,14 +698,20 @@ function enemyRowElement(
   if (markButtons !== null) {
     row.append(markButtons);
   }
-  if (card.intel !== null) {
+  const intelText = card.intel === null ? null : formatIntel(card.intel);
+  // Focused rows, the default, keep only what may change a decision now (the owner, after a game:
+  // "a lot of it is useless 90% of the time"); "Detailed enemy rows" shows every line.
+  const isIntelShown =
+    intelText !== null &&
+    (isDetailed || (gameTimeSeconds < INTEL_SHOWN_UNTIL_SECONDS && intelText !== UNRANKED_TEXT));
+  if (card.intel !== null && isIntelShown) {
     const intelElement = document.createElement("span");
     intelElement.className = "enemy-intel";
     intelElement.dataset["offRole"] = card.intel.is_off_role ? "true" : "false";
     intelElement.textContent = formatIntel(card.intel);
     row.append(intelElement);
   }
-  if (card.combat_stats !== null) {
+  if (card.combat_stats !== null && isDetailed) {
     const statsElement = document.createElement("span");
     statsElement.className = "enemy-stats";
     statsElement.dataset["source"] = card.combat_stats.source;
@@ -715,7 +734,10 @@ function enemyRowElement(
     pathElement.textContent = junglePathText;
     row.append(pathElement);
   }
-  const locationText = card.location === null ? null : formatLocation(card.location);
+  // A laner in their lane is where the player expects them; their likely place is news only for the
+  // jungler and a laner who roams.
+  const isLocationShown = isDetailed || card.role === "JUNGLE" || card.is_roaming;
+  const locationText = card.location === null || !isLocationShown ? null : formatLocation(card.location);
   if (locationText !== null) {
     const locationElement = document.createElement("span");
     locationElement.className = "enemy-location";
@@ -738,7 +760,15 @@ function enemyRowElement(
     backElement.textContent = lastBackText;
     row.append(backElement);
   }
-  if (card.next_item !== null) {
+  const nextItem = card.next_item;
+  // Their next item is news when they can likely buy it now, and not a guess.
+  const isNextItemShown =
+    nextItem !== null &&
+    (isDetailed ||
+      (nextItem.likelihood >= LIKELY_NEXT_ITEM &&
+        nextItem.chance_to_afford !== null &&
+        nextItem.chance_to_afford >= LIKELY_TO_AFFORD));
+  if (card.next_item !== null && isNextItemShown) {
     const nextItemElement = document.createElement("span");
     nextItemElement.className = "enemy-next-item";
     const chance = card.next_item.chance_to_afford;
@@ -746,7 +776,7 @@ function enemyRowElement(
     nextItemElement.textContent = formatNextItem(card.next_item);
     row.append(nextItemElement);
   }
-  if (card.gold !== null) {
+  if (card.gold !== null && isDetailed) {
     const unspentElement = document.createElement("span");
     unspentElement.className = "enemy-unspent";
     unspentElement.dataset["source"] = card.gold.source;
@@ -844,7 +874,8 @@ function renderYouPanel(): void {
       : [
           ["you-defenses", formatDefenses(panel)],
           ["you-holding", formatHolding(panel)],
-          ["you-pace", formatCreepPace(panel)],
+          // Off the Rift, as in ARAM, creep score is no measure of how the game goes.
+          ["you-pace", received?.state.is_summoners_rift === false ? null : formatCreepPace(panel)],
           ["you-opponent", formatLaneOpponent(panel)],
         ];
   const shownLines = lines.filter((line): line is [string, string] => line[1] !== null);
@@ -888,6 +919,7 @@ function renderEnemyStrip(nowMilliseconds: number): void {
       received.state.cooldowns,
       areEstimatesShown ? received.state.jungle_paths : [],
       hasMarkButtons,
+      received.state.preferences.detailed_enemy_rows,
     ),
   );
   const campTimersText = areEstimatesShown

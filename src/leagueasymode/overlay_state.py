@@ -637,6 +637,10 @@ class OverlayPreferences(BaseModel):
     # The minimap layer marks only the enemy jungler and laners likely away from their lane (a
     # top laner freezing a wave stays off it); every enemy unless the player narrows it.
     minimap_roamers_only: bool = False
+    # Every line on each enemy's row; off, the rows keep only what may change a decision now: rank
+    # and record in the first three minutes, next item when they can buy it, likely place for the
+    # jungler and a roaming laner.
+    detailed_enemy_rows: bool = False
 
 
 # The widgets the player can move; the minimap layer stays over League's minimap.

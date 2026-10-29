@@ -4,8 +4,8 @@ title: The engine and the overlay page
 description: How the engine turns the game's answers into the overlay's state, how that state reaches the widgets, how the page is built and tested, and how to run it all against a replay.
 tags: [engine, overlay, architecture]
 status: draft
-generated: { by: claude-code/cloud, at: 2026-10-29T00:30:00Z }
-generated: { by: claude-code/cloud, at: 2026-10-29T00:30:00Z }
+generated: { by: claude-code/cloud, at: 2026-10-29T01:00:00Z }
+generated: { by: claude-code/cloud, at: 2026-10-29T01:00:00Z }
 sources:
   - id: engine
     resource: ../../src/leagueasymode/engine.py
@@ -121,6 +121,8 @@ game API ─▶ GameApiClient ─▶ GameSnapshot ─▶ estimators ─▶ Overl
 | Players and death timers | exact | each player's side, role as the game names it, level, and, while dead, when they respawn (`respawnTimer` added to the clock) |
 | Numbers window | exact | open while more enemies than allies are dead; it closes at the first respawn after which no more enemies than allies are dead; a death to come cannot be known, so it is never counted |
 | Callouts | exact: each states a fact at the moment it becomes true | "Zed is level 6" when an enemy crosses 6, 11 or 16 between two answers (not for levels already reached when the overlay starts); "2 enemies down for 0:24" when a numbers window opens or widens; "Baron in 1:00" (with "~" when the spawn time is provisional) when an objective comes within a minute; each once per game, shown for six game seconds; a clock that runs back more than five seconds starts a new game |
+| Callouts in a fight | a rule over the callouts | a fight is on until 8 seconds after the last death on either side (`callouts.fight_quiet_seconds`). Meanwhile, news about an enemy's level, items, trip to base or absence waits, and is shown when the fight ends if it waited no more than 15 seconds (`held_callout_seconds`); an objective, an inhibitor open, a marked spell back and a suggestion are shown at once. A numbers window is called out once, when the fight ends, and only with at least 2 enemies down (`numbers_window_min_enemies`). The owner, after a game: each death made a callout, "its like i know" |
+| Focused enemy rows | a rule over the strip | by default each enemy's row is one line of facts; a second line shows only what may change a decision now: rank and record before 3:00 and never a bare "Unranked", the next item when it is likely and they can likely afford it, the likely place of the jungler or a roaming laner, a power level soon, a jungle path, a recent clue, a trip to base. "Detailed enemy rows" in Settings shows every line. The fight chance shows only with at least 2 alive on each side; the You panel's creep score pace only on the Rift |
 | Item gold, finished items, each team's item gold | exact, at the patch's prices | each player's inventory priced at the catalog's total price (the scoreboard's price for an item the catalog lacks); a finished item is built from parts and into nothing, is not boots or a consumable, and costs at least 2000 gold, a floor to check on real data; a team's item gold is gold earned and spent, not gold in hand |
 | Item callouts | exact | "Caitlyn finished Infinity Edge" when a finished item appears in an enemy's inventory between two answers whose items were both known |
 | Roles (estimator 1) | given where the game assigns them; otherwise likely or a guess | each player gets a cost for each role from Smite, a support item, the other summoner spells and, after 3:00, the least CS on the team; each team's open roles go to its open players in the assignment of least total cost, found by trying all of them (120 for five); a player's role is "likely" when every assignment that changes it costs at least 2 more, otherwise a "guess". The costs are a hand-set prior, to be fitted on the roles the post-game timeline records |

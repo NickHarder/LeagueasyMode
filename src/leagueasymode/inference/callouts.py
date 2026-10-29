@@ -32,6 +32,22 @@ OBJECTIVE_NAMES: Final = {
 }
 
 
+# What can wait for a fight to end: news about an enemy's level, items, trip to base or absence.
+# An objective, an inhibitor open, a marked spell back and a suggestion, such as "their jungler is
+# down: take Dragon", which a death in the fight brings, are called out at once.
+FIGHT_HELD_KINDS: Final[frozenset[CalloutKind]] = frozenset(
+    {
+        "level_spike",
+        "level_soon",
+        "item_spike",
+        "item_soon",
+        "went_back",
+        "missing",
+        "one_trick",
+    }
+)
+
+
 class CalloutRules(BaseModel):
     """The callouts' hand-set thresholds: `tuning.json`'s "callouts"."""
 
@@ -53,6 +69,13 @@ class CalloutRules(BaseModel):
     missing_gap_seconds: float = 30.0
     # An objective this close to spawning is called out.
     objective_soon_seconds: float = 60.0
+    # A fight is on until this long after the last death on either side: the callouts that can
+    # wait (`FIGHT_HELD_KINDS`) wait until then, and are dropped if they waited longer than the
+    # second figure. A numbers window is called out once, after the fight, and only with at least
+    # this many enemies down: one death the player sees for themselves.
+    fight_quiet_seconds: float = 8.0
+    held_callout_seconds: float = 15.0
+    numbers_window_min_enemies: int = 2
     # Scouting (a jungler's usual start, an enemy one-trick) is called out before this: the camps
     # spawn at 1:30.
     scouting_until_seconds: float = 90.0
@@ -88,6 +111,10 @@ class CalloutTracker:
         self._made_callout_ids: set[str] = set()
         self._shown_callouts: list[Callout] = []
         self._last_missing_seconds: float | None = None
+        # When a player last died, for whether a fight is on, and what waits for it to end, by id,
+        # with when it started waiting.
+        self._last_death_seconds: float | None = None
+        self._held_callouts: dict[str, tuple[Callout, float]] = {}
 
     def update(self, state: OverlayState) -> list[Callout]:
         """Take the next state and return the callouts to show with it.
@@ -111,6 +138,7 @@ class CalloutTracker:
             and game_time_seconds < previous_game_time_seconds - NEW_GAME_CLOCK_DROP_SECONDS
         ):
             self._forget_the_game()
+        is_fighting = self._note_deaths(previous_state, state, game_time_seconds)
         candidate_callouts = [
             *self._level_spikes(state, game_time_seconds),
             *_levels_soon(state, game_time_seconds, self.rules),
@@ -120,13 +148,14 @@ class CalloutTracker:
             *self._jungler_backs(state, game_time_seconds),
             *self._items_soon(state, game_time_seconds),
             *self._missing(state, game_time_seconds),
-            *self._numbers_window(state, game_time_seconds),
+            *self._numbers_window(state, game_time_seconds, is_fighting=is_fighting),
             *self._objectives_soon(state, game_time_seconds),
             *self._item_spikes(state, game_time_seconds),
             *self._cooldowns_ready(state, game_time_seconds),
             *self._inhibitors_opened(state, game_time_seconds),
             *suggestions(self._previous_state, state, game_time_seconds, self.suggestion_rules),
         ]
+        ready_callouts = self._hold_in_fights(candidate_callouts, game_time_seconds, is_fighting)
         # Each is shown for as long as the rules say from now.
         new_callouts = [
             callout.model_copy(
@@ -139,7 +168,7 @@ class CalloutTracker:
                     )
                 }
             )
-            for callout in candidate_callouts
+            for callout in ready_callouts
             if callout.callout_id not in self._made_callout_ids
         ]
         self._made_callout_ids.update(callout.callout_id for callout in new_callouts)
@@ -157,6 +186,64 @@ class CalloutTracker:
         self._made_callout_ids = set()
         self._shown_callouts = []
         self._last_missing_seconds = None
+        self._last_death_seconds = None
+        self._held_callouts = {}
+
+    def _note_deaths(
+        self, previous_state: OverlayState | None, state: OverlayState, game_time_seconds: float
+    ) -> bool:
+        """Note a new death on either side, and return whether a fight is on.
+
+        Args:
+            previous_state: The state before; None for the first.
+            state: The new state.
+            game_time_seconds: Its game time.
+
+        Returns:
+            Whether a player died less than `rules.fight_quiet_seconds` ago.
+        """
+        dead_count = sum(1 for card in state.players if card.is_dead)
+        previous_dead_count = (
+            sum(1 for card in previous_state.players if card.is_dead)
+            if previous_state is not None
+            else dead_count
+        )
+        if dead_count > previous_dead_count:
+            self._last_death_seconds = game_time_seconds
+        last_death_seconds = self._last_death_seconds
+        return (
+            last_death_seconds is not None
+            and game_time_seconds - last_death_seconds < self.rules.fight_quiet_seconds
+        )
+
+    def _hold_in_fights(
+        self, candidate_callouts: list[Callout], game_time_seconds: float, is_fighting: bool
+    ) -> list[Callout]:
+        """Keep back, during a fight, the callouts that can wait, and let them out after it.
+
+        Args:
+            candidate_callouts: The callouts this state would make.
+            game_time_seconds: Its game time.
+            is_fighting: Whether a fight is on.
+
+        Returns:
+            The callouts to make now: during a fight, those that cannot wait; after it, those too
+            that waited no longer than `rules.held_callout_seconds`.
+        """
+        if is_fighting:
+            for callout in candidate_callouts:
+                if callout.kind in FIGHT_HELD_KINDS:
+                    self._held_callouts.setdefault(callout.callout_id, (callout, game_time_seconds))
+            return [
+                callout for callout in candidate_callouts if callout.kind not in FIGHT_HELD_KINDS
+            ]
+        released_callouts = [
+            callout
+            for callout, held_since_seconds in self._held_callouts.values()
+            if game_time_seconds - held_since_seconds <= self.rules.held_callout_seconds
+        ]
+        self._held_callouts = {}
+        return [*released_callouts, *candidate_callouts]
 
     def _level_spikes(self, state: OverlayState, game_time_seconds: float) -> list[Callout]:
         """Return a callout for each enemy who has just reached level 6, 11 or 16.
@@ -389,18 +476,28 @@ class CalloutTracker:
             and game_time_seconds >= timer.ready_at_game_time_seconds
         ]
 
-    def _numbers_window(self, state: OverlayState, game_time_seconds: float) -> list[Callout]:
-        """Return a callout when a numbers window opens or another enemy falls in one.
+    def _numbers_window(
+        self, state: OverlayState, game_time_seconds: float, *, is_fighting: bool
+    ) -> list[Callout]:
+        """Return a callout for a numbers window, once the fight that opened it is over.
+
+        Each death of a fight once made a callout, which the player saw happen anyway; now the
+        window is called out when the dying stops, and only with enough enemies down to matter.
 
         Args:
             state: The new state.
             game_time_seconds: Its game time.
+            is_fighting: Whether a fight is on.
 
         Returns:
             The callout, or nothing.
         """
         window = state.numbers_window
-        if window is None:
+        if (
+            window is None
+            or is_fighting
+            or window.enemy_dead_count < self.rules.numbers_window_min_enemies
+        ):
             return []
         enemy_text = "enemy" if window.enemy_dead_count == 1 else "enemies"
         remaining_text = _clock_text(window.ends_at_game_time_seconds - game_time_seconds)

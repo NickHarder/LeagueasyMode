@@ -952,6 +952,11 @@
           "default": false,
           "title": "Minimap Roamers Only",
           "type": "boolean"
+        },
+        "detailed_enemy_rows": {
+          "default": false,
+          "title": "Detailed Enemy Rows",
+          "type": "boolean"
         }
       },
       "title": "OverlayPreferences",

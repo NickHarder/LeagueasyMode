@@ -19,6 +19,7 @@ export const PREFERENCE_NAMES = [
     "speak_callouts",
     "click_to_mark",
     "minimap_roamers_only",
+    "detailed_enemy_rows",
 ];
 /** The widgets the player can move; the minimap layer stays over League's minimap. */
 export const MOVABLE_WIDGETS = ["objective_strip", "callouts", "enemy_strip", "you_panel"];
