@@ -3,55 +3,30 @@
 If you are picking this work up, human or model: read this file top to bottom first. The `handoff` skill
 refreshes it; it describes the current state.
 
-Last updated: 2026-10-28, on branch `feat/install-updates` (pull request #59). `main` holds
-everything to #49. Open and stacked, each on the one before, from the first tests on the owner's
-Mac: #50 (the overlay never holds the mouse or keyboard), #51 (no minimap circle for an enemy in
-sight), #52 (games sent to the private `NickHarder/LeagueasyMode-recordings`), #53 (the engine
-keeps running through errors; crash reports), #54 (the phase 10 plan,
-`docs/plans/phase-10-field-testing.md`), #55 (10.1, 10.2: build numbers, the engine's log), #57
-(10.3: Report a problem; the engine restarted when it stops), #58 (10.4, 10.5: How to use; the
-Rift's widgets hidden on other maps), #59 (10.6: each green main published as a prerelease, and
-"Install update" in the app). Merging them in that order keeps each diff to its own commits. #56
-is another session's plan (roasts), not part of this stack.
+Last updated: 2026-10-29, at `ff23895` on `main` (pull request #94 merged). No pull request of
+this session is open. Another session (roasts, phase 11) merges into `main` too.
 
 ## Where things stand
 
-The plan is [docs/plans/overlay-and-inference.md](docs/plans/overlay-and-inference.md) (approved by
-the owner on 2026-10-08). Phase 0 is done; phase 1, the tracer bullet, is built and waits for the
-test on a Mac; phase 2 ([docs/plans/phase-2-exact-facts.md](docs/plans/phase-2-exact-facts.md)) is
-built, its structures in phase 8.5. Phases 3 to 7 are built and merged
-([phase 3](docs/plans/phase-3-economy-and-open-policy.md), approved;
-[phase 4](docs/plans/phase-4-positions.md), [phase 5](docs/plans/phase-5-models.md),
-[phase 6](docs/plans/phase-6-post-game.md) and [phase 7](docs/plans/phase-7-packaging.md), built
-on their best guesses and approved on 2026-10-09, phase 7 without signing as the owner chose);
-phase 5's models are hand-set and phase 6's thresholds empty until 20 recorded games exist. Phase 8
-([docs/plans/phase-8-first-test.md](docs/plans/phase-8-first-test.md), approved) goes past the
-approved plan: 8.1 to 8.6 (the status page and the report after a test, the overlay over League's
-own screen and window, moving the widgets, spoken callouts, structures, the Swift 6 language mode)
-are merged (#34 to #39). None waits for the test on a Mac, which confirms them. Phase 8 is built.
-Phase 9 ([docs/plans/phase-9-scouting.md](docs/plans/phase-9-scouting.md), approved) reads the
-players' past games: 9.1 to 9.3, 9.5 and 9.6 (where the enemy jungler usually starts and is at
-4:00, champion pools, the usual start as a prior for the jungle path, scouting scored after the
-game) and 9.7 (the 4:00 habit in the positions) are merged (#40 to #45); 9.4 (each player's
-creep score and gold at 10:00, which the owner said yes to on 2026-10-09) is built in pull
-request #49, after one `tuning.json` for the hand-set thresholds (#48, merged). Each slice goes
-up as its own pull request into `main` without waiting for the one before to merge.
+The owner plays with the app on an Apple silicon Mac (League windowed) and updates arrive by
+themselves: each green push to `main` publishes a prerelease `build-<n>` (latest `build-190`), and
+the app installs it when no game window is on screen. Every plan is approved; phases 0 to 10 are
+built, phase 11 (roasts) is the other session's. Since the owner's first real games (2026-10-28
+and 29) the work is field fixes and the approved layout plan
+([docs/plans/overlay-layout.md](docs/plans/overlay-layout.md), all five slices merged) tied to the
+use cases in [docs/USERS.md](docs/USERS.md).
 
 | Area | State | Proof |
 |---|---|---|
-| Scaffold | ai-kit v0.11.1, Python layer, GitHub CI | `.copier-answers.yml` |
-| Gate | Green: lint, 872 tests (and 42 in Chromium), secrets | `make gate` |
-| Recorder | Records games, the client's patch data and the post-game timeline; anonymized copies | `uv run leagueasymode record`; `tests/test_recorder.py`, `tests/test_anonymize.py` |
-| Replay | A recording served as a stand-in game API | `uv run leagueasymode replay <recording>`; `tests/test_replay.py` |
-| Engine and overlay page | The dragon and Elder timer, from the game's answer to the page | `uv run leagueasymode run`; `tests/test_tracer_bullet.py` |
-| Phase 2 facts | Objective strip, buffs, inhibitors, numbers window, enemy strip, callouts, item catalog and item gold, roles, combat stats | `tests/test_objective_strip.py`, `test_numbers_window.py`, `test_callouts.py`, `test_item_facts.py`, `test_roles.py`, `test_combat_stats.py`; eight browser tests |
-| Patch stats | Each patch's champion and item stats from Data Dragon, fetched once a patch and kept on disk; checked against the real 16.20.1 files on 2026-10-09, with the attack damage growth Data Dragon leaves out since 16.5.1 borrowed from 16.4.1 | `tests/test_data_dragon.py` against a stand-in |
-| Widgets in a browser | Rendered in Chromium against a replay | `uv run pytest -m browser` (needs Chromium); `tests/test_overlay_page.py` |
-| macOS app | Builds on macOS 15 and passes its 58 unit tests in CI; **never run over League** | `overlay/macos/`; CI job `macos-overlay` |
-| App bundle | `LeagueasyMode.app` with the engine inside, signed ad hoc, built by CI, its engine started from an empty home folder; **never opened on a Mac by a person** | `overlay/macos/scripts/build_app.sh`; CI job `macos-app`, which keeps the zip with each run |
-| CI | 11 jobs, the widgets', the macOS app's and the app bundle's included; none may fail | `.github/workflows/ci.yml` |
-| Releases | A tag `v<version>` publishes the zipped app; the app checks for a newer release once a day; **no release published yet** | `.github/workflows/release.yml`; `docs/references/macos-app.md` |
-| Real game data | **None yet**: every test uses built payloads in the API's documented shape | `tests/game_payloads.py` |
+| Gate | Green: lint, 1079 tests (and 80 in Chromium), secrets | `make gate`; `uv run pytest -m browser` |
+| CI and builds | 11 jobs, none may fail; each green `main` publishes `build-<n>` | `.github/workflows/ci.yml`; GitHub releases |
+| App on the owner's Mac | Runs over League, installs updates itself (seen 107 → 119, then to 176) | the owner's messages; `reports/` in the recordings repository |
+| Overlay at a glance | Timers, the newest two callouts that ask for an action now, one short line an enemy | `tests/test_overlay_page.py` (glance tests) |
+| Details on a key | Tab or Option held, or the player dead: everything else, the spell buttons and the Tab overview of both teams | `overlay/macos/Sources/OverlayCore/DetailsKey.swift`; `areDetailsShown`, `renderOverview` in `overlay/web/src/overlay.ts` |
+| Layout | Drag, resize (60–160%), sliders, opacity, hide, kept off League's HUD | `tests/test_layout_page.py`, `tests/test_settings_page.py` |
+| Off the Rift (ARAM, Arena) | No roles; inhibitor timers only, marked "~"; the Rift's models hidden | `tests/test_other_maps.py` |
+| Recording and sending | Records each game; recordings left open are closed after 20 minutes and sent | `tests/test_sender.py`, `tests/test_recording_file.py` |
+| Real game data | **One game** in the recordings repository (Practice Tool, cancelled at 0:00); the owner's ARAM and Swiftplay games were left open on the Mac and go with build 184 or later | `NickHarder/LeagueasyMode-recordings`, `games/` |
 
 ## How to check your work
 
@@ -70,51 +45,22 @@ In `AGENTS.md`, this project's own included: every session reads that file.
 
 ## Open, for the owner
 
-1. **Data Dragon from this environment**: allowed (the owner, 2026-10-08 and 2026-10-09), and
-   reachable since 2026-10-09; the parsing is checked against the real 16.20.1 files.
-2. **The test on a Mac** in [docs/references/macos-app.md](docs/references/macos-app.md): run the
-   app, play a Practice Tool game in each display mode, and record a game or two. The recordings
-   (anonymized) become the test data every estimator needs. With 7.2 the app needs no clone: the
-   `macos-app` job of a pull request's CI run keeps `LeagueasyMode-<version>.zip` (Apple silicon),
-   and the reference says how to open an unsigned app the first time. After the game, "Status…"
-   in the menu, then "Copy report", gives a report to paste back: it says what worked and names
-   no player.
-3. **Compare Riot's root certificate** once with Riot's own `riotgames.pem`: the SHA-256
+1. **Install build 184 or later** (it installs itself when no game is on screen). The games
+   already played then close and go to the recordings repository. The menu's "Status…", "Sending
+   games", says how many went. If none do, "Report a problem…" sends the log and now the
+   recordings folder's list.
+2. **Try the new overlay in a game** and say: whether holding **Tab** shows the details or only
+   **Option** does (reading Tab may need macOS's Input Monitoring permission; Option needs none);
+   whether the mouse now behaves; whether the shaded HUD regions in Edit layout sit on League's
+   HUD, and the minimap layer on League's minimap.
+3. **USERS.md's open fields**: games a day, when the owner plays, main role and rank.
+4. **Documents waiting for approval** (`make docs-status`): the phase 10 plan and the references
+   on recordings, the engine and the macOS app, all drafts.
+5. **Auto-merge settings** (10.7): "Allow auto-merge" and a branch rule on `main` requiring CI's
+   checks; until then sessions merge green pull requests themselves, as the owner allowed.
+6. **The first release**: tag `v0.1.0` when the owner wants; the prereleases need nothing.
+7. **Compare Riot's root certificate** once with Riot's own `riotgames.pem`: the SHA-256
    fingerprint is in `src/leagueasymode/riot_tls.py`.
-4. **The kit's gate skills** (`kickoff`, `audit-codebase`, `define-personas`, `plan-architecture`,
-   `define-key-metrics`) have not been run; the approved plan stands in for the plan and the
-   architecture. Say whether to run any of them.
-5. **Hidden gold's wording and look (3.5)**, on a best guess as with the suggestions: each
-   enemy's row says "1.4k ±0.3k unspent" in gold, and the strip's header adds "Gold −1.8k ±0.6k"
-   under the item-gold lead. The chance an enemy can afford their next item is worked out
-   (`chance_of_affording`) and shows with 3.8's next item ("next Infinity Edge · 2.1k left · 40%
-   now", and the callout "Caitlyn can likely buy Infinity Edge"). Hidden experience (3.6)
-   adds "6 in ~0:35" on an enemy's row within 1:30 of 6, 11 or 16, and the callout "Zed hits 6
-   in ~0:15"; backs (3.7) add "went back 7:42 · returns ~0:24" and, for their jungler only, the
-   callout "Vi went back: in the jungle again in ~0:20". The same applies to both.
-6. **The minimap layer on the Mac (4.6)**: it is drawn where League's minimap is, from League's
-   `game.cfg`, at 22% of the window's height times League's minimap scale; whether that lines up
-   with League's own minimap can only be seen on the Mac. Say how far off it is, or send a
-   screenshot.
-7. **The first release**: when the app has been tried on a Mac, tag `v0.1.0` on `main` and push
-   the tag (`docs/references/macos-app.md`, "Releases, updates and opening at login"). Publishing
-   is the owner's call; no session tags a release unasked. The prereleases `build-<n>` are CI's,
-   from each green push to main, as the owner allowed on 2026-10-28 (10.6).
-8. **Documents waiting for approval** (`make docs-status`): the retrospective, and the references
-   on recordings, the engine and the macOS app, all drafts. Every plan is approved (phase 3's on
-   2026-10-08, the rest on 2026-10-09).
-9. **Auto-merge (10.7)**, approved by the owner on 2026-10-28, needs two settings only the owner
-   can change: Settings → General → Pull Requests → "Allow auto-merge", and a branch rule on
-   `main` (Settings → Rules) requiring CI's checks. Claude's pull requests then merge themselves
-   once green, and with 10.6 each merge reaches the app as "Install update".
-10. **The daily check (10.8)** runs as a scheduled cloud session at 13:52 UTC: it reads what
-   arrived in the recordings repository (games, crash reports, problem reports) and opens pull
-   requests for what they show.
-11. **Advanced opponent tracking**: whether the minimap's circles should first show only the
-   jungler and laners likely away from lane, with a setting; not yet answered.
-12. **Phase 11, roasts with receipts** ([docs/plans/phase-11-roasts.md](docs/plans/phase-11-roasts.md),
-    approved 2026-10-28, again with slice 11.8, Claude's take): its slice 11.0 needs one real matchmade game recorded to the end; the only recording
-    so far is a Practice Tool game cancelled at 0:00.
 
 ## Where everything is
 
@@ -166,6 +112,12 @@ In `AGENTS.md`. Also: a raw recording (it holds other players' names); only `ano
   with this if the free developer key can handle this"; no developer key is used, and the pace
   would fit one's limits).
 
+- The overlay is quiet at a glance and shows details only while Tab or Option is held or the
+  player is dead (the owner, 2026-10-29: "maybe extra details onyl show if i hit tab"; "if it is
+  goign to take my eyes off fights, it needs to be wort while info"); `docs/log.md`.
+- The layout plan and its decisions: widgets dropped on League's HUD move off automatically; ARAM
+  times the inhibitors only (the owner, 2026-10-29: "approved, move them off automatically, no
+  ARAM timers except inhib"); [docs/plans/overlay-layout.md](docs/plans/overlay-layout.md).
 - Recorded games go, anonymized, to the owner's private repository
   `NickHarder/LeagueasyMode-recordings`, by themselves once a token is in the Keychain (the
   owner, 2026-10-28: "i want it automated if possible"; a private repository over a branch of the
@@ -173,8 +125,11 @@ In `AGENTS.md`. Also: a raw recording (it holds other players' names); only `ano
 
 ## Known limitations
 
-- On the third try on a Mac (ARAM, 2026-10-28) the engine stopped with exit 1, cause unknown;
-  the crash reports the engine now writes and sends say where the next error happens.
+- League's HUD regions (layout slice L.3) are a guess at its default HUD, as shares of the
+  window; the shading in Edit layout shows them for the owner to check.
+- ARAM's inhibitor respawn time is unknown: the Rift's 5:00 stands in, marked "~", until a
+  recorded ARAM game shows `InhibKilled` and `InhibRespawned`.
+- Whether macOS lets the app read Tab's state without Input Monitoring is not yet seen.
 
 - Nothing has met a real game: field names, the `KillerName` form, the lockfile path, the
   certificate check and the timeline endpoint are from documentation and libraries, not seen.
