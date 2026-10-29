@@ -6,6 +6,11 @@ skill has the format.
 
 ## 2026-10-29
 
+- The key metrics' computations, as `define-key-metrics` asks: the recordings counts (games, crash
+  reports, problem reports in a window, from file names alone) and the accuracy score (an
+  estimator's weighed mean over its newest games), each with its executor and a standard-library
+  attester. DR-01, GR-01 and GR-02 now carry values `make attest` accepted; DR-02 to DR-04 have
+  nothing to score yet; NS-01's computation waits for the first scored games.
 - `ARCHITECTURE.md`, by the kit's `plan-architecture`, after the product as the audit was: the
   three programs and their contract, the trust boundaries, one answer end to end, failure per
   dependency, the latency budget against what PERF measured, eight deviations from the plan (the
