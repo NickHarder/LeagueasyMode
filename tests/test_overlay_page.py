@@ -666,14 +666,15 @@ async def test_an_enemy_in_sight_has_no_mark_on_the_minimap(tmp_path: Path) -> N
 
 async def test_off_the_rift_its_widgets_and_the_minimap_layer_hide(tmp_path: Path) -> None:
     # The same game on ARAM's map: the enemies show, the Rift's dragon, objectives and minimap not.
-    # The fallen inhibitor stays, its time marked unconfirmed (the owner, 2026-10-29: "no ARAM
-    # timers except inhib"); it was asserted hidden before that.
+    # The fallen inhibitor stays (the owner, 2026-10-29: "no ARAM timers except inhib"); it was
+    # asserted hidden before that. Its time was marked "~" until the owner's recorded ARAMs set
+    # ARAM's respawn at 4:10, 50 seconds sooner than the Rift's 5:00, now shown without the mark.
     async with open_overlay(tmp_path, snapshot_count=60, speed=1.0, map_number=12) as page:
         await expect(page.locator("#enemy-strip .enemy-row")).to_have_count(5, timeout=5000)
         await expect(page.locator("#dragon-widget")).to_be_hidden()
         pills = page.locator("#objective-pills .pill")
         await expect(pills).to_have_count(1)
-        await expect(pills.nth(0)).to_have_text(re.compile(r"^Enemy top inhib\s*~4:[45]\d$"))
+        await expect(pills.nth(0)).to_have_text(re.compile(r"^Enemy top inhib\s*3:[45]\d$"))
         await expect(page.locator("#minimap")).to_be_hidden()
         await keep_screenshot(page, "off-the-rift")
 
