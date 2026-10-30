@@ -4,6 +4,14 @@ What changed in this project and why, newest first. A commit shows the differenc
 gives the reason. The `handoff` skill adds to it at every checkpoint, and the `write-okf-concept`
 skill has the format.
 
+## 2026-10-30
+
+- Off the Rift the scoring harness scores only what the overlay works out there: the combat
+  stats, the next items and the fights. The owner's 15 uploaded games, most of them ARAM, scored
+  the Rift's roles (0/10), gold, experience, positions, map and win chance (worse than a coin
+  flip in 9 games) on games where the overlay never shows them; those scores would have set the
+  accuracy thresholds and the refit. An ARAM no longer gives the win chance samples.
+
 ## 2026-10-29
 
 - An automatic update waits while League's game app runs, not only while its window is on

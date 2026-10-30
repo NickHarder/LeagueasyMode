@@ -52,6 +52,7 @@ from leagueasymode.scoring import (
     score_recording,
     score_roles,
     score_win_chance,
+    win_samples,
 )
 from recorded_games import (
     game_details,
@@ -136,6 +137,24 @@ def test_scores_come_together_for_a_recording(tmp_path: Path) -> None:
     recording = write_scored_recording(tmp_path, players_at(are_positions_given=True, level=1))
     scores = score_recording(recording, fixture_patch_stats())
     assert [score.estimator for score in scores] == ["roles", "combat stats (yours)"]
+
+
+def test_off_the_rift_only_what_the_overlay_shows_there_is_scored(tmp_path: Path) -> None:
+    # The owner's ARAMs (map 12) scored the Rift's roles, gold, experience, positions, map and
+    # win chance, none of which the overlay works out off the Rift: roles 0/10 and a win chance
+    # worse than a coin flip in game after game, which would have set the thresholds and the
+    # fits. Off the Rift only the estimators the overlay uses there are scored.
+    recording = write_scored_recording(
+        tmp_path,
+        players_at(are_positions_given=True, level=1),
+        timeline=game_timeline(),
+        winning_team_id=100,
+        map_number=12,
+    )
+    scores = score_recording(recording, fixture_patch_stats())
+    assert [score.estimator for score in scores] == ["combat stats (yours)"]
+    # Nor does an ARAM refit the Rift's win chance.
+    assert win_samples(read_recorded_game(recording)) == []
 
 
 def test_gold_is_scored_for_every_player_but_you_against_the_timeline(tmp_path: Path) -> None:

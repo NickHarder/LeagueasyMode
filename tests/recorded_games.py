@@ -128,6 +128,7 @@ def write_scored_recording(
     past_timelines: dict[int, JsonValue] | None = None,
     client_answers: dict[str, JsonValue] | None = None,
     details: JsonValue | None = None,
+    map_number: int = 11,
 ) -> Path:
     """A recording of a built game, one answer a minute to 15:00; the feed shows each event from
     its time on. Past games' timelines, by game id, and other answers of the client, by path, are
@@ -183,6 +184,7 @@ def write_scored_recording(
                     else seed
                     for seed in players
                 ),
+                map_number=map_number,
             ),
         )
     details_positions = positions_by_champion or {
