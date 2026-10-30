@@ -69,4 +69,4 @@ def test_no_line_flames_a_teammate_for_what_the_defendant_did_too() -> None:
     assert quick is not None
     lines = roast_suggestions(quick, 2, RoastRules()).lines
     assert not any("Jax died" in line for line in lines)
-    assert lines[0] == "gg, died 8 times myself, we all inted"
+    assert lines[0] == "gg, died 8 times myself lol we all inted"
