@@ -6,6 +6,10 @@ skill has the format.
 
 ## 2026-10-29
 
+- The case lines in a spunky 17-year-old's voice (the owner: "Imagine you are a spunky 17 yo.
+  What would you type post game? Channel that personal"; the draft "aaoorived"): all 81 lines
+  redrafted ("bro is an atm", "yall are cooked", "smurfing in my elo is crazy"), slots, spice
+  levels and the self-aware rule unchanged.
 - An automatic update waits while League's game app runs, not only while its window is on
   screen: build 222 installed itself at 22:02:22 in the middle of the owner's ARAM, and the game's
   recording stopped that second and went up in two halves (6:49 and 2:17). A game in another

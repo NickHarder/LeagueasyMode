@@ -15,9 +15,9 @@ NUMBER_WORDS: Final = re.compile(
 )
 # The lines the owner approved word for word: first on 2026-10-08 in nothingsmyfault, then with
 # more flair and harsher Speedrun lines, then on 2026-10-29 in League-chat voice ("approve") and
-# with the self-aware lines ("approved"). A
+# with the self-aware lines ("approved"), then in a spunky 17-year-old's voice ("aaoorived"). A
 # change to any line changes this; the new line goes to the owner before the fingerprint does.
-APPROVED_LINES_SHA256: Final = "82fed0af88b0a7db51699858581038407999381462f23dea30dbf271d3f3c4b7"
+APPROVED_LINES_SHA256: Final = "a3b184241d8bab5f2b42ff3514a1ba9e04dc848658b9dcaff6b4c2f6273d3cbf"
 
 
 def test_the_lines_are_the_ones_the_owner_approved() -> None:
