@@ -88,12 +88,19 @@ def test_on_the_rift_an_inhibitors_timer_is_confirmed() -> None:
     assert timer.is_rule_verified
 
 
-def test_off_the_rift_the_inhibitors_timer_shows_unconfirmed() -> None:
-    # The owner, 2026-10-29: "no ARAM timers except inhib". No source gives ARAM's respawn time,
-    # so the Rift's 5:00 stands in, marked unconfirmed until a recorded ARAM game sets it.
+def test_in_aram_an_inhibitor_comes_back_after_four_minutes_ten() -> None:
+    # The owner, 2026-10-29: "no ARAM timers except inhib". The Rift's 5:00 stood in, unconfirmed,
+    # until recorded ARAMs set it: in the owner's games of 2026-10-29 every one of 9 inhibitors
+    # came back 250 seconds after it fell, to the second. Now confirmed.
     (timer,) = state_of(HOWLING_ABYSS, "ARAM").inhibitors
     assert timer.side == "ally"
     assert timer.lane == "mid"
+    assert timer.respawns_at_game_time_seconds == 750.0
+    assert timer.is_rule_verified
+
+
+def test_on_another_map_the_rifts_inhibitor_time_stands_in_unconfirmed() -> None:
+    (timer,) = state_of(30, "CHERRY").inhibitors
     assert timer.respawns_at_game_time_seconds == 800.0
     assert not timer.is_rule_verified
 

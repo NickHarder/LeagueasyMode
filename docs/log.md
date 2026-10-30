@@ -6,6 +6,16 @@ skill has the format.
 
 ## 2026-10-30
 
+- Turrets and inhibitors are read by the names the game really gives them
+  (`Turret_TOrder_L0_P3_…`, `Inhib_TChaos_L1_P1_…`), read against the match timelines of the
+  owner's games: lane 0 bot, 1 mid, 2 top; place 3 outer, 2 inner, 1 inhibitor, 4 and 5 nexus.
+  The code had read only the names open-source readers give (`Turret_T1_L_03_A`,
+  `Barracks_T1_L1`), which never came, so in every real game no turret or inhibitor was read:
+  no inhibitor timers (ARAM's only timers), no turrets per lane, no turret gold, clues or win
+  chance lead. ARAM's inhibitors come back after 4:10, as all 9 did in the owner's ARAMs, now
+  confirmed. On the one full Rift game, gold moved from 146 to 153 off and the Swiftplay's win
+  chance Brier from 0.391 to 0.404: their turret weights were set without ever seeing a turret,
+  and wait for more games to fit.
 - Off the Rift the scoring harness scores only what the overlay works out there: the combat
   stats, the next items and the fights. The owner's 15 uploaded games, most of them ARAM, scored
   the Rift's roles (0/10), gold, experience, positions, map and win chance (worse than a coin

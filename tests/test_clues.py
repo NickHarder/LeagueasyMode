@@ -67,6 +67,14 @@ def test_a_turret_taken_puts_the_champions_credited_with_it_there() -> None:
     assert ZED not in clues
 
 
+def test_a_turret_named_as_the_game_names_it_places_its_takers() -> None:
+    turret = turret_killed_event(
+        1, 600.0, "Turret_TOrder_L2_P3_1509986696_0", "Top Dog", ["Gank Plz"]
+    )
+    clues = observe(ClueTracker(), 610.0, [game_start_event(), turret])
+    assert latest(clues, DARIUS).point_name == "order_top_outer_turret"
+
+
 def test_an_inhibitor_taken_puts_its_takers_at_it() -> None:
     inhibitor = inhibitor_killed_event(1, 1500.0, "Barracks_T2_C1", "Ahri")
     clue = latest(observe(ClueTracker(), 1510.0, [game_start_event(), inhibitor]), AHRI)

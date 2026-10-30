@@ -21,8 +21,6 @@ from leagueasymode.inference.gold import (
     CHAMPION_KILL_EVENT,
     NEW_GAME_SLACK_SECONDS,
     TURRET_KILLED_EVENT,
-    TURRET_NAME_PATTERN,
-    TURRET_TIER_BY_LANE_AND_PLACE,
     PlayerKey,
     player_key,
 )
@@ -30,12 +28,10 @@ from leagueasymode.inference.objectives import (
     BARON_KILL_EVENT,
     DRAGON_KILL_EVENT,
     INHIBITOR_KILLED_EVENT,
-    INHIBITOR_NAME_PATTERN,
-    LANE_BY_LETTER,
-    TEAM_BY_NUMBER,
 )
 from leagueasymode.inference.rift_map import RIFT_MAP, TEAM_PREFIX, fountain_of, role_point_of
 from leagueasymode.inference.roles import assign_roles
+from leagueasymode.inference.structure_names import read_inhibitor_name, read_turret_name
 from leagueasymode.overlay_state import BackEstimate, PositionClue
 
 # The epic monsters' pits, and their names in words. The Voidgrubs' event name is to be confirmed
@@ -272,34 +268,32 @@ def _structure_place(event: GameEvent) -> tuple[str, str] | None:
         return _turret_place(event.turret_killed_name)
     if event.event_name != INHIBITOR_KILLED_EVENT:
         return None
-    inhibitor_match = INHIBITOR_NAME_PATTERN.match(event.inhibitor_killed_name or "")
-    if inhibitor_match is None:
+    inhibitor = read_inhibitor_name(event.inhibitor_killed_name)
+    if inhibitor is None:
         return None
-    team_prefix = TEAM_PREFIX[TEAM_BY_NUMBER[inhibitor_match["team"]]]
-    lane = LANE_BY_LETTER[inhibitor_match["lane"]]
-    return f"{team_prefix}_{lane}_inhibitor", f"at the {lane} inhibitor"
+    team_prefix = TEAM_PREFIX[inhibitor.team]
+    return f"{team_prefix}_{inhibitor.lane}_inhibitor", f"at the {inhibitor.lane} inhibitor"
 
 
 def _turret_place(turret_name: str | None) -> tuple[str, str] | None:
     """Return where a turret stands, by the name the feed gives it.
 
     Args:
-        turret_name: Such as "Turret_T1_L_03_A".
+        turret_name: Such as "Turret_TOrder_L2_P3_1509986696_0".
 
     Returns:
         The map's point and the place in words, or None for a name not understood.
     """
-    turret_match = TURRET_NAME_PATTERN.match(turret_name or "")
-    if turret_match is None:
+    turret = read_turret_name(turret_name)
+    if turret is None:
         return None
-    tier = TURRET_TIER_BY_LANE_AND_PLACE.get((turret_match["lane"], int(turret_match["place"])))
-    team_prefix = TEAM_PREFIX[TEAM_BY_NUMBER[turret_match["team"]]]
-    lane = LANE_BY_LETTER[turret_match["lane"]]
-    if tier is None:
-        return None
-    if tier == "nexus":
+    team_prefix = TEAM_PREFIX[turret.team]
+    if turret.tier == "nexus":
         return f"{team_prefix}_nexus", "at the nexus turrets"
-    return f"{team_prefix}_{lane}_{tier}_turret", f"at the {lane} {tier} turret"
+    return (
+        f"{team_prefix}_{turret.lane}_{turret.tier}_turret",
+        f"at the {turret.lane} {turret.tier} turret",
+    )
 
 
 def _pit_place(event: GameEvent) -> tuple[str, str] | None:

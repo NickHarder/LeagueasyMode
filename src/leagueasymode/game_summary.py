@@ -22,21 +22,14 @@ from typing import Final, Literal
 from pydantic import BaseModel, ConfigDict
 
 from leagueasymode.game_state import GameEvent, GameSnapshot
-from leagueasymode.inference.gold import (
-    CHAMPION_KILL_EVENT,
-    TURRET_KILLED_EVENT,
-    TURRET_NAME_PATTERN,
-    TURRET_TIER_BY_LANE_AND_PLACE,
-)
+from leagueasymode.inference.gold import CHAMPION_KILL_EVENT, TURRET_KILLED_EVENT
 from leagueasymode.inference.objectives import (
     BARON_KILL_EVENT,
     DRAGON_KILL_EVENT,
     ELDER_DRAGON_TYPE,
     INHIBITOR_KILLED_EVENT,
-    INHIBITOR_NAME_PATTERN,
-    LANE_BY_LETTER,
-    TEAM_BY_NUMBER,
 )
+from leagueasymode.inference.structure_names import read_inhibitor_name, read_turret_name
 from leagueasymode.inference.win_chance import WIN_CHANCE_RULES, WinChanceRules, win_chance
 from leagueasymode.scoring import (
     EstimatorScore,
@@ -328,22 +321,19 @@ def _structure_words(
         Its kind, and such as "their top outer turret"; None for another entry.
     """
     if event.event_name == TURRET_KILLED_EVENT:
-        turret_match = TURRET_NAME_PATTERN.match(event.turret_killed_name or "")
-        if turret_match is None:
+        turret = read_turret_name(event.turret_killed_name)
+        if turret is None:
             return None
-        whose = "your" if TEAM_BY_NUMBER[turret_match["team"]] == ally_team else "their"
-        tier = TURRET_TIER_BY_LANE_AND_PLACE.get(
-            (turret_match["lane"], int(turret_match["place"])), "base"
-        )
-        if tier == "nexus":
+        whose = "your" if turret.team == ally_team else "their"
+        if turret.tier == "nexus":
             return "turret", f"{whose} nexus turret"
-        return "turret", f"{whose} {LANE_BY_LETTER[turret_match['lane']]} {tier} turret"
+        return "turret", f"{whose} {turret.lane} {turret.tier} turret"
     if event.event_name == INHIBITOR_KILLED_EVENT:
-        inhibitor_match = INHIBITOR_NAME_PATTERN.match(event.inhibitor_killed_name or "")
-        if inhibitor_match is None:
+        inhibitor = read_inhibitor_name(event.inhibitor_killed_name)
+        if inhibitor is None:
             return None
-        whose = "your" if TEAM_BY_NUMBER[inhibitor_match["team"]] == ally_team else "their"
-        return "inhibitor", f"{whose} {LANE_BY_LETTER[inhibitor_match['lane']]} inhibitor"
+        whose = "your" if inhibitor.team == ally_team else "their"
+        return "inhibitor", f"{whose} {inhibitor.lane} inhibitor"
     return None
 
 
