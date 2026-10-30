@@ -1058,10 +1058,11 @@ def win_samples(game: RecordedGame) -> list[tuple[WinFeatures, float]]:
 
     Returns:
         Each minute's features and the result (1 when your team won), in order; none when the
-        recording has no result.
+        recording has no result, or off the Rift, where the win chance is not shown, so that an
+        ARAM does not refit the Rift's.
     """
     has_ally_won = ally_result(game)
-    if has_ally_won is None:
+    if has_ally_won is None or not _is_on_the_rift(game):
         return []
     result = 1.0 if has_ally_won else 0.0
     return [(features, result) for _, features in sorted(game.minute_win_features.items())]
@@ -1180,6 +1181,12 @@ def score_recording(recording_path: Path, patch_stats: PatchStats | None) -> lis
 def score_game(game: RecordedGame, patch_stats: PatchStats | None) -> list[EstimatorScore]:
     """Score every estimator a recorded game can score.
 
+    Off the Rift only the estimators the overlay uses there are scored: the combat stats, the
+    next items and the fights. The rest were built for the Rift's roles, income, lanes and
+    objectives, and the engine does not work them out elsewhere (`engine.py`); scored on the
+    owner's ARAMs they read roles 0/10 and a win chance worse than a coin flip, which would set
+    the thresholds and the fits.
+
     Args:
         game: The recorded game.
         patch_stats: The patch's stats; None when they cannot be had.
@@ -1187,6 +1194,16 @@ def score_game(game: RecordedGame, patch_stats: PatchStats | None) -> list[Estim
     Returns:
         The scores, in the plan's order of the estimators; one that cannot be scored is left out.
     """
+    if not _is_on_the_rift(game):
+        return [
+            score
+            for score in [
+                score_combat_stats(game, patch_stats),
+                score_next_items(game, patch_stats),
+                score_fights(game, patch_stats),
+            ]
+            if score is not None
+        ]
     return [
         *(
             score
@@ -1214,6 +1231,19 @@ def score_game(game: RecordedGame, patch_stats: PatchStats | None) -> list[Estim
         ),
         *score_jungle_habits(game),
     ]
+
+
+def _is_on_the_rift(game: RecordedGame) -> bool:
+    """Return whether a recorded game was played on Summoner's Rift.
+
+    Args:
+        game: The recorded game.
+
+    Returns:
+        Whether its first answer names the Rift; True for a game without an answer, which scores
+        nothing anyway.
+    """
+    return not game.minute_snapshots or game.minute_snapshots[0].game_data.is_summoners_rift
 
 
 def _timeline_items[Estimate](
