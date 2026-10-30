@@ -30,6 +30,27 @@ def enemy_turret(event_id: int, name: str) -> dict[str, JsonValue]:
     return turret_killed_event(event_id, 600.0 + 60 * event_id, name, ALLY_TOP)
 
 
+def test_the_names_the_game_really_gives_are_read() -> None:
+    # As the feed named them in the owner's games of 2026-10-29; the names these tests long used
+    # never came in a real game, so no lane showed a turret down.
+    structures = lane_structures(
+        snapshot_at(
+            1500.0,
+            enemy_turret(1, "Turret_TChaos_L0_P3_511845594_0"),
+            enemy_turret(2, "Turret_TChaos_L0_P2_528623213_0"),
+            enemy_turret(3, "Turret_TChaos_L0_P1_478290356_0"),
+            enemy_turret(4, "Turret_TChaos_L2_P3_2521511112_0"),
+            turret_killed_event(5, 900.0, "Turret_TOrder_L1_P3_1242677625_0", ENEMY_JUNGLER),
+            turret_killed_event(6, 950.0, "Turret_TOrder_L1_P4_3675873665_0", ENEMY_JUNGLER),
+        )
+    )
+    assert structures == [
+        LaneStructures(side="ally", lane="mid", turrets_down=1, is_inhibitor_exposed=False),
+        LaneStructures(side="enemy", lane="top", turrets_down=1, is_inhibitor_exposed=False),
+        LaneStructures(side="enemy", lane="bot", turrets_down=3, is_inhibitor_exposed=True),
+    ]
+
+
 def test_before_any_turret_falls_there_is_nothing_to_show() -> None:
     assert lane_structures(snapshot_at(300.0)) == []
 

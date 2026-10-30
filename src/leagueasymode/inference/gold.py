@@ -22,7 +22,6 @@ everything else counted, corrects it for every player of your kind.
 """
 
 import math
-import re
 from collections import Counter, defaultdict
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
@@ -32,12 +31,8 @@ from typing import Final, Literal
 from pydantic import BaseModel, ConfigDict
 
 from leagueasymode.game_state import GameEvent, GameSnapshot, ScoreboardItem, ScoreboardPlayer
-from leagueasymode.inference.objectives import (
-    BARON_KILL_EVENT,
-    INHIBITOR_KILLED_EVENT,
-    INHIBITOR_NAME_PATTERN,
-    TEAM_BY_NUMBER,
-)
+from leagueasymode.inference.objectives import BARON_KILL_EVENT, INHIBITOR_KILLED_EVENT
+from leagueasymode.inference.structure_names import read_inhibitor_name, read_turret_name
 from leagueasymode.overlay_state import GoldEstimate, PlayerCard, TeamGold
 from leagueasymode.patch_data import CONSUMABLE_CATEGORY, ItemCatalog
 
@@ -51,24 +46,6 @@ CHAMPION_KILL_EVENT: Final = "ChampionKill"
 TURRET_KILLED_EVENT: Final = "TurretKilled"
 SMITE_SPELL_ID: Final = "SummonerSmite"
 OTHER_TEAM: Final = {"ORDER": "CHAOS", "CHAOS": "ORDER"}
-# "Turret_T1_L_03_A": the turret's team (1 for ORDER), its lane, and its place in the lane counted
-# from the base. As open-source readers of the game's API name them; a recording confirms it.
-TURRET_NAME_PATTERN: Final = re.compile(
-    r"^Turret_T(?P<team>[12])_(?P<lane>[LCR])_(?P<place>\d{2})_A$"
-)
-TURRET_TIER_BY_LANE_AND_PLACE: Final[Mapping[tuple[str, int], str]] = {
-    ("L", 3): "outer",
-    ("C", 5): "outer",
-    ("R", 3): "outer",
-    ("L", 2): "inner",
-    ("C", 4): "inner",
-    ("R", 2): "inner",
-    ("L", 1): "inhibitor",
-    ("C", 3): "inhibitor",
-    ("R", 1): "inhibitor",
-    ("C", 2): "nexus",
-    ("C", 1): "nexus",
-}
 # The support item's quest: World Atlas, Runic Compass, then Bounty of Worlds and the item it
 # becomes, by their ids of the 2024 season. An item built from Bounty of Worlds is the last stage
 # too, so that a new support item is known by its recipe.
@@ -890,10 +867,10 @@ def _objective_payments(
     if event.event_name == TURRET_KILLED_EVENT:
         return _turret_payments(event, snapshot, rules)
     if event.event_name == INHIBITOR_KILLED_EVENT:
-        inhibitor_match = INHIBITOR_NAME_PATTERN.match(event.inhibitor_killed_name or "")
-        if inhibitor_match is None:
+        inhibitor = read_inhibitor_name(event.inhibitor_killed_name)
+        if inhibitor is None:
             return []
-        destroying_team = OTHER_TEAM[TEAM_BY_NUMBER[inhibitor_match["team"]]]
+        destroying_team = OTHER_TEAM[inhibitor.team]
         return _shared_payments(event, snapshot, destroying_team, rules.inhibitor_gold)
     if event.event_name == BARON_KILL_EVENT:
         killer = snapshot.player_named(event.killer_name)
@@ -914,21 +891,20 @@ def _turret_payments(
     Returns:
         The payments; none for a turret whose name is not understood.
     """
-    turret_match = TURRET_NAME_PATTERN.match(event.turret_killed_name or "")
-    if turret_match is None:
+    turret = read_turret_name(event.turret_killed_name)
+    if turret is None:
         return []
-    tier = TURRET_TIER_BY_LANE_AND_PLACE.get((turret_match["lane"], int(turret_match["place"])))
     tier_gold = next(
         (
             (team_gold_each, shared_gold)
             for name, team_gold_each, shared_gold in rules.turret_gold
-            if name == tier
+            if name == turret.tier
         ),
         None,
     )
     if tier_gold is None:
         return []
-    destroying_team = OTHER_TEAM[TEAM_BY_NUMBER[turret_match["team"]]]
+    destroying_team = OTHER_TEAM[turret.team]
     return [
         *_team_payments(snapshot, destroying_team, tier_gold[0]),
         *_shared_payments(event, snapshot, destroying_team, tier_gold[1]),

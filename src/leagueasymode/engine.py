@@ -191,8 +191,8 @@ def compute_overlay_state(
     objectives = objective_timers(snapshot) if on_the_rift else []
     buffs = buff_timers(snapshot) if on_the_rift else []
     # Off the Rift only the inhibitors are timed (the owner, 2026-10-29: "no ARAM timers except
-    # inhib"), with the Rift's respawn time marked unconfirmed until an ARAM recording sets it.
-    inhibitors = inhibitor_timers(snapshot, is_rule_verified=on_the_rift)
+    # inhib"), at ARAM's own respawn time, which the owner's recorded ARAMs set.
+    inhibitors = inhibitor_timers(snapshot)
     teams_gold = team_gold(cards)
     teams_item_gold = team_item_gold(cards)
     return OverlayState(

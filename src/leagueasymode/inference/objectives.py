@@ -7,13 +7,13 @@ season goes back to unverified, and the overlay marks its times as provisional, 
 confirmed again.
 """
 
-import re
 from dataclasses import dataclass
 from typing import Final, Literal
 
 from pydantic import BaseModel, ConfigDict
 
 from leagueasymode.game_state import GameEvent, GameSnapshot
+from leagueasymode.inference.structure_names import read_inhibitor_name
 from leagueasymode.overlay_state import BuffTimer, DragonTimer, InhibitorTimer, ObjectiveTimer
 
 DRAGON_KILL_EVENT: Final = "DragonKill"
@@ -25,15 +25,10 @@ DEFAULT_MAP_TERRAIN: Final = "Default"
 BARON_BUFF_SECONDS: Final = 180.0
 ELDER_BUFF_SECONDS: Final = 150.0
 INHIBITOR_RESPAWN_SECONDS: Final = 300.0
-# "Barracks_T1_L1": team 1 (ORDER) or 2 (CHAOS), then the lane. L, C and R are taken as top, mid
-# and bottom, which the first recordings confirm or correct.
-INHIBITOR_NAME_PATTERN: Final = re.compile(r"^Barracks_T(?P<team>[12])_(?P<lane>[LCR])1$")
-TEAM_BY_NUMBER: Final = {"1": "ORDER", "2": "CHAOS"}
-LANE_BY_LETTER: Final[dict[str, Literal["top", "mid", "bot"]]] = {
-    "L": "top",
-    "C": "mid",
-    "R": "bot",
-}
+# ARAM's map, the Howling Abyss, and its inhibitors' respawn: in the owner's ARAMs of 2026-10-29
+# every one of 9 inhibitors came back 250 seconds after it fell, to the second.
+HOWLING_ABYSS_MAP_NUMBER: Final = 12
+HOWLING_ABYSS_INHIBITOR_RESPAWN_SECONDS: Final = 250.0
 
 
 class DragonRules(BaseModel):
@@ -246,23 +241,27 @@ def buff_timers(snapshot: GameSnapshot) -> list[BuffTimer]:
     ]
 
 
-def inhibitor_timers(
-    snapshot: GameSnapshot, *, is_rule_verified: bool = True
-) -> list[InhibitorTimer]:
+def inhibitor_timers(snapshot: GameSnapshot) -> list[InhibitorTimer]:
     """Return the inhibitors that are down, with when each comes back.
 
     An inhibitor is back when its respawn time passes or the feed says it respawned, whichever
     comes first. A name this module does not recognize is left out.
 
+    The respawn time is the Rift's 5:00 there and ARAM's 4:10 on the Howling Abyss, both
+    confirmed; on any other map the Rift's stands in, unconfirmed.
+
     Args:
         snapshot: The game's state.
-        is_rule_verified: Whether the Rift's respawn time is known to hold on this map; off the
-            Rift it stands in, unconfirmed.
 
     Returns:
         The inhibitors down, in the order they fell.
     """
     game_time_seconds = snapshot.game_data.game_time_seconds
+    is_aram = snapshot.game_data.map_number == HOWLING_ABYSS_MAP_NUMBER
+    respawn_seconds = (
+        HOWLING_ABYSS_INHIBITOR_RESPAWN_SECONDS if is_aram else INHIBITOR_RESPAWN_SECONDS
+    )
+    is_rule_verified = is_aram or snapshot.game_data.is_summoners_rift
     ally_team = snapshot.ally_team()
     last_kill_by_name = {
         event.inhibitor_killed_name: event
@@ -271,21 +270,20 @@ def inhibitor_timers(
     }
     timers: list[InhibitorTimer] = []
     for inhibitor_name, kill_event in last_kill_by_name.items():
-        name_match = INHIBITOR_NAME_PATTERN.match(inhibitor_name)
-        respawns_at_seconds = kill_event.event_time_seconds + INHIBITOR_RESPAWN_SECONDS
+        inhibitor = read_inhibitor_name(inhibitor_name)
+        respawns_at_seconds = kill_event.event_time_seconds + respawn_seconds
         has_respawned = any(
             event.event_name == INHIBITOR_RESPAWNED_EVENT
             and event.inhibitor_respawned_name == inhibitor_name
             and event.event_time_seconds >= kill_event.event_time_seconds
             for event in snapshot.event_list.events
         )
-        if name_match is None or has_respawned or game_time_seconds >= respawns_at_seconds:
+        if inhibitor is None or has_respawned or game_time_seconds >= respawns_at_seconds:
             continue
-        owner_team = TEAM_BY_NUMBER[name_match.group("team")]
         timers.append(
             InhibitorTimer(
-                side="ally" if owner_team == ally_team else "enemy",
-                lane=LANE_BY_LETTER[name_match.group("lane")],
+                side="ally" if inhibitor.team == ally_team else "enemy",
+                lane=inhibitor.lane,
                 respawns_at_game_time_seconds=respawns_at_seconds,
                 is_rule_verified=is_rule_verified,
             )

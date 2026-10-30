@@ -96,6 +96,17 @@ def test_a_destroyed_inhibitor_respawns_five_minutes_later() -> None:
     ] == [("enemy", "top", 2100.0)]
 
 
+def test_an_inhibitor_named_as_the_game_names_it_is_timed() -> None:
+    # The feed's name in the owner's Swiftplay of 2026-10-29: Chaos's bot inhibitor.
+    inhibitor_kill = inhibitor_killed_event(1, 1800.0, "Inhib_TChaos_L0_P1_2971077479_0", ALLY_TOP)
+    respawned = inhibitor_respawned_event(2, 2100.0, "Inhib_TChaos_L0_P1_2971077479_0")
+    inhibitors = inhibitor_timers(snapshot_at(1900.0, inhibitor_kill))
+    assert [
+        (timer.side, timer.lane, timer.respawns_at_game_time_seconds) for timer in inhibitors
+    ] == [("enemy", "bot", 2100.0)]
+    assert inhibitor_timers(snapshot_at(2050.0, inhibitor_kill, respawned)) == []
+
+
 def test_a_respawned_inhibitor_is_no_longer_shown() -> None:
     inhibitor_kill = inhibitor_killed_event(1, 1800.0, "Barracks_T1_C1", ENEMY_JUNGLER)
     respawned = inhibitor_respawned_event(2, 2100.0, "Barracks_T1_C1")

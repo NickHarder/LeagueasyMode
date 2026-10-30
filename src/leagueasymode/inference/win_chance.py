@@ -26,12 +26,8 @@ from typing import Final, Literal
 
 from leagueasymode.game_state import GameSnapshot
 from leagueasymode.inference.fitting import logistic
-from leagueasymode.inference.gold import (
-    BAND_STANDARD_DEVIATIONS,
-    TURRET_KILLED_EVENT,
-    TURRET_NAME_PATTERN,
-)
-from leagueasymode.inference.objectives import TEAM_BY_NUMBER
+from leagueasymode.inference.gold import BAND_STANDARD_DEVIATIONS, TURRET_KILLED_EVENT
+from leagueasymode.inference.structure_names import read_turret_name
 from leagueasymode.overlay_state import (
     BuffTimer,
     DragonTimer,
@@ -329,11 +325,11 @@ def _turret_lead(snapshot: GameSnapshot, ally_team: str) -> int:
         The lead in turrets.
     """
     fallen_teams = [
-        TEAM_BY_NUMBER[turret_match["team"]]
+        turret.team
         for event in snapshot.event_list.events
         if event.event_name == TURRET_KILLED_EVENT
-        for turret_match in [TURRET_NAME_PATTERN.match(event.turret_killed_name or "")]
-        if turret_match is not None
+        for turret in [read_turret_name(event.turret_killed_name)]
+        if turret is not None
     ]
     return sum(1 for team in fallen_teams if team != ally_team) - sum(
         1 for team in fallen_teams if team == ally_team

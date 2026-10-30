@@ -138,8 +138,6 @@ In `AGENTS.md`. Also: a raw recording (it holds other players' names); only `ano
 
 - League's HUD regions (layout slice L.3) are a guess at its default HUD, as shares of the
   window; the shading in Edit layout shows them for the owner to check.
-- ARAM's inhibitor respawn time is unknown: the Rift's 5:00 stands in, marked "~", until a
-  recorded ARAM game shows `InhibKilled` and `InhibRespawned`.
 - Whether macOS lets the app read Tab's state without Input Monitoring is not yet seen.
 
 - Nothing has met a real game: field names, the `KillerName` form, the lockfile path, the

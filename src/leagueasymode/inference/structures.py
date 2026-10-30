@@ -1,20 +1,17 @@
 """Structures, from the kill feed: each side's turrets down per lane, and the inhibitors they open.
 
 Exact: it restates the feed's `TurretKilled` and inhibitor announcements, read by the turret names
-the gold and the clues already read ("Turret_T2_L_03_A": the enemy's top outer turret, when you
-play on the blue side). The two nexus turrets are left out: whether they come back, and when, the
-feed does not say.
+the gold and the clues already read (`structure_names.py`: "Turret_TChaos_L2_P3_…" is the
+enemy's top outer turret, when you play on the blue side). The two nexus turrets are left out:
+whether they come back, and when, the feed does not say.
 """
 
 from typing import Final, Literal
 
 from leagueasymode.game_state import GameSnapshot
-from leagueasymode.inference.gold import (
-    TURRET_KILLED_EVENT,
-    TURRET_NAME_PATTERN,
-    TURRET_TIER_BY_LANE_AND_PLACE,
-)
-from leagueasymode.inference.objectives import LANE_BY_LETTER, TEAM_BY_NUMBER, inhibitor_timers
+from leagueasymode.inference.gold import TURRET_KILLED_EVENT
+from leagueasymode.inference.objectives import inhibitor_timers
+from leagueasymode.inference.structure_names import read_turret_name
 from leagueasymode.overlay_state import LaneStructures
 
 type Side = Literal["ally", "enemy"]
@@ -43,22 +40,15 @@ def lane_structures(snapshot: GameSnapshot) -> list[LaneStructures]:
     ally_team = snapshot.ally_team()
     turrets_down: set[tuple[Side, Lane, str]] = set()
     for event in snapshot.event_list.events:
-        name_match = (
-            TURRET_NAME_PATTERN.match(event.turret_killed_name or "")
+        turret = (
+            read_turret_name(event.turret_killed_name)
             if event.event_name == TURRET_KILLED_EVENT
             else None
         )
-        if name_match is None:
+        if turret is None or turret.tier not in LANE_TURRET_TIERS:
             continue
-        tier = TURRET_TIER_BY_LANE_AND_PLACE.get(
-            (name_match.group("lane"), int(name_match.group("place")))
-        )
-        if tier not in LANE_TURRET_TIERS:
-            continue
-        owner_side: Side = (
-            "ally" if TEAM_BY_NUMBER[name_match.group("team")] == ally_team else "enemy"
-        )
-        turrets_down.add((owner_side, LANE_BY_LETTER[name_match.group("lane")], tier))
+        owner_side: Side = "ally" if turret.team == ally_team else "enemy"
+        turrets_down.add((owner_side, turret.lane, turret.tier))
     inhibitors_down = {(timer.side, timer.lane) for timer in inhibitor_timers(snapshot)}
     lanes: list[LaneStructures] = []
     for side in SIDES:

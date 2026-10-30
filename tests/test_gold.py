@@ -144,6 +144,16 @@ def test_a_turret_pays_its_destroyers_globally_and_its_takers_locally() -> None:
     assert GAREN not in gold
 
 
+def test_a_turret_named_as_the_game_names_it_pays_too() -> None:
+    # Order's top outer turret, by the name the feed gave it in the owner's games.
+    outer_top = turret_killed_event(
+        1, 600.0, "Turret_TOrder_L2_P3_1509986696_0", "Top Dog", ["Gank Plz"]
+    )
+    gold = feed_gold(snapshot_at(610.0, events=[game_start_event(), outer_top]))
+    assert gold[DARIUS].objective_gold == 50.0 + 125.0
+    assert gold[ZED].objective_gold == 50.0
+
+
 def test_inner_turrets_inhibitors_and_baron_pay_their_own_amounts() -> None:
     events = [
         game_start_event(),
