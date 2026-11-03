@@ -6,6 +6,10 @@ skill has the format.
 
 ## 2026-11-03
 
+- The self-aware lines differ at Speedrun too (the owner: "make the self aware lines different at
+  speedrun too"; the draft "Ok"): each spicy self-aware line keeps spice 3, and a harsher copy
+  takes 4 ("whole team was a feeding frenzy and i was the buffet", "i was spectating my own game
+  fr", "report all of us").
 - "ban speedrun" is a slide switch on a row of its own (the owner: "make the ban speedrun a
   toggle with a slide that is its own"), in the post-game window with a short note of its risk,
   and on the roast card.
