@@ -6,6 +6,12 @@ skill has the format.
 
 ## 2026-11-03
 
+- The roasts get edge (the owner: "Stop being so tame. Have some edge to your roasts ... Make it
+  true make it sting make it funny this is for friends and laughs. I am responsible if I want to
+  paste something or not"; the draft "Yeah this is way better"). All 58 lines spice 3 and 4 show
+  are rewritten to sting ("that's not a smurf that's a war crime", "turn your monitor on next
+  time", "not even inting, inting would've been on purpose"); every number is still the game's,
+  the self-aware rule holds, and so does the floor: no slurs, nothing about who a person is.
 - The self-aware lines differ at Speedrun too (the owner: "make the self aware lines different at
   speedrun too"; the draft "Ok"): each spicy self-aware line keeps spice 3, and a harsher copy
   takes 4 ("whole team was a feeding frenzy and i was the buffet", "i was spectating my own game
