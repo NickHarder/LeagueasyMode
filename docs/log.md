@@ -6,6 +6,9 @@ skill has the format.
 
 ## 2026-11-03
 
+- "ban speedrun" is a slide switch on a row of its own (the owner: "make the ban speedrun a
+  toggle with a slide that is its own"), in the post-game window with a short note of its risk,
+  and on the roast card.
 - Spice 3 by default, with a "ban speedrun" toggle for 4 (the owner: "have it be on default (3)
   and a toggle for ban speedrun"), on the roast card and in the post-game window; the spice
   buttons are gone, and the engine's default is 3 again.

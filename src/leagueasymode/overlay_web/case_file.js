@@ -239,22 +239,25 @@ export function caseSectionElement(fetchCase) {
         });
         const proveLabel = htmlElement("label", "case-prove");
         proveLabel.append(prove, document.createTextNode(" 1v1s only: each vs their lane opponent"));
-        const banSpeedrun = htmlElement("input", "");
+        // A slide switch on a row of its own (the owner, 2026-11-03: "make the ban speedrun a toggle
+        // with a slide that is its own").
+        const banSpeedrun = htmlElement("input", "ban-switch");
         banSpeedrun.type = "checkbox";
+        banSpeedrun.setAttribute("role", "switch");
         banSpeedrun.checked = choice.spice === BAN_SPEEDRUN_SPICE;
         banSpeedrun.addEventListener("change", () => {
             choose({ spice: banSpeedrun.checked ? BAN_SPEEDRUN_SPICE : DEFAULT_SPICE });
         });
-        const banSpeedrunLabel = htmlElement("label", "case-prove case-ban-speedrun");
-        banSpeedrunLabel.append(banSpeedrun, document.createTextNode(" ban speedrun"));
+        const banSpeedrunLabel = htmlElement("label", "case-ban-speedrun");
+        banSpeedrunLabel.append(banSpeedrun, htmlElement("span", "case-ban-name", "ban speedrun"), htmlElement("span", "case-ban-hint", "harshest lines. can get you chat restricted"));
         const anotherTake = htmlElement("button", "case-take", "New line");
         anotherTake.type = "button";
         anotherTake.addEventListener("click", () => {
             choose({ take: choice.take + 1 });
         });
         const actions = htmlElement("div", "case-actions");
-        actions.append(banSpeedrunLabel, proveLabel, anotherTake);
-        controls.replaceChildren(chipRowElement("Who", [targetChip("Our team", "team"), targetChip("Their team", "enemy")]), chipRowElement("Lane", LANES.map(([position, name]) => targetChip(name, `lane:${position}`))), chipRowElement("Ours", playerChips("ally")), chipRowElement("Theirs", playerChips("enemy")), actions);
+        actions.append(proveLabel, anotherTake);
+        controls.replaceChildren(chipRowElement("Who", [targetChip("Our team", "team"), targetChip("Their team", "enemy")]), chipRowElement("Lane", LANES.map(([position, name]) => targetChip(name, `lane:${position}`))), chipRowElement("Ours", playerChips("ally")), chipRowElement("Theirs", playerChips("enemy")), banSpeedrunLabel, actions);
         hasControls = true;
     };
     const markChoice = () => {

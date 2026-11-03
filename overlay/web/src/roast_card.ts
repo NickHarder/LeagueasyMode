@@ -197,17 +197,24 @@ function drawCard(): void {
   const close = button("roast-card-close", "✕", closeCard);
   close.setAttribute("aria-label", "Close");
   header.append(title, close);
-  const spices = document.createElement("div");
-  spices.className = "roast-card-spice";
-  const isBanSpeedrun = spice === BAN_SPEEDRUN_SPICE;
-  const banSpeedrun = button("roast-card-level", "ban speedrun", () => {
-    spice = isBanSpeedrun ? DEFAULT_SPICE : BAN_SPEEDRUN_SPICE;
+  // A slide switch on a row of its own (the owner, 2026-11-03: "make the ban speedrun a toggle
+  // with a slide that is its own").
+  const spices = document.createElement("label");
+  spices.className = `roast-card-spice ${TAKES_CLICKS_CLASS}`;
+  const banSpeedrun = document.createElement("input");
+  banSpeedrun.type = "checkbox";
+  banSpeedrun.className = "ban-switch";
+  banSpeedrun.setAttribute("role", "switch");
+  banSpeedrun.checked = spice === BAN_SPEEDRUN_SPICE;
+  banSpeedrun.addEventListener("change", () => {
+    spice = banSpeedrun.checked ? BAN_SPEEDRUN_SPICE : DEFAULT_SPICE;
     drawCard();
     askSoon(0);
   });
-  banSpeedrun.title = "The harshest lines; pasting them can get you chat restricted";
-  banSpeedrun.setAttribute("aria-pressed", String(isBanSpeedrun));
-  spices.append(banSpeedrun);
+  const banName = document.createElement("span");
+  banName.textContent = "ban speedrun";
+  spices.title = "The harshest lines; pasting them can get you chat restricted";
+  spices.append(banSpeedrun, banName);
   const lines = document.createElement("ul");
   lines.className = "roast-card-lines";
   lines.append(
