@@ -6,6 +6,13 @@ skill has the format.
 
 ## 2026-11-03
 
+- The post-game window restyled (the owner: "yes restyle it, no nerd stuff. just fun stuff i can
+  analyze the end game screen doesnt already give ... more roast and higher level roasts"). No
+  courtroom words: the verdict stamps read as chat ("EVERY LANE LOST", "JG DIFF", "MY BAD",
+  "SMURF DIFF", "CARRIED", "COINFLIP"), the case is "Roast", the exhibits "Receipts", "Prove it"
+  "1v1s only", "Another take" "New line", and the risk note is plain. The accuracy table and the
+  estimate-against-timeline chart are gone (the history is still kept); the gold lead is one line.
+  The window and the roast card open on spice 4.
 - Only the two highest spice levels (the owner: "maybe we only have the higher spice levels.
   these low ones suck"). The roast card and the post-game window offer 3 Tilted and 4 Speedrun,
   opening on 3; the lines for 1 and 2 stay in `templates.toml`, offered nowhere, and the engine

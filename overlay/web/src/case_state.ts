@@ -84,7 +84,9 @@ export interface CaseChoice {
   readonly take: number;
 }
 
-export const DEFAULT_CHOICE: CaseChoice = { target: "team", spice: 3, prove: false, take: 0 };
+// The window opens on the hardest spice (the owner, 2026-11-03: "more roast and higher level
+// roasts").
+export const DEFAULT_CHOICE: CaseChoice = { target: "team", spice: 4, prove: false, take: 0 };
 
 const SIDES: ReadonlySet<string> = new Set(["ally", "enemy"]);
 const SOURCE_KINDS: ReadonlySet<string> = new Set(["game", "timeline", "live", "computation"]);

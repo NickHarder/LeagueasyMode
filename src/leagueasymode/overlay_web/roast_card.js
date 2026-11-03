@@ -29,7 +29,8 @@ const SPICE_LEVELS = [
     [3, "Tilted"],
     [4, "Chat-Restricted Speedrun"],
 ];
-const DEFAULT_SPICE = 3;
+// The card opens on the hardest (the owner, 2026-11-03: "more roast and higher level roasts").
+const DEFAULT_SPICE = 4;
 function isRoastSuggestions(value) {
     if (typeof value !== "object" || value === null) {
         return false;

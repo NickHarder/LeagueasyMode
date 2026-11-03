@@ -82,7 +82,7 @@ def test_the_quick_case_rules_on_the_scoreboard_alone() -> None:
         options=CaseOptions(),
         rules=RoastRules(),
     )
-    assert case.verdict.title == "NO LANE VERDICT"
+    assert case.verdict.title == "SCOREBOARD ONLY"
     assert case.lines
     view = case_view(roast, CaseOptions(), RoastRules())
     assert view.is_quick

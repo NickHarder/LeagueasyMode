@@ -59,7 +59,7 @@ def test_a_quick_case_with_no_lanes_still_offers_lines() -> None:
     assert suggestions.is_quick
     assert 1 <= len(suggestions.lines) <= SUGGESTION_COUNT
     assert len(set(suggestions.lines)) == len(suggestions.lines)
-    # "NO LANE VERDICT" is no ruling, so chat does not hear it.
+    # "SCOREBOARD ONLY" is no ruling, so chat does not hear it.
     assert all(line.startswith("gg, ") for line in suggestions.lines)
 
 

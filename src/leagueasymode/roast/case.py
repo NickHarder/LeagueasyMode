@@ -35,8 +35,9 @@ class CaseOptions(BaseModel):
     # Keep only head-to-head lines: each target against their lane opponent.
     prove: bool = False
     # The post-game window and the roast card offer only 3 and 4 (the owner, 2026-11-03: "these
-    # low ones suck"); 1 and 2 stay readable for an older page.
-    spice: int = Field(default=3, ge=1, le=4)
+    # low ones suck"), opening on 4 ("more roast and higher level roasts"); 1 and 2 stay readable
+    # for an older page.
+    spice: int = Field(default=4, ge=1, le=4)
     take: int = Field(default=0, ge=0)
     # The Mutual Defense Pact: friends on the defendant's team left out of a team roast.
     spare_friends: bool = False

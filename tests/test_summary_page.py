@@ -26,7 +26,6 @@ from game_payloads import DEFAULT_PLAYERS, champion_kill_event, turret_killed_ev
 from leagueasymode.accuracy_history import (
     append_game_accuracy,
     game_accuracy_of,
-    read_accuracy_history,
 )
 from leagueasymode.engine import OverlayEngine
 from leagueasymode.game_api import GameApiClient
@@ -111,10 +110,13 @@ async def test_the_window_shows_the_last_game_reconstructed(tmp_path: Path) -> N
         await expect(page.locator(".summary-detail")).to_have_text("Ahri · 15:00")
         # The win chance and the gold lead, each a line; the gold lead has two, with a legend.
         await expect(page.locator(".chart").first.locator(".chart-line")).to_have_count(1)
-        await expect(page.locator(".chart").nth(1).locator(".chart-line")).to_have_count(2)
+        # The gold lead as it was, one line; no estimate against the timeline (the owner,
+        # 2026-11-03: "no nerd stuff"), and no accuracy table.
+        await expect(page.locator(".chart").nth(1).locator(".chart-line")).to_have_count(1)
         await expect(page.locator(".chart-legend-item")).to_have_text(
-            ["Estimated", "Timeline", "your team's", "their team's"]
+            ["your team's", "their team's"]
         )
+        await expect(page.locator(".summary-accuracy")).to_have_count(0)
         await expect(page.locator(".summary-swings li")).to_have_count(3)
         await expect(page.locator(".summary-moments li")).to_have_text(
             [
@@ -136,25 +138,6 @@ async def test_the_crosshair_reads_out_a_minute(tmp_path: Path) -> None:
         tooltip = page.locator(".chart-tooltip").first
         await expect(tooltip).to_be_visible()
         await expect(tooltip).to_contain_text(re.compile(r"\d+:00\s*\d+%\s*Win chance"))
-
-
-async def test_each_estimator_shows_this_game_and_the_last_games(tmp_path: Path) -> None:
-    summary_path, history_path = write_summary_and_history(tmp_path)
-    async with open_summary(summary_path, history_path) as page:
-        gold_scores = [
-            score
-            for game in read_accuracy_history(history_path)
-            for score in game.scores
-            if score.estimator == "gold earned"
-        ]
-        # Every game's estimator is scored on as many player-minutes: the plain average.
-        average = sum(score.value for score in gold_scores) / len(gold_scores)
-        gold_row = page.locator(".summary-accuracy tr", has_text="gold earned")
-        await expect(gold_row).to_contain_text(
-            f"{gold_scores[-1].value:.0f} gold off", timeout=5000
-        )
-        await expect(gold_row).to_contain_text(f"{average:.0f} gold off (3)")
-        await expect(gold_row.locator(".sparkline-line")).to_have_count(1)
 
 
 async def test_before_any_game_the_window_says_so(tmp_path: Path) -> None:
@@ -193,9 +176,9 @@ async def test_the_case_file_shows_under_the_result(tmp_path: Path) -> None:
         )
         assert await case_file.locator(".case-lines li").count() > 0
         await expect(case_file.locator(".case-closing-line")).not_to_be_empty()
-        await expect(case_file.locator(".case-closing-caption")).to_contain_text("/ 140 characters")
+        await expect(case_file.locator(".case-closing-caption")).to_contain_text("/140")
         await expect(case_file.locator(".case-chip[aria-pressed=true]")).to_have_text(
-            ["Our team", "3 Tilted"]
+            ["Our team", "4 Chat-Restricted Speedrun"]
         )
         await expect(case_file.locator(".case-chip-row[aria-label=Ours] .case-chip")).to_have_text(
             ["Jax", "Lee Sin", "Ahri (you)", "Jinx", "Lulu"]
@@ -204,7 +187,7 @@ async def test_the_case_file_shows_under_the_result(tmp_path: Path) -> None:
         await expect(case_file.locator(".case-chip-row[aria-label=Spice] .case-chip")).to_have_text(
             ["3 Tilted", "4 Chat-Restricted Speedrun"]
         )
-        await expect(case_file.locator(".case-risk")).to_contain_text("Instant Feedback System")
+        await expect(case_file.locator(".case-risk")).to_contain_text("chat restricted")
         await keep_screenshot(page, "post-game-case-file")
 
 
@@ -218,7 +201,7 @@ async def test_any_of_the_ten_can_be_put_on_trial(tmp_path: Path) -> None:
         await expect(leblanc).to_have_attribute("aria-pressed", "true")
         await expect(case_file.locator(".case-lines")).to_contain_text("LeBlanc")
         await case_file.locator(".case-chip", has_text="Tilted").click()
-        await expect(case_file.locator(".case-risk")).to_contain_text("Instant Feedback System")
+        await expect(case_file.locator(".case-risk")).to_contain_text("chat restricted")
         await expect(case_file.locator(".case-chip[aria-pressed=true]")).to_have_text(
             ["LeBlanc", "3 Tilted"]
         )
@@ -233,7 +216,7 @@ async def test_a_game_without_a_case_says_so(tmp_path: Path) -> None:
     summary_path, history_path = write_summary_and_history(tmp_path)
     async with open_summary(summary_path, history_path) as page:
         await expect(page.locator(".case-file .case-empty")).to_contain_text(
-            "No case for this game", timeout=5000
+            "nothing to roast yet", timeout=5000
         )
 
 
@@ -269,9 +252,9 @@ async def test_a_quick_case_says_so_until_the_full_one_comes(tmp_path: Path) -> 
     async with open_summary(summary_path, history_path) as page:
         case_file = page.locator(".case-file")
         await expect(case_file.locator(".case-quick")).to_contain_text(
-            "quick case from the end-of-game scoreboard", timeout=5000
+            "quick read off the scoreboard", timeout=5000
         )
-        await expect(case_file.locator(".case-stamp")).to_have_text("NO LANE VERDICT")
+        await expect(case_file.locator(".case-stamp")).to_have_text("SCOREBOARD ONLY")
         await expect(case_file.locator(".case-board")).to_have_count(0)
         assert await case_file.locator(".case-lines li").count() > 0
 

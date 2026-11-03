@@ -44,10 +44,10 @@ def view_of(options: CaseOptions, defendant_id: int = MIDDLE_ID) -> CaseView:
     return case_view(last_game(defendant_id), options, RoastRules())
 
 
-def test_the_defaults_are_the_whole_team_at_tilted() -> None:
+def test_the_defaults_are_the_whole_team_at_the_hardest_spice() -> None:
     # Only the two highest spice levels are offered (the owner, 2026-11-03: "these low ones
-    # suck"), the lower of them first.
-    assert case_options_of({}) == CaseOptions(target="team", spice=3, prove=False, take=0)
+    # suck"), opening on the hardest ("more roast and higher level roasts").
+    assert case_options_of({}) == CaseOptions(target="team", spice=4, prove=False, take=0)
 
 
 def test_the_query_sets_every_option() -> None:
