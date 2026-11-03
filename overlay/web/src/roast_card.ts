@@ -31,7 +31,8 @@ const SPICE_LEVELS: readonly (readonly [number, string])[] = [
   [3, "Tilted"],
   [4, "Chat-Restricted Speedrun"],
 ];
-const DEFAULT_SPICE = 3;
+// The card opens on the hardest (the owner, 2026-11-03: "more roast and higher level roasts").
+const DEFAULT_SPICE = 4;
 
 interface RoastSuggestions {
   readonly kept_at_seconds: number;

@@ -197,7 +197,7 @@ def judge_case(
         return _verdict(
             "remake",
             title="REMAKE",
-            summary="A remake. There is no case to answer.",
+            summary="remake. doesn't count, nobody's getting flamed",
             acquitted=None,
             exhibit_keys=(),
             lanes=(),
@@ -207,8 +207,8 @@ def judge_case(
     if defendant.won:
         return _verdict(
             "carry_receipt",
-            title="CARRY RECEIPT",
-            summary="A win. Nothing to defend; the receipt shows who carried.",
+            title="CARRIED",
+            summary="dub. here's who actually did the work",
             acquitted=None,
             exhibit_keys=lane_keys,
             lanes=lanes,
@@ -216,11 +216,8 @@ def judge_case(
     if len(lanes) < len(POSITION_ORDER):
         return _verdict(
             "no_lane_verdict",
-            title="NO LANE VERDICT",
-            summary=(
-                "Riot's data gives no full lane board for this game, so the court rules on the "
-                "scoreboard alone."
-            ),
+            title="SCOREBOARD ONLY",
+            summary="no lane stats for this game, so it's straight off the scoreboard",
             acquitted=None,
             exhibit_keys=(),
             lanes=(),
@@ -256,11 +253,8 @@ def _judge_loss(
     if own_lost and not held_others:
         return _verdict(
             "mutual_destruction",
-            title="MUTUAL ASSURED DESTRUCTION",
-            summary=(
-                "Every lane was lost, the defendant's included. "
-                "Nobody leaves this courtroom innocent."
-            ),
+            title="EVERY LANE LOST",
+            summary="every lane lost, yours too. nobody's clean this game",
             acquitted=False,
             exhibit_keys=lane_keys,
             lanes=lanes,
@@ -272,9 +266,8 @@ def _judge_loss(
         )
         return _verdict(
             "enemy_smurf",
-            title="ENEMY SMURF",
-            summary="The defendant's lane was lost to an opponent who killed nearly everyone. "
-            "Opponent diff, not position diff.",
+            title="SMURF DIFF",
+            summary="you lost lane to a guy who killed basically everyone. smurf diff, not you",
             acquitted=True,
             exhibit_keys=(*lane_keys, *smurf_keys),
             lanes=lanes,
@@ -282,20 +275,19 @@ def _judge_loss(
     if own_lost and len(held_others) >= rules.guilty_held_lanes:
         return _verdict(
             "guilty",
-            title="GUILTY",
-            summary=(
-                "The other lanes held and the defendant's lane did not. The defense rests, poorly."
-            ),
+            title="MY BAD",
+            summary="the other lanes held and yours didn't. this one's on you",
             acquitted=False,
             exhibit_keys=lane_keys,
             lanes=lanes,
         )
     if not own_lost and len(gapped_others) == 1 and len(lost_others) == 1:
         role = ROLE_NAME_BY_POSITION.get(gapped_others[0].position, gapped_others[0].position)
+        chat_role = CHAT_ROLE_BY_ROLE_NAME.get(role, role.lower())
         return _verdict(
             "lane_diff",
-            title=f"{role} DIFF",
-            summary=f"Every lane held except the {role.lower()}, which was a gap. Acquitted.",
+            title=f"{chat_role.upper()} DIFF",
+            summary=f"every lane held except {chat_role}. that's the game",
             acquitted=True,
             exhibit_keys=lane_keys,
             lanes=lanes,
@@ -304,15 +296,15 @@ def _judge_loss(
         return _verdict(
             "team_diff",
             title="TEAM DIFF",
-            summary="The defendant's lane held while the team lost theirs. Acquitted: team diff.",
+            summary="you held your lane, the rest didn't. team diff",
             acquitted=True,
             exhibit_keys=lane_keys,
             lanes=lanes,
         )
     return _verdict(
         "hung_jury",
-        title="HUNG JURY",
-        summary="The lanes do not settle it either way.",
+        title="COINFLIP",
+        summary="lanes don't pick a side on this one",
         acquitted=None,
         exhibit_keys=lane_keys,
         lanes=lanes,

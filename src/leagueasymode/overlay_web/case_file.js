@@ -37,8 +37,8 @@ const CLAUDE_TAKE_RECHECK_MILLISECONDS = 1500;
 const QUICK_CASE_RECHECK_MILLISECONDS = 15000;
 // How long a copy button says "Copied".
 const COPIED_MILLISECONDS = 2000;
-const QUICK_CASE_TEXT = "A quick case from the end-of-game scoreboard. The full case, with the lanes, replaces it when the match timeline comes.";
-const NO_CASE_TEXT = "No case for this game: its details have not come yet, or it was not two teams of five.";
+const QUICK_CASE_TEXT = "quick read off the scoreboard. lane stats show up in a minute or two, when Riot sends the match timeline";
+const NO_CASE_TEXT = "nothing to roast yet: the game's stats haven't come in, or it wasn't a 5v5";
 function htmlElement(name, className, text) {
     const element = document.createElement(name);
     if (className !== "") {
@@ -99,7 +99,7 @@ function goldCellElement(gold, letter, openExhibits) {
 }
 function boardElement(view, openExhibits) {
     const table = htmlElement("table", "case-board");
-    const caption = htmlElement("caption", "", "Each lane against its opponent at 14:00, by our thresholds");
+    const caption = htmlElement("caption", "", "Every lane vs its opponent at 14:00");
     const head = htmlElement("tr", "");
     for (const heading of ["Lane", "Ours", "Theirs", "Gold", "CS", "Outcome"]) {
         const cell = htmlElement("th", "", heading);
@@ -131,7 +131,7 @@ function exhibitsElement(view) {
     const supporting = view.exhibits.filter((exhibit) => exhibit.supporting);
     const list = htmlElement("ol", "case-exhibit-list");
     list.append(...cited.map(exhibitElement));
-    details.append(htmlElement("summary", "", `Exhibits (${String(view.exhibits.length)})`), list);
+    details.append(htmlElement("summary", "", `Receipts (${String(view.exhibits.length)})`), list);
     if (supporting.length > 0) {
         const fold = htmlElement("details", "case-supporting");
         const supportingList = htmlElement("ol", "case-exhibit-list");
@@ -151,7 +151,7 @@ function claudeTakeElement(view) {
         take.append(htmlElement("p", "case-claude-take-label", "Claude is rewording the closing line…"));
         return take;
     }
-    take.append(htmlElement("p", "case-claude-take-label", "Claude's take · not one of your approved lines · ⌃⌥C copies this one"), htmlElement("blockquote", "case-closing-line", view.claude_take), htmlElement("figcaption", "case-closing-caption", `${String(view.claude_take.length)} / ${String(view.closing_line_limit)} characters`));
+    take.append(htmlElement("p", "case-claude-take-label", "Claude's take · not one of your approved lines · ⌃⌥C copies this one"), htmlElement("blockquote", "case-closing-line", view.claude_take), htmlElement("figcaption", "case-closing-caption", `${String(view.claude_take.length)}/${String(view.closing_line_limit)}`));
     return take;
 }
 /** Draw the case's verdict, board, lines, closing line and exhibits. */
@@ -194,13 +194,13 @@ export function renderCaseBody(body, view) {
     const lines = htmlElement("ol", "case-lines");
     lines.append(...view.lines.map((line) => lineElement(line, openExhibits)));
     const closing = htmlElement("figure", "case-closing");
-    closing.append(htmlElement("blockquote", "case-closing-line", view.closing_line), copyButtonElement(view.closing_line), htmlElement("figcaption", "case-closing-caption", `${String(view.closing_line.length)} / ${String(view.closing_line_limit)} characters · paste it yourself; nothing is sent to chat`));
+    closing.append(htmlElement("blockquote", "case-closing-line", view.closing_line), copyButtonElement(view.closing_line), htmlElement("figcaption", "case-closing-caption", `${String(view.closing_line.length)}/${String(view.closing_line_limit)} · copy, then ⌘V in chat`));
     const parts = view.is_quick ? [htmlElement("p", "case-quick", QUICK_CASE_TEXT), verdict] : [verdict];
     const claudeTake = claudeTakeElement(view);
     if (view.board.length > 0) {
         parts.push(boardElement(view, openExhibits));
     }
-    parts.push(view.lines.length > 0 ? lines : htmlElement("p", "case-empty", "No line fits this target."), closing);
+    parts.push(view.lines.length > 0 ? lines : htmlElement("p", "case-empty", "nothing to roast them for. they were fine"), closing);
     if (claudeTake !== null) {
         parts.push(claudeTake);
     }
@@ -218,7 +218,7 @@ export function caseSectionElement(fetchCase) {
     const controls = htmlElement("div", "case-controls");
     const body = htmlElement("div", "case-body");
     body.setAttribute("aria-live", "polite");
-    section.append(htmlElement("h2", "", "The case"), controls, body);
+    section.append(htmlElement("h2", "", "Roast"), controls, body);
     let choice = DEFAULT_CHOICE;
     let latestRequest = 0;
     let hasControls = false;
@@ -241,15 +241,15 @@ export function caseSectionElement(fetchCase) {
             choose({ prove: prove.checked });
         });
         const proveLabel = htmlElement("label", "case-prove");
-        proveLabel.append(prove, document.createTextNode(" Prove it: each against their lane opponent"));
-        const anotherTake = htmlElement("button", "case-take", "Another take");
+        proveLabel.append(prove, document.createTextNode(" 1v1s only: each vs their lane opponent"));
+        const anotherTake = htmlElement("button", "case-take", "New line");
         anotherTake.type = "button";
         anotherTake.addEventListener("click", () => {
             choose({ take: choice.take + 1 });
         });
         const actions = htmlElement("div", "case-actions");
         actions.append(proveLabel, anotherTake);
-        controls.replaceChildren(chipRowElement("Roast", [targetChip("Our team", "team"), targetChip("Their team", "enemy")]), chipRowElement("Lane", LANES.map(([position, name]) => targetChip(name, `lane:${position}`))), chipRowElement("Ours", playerChips("ally")), chipRowElement("Theirs", playerChips("enemy")), chipRowElement("Spice", SPICE_LEVELS.map(([level, name]) => chipElement(`${String(level)} ${name}`, "spice", String(level), () => {
+        controls.replaceChildren(chipRowElement("Who", [targetChip("Our team", "team"), targetChip("Their team", "enemy")]), chipRowElement("Lane", LANES.map(([position, name]) => targetChip(name, `lane:${position}`))), chipRowElement("Ours", playerChips("ally")), chipRowElement("Theirs", playerChips("enemy")), chipRowElement("Spice", SPICE_LEVELS.map(([level, name]) => chipElement(`${String(level)} ${name}`, "spice", String(level), () => {
             choose({ spice: level });
         }))), actions);
         hasControls = true;
@@ -267,7 +267,7 @@ export function caseSectionElement(fetchCase) {
             return;
         }
         if (!isCaseView(answer)) {
-            body.replaceChildren(htmlElement("p", "case-empty", hasControls ? "Could not build this case." : NO_CASE_TEXT));
+            body.replaceChildren(htmlElement("p", "case-empty", hasControls ? "couldn't build that roast" : NO_CASE_TEXT));
             return;
         }
         if (!hasControls) {

@@ -322,7 +322,7 @@ def _add_the_last_games_case(
         # The overlay's roast card after a game: three lines at one spice level, and when the case
         # was kept, so the card shows only a case kept after the game it saw end.
         try:
-            spice = case_options_of({"spice": request.query.get("spice", "3")}).spice
+            spice = case_options_of({"spice": request.query.get("spice", "4")}).spice
         except ValueError as error:
             return web.json_response({"message": str(error)}, status=400)
         roast_path = roast_path_beside(summary_path) if summary_path is not None else None

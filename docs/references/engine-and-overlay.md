@@ -406,15 +406,19 @@ asks `/status` every two seconds while it is open; its contract is
 # The post-game window
 
 `/summary.html`, a page of its own (`overlay/web/src/summary.ts`), opened by the macOS app's
-"Last game…" in a normal window. It reads `/summary` and `/history` once and shows the result
-("Victory", your champion and the game's length); your win chance each minute as a line, the
-three biggest swings marked on it; the gold lead each minute, the overlay's estimate against the
-timeline's, with a legend and labels at the lines' ends; the three swings with what happened in
-each; the game's moments, a dot for whose good each was; and each estimator's score this game,
-its average over the last ten games in the history, and a sparkline of them. Each chart has a
-crosshair whose readout lists every line at the minute under the pointer, the same with the arrow
-keys once focused, and a table of its values beneath. Light or dark with the system; the two
-series colors pass every colorblindness and contrast check in both. Before any game it says so.
+"Last game…" in a normal window. It reads `/summary` once and shows only what League's own end
+screen does not, in the roast's voice, with no courtroom words and nothing about how the overlay's
+estimates scored (the owner, 2026-11-03: "just fun stuff i can analyze the end game screen doesnt
+already give ... no nerd stuff. more roast and higher level roasts"): the result ("Victory", your
+champion and the game's length); the roast (verdict stamps such as "EVERY LANE LOST", "JG DIFF",
+"MY BAD"; the lane board at 14:00; the lines; the closing line with a Copy button; the receipts),
+opening on spice 4; your win chance each minute as a line, the three biggest swings marked on it;
+the gold lead each minute, the timeline's when Riot sent it, else the overlay's read; the three
+swings with what happened in each; and the key moments, a dot for whose good each was. The
+accuracy history is still kept (`/history`), shown nowhere. Each chart has a crosshair whose
+readout lists every line at the minute under the pointer, the same with the arrow keys once
+focused, and a table of its values beneath. Light or dark with the system. Before any game it says
+so.
 
 The case file's closing line has a Copy button. After a game the overlay itself offers the roast:
 once the page has seen the game end, it asks `/roast-suggestions?spice=N` every 5 seconds until a

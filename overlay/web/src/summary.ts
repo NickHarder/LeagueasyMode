@@ -1,19 +1,18 @@
 /**
- * The post-game window: the last game reconstructed, and how accurate the overlay has been.
+ * The post-game window: the roast, and the last game as League's end screen does not show it.
  *
  * A page of its own (`/summary.html`), opened from the macOS app's menu in a normal window, not
- * the click-through overlay. It reads the last game from `/summary` and the accuracy history from
- * `/history`, once; the case file under the result asks `/case` for each target the player picks.
+ * the click-through overlay. It reads the last game from `/summary`, once; the roast under the
+ * result asks `/case` for each target the player picks. Only what League's own end screen does
+ * not show, and nothing about how the overlay's estimates scored (the owner, 2026-11-03: "just fun
+ * stuff i can analyze the end game screen doesnt already give ... no nerd stuff").
  */
 
 import { caseSectionElement } from "./case_file.js";
 import {
-  type GameAccuracy,
   type GameSummary,
   type SummaryMoment,
   type SummaryPoint,
-  type SummaryScore,
-  accuracyGamesOf,
   isGameSummary,
 } from "./summary_state.js";
 
@@ -34,22 +33,6 @@ const SWING_DOT_RADIUS = 5;
 // Gold axis steps to choose among, so that the axis has a few round ticks.
 const GOLD_TICK_STEPS = [500, 1000, 2000, 5000, 10000, 20000];
 const MOST_GOLD_TICKS = 5;
-const SHOWN_HISTORY_GAMES = 10;
-const SPARKLINE_WIDTH = 96;
-const SPARKLINE_HEIGHT = 24;
-const VALUE_FORMATS: Readonly<Record<string, (value: number) => string>> = {
-  share_correct: (value) => `${(value * PERCENT).toFixed(0)}%`,
-  share_within_band: (value) => `${(value * PERCENT).toFixed(0)}%`,
-  share_matched: (value) => `${(value * PERCENT).toFixed(0)}%`,
-  mean_chance: (value) => `${(value * PERCENT).toFixed(0)}%`,
-  mean_absolute_percent_error: (value) => `${value.toFixed(1)}% off`,
-  mean_absolute_error_gold: (value) => `${value.toFixed(0)} gold off`,
-  mean_absolute_error_experience: (value) => `${value.toFixed(0)} XP off`,
-  mean_distance_units: (value) => `${value.toFixed(0)} units off`,
-  brier_score: (value) => `Brier ${value.toFixed(3)}`,
-  fight_brier_score: (value) => `Brier ${value.toFixed(3)}`,
-  contest_brier_score: (value) => `Brier ${value.toFixed(3)}`,
-};
 
 /** One line of a chart: its name, its points, and the CSS variable of its color. */
 interface ChartSeries {
@@ -100,12 +83,6 @@ export function formatGoldLead(gold: number): string {
   return thousands > 0 ? `+${thousands.toFixed(1)}k` : `${MINUS_SIGN}${(-thousands).toFixed(1)}k`;
 }
 
-/** Return a score in words, by its measure: "95%", "220 gold off", "Brier 0.183". */
-export function formatScoreValue(measure: string, value: number): string {
-  const format = VALUE_FORMATS[measure];
-  return format === undefined ? value.toFixed(3) : format(value);
-}
-
 /** Return round ticks for a gold axis that holds every value, with 0 among them. */
 export function goldTicks(values: readonly number[]): number[] {
   const largest = Math.max(1, ...values.map((value) => Math.abs(value)));
@@ -116,15 +93,6 @@ export function goldTicks(values: readonly number[]): number[] {
     ticks.push(tick);
   }
   return ticks;
-}
-
-/** Return the average of scores, each weighed by its samples. */
-function weightedMean(scores: readonly { sample_count: number; value: number }[]): number {
-  const samples = scores.reduce((total, score) => total + score.sample_count, 0);
-  if (samples === 0) {
-    return scores.reduce((total, score) => total + score.value, 0) / Math.max(1, scores.length);
-  }
-  return scores.reduce((total, score) => total + score.value * score.sample_count, 0) / samples;
 }
 
 function svgElement<Name extends keyof SVGElementTagNameMap>(
@@ -307,19 +275,6 @@ function tableViewElement(chart: LineChart): HTMLElement {
   return details;
 }
 
-/** Return a legend: a line key and a name for each series. */
-function legendElement(series: readonly ChartSeries[]): HTMLElement {
-  const legend = htmlElement("div", "chart-legend");
-  for (const entry of series) {
-    const item = htmlElement("span", "chart-legend-item");
-    const key = htmlElement("span", "chart-legend-key");
-    key.style.backgroundColor = `var(${entry.colorVariable})`;
-    item.append(key, document.createTextNode(entry.name));
-    legend.append(item);
-  }
-  return legend;
-}
-
 function sectionElement(title: string, ...children: HTMLElement[]): HTMLElement {
   const section = htmlElement("section", "summary-section");
   section.append(htmlElement("h2", "", title), ...children);
@@ -380,77 +335,17 @@ function momentsLegendElement(): HTMLElement {
   return legend;
 }
 
-/** Return a sparkline of an estimator's scores over the last games, the last in the accent. */
-function sparklineElement(values: readonly number[], label: string): SVGSVGElement {
-  const svg = svgElement("svg", {
-    viewBox: `0 0 ${String(SPARKLINE_WIDTH)} ${String(SPARKLINE_HEIGHT)}`,
-    class: "sparkline",
-    role: "img",
-    "aria-label": label,
-  });
-  if (values.length < 2) {
-    return svg;
-  }
-  const lowest = Math.min(...values);
-  const highest = Math.max(...values);
-  const spread = highest - lowest || 1;
-  const xOf = (index: number): number => 4 + (index / (values.length - 1)) * (SPARKLINE_WIDTH - 8);
-  const yOf = (value: number): number => SPARKLINE_HEIGHT - 4 - ((value - lowest) / spread) * (SPARKLINE_HEIGHT - 8);
-  const path = values.map((value, index) => `${index === 0 ? "M" : "L"}${xOf(index).toFixed(1)},${yOf(value).toFixed(1)}`).join(" ");
-  svg.append(svgElement("path", { d: path, class: "sparkline-line" }));
-  const lastValue = values[values.length - 1];
-  if (lastValue !== undefined) {
-    svg.append(svgElement("circle", { cx: xOf(values.length - 1), cy: yOf(lastValue), r: 3, class: "sparkline-dot" }));
-  }
-  return svg;
-}
-
-function accuracyElement(scores: readonly SummaryScore[], history: readonly GameAccuracy[]): HTMLElement {
-  const table = htmlElement("table", "summary-accuracy");
-  const header = htmlElement("tr", "");
-  header.append(
-    htmlElement("th", "", "Estimator"),
-    htmlElement("th", "", "This game"),
-    htmlElement("th", "", `Last ${String(SHOWN_HISTORY_GAMES)} games`),
-    htmlElement("th", "", "Over the games"),
-  );
-  const recentGames = history.slice(-SHOWN_HISTORY_GAMES);
-  const rows = scores.map((score) => {
-    const pastScores = recentGames.flatMap((game) =>
-      game.scores.filter((pastScore) => pastScore.estimator === score.estimator && pastScore.measure === score.measure),
-    );
-    const row = htmlElement("tr", "");
-    const sparklineCell = htmlElement("td", "");
-    sparklineCell.append(
-      sparklineElement(
-        pastScores.map((pastScore) => pastScore.value),
-        `${score.estimator} over the last ${String(pastScores.length)} games`,
-      ),
-    );
-    row.append(
-      htmlElement("td", "", score.estimator),
-      htmlElement("td", "summary-number", formatScoreValue(score.measure, score.value)),
-      htmlElement(
-        "td",
-        "summary-number",
-        pastScores.length === 0 ? "" : `${formatScoreValue(score.measure, weightedMean(pastScores))} (${String(pastScores.length)})`,
-      ),
-      sparklineCell,
-    );
-    return row;
-  });
-  table.append(header, ...rows);
-  return table;
-}
-
-/** Draw the whole window from the last game and the history. */
-export function renderSummary(root: HTMLElement, summary: GameSummary, history: readonly GameAccuracy[]): void {
+/** Draw the whole window from the last game. */
+export function renderSummary(root: HTMLElement, summary: GameSummary): void {
   const winSeries: ChartSeries = { name: "Win chance", points: summary.win_chance, colorVariable: "--series-1" };
+  // The gold lead as it was: the timeline's when Riot sent it, else the overlay's read of it. No
+  // estimate against truth here (the owner, 2026-11-03: "no nerd stuff").
   const goldSeries: ChartSeries[] = [
-    { name: "Estimated", points: summary.gold_lead_estimated, colorVariable: "--series-1" },
-    ...(summary.gold_lead_true.length > 0
-      ? [{ name: "Timeline", points: summary.gold_lead_true, colorVariable: "--series-2" }]
-      : []),
+    {
+      name: "Gold lead",
+      points: summary.gold_lead_true.length > 0 ? summary.gold_lead_true : summary.gold_lead_estimated,
+      colorVariable: "--series-1",
+    },
   ];
   const ticks = goldTicks(goldSeries.flatMap((series) => series.points.map((point) => point.value)));
   root.replaceChildren(
@@ -470,10 +365,9 @@ export function renderSummary(root: HTMLElement, summary: GameSummary, history: 
       }),
     ),
     sectionElement(
-      "Gold lead: the overlay's estimate and the timeline",
-      legendElement(goldSeries),
+      "Gold lead",
       lineChartElement({
-        label: "Your team's gold lead each minute, estimated and from the timeline",
+        label: "Your team's gold lead each minute",
         series: goldSeries,
         lowest: ticks[0] ?? -1,
         highest: ticks[ticks.length - 1] ?? 1,
@@ -484,8 +378,7 @@ export function renderSummary(root: HTMLElement, summary: GameSummary, history: 
       }),
     ),
     sectionElement("What swung it", swingsElement(summary)),
-    sectionElement("The game", momentsLegendElement(), momentsElement(summary.moments)),
-    sectionElement("How accurate the overlay was", accuracyElement(summary.scores, history)),
+    sectionElement("Key moments", momentsLegendElement(), momentsElement(summary.moments)),
   );
 }
 
@@ -511,12 +404,12 @@ async function start(): Promise<void> {
   if (root === null) {
     return;
   }
-  const [summary, history] = await Promise.all([fetchJson("/summary"), fetchJson("/history")]);
+  const summary = await fetchJson("/summary");
   if (!isGameSummary(summary)) {
     renderNoGame(root);
     return;
   }
-  renderSummary(root, summary, accuracyGamesOf(history));
+  renderSummary(root, summary);
 }
 
 void start();

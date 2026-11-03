@@ -22,11 +22,12 @@ from leagueasymode.roast.targets import parse_target
 
 SPICE_NAMES: Final = {1: "Honor-eligible", 2: "Salty", 3: "Tilted", 4: "Chat-Restricted Speedrun"}
 RISKY_SPICE: Final = 3
+# The risk of pasting a spicy line, said plainly (the owner, 2026-11-03: "no nerd stuff"): Riot's
+# chat filter, reports, and since patch 26.5 gameplay bans for severe chat. The lines never cross
+# the floor (no slurs, nothing about who a person is); Riot still decides what it punishes.
 RISK_WARNING: Final = (
-    "At this spice, the closing line is yours to risk: Riot's chat filter mutes blocked words, "
-    "reports go through the Instant Feedback System, and severe chat has carried gameplay bans "
-    "since patch 26.5. The lines never cross the floor (no slurs, nothing about who a person is), "
-    "but Riot decides what it penalises."
+    "heads up: spicy lines can still get you reported or chat restricted. no slurs in here, "
+    "but Riot makes the call. your risk"
 )
 TRUE_TEXTS: Final = frozenset({"1", "true", "on", "yes"})
 
@@ -139,7 +140,7 @@ def case_options_of(query: Mapping[str, str]) -> CaseOptions:
     """
     target = query.get("target", "team")
     parse_target(target)
-    spice_text = query.get("spice", "3")
+    spice_text = query.get("spice", "4")
     take_text = query.get("take", "0")
     if not spice_text.isdigit() or int(spice_text) not in SPICE_NAMES:
         message = f"spice {spice_text!r} is not 1, 2, 3 or 4"
