@@ -3,7 +3,7 @@
  * `leagueasymode.roast.case_view` (`overlay/web/roast_case.schema.json`), and the query `/case`
  * takes.
  */
-export const DEFAULT_CHOICE = { target: "team", spice: 2, prove: false, take: 0 };
+export const DEFAULT_CHOICE = { target: "team", spice: 3, prove: false, take: 0 };
 const SIDES = new Set(["ally", "enemy"]);
 const SOURCE_KINDS = new Set(["game", "timeline", "live", "computation"]);
 function isRecord(value) {

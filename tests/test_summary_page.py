@@ -195,12 +195,16 @@ async def test_the_case_file_shows_under_the_result(tmp_path: Path) -> None:
         await expect(case_file.locator(".case-closing-line")).not_to_be_empty()
         await expect(case_file.locator(".case-closing-caption")).to_contain_text("/ 140 characters")
         await expect(case_file.locator(".case-chip[aria-pressed=true]")).to_have_text(
-            ["Our team", "2 Salty"]
+            ["Our team", "3 Tilted"]
         )
         await expect(case_file.locator(".case-chip-row[aria-label=Ours] .case-chip")).to_have_text(
             ["Jax", "Lee Sin", "Ahri (you)", "Jinx", "Lulu"]
         )
-        await expect(case_file.locator(".case-risk")).to_have_count(0)
+        # Only the two highest spice levels are offered, so the risk of pasting always shows.
+        await expect(case_file.locator(".case-chip-row[aria-label=Spice] .case-chip")).to_have_text(
+            ["3 Tilted", "4 Chat-Restricted Speedrun"]
+        )
+        await expect(case_file.locator(".case-risk")).to_contain_text("Instant Feedback System")
         await keep_screenshot(page, "post-game-case-file")
 
 

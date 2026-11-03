@@ -139,7 +139,7 @@ def case_options_of(query: Mapping[str, str]) -> CaseOptions:
     """
     target = query.get("target", "team")
     parse_target(target)
-    spice_text = query.get("spice", "2")
+    spice_text = query.get("spice", "3")
     take_text = query.get("take", "0")
     if not spice_text.isdigit() or int(spice_text) not in SPICE_NAMES:
         message = f"spice {spice_text!r} is not 1, 2, 3 or 4"

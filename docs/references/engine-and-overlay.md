@@ -418,10 +418,15 @@ series colors pass every colorblindness and contrast check in both. Before any g
 
 The case file's closing line has a Copy button. After a game the overlay itself offers the roast:
 once the page has seen the game end, it asks `/roast-suggestions?spice=N` every 5 seconds until a
-case kept after that end comes, then shows a card of three lines for chat
-(`overlay/web/src/roast_card.ts`, `roast/suggestions.py`): the team's closing line, the lane lost by
-the most gold, and the enemy team, no two from the same template, filled from the team's next lines
-when those would repeat or a quick case has no lanes. The card has the spice levels 1 to 4 and a
+case kept after that end comes, then shows a card of up to three players to roast
+(`overlay/web/src/roast_card.ts`, `roast/suggestions.py`): each player's lines come from a case
+about that player alone, ranked by how far their numbers are past the template's thresholds (10
+deaths against 6 is 1.67), and the players by their hardest line; each leads with a line whose
+template leads no player before it, so the card opens on different jokes. The defendant comes
+first only to own something (`self-*`, `defendant-behind`); lines clearing a teammate are left out.
+A copied line is replaced, once the copy has shown, by that player's next line; the others stay
+(the owner, 2026-10-29: "make it roast different players ... the hardest hitting and only if its
+notable ... if i copy a jax one generate a new jax one"). The card, like the post-game window, offers spice 3 and 4 only, opening on 3 (the owner, 2026-11-03: "these low ones suck"), and a
 close button; a click on a line hands it to the app (`leagueasymodeCopy`), which copies it and
 shows its toast; nothing is sent to chat. The card's buttons are click regions like the spell
 buttons, so the overlay still lets every other click through. It goes when closed or when the next

@@ -5,10 +5,10 @@
  * and another take; each pick asks `/case` again. Nothing here sends anything to chat.
  */
 import { DEFAULT_CHOICE, casePath, isCaseView, } from "./case_state.js";
-// The spice levels, as `leagueasymode.roast.case_view.SPICE_NAMES` names them.
+// The spice levels offered, as `leagueasymode.roast.case_view.SPICE_NAMES` names them: the two
+// highest only (the owner, 2026-11-03: "maybe we only have the higher spice levels. these low ones
+// suck").
 const SPICE_LEVELS = [
-    [1, "Honor-eligible"],
-    [2, "Salty"],
     [3, "Tilted"],
     [4, "Chat-Restricted Speedrun"],
 ];
