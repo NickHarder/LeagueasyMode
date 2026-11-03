@@ -6,6 +6,10 @@ skill has the format.
 
 ## 2026-11-03
 
+- Only the two highest spice levels (the owner: "maybe we only have the higher spice levels.
+  these low ones suck"). The roast card and the post-game window offer 3 Tilted and 4 Speedrun,
+  opening on 3; the lines for 1 and 2 stay in `templates.toml`, offered nowhere, and the engine
+  still reads a request for them.
 - The roast card roasts different players (the owner: "make it roast different players. also
   make it the hardest hitting and only if its notable. if i copy a jax one generate a new jax one
   ... i want variety on who i can pick"). Up to three players, each with their lines hardest first,

@@ -426,7 +426,7 @@ template leads no player before it, so the card opens on different jokes. The de
 first only to own something (`self-*`, `defendant-behind`); lines clearing a teammate are left out.
 A copied line is replaced, once the copy has shown, by that player's next line; the others stay
 (the owner, 2026-10-29: "make it roast different players ... the hardest hitting and only if its
-notable ... if i copy a jax one generate a new jax one"). The card has the spice levels 1 to 4 and a
+notable ... if i copy a jax one generate a new jax one"). The card, like the post-game window, offers spice 3 and 4 only, opening on 3 (the owner, 2026-11-03: "these low ones suck"), and a
 close button; a click on a line hands it to the app (`leagueasymodeCopy`), which copies it and
 shows its toast; nothing is sent to chat. The card's buttons are click regions like the spell
 buttons, so the overlay still lets every other click through. It goes when closed or when the next

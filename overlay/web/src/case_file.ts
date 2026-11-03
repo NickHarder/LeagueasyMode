@@ -16,10 +16,10 @@ import {
   isCaseView,
 } from "./case_state.js";
 
-// The spice levels, as `leagueasymode.roast.case_view.SPICE_NAMES` names them.
+// The spice levels offered, as `leagueasymode.roast.case_view.SPICE_NAMES` names them: the two
+// highest only (the owner, 2026-11-03: "maybe we only have the higher spice levels. these low ones
+// suck").
 const SPICE_LEVELS: readonly (readonly [number, string])[] = [
-  [1, "Honor-eligible"],
-  [2, "Salty"],
   [3, "Tilted"],
   [4, "Chat-Restricted Speedrun"],
 ];

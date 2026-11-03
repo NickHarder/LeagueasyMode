@@ -86,26 +86,26 @@ async def test_after_a_game_the_card_offers_three_lines_and_copies_one(tmp_path:
                 keep_quick_case(summary_path)
                 lines = card.locator(".roast-card-line")
                 await expect(lines).to_have_count(3, timeout=10000)
-                salty = await lines.all_text_contents()
-                assert all(line.startswith("gg") for line in salty)
+                tilted = await lines.all_text_contents()
+                assert all(line.startswith("gg") for line in tilted)
                 # Three different players, each with their hardest line (the owner, 2026-10-29:
                 # "make it roast different players").
-                assert [line.split()[1] for line in salty] == ["Jax", "Lee", "Jinx"]
-                await expect(card.locator(".roast-card-level[aria-pressed=true]")).to_have_text("2")
+                assert [line.split()[1] for line in tilted] == ["Jax", "Lee", "Jinx"]
+                await expect(card.locator(".roast-card-level[aria-pressed=true]")).to_have_text("3")
                 screenshot_directory = os.environ.get("OVERLAY_SCREENSHOT_DIRECTORY")
                 if screenshot_directory:
                     await page.screenshot(path=str(Path(screenshot_directory) / "roast-card.png"))
                 await lines.nth(1).click()
-                assert await page.evaluate("window.copiedLines") == [salty[1]]
+                assert await page.evaluate("window.copiedLines") == [tilted[1]]
                 await expect(lines.nth(1)).to_have_attribute("data-copied", "true")
                 # Once the copy has shown, Lee Sin's next line takes its place; the others stay.
-                await expect(lines.nth(1)).not_to_have_text(salty[1], timeout=5000)
+                await expect(lines.nth(1)).not_to_have_text(tilted[1], timeout=5000)
                 await expect(lines.nth(1)).to_contain_text("Lee Sin")
-                await expect(lines.nth(0)).to_have_text(salty[0])
-                await expect(lines.nth(2)).to_have_text(salty[2])
+                await expect(lines.nth(0)).to_have_text(tilted[0])
+                await expect(lines.nth(2)).to_have_text(tilted[2])
                 # Another spice, other lines.
                 await card.get_by_role("button", name="4 Chat-Restricted Speedrun").click()
-                await expect(lines.first).not_to_have_text(salty[0], timeout=5000)
+                await expect(lines.first).not_to_have_text(tilted[0], timeout=5000)
                 await card.get_by_role("button", name="Close").click()
                 await expect(card).to_be_hidden()
                 await browser.close()

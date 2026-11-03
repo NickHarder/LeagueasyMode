@@ -25,8 +25,13 @@ const QUICK_CASE_MILLISECONDS = 15000;
 const KEPT_BEFORE_THE_END_SECONDS = 5;
 const COPIED_MILLISECONDS = 2000;
 const MILLISECONDS_PER_SECOND = 1000;
-const SPICE_NAMES: readonly string[] = ["Honor-eligible", "Salty", "Tilted", "Chat-Restricted Speedrun"];
-const DEFAULT_SPICE = 2;
+// The spice levels offered: the two highest only (the owner, 2026-11-03: "maybe we only have the
+// higher spice levels. these low ones suck").
+const SPICE_LEVELS: readonly (readonly [number, string])[] = [
+  [3, "Tilted"],
+  [4, "Chat-Restricted Speedrun"],
+];
+const DEFAULT_SPICE = 3;
 
 interface RoastSuggestions {
   readonly kept_at_seconds: number;
@@ -201,8 +206,7 @@ function drawCard(): void {
   spiceLabel.textContent = "Spice";
   spices.append(
     spiceLabel,
-    ...SPICE_NAMES.map((name, index) => {
-      const level = index + 1;
+    ...SPICE_LEVELS.map(([level, name]) => {
       const choice = button("roast-card-level", String(level), () => {
         spice = level;
         drawCard();

@@ -84,7 +84,7 @@ export interface CaseChoice {
   readonly take: number;
 }
 
-export const DEFAULT_CHOICE: CaseChoice = { target: "team", spice: 2, prove: false, take: 0 };
+export const DEFAULT_CHOICE: CaseChoice = { target: "team", spice: 3, prove: false, take: 0 };
 
 const SIDES: ReadonlySet<string> = new Set(["ally", "enemy"]);
 const SOURCE_KINDS: ReadonlySet<string> = new Set(["game", "timeline", "live", "computation"]);
