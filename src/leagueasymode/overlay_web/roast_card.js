@@ -23,14 +23,10 @@ const QUICK_CASE_MILLISECONDS = 15000;
 const KEPT_BEFORE_THE_END_SECONDS = 5;
 const COPIED_MILLISECONDS = 2000;
 const MILLISECONDS_PER_SECOND = 1000;
-// The spice levels offered: the two highest only (the owner, 2026-11-03: "maybe we only have the
-// higher spice levels. these low ones suck").
-const SPICE_LEVELS = [
-    [3, "Tilted"],
-    [4, "Chat-Restricted Speedrun"],
-];
-// The card opens on the hardest (the owner, 2026-11-03: "more roast and higher level roasts").
-const DEFAULT_SPICE = 4;
+// Spice 3 by default, and a "ban speedrun" toggle for 4 (the owner, 2026-11-03: "have it be on
+// default (3) and a toggle for ban speedrun").
+const DEFAULT_SPICE = 3;
+const BAN_SPEEDRUN_SPICE = 4;
 function isRoastSuggestions(value) {
     if (typeof value !== "object" || value === null) {
         return false;
@@ -182,19 +178,15 @@ function drawCard() {
     header.append(title, close);
     const spices = document.createElement("div");
     spices.className = "roast-card-spice";
-    const spiceLabel = document.createElement("span");
-    spiceLabel.textContent = "Spice";
-    spices.append(spiceLabel, ...SPICE_LEVELS.map(([level, name]) => {
-        const choice = button("roast-card-level", String(level), () => {
-            spice = level;
-            drawCard();
-            askSoon(0);
-        });
-        choice.title = name;
-        choice.setAttribute("aria-label", `${String(level)} ${name}`);
-        choice.setAttribute("aria-pressed", String(level === spice));
-        return choice;
-    }));
+    const isBanSpeedrun = spice === BAN_SPEEDRUN_SPICE;
+    const banSpeedrun = button("roast-card-level", "ban speedrun", () => {
+        spice = isBanSpeedrun ? DEFAULT_SPICE : BAN_SPEEDRUN_SPICE;
+        drawCard();
+        askSoon(0);
+    });
+    banSpeedrun.title = "The harshest lines; pasting them can get you chat restricted";
+    banSpeedrun.setAttribute("aria-pressed", String(isBanSpeedrun));
+    spices.append(banSpeedrun);
     const lines = document.createElement("ul");
     lines.className = "roast-card-lines";
     lines.append(...shownLines.map((line, groupIndex) => {

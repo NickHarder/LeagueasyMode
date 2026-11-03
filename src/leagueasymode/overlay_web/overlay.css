@@ -771,8 +771,7 @@ body {
 }
 
 .roast-card-level {
-  min-width: 28px;
-  padding: 2px 0;
+  padding: 3px 10px;
 }
 
 .roast-card-level[aria-pressed="true"] {

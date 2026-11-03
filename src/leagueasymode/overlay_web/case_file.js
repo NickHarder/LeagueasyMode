@@ -5,13 +5,10 @@
  * and another take; each pick asks `/case` again. Nothing here sends anything to chat.
  */
 import { DEFAULT_CHOICE, casePath, isCaseView, } from "./case_state.js";
-// The spice levels offered, as `leagueasymode.roast.case_view.SPICE_NAMES` names them: the two
-// highest only (the owner, 2026-11-03: "maybe we only have the higher spice levels. these low ones
-// suck").
-const SPICE_LEVELS = [
-    [3, "Tilted"],
-    [4, "Chat-Restricted Speedrun"],
-];
+// Spice 3 by default, and a "ban speedrun" toggle for 4 (the owner, 2026-11-03: "have it be on
+// default (3) and a toggle for ban speedrun").
+const DEFAULT_SPICE = 3;
+const BAN_SPEEDRUN_SPICE = 4;
 const LANES = [
     ["TOP", "Top"],
     ["JUNGLE", "Jungle"],
@@ -242,21 +239,27 @@ export function caseSectionElement(fetchCase) {
         });
         const proveLabel = htmlElement("label", "case-prove");
         proveLabel.append(prove, document.createTextNode(" 1v1s only: each vs their lane opponent"));
+        const banSpeedrun = htmlElement("input", "");
+        banSpeedrun.type = "checkbox";
+        banSpeedrun.checked = choice.spice === BAN_SPEEDRUN_SPICE;
+        banSpeedrun.addEventListener("change", () => {
+            choose({ spice: banSpeedrun.checked ? BAN_SPEEDRUN_SPICE : DEFAULT_SPICE });
+        });
+        const banSpeedrunLabel = htmlElement("label", "case-prove case-ban-speedrun");
+        banSpeedrunLabel.append(banSpeedrun, document.createTextNode(" ban speedrun"));
         const anotherTake = htmlElement("button", "case-take", "New line");
         anotherTake.type = "button";
         anotherTake.addEventListener("click", () => {
             choose({ take: choice.take + 1 });
         });
         const actions = htmlElement("div", "case-actions");
-        actions.append(proveLabel, anotherTake);
-        controls.replaceChildren(chipRowElement("Who", [targetChip("Our team", "team"), targetChip("Their team", "enemy")]), chipRowElement("Lane", LANES.map(([position, name]) => targetChip(name, `lane:${position}`))), chipRowElement("Ours", playerChips("ally")), chipRowElement("Theirs", playerChips("enemy")), chipRowElement("Spice", SPICE_LEVELS.map(([level, name]) => chipElement(`${String(level)} ${name}`, "spice", String(level), () => {
-            choose({ spice: level });
-        }))), actions);
+        actions.append(banSpeedrunLabel, proveLabel, anotherTake);
+        controls.replaceChildren(chipRowElement("Who", [targetChip("Our team", "team"), targetChip("Their team", "enemy")]), chipRowElement("Lane", LANES.map(([position, name]) => targetChip(name, `lane:${position}`))), chipRowElement("Ours", playerChips("ally")), chipRowElement("Theirs", playerChips("enemy")), actions);
         hasControls = true;
     };
     const markChoice = () => {
         for (const chip of controls.querySelectorAll(".case-chip")) {
-            const isPressed = chip.dataset["target"] === choice.target || chip.dataset["spice"] === String(choice.spice);
+            const isPressed = chip.dataset["target"] === choice.target;
             chip.setAttribute("aria-pressed", String(isPressed));
         }
     };
