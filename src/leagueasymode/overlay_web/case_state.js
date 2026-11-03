@@ -3,9 +3,9 @@
  * `leagueasymode.roast.case_view` (`overlay/web/roast_case.schema.json`), and the query `/case`
  * takes.
  */
-// The window opens on the hardest spice (the owner, 2026-11-03: "more roast and higher level
-// roasts").
-export const DEFAULT_CHOICE = { target: "team", spice: 4, prove: false, take: 0 };
+// The window opens on spice 3; "ban speedrun" switches to 4 (the owner, 2026-11-03: "have it be on
+// default (3) and a toggle for ban speedrun").
+export const DEFAULT_CHOICE = { target: "team", spice: 3, prove: false, take: 0 };
 const SIDES = new Set(["ally", "enemy"]);
 const SOURCE_KINDS = new Set(["game", "timeline", "live", "computation"]);
 function isRecord(value) {

@@ -177,16 +177,14 @@ async def test_the_case_file_shows_under_the_result(tmp_path: Path) -> None:
         assert await case_file.locator(".case-lines li").count() > 0
         await expect(case_file.locator(".case-closing-line")).not_to_be_empty()
         await expect(case_file.locator(".case-closing-caption")).to_contain_text("/140")
-        await expect(case_file.locator(".case-chip[aria-pressed=true]")).to_have_text(
-            ["Our team", "4 Chat-Restricted Speedrun"]
-        )
+        await expect(case_file.locator(".case-chip[aria-pressed=true]")).to_have_text(["Our team"])
         await expect(case_file.locator(".case-chip-row[aria-label=Ours] .case-chip")).to_have_text(
             ["Jax", "Lee Sin", "Ahri (you)", "Jinx", "Lulu"]
         )
-        # Only the two highest spice levels are offered, so the risk of pasting always shows.
-        await expect(case_file.locator(".case-chip-row[aria-label=Spice] .case-chip")).to_have_text(
-            ["3 Tilted", "4 Chat-Restricted Speedrun"]
-        )
+        # Spice 3 by default, with a "ban speedrun" toggle for 4 (the owner, 2026-11-03); the
+        # risk of pasting shows at both.
+        await expect(case_file.locator(".case-chip-row[aria-label=Spice]")).to_have_count(0)
+        await expect(page.get_by_label("ban speedrun")).not_to_be_checked()
         await expect(case_file.locator(".case-risk")).to_contain_text("chat restricted")
         await keep_screenshot(page, "post-game-case-file")
 
@@ -200,11 +198,11 @@ async def test_any_of_the_ten_can_be_put_on_trial(tmp_path: Path) -> None:
         await leblanc.click(timeout=5000)
         await expect(leblanc).to_have_attribute("aria-pressed", "true")
         await expect(case_file.locator(".case-lines")).to_contain_text("LeBlanc")
-        await case_file.locator(".case-chip", has_text="Tilted").click()
+        before = await case_file.locator(".case-lines").text_content()
+        await page.get_by_label("ban speedrun").check()
+        await expect(case_file.locator(".case-lines")).not_to_have_text(before or "")
         await expect(case_file.locator(".case-risk")).to_contain_text("chat restricted")
-        await expect(case_file.locator(".case-chip[aria-pressed=true]")).to_have_text(
-            ["LeBlanc", "3 Tilted"]
-        )
+        await expect(case_file.locator(".case-chip[aria-pressed=true]")).to_have_text(["LeBlanc"])
         # A letter opens the exhibits at the one it cites.
         letter = case_file.locator(".case-letter").first
         letter_text = await letter.text_content()

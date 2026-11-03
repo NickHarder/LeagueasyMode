@@ -6,6 +6,9 @@ skill has the format.
 
 ## 2026-11-03
 
+- Spice 3 by default, with a "ban speedrun" toggle for 4 (the owner: "have it be on default (3)
+  and a toggle for ban speedrun"), on the roast card and in the post-game window; the spice
+  buttons are gone, and the engine's default is 3 again.
 - The post-game window restyled (the owner: "yes restyle it, no nerd stuff. just fun stuff i can
   analyze the end game screen doesnt already give ... more roast and higher level roasts"). No
   courtroom words: the verdict stamps read as chat ("EVERY LANE LOST", "JG DIFF", "MY BAD",

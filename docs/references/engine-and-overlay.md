@@ -412,7 +412,7 @@ estimates scored (the owner, 2026-11-03: "just fun stuff i can analyze the end g
 already give ... no nerd stuff. more roast and higher level roasts"): the result ("Victory", your
 champion and the game's length); the roast (verdict stamps such as "EVERY LANE LOST", "JG DIFF",
 "MY BAD"; the lane board at 14:00; the lines; the closing line with a Copy button; the receipts),
-opening on spice 4; your win chance each minute as a line, the three biggest swings marked on it;
+on spice 3 with a "ban speedrun" toggle for 4; your win chance each minute as a line, the three biggest swings marked on it;
 the gold lead each minute, the timeline's when Riot sent it, else the overlay's read; the three
 swings with what happened in each; and the key moments, a dot for whose good each was. The
 accuracy history is still kept (`/history`), shown nowhere. Each chart has a crosshair whose
@@ -430,7 +430,7 @@ template leads no player before it, so the card opens on different jokes. The de
 first only to own something (`self-*`, `defendant-behind`); lines clearing a teammate are left out.
 A copied line is replaced, once the copy has shown, by that player's next line; the others stay
 (the owner, 2026-10-29: "make it roast different players ... the hardest hitting and only if its
-notable ... if i copy a jax one generate a new jax one"). The card, like the post-game window, offers spice 3 and 4 only, opening on 3 (the owner, 2026-11-03: "these low ones suck"), and a
+notable ... if i copy a jax one generate a new jax one"). The card, like the post-game window, opens on spice 3 with a "ban speedrun" toggle for 4 (the owner, 2026-11-03: "have it be on default (3) and a toggle for ban speedrun"), and a
 close button; a click on a line hands it to the app (`leagueasymodeCopy`), which copies it and
 shows its toast; nothing is sent to chat. The card's buttons are click regions like the spell
 buttons, so the overlay still lets every other click through. It goes when closed or when the next

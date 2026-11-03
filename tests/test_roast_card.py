@@ -91,7 +91,9 @@ async def test_after_a_game_the_card_offers_three_lines_and_copies_one(tmp_path:
                 # Three different players, each with their hardest line (the owner, 2026-10-29:
                 # "make it roast different players").
                 assert [line.split()[1] for line in tilted] == ["Jax", "Lee", "Jinx"]
-                await expect(card.locator(".roast-card-level[aria-pressed=true]")).to_have_text("4")
+                # Spice 3 by default; "ban speedrun" is off (the owner, 2026-11-03).
+                ban_speedrun = card.get_by_role("button", name="ban speedrun")
+                await expect(ban_speedrun).to_have_attribute("aria-pressed", "false")
                 screenshot_directory = os.environ.get("OVERLAY_SCREENSHOT_DIRECTORY")
                 if screenshot_directory:
                     await page.screenshot(path=str(Path(screenshot_directory) / "roast-card.png"))
@@ -104,7 +106,8 @@ async def test_after_a_game_the_card_offers_three_lines_and_copies_one(tmp_path:
                 await expect(lines.nth(0)).to_have_text(tilted[0])
                 await expect(lines.nth(2)).to_have_text(tilted[2])
                 # Another spice, other lines.
-                await card.get_by_role("button", name="3 Tilted").click()
+                await ban_speedrun.click()
+                await expect(ban_speedrun).to_have_attribute("aria-pressed", "true")
                 await expect(lines.first).not_to_have_text(tilted[0], timeout=5000)
                 await card.get_by_role("button", name="Close").click()
                 await expect(card).to_be_hidden()
