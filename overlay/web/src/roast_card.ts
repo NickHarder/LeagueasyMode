@@ -1,8 +1,9 @@
 /**
- * The roast card: after a game, three lines for chat on the overlay, each about a different target,
- * at a spice level picked on the card (the owner, 2026-10-29: the post-game window's options were
- * "overwhelming", and "can it be done through the overlay"). A click copies a line, for the player
- * to paste; nothing is sent to chat.
+ * The roast card: after a game, up to three players to roast on the overlay, each with their
+ * hardest-hitting line, at a spice level picked on the card (the owner, 2026-10-29: the post-game
+ * window's options were "overwhelming", "can it be done through the overlay", and "make it roast
+ * different players ... if i copy a jax one generate a new jax one"). A click copies a line, for
+ * the player to paste, and that player's next line takes its place; nothing is sent to chat.
  *
  * It shows only after the page saw a game end, and only a case kept after that, so an older game's
  * case never shows; it goes when the player closes it or the next game starts. The quick case's
@@ -32,6 +33,7 @@ interface RoastSuggestions {
   readonly spice: number;
   readonly is_quick: boolean;
   readonly lines: readonly string[];
+  readonly groups: readonly (readonly string[])[];
 }
 
 function isRoastSuggestions(value: unknown): value is RoastSuggestions {
@@ -40,12 +42,17 @@ function isRoastSuggestions(value: unknown): value is RoastSuggestions {
   }
   const record = value as Record<string, unknown>;
   const lines = record["lines"];
+  const groups = record["groups"];
   return (
     typeof record["kept_at_seconds"] === "number" &&
     typeof record["spice"] === "number" &&
     typeof record["is_quick"] === "boolean" &&
     Array.isArray(lines) &&
-    lines.every((line) => typeof line === "string")
+    lines.every((line) => typeof line === "string") &&
+    Array.isArray(groups) &&
+    groups.every(
+      (group) => Array.isArray(group) && group.length > 0 && group.every((line) => typeof line === "string"),
+    )
   );
 }
 
@@ -54,6 +61,8 @@ let wasGameRunning = false;
 let gameEndedAtSeconds: number | null = null;
 let gameEndedAtMilliseconds = 0;
 let suggestions: RoastSuggestions | null = null;
+// Which of each player's lines the card shows; a copy moves that player's on.
+let shownIndexes: number[] = [];
 let spice = DEFAULT_SPICE;
 let copiedLine: string | null = null;
 let askTimer: number | null = null;
@@ -112,6 +121,9 @@ async function askForSuggestions(): Promise<void> {
     return;
   }
   if (isRoastSuggestions(answer) && answer.kept_at_seconds >= endedAt - KEPT_BEFORE_THE_END_SECONDS) {
+    if (suggestions === null || JSON.stringify(suggestions.groups) !== JSON.stringify(answer.groups)) {
+      shownIndexes = answer.groups.map(() => 0);
+    }
     suggestions = answer;
     drawCard();
     if (answer.is_quick) {
@@ -124,8 +136,9 @@ async function askForSuggestions(): Promise<void> {
   }
 }
 
-/** Copy a line: the app copies it and shows its toast; a browser's clipboard takes it otherwise. */
-function copyLine(line: string): void {
+/** Copy a line: the app copies it and shows its toast; a browser's clipboard takes it otherwise.
+ * Once the copy has shown, that player's next line takes its place. */
+function copyLine(line: string, groupIndex: number): void {
   const app = window.webkit?.messageHandlers?.leagueasymodeCopy;
   if (app !== undefined) {
     app.postMessage(line);
@@ -137,6 +150,10 @@ function copyLine(line: string): void {
   window.setTimeout(() => {
     if (copiedLine === line) {
       copiedLine = null;
+      const groupSize = suggestions?.groups[groupIndex]?.length ?? 0;
+      if (groupSize > 0) {
+        shownIndexes[groupIndex] = ((shownIndexes[groupIndex] ?? 0) + 1) % groupSize;
+      }
       drawCard();
     }
   }, COPIED_MILLISECONDS);
@@ -164,7 +181,8 @@ function drawCard(): void {
   }
   // Drawn again only when what it shows changes, so a click is never lost to a redraw.
   const shown = suggestions;
-  const text = JSON.stringify([shown.lines, spice, copiedLine]);
+  const shownLines = shown.groups.map((group, index) => group[(shownIndexes[index] ?? 0) % group.length] ?? "");
+  const text = JSON.stringify([shownLines, spice, copiedLine]);
   if (text === drawnText && !card.hidden) {
     return;
   }
@@ -199,10 +217,10 @@ function drawCard(): void {
   const lines = document.createElement("ul");
   lines.className = "roast-card-lines";
   lines.append(
-    ...shown.lines.map((line) => {
+    ...shownLines.map((line, groupIndex) => {
       const item = document.createElement("li");
       const choice = button("roast-card-line", line, () => {
-        copyLine(line);
+        copyLine(line, groupIndex);
       });
       if (line === copiedLine) {
         choice.dataset["copied"] = "true";
@@ -213,7 +231,8 @@ function drawCard(): void {
   );
   const hint = document.createElement("p");
   hint.className = "roast-card-hint";
-  hint.textContent = copiedLine === null ? "Click a line to copy · ⌘V in chat" : "Copied · ⌘V in chat";
+  hint.textContent =
+    copiedLine === null ? "Click a line to copy · ⌘V in chat · a new one comes up" : "Copied · ⌘V in chat";
   card.replaceChildren(header, spices, lines, hint);
   card.hidden = false;
 }

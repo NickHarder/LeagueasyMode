@@ -3,6 +3,7 @@
 from pathlib import Path
 
 from client_game_payloads import (
+    carried_game_payload,
     details_payload,
     end_of_game_payload,
     summary_payload,
@@ -70,3 +71,28 @@ def test_no_line_flames_a_teammate_for_what_the_defendant_did_too() -> None:
     lines = roast_suggestions(quick, 2, RoastRules()).lines
     assert not any("Jax died" in line for line in lines)
     assert lines[0] == "gg, died 8 times myself lol we all inted"
+
+
+def test_the_card_offers_different_players_each_with_their_hardest_line_first() -> None:
+    # The owner, 2026-10-29: "make it roast different players. also make it the hardest hitting
+    # and only if its notable ... if i copy a jax one generate a new jax one". Here the player
+    # went 12/1/8; Jax died 10 times with 12% kill participation, Lee Sin 9, Jinx 7.
+    quick = quick_game_roast(carried_game_payload())
+    assert quick is not None
+    suggestions = roast_suggestions(quick, 2, RoastRules())
+    leads = [group[0] for group in suggestions.groups]
+    assert [lead.split()[1] for lead in leads] == ["Jax", "Lee", "Jinx"]
+    assert suggestions.lines == tuple(leads)
+    # Each player's group is about that player only, with more than one line to move on to.
+    for group in suggestions.groups:
+        assert len(group) > 1
+        assert len({line.split()[1] for line in group}) == 1
+    # Different jokes lead: no two players open on the same template's words.
+    assert len({lead.split(".")[-1] for lead in leads}) == len(leads)
+
+
+def test_no_line_on_the_card_is_about_the_player_unless_they_own_something() -> None:
+    quick = quick_game_roast(carried_game_payload())
+    assert quick is not None
+    lines = [line for group in roast_suggestions(quick, 4, RoastRules()).groups for line in group]
+    assert not any("Ahri" in line or "myself" in line or " me " in line for line in lines)

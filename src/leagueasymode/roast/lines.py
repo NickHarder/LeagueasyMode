@@ -22,6 +22,9 @@ class CitedLine(BaseModel):
     champion_participant_ids: tuple[int, ...]
     # The player the line is about, whether or not it names their champion.
     subject_participant_id: int | None = None
+    # How far past its template's thresholds the subject's numbers are: 1 just meets them, 2 is
+    # twice the bar. The roast card picks each player's hardest-hitting line by it.
+    notability: float = 0.0
 
     @property
     def text(self) -> str:

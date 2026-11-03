@@ -31,6 +31,10 @@ HEAD_TO_HEAD_FAMILIES: Final = frozenset({"lanes", "kills"})
 # so the case spreads its blame. The defendant's own lines are their excuses, and are not capped;
 # nor is a single lane or player the reader chose, who gets every receipt there is.
 MAXIMUM_LINES_PER_SUBJECT: Final = 3
+# Slots about a team or the game, not the line's subject: no measure of how notable its subject is.
+TEAM_SLOT_PREFIXES: Final = ("team.", "enemy_team.", "game.")
+# Keeps a ceiling's ratio finite when the value is 0, such as no control wards bought.
+NOTABILITY_EPSILON: Final = 0.05
 # Lines about a teammate that clear them rather than flame them: the defendant meeting their
 # conditions too is no fault.
 NOT_FLAMES: Final = frozenset({"carry-receipt-ally", "lane-held-ahead", "lane-held-behind"})
@@ -179,6 +183,38 @@ def fill_template(
     )
 
 
+def _notability(template: RoastTemplate, subject: RoastPlayer, context: CaseContext) -> float:
+    """Return how far past its template's thresholds a subject's numbers are.
+
+    Each of the subject's own bounds counts: a floor as the value over it (10 deaths against 6 is
+    1.67), a ceiling alone as it over the value (12% kill participation against 35% is about 2.4).
+    A floor of 1 or less only asks that the exhibit exist, and counts as just meeting it.
+
+    Args:
+        template: The template.
+        subject: The player the line is about.
+        context: The case.
+
+    Returns:
+        The largest of those, and 1 when none can be read.
+    """
+    ratios: list[float] = []
+    for condition in template.when:
+        if condition.slot.startswith(TEAM_SLOT_PREFIXES):
+            continue
+        exhibit_key = exhibit_key_for(condition.slot, subject, context)
+        value = exhibit_number(context.ledger, exhibit_key) if exhibit_key is not None else None
+        if value is None:
+            continue
+        if condition.at_least is not None and condition.at_least > 1:
+            ratios.append(value / condition.at_least)
+        elif condition.at_least is None and condition.at_most is not None:
+            ratios.append(
+                (condition.at_most + NOTABILITY_EPSILON) / (max(value, 0) + NOTABILITY_EPSILON)
+            )
+    return max(ratios, default=1.0)
+
+
 def _is_a_glass_house(template: RoastTemplate, context: CaseContext) -> bool:
     """Return whether a line would flame a teammate for what the defendant did too.
 
@@ -267,7 +303,9 @@ def compose_lines(
         for subject in open_subjects[: template.max_subjects]:
             line = fill_template(template, subject, context)
             if line is not None:
-                lines.append(line)
+                lines.append(
+                    line.model_copy(update={"notability": _notability(template, subject, context)})
+                )
                 lines_per_subject[subject.participant_id] = (
                     lines_per_subject.get(subject.participant_id, 0) + 1
                 )

@@ -211,3 +211,31 @@ def end_of_game_payload(
         "localPlayer": {"puuid": local_puuid},
         "teams": teams,
     }
+
+
+def carried_game_payload() -> JsonValue:
+    """The quick case's stats with the player here at 12/1/8: every teammate is fair game."""
+    payload = end_of_game_payload()
+    assert isinstance(payload, dict)
+    local_player = payload["localPlayer"]
+    assert isinstance(local_player, dict)
+    teams = payload["teams"]
+    assert isinstance(teams, list)
+    for team in teams:
+        assert isinstance(team, dict)
+        team_players = team["players"]
+        assert isinstance(team_players, list)
+        for player in team_players:
+            assert isinstance(player, dict)
+            player_stats = player["stats"]
+            assert isinstance(player_stats, dict)
+            if player.get("puuid") == local_player.get("puuid"):
+                player_stats.update(
+                    {
+                        "NUM_DEATHS": 1,
+                        "CHAMPIONS_KILLED": 12,
+                        "ASSISTS": 8,
+                        "TOTAL_TIME_SPENT_DEAD": 25,
+                    }
+                )
+    return payload

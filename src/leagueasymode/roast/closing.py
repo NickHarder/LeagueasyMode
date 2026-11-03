@@ -25,6 +25,9 @@ class ClosingLine(BaseModel):
     exhibit_keys: tuple[str, ...]
     # The template the line came from; empty for the fallback line.
     template_id: str = ""
+    # The player the line is about, and how notable their numbers are (`compose._notability`).
+    subject_participant_id: int | None = None
+    notability: float = 0.0
 
 
 def closing_line_candidates(
@@ -71,6 +74,8 @@ def closing_line_candidates(
                     text=fitting_texts[0],
                     exhibit_keys=line.exhibit_keys,
                     template_id=line.template_id,
+                    subject_participant_id=line.subject_participant_id,
+                    notability=line.notability,
                 )
             )
     return candidates

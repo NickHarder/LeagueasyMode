@@ -14,7 +14,7 @@ import pytest
 from aiohttp import web
 from playwright.async_api import async_playwright, expect
 
-from client_game_payloads import end_of_game_payload
+from client_game_payloads import carried_game_payload
 from game_payloads import all_game_data
 from leagueasymode.engine import OverlayEngine
 from leagueasymode.game_api import GameApiClient
@@ -49,7 +49,7 @@ def game_until(game_over: asyncio.Event) -> web.Application:
 
 
 def keep_quick_case(summary_path: Path, *, kept_hours_ago: float = 0) -> None:
-    quick = quick_game_roast(end_of_game_payload())
+    quick = quick_game_roast(carried_game_payload())
     assert quick is not None
     roast_path = roast_path_beside(summary_path)
     roast_path.write_text(quick.model_dump_json())
@@ -88,6 +88,9 @@ async def test_after_a_game_the_card_offers_three_lines_and_copies_one(tmp_path:
                 await expect(lines).to_have_count(3, timeout=10000)
                 salty = await lines.all_text_contents()
                 assert all(line.startswith("gg") for line in salty)
+                # Three different players, each with their hardest line (the owner, 2026-10-29:
+                # "make it roast different players").
+                assert [line.split()[1] for line in salty] == ["Jax", "Lee", "Jinx"]
                 await expect(card.locator(".roast-card-level[aria-pressed=true]")).to_have_text("2")
                 screenshot_directory = os.environ.get("OVERLAY_SCREENSHOT_DIRECTORY")
                 if screenshot_directory:
@@ -95,6 +98,11 @@ async def test_after_a_game_the_card_offers_three_lines_and_copies_one(tmp_path:
                 await lines.nth(1).click()
                 assert await page.evaluate("window.copiedLines") == [salty[1]]
                 await expect(lines.nth(1)).to_have_attribute("data-copied", "true")
+                # Once the copy has shown, Lee Sin's next line takes its place; the others stay.
+                await expect(lines.nth(1)).not_to_have_text(salty[1], timeout=5000)
+                await expect(lines.nth(1)).to_contain_text("Lee Sin")
+                await expect(lines.nth(0)).to_have_text(salty[0])
+                await expect(lines.nth(2)).to_have_text(salty[2])
                 # Another spice, other lines.
                 await card.get_by_role("button", name="4 Chat-Restricted Speedrun").click()
                 await expect(lines.first).not_to_have_text(salty[0], timeout=5000)

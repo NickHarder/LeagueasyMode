@@ -4,6 +4,14 @@ What changed in this project and why, newest first. A commit shows the differenc
 gives the reason. The `handoff` skill adds to it at every checkpoint, and the `write-okf-concept`
 skill has the format.
 
+## 2026-11-03
+
+- The roast card roasts different players (the owner: "make it roast different players. also
+  make it the hardest hitting and only if its notable. if i copy a jax one generate a new jax one
+  ... i want variety on who i can pick"). Up to three players, each with their lines hardest first,
+  ranked by how far their numbers are past each line's thresholds; the card opens on different
+  jokes; a copied line gives way to that player's next one while the others stay.
+
 ## 2026-10-30
 
 - Turrets and inhibitors are read by the names the game really gives them
