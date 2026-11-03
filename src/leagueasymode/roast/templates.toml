@@ -432,10 +432,19 @@ text = "died {deaths} times myself lol we all inted"
 id = "self-deaths-spicy"
 family = "scoreboard"
 subject = "defendant"
-spice = [3, 4]
+spice = [3, 3]
 rank_by = "deaths"
 when = [{ slot = "deaths", at_least = 6 }]
 text = "{deaths} deaths from me too ngl. whole team was inting me included"
+
+[[templates]]
+id = "self-deaths-speedrun"
+family = "scoreboard"
+subject = "defendant"
+spice = [4, 4]
+rank_by = "deaths"
+when = [{ slot = "deaths", at_least = 6 }]
+text = "{deaths} deaths myself lmao. whole team was a feeding frenzy and i was the buffet"
 
 [[templates]]
 id = "self-grey-screen"
@@ -450,10 +459,19 @@ text = "spent {time_dead} dead myself, rough game"
 id = "self-grey-screen-spicy"
 family = "scoreboard"
 subject = "defendant"
-spice = [3, 4]
+spice = [3, 3]
 rank_by = "time_dead"
 when = [{ slot = "time_dead", at_least = 180 }]
 text = "{time_dead} on a grey screen me too lmao. nobody played this game"
+
+[[templates]]
+id = "self-grey-screen-speedrun"
+family = "scoreboard"
+subject = "defendant"
+spice = [4, 4]
+rank_by = "time_dead"
+when = [{ slot = "time_dead", at_least = 180 }]
+text = "{time_dead} dead myself. i was spectating my own game fr"
 
 [[templates]]
 id = "self-low-kp"
@@ -468,10 +486,21 @@ text = "{kill_participation} kp from me too, nobody showed up lol"
 id = "self-low-kp-spicy"
 family = "scoreboard"
 subject = "defendant"
-spice = [3, 4]
+spice = [3, 3]
 rank_by = "kill_participation"
 when = [{ slot = "kill_participation", at_most = 0.35 }, { slot = "team.team_kills", at_least = 10 }]
 text = "{kill_participation} kp myself ngl. we all forgot to group"
+
+# --- The scoreboard ----------------------------------------------------------------------------------
+
+[[templates]]
+id = "self-low-kp-speedrun"
+family = "scoreboard"
+subject = "defendant"
+spice = [4, 4]
+rank_by = "kill_participation"
+when = [{ slot = "kill_participation", at_most = 0.35 }, { slot = "team.team_kills", at_least = 10 }]
+text = "{kill_participation} kp myself. i was afk too, we all were, report all of us"
 
 # --- The scoreboard ----------------------------------------------------------------------------------
 
