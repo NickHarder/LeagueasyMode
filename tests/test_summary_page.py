@@ -184,7 +184,8 @@ async def test_the_case_file_shows_under_the_result(tmp_path: Path) -> None:
         # Spice 3 by default, with a "ban speedrun" toggle for 4 (the owner, 2026-11-03); the
         # risk of pasting shows at both.
         await expect(case_file.locator(".case-chip-row[aria-label=Spice]")).to_have_count(0)
-        await expect(page.get_by_label("ban speedrun")).not_to_be_checked()
+        # A slide switch on a row of its own (the owner, 2026-11-03).
+        await expect(page.get_by_role("switch", name="ban speedrun")).not_to_be_checked()
         await expect(case_file.locator(".case-risk")).to_contain_text("chat restricted")
         await keep_screenshot(page, "post-game-case-file")
 
@@ -199,7 +200,7 @@ async def test_any_of_the_ten_can_be_put_on_trial(tmp_path: Path) -> None:
         await expect(leblanc).to_have_attribute("aria-pressed", "true")
         await expect(case_file.locator(".case-lines")).to_contain_text("LeBlanc")
         before = await case_file.locator(".case-lines").text_content()
-        await page.get_by_label("ban speedrun").check()
+        await page.get_by_role("switch", name="ban speedrun").check()
         await expect(case_file.locator(".case-lines")).not_to_have_text(before or "")
         await expect(case_file.locator(".case-risk")).to_contain_text("chat restricted")
         await expect(case_file.locator(".case-chip[aria-pressed=true]")).to_have_text(["LeBlanc"])
