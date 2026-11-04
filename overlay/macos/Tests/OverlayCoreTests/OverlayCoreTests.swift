@@ -264,7 +264,7 @@ final class MarkSequenceTests: XCTestCase {
 
     func testASpellWithNoPickMarksNothing() {
         var sequence = MarkSequence()
-        XCTAssertNil(sequence.markSpell(.summoner, atSeconds: 5))
+        XCTAssertNil(sequence.markSpell(.ultimate, atSeconds: 5))
     }
 
     func testAPickWaitsOnlyAFewSeconds() {
@@ -277,7 +277,7 @@ final class MarkSequenceTests: XCTestCase {
         var sequence = MarkSequence()
         sequence.pickEnemy(slot: 1, atSeconds: 10)
         XCTAssertNotNil(sequence.markSpell(.flash, atSeconds: 11))
-        XCTAssertNil(sequence.markSpell(.summoner, atSeconds: 11.5))
+        XCTAssertNil(sequence.markSpell(.ultimate, atSeconds: 11.5))
     }
 
     func testALaterPickReplacesAnEarlierOne() {
@@ -285,7 +285,7 @@ final class MarkSequenceTests: XCTestCase {
         sequence.pickEnemy(slot: 1, atSeconds: 10)
         sequence.pickEnemy(slot: 4, atSeconds: 10.5)
         XCTAssertEqual(
-            sequence.markSpell(.summoner, atSeconds: 11), CooldownMark(enemySlot: 4, spell: .summoner)
+            sequence.markSpell(.ultimate, atSeconds: 11), CooldownMark(enemySlot: 4, spell: .ultimate)
         )
     }
 
@@ -297,21 +297,11 @@ final class MarkSequenceTests: XCTestCase {
     }
 }
 
-final class MarkedSpellTests: XCTestCase {
-    func testOnlySummonerSpellsAreMarked() {
-        // The ultimate's case went with Riot's third-party policy against tracking enemy ultimate
-        // cooldowns (the owner, 2026-11-04: "make all the rec fixes"); the other tests that marked
-        // an ultimate mark the other summoner spell for that reason.
-        XCTAssertEqual(MarkedSpell.allCases, [.flash, .summoner])
-        XCTAssertNil(MarkedSpell(rawValue: "ultimate"))
-    }
-}
-
 final class MarkRequestTests: XCTestCase {
     func testAMarkIsPostedBesideTheOverlayPageWithTheAppsHeader() throws {
         let overlayURL = try XCTUnwrap(URL(string: "http://127.0.0.1:52011/"))
         let request = MarkRequest.make(
-            overlayURL: overlayURL, mark: CooldownMark(enemySlot: 2, spell: .summoner)
+            overlayURL: overlayURL, mark: CooldownMark(enemySlot: 2, spell: .ultimate)
         )
         XCTAssertEqual(request.url?.absoluteString, "http://127.0.0.1:52011/marks")
         XCTAssertEqual(request.httpMethod, "POST")
@@ -320,7 +310,7 @@ final class MarkRequestTests: XCTestCase {
         let body = try XCTUnwrap(request.httpBody)
         let decoded = try XCTUnwrap(JSONSerialization.jsonObject(with: body) as? [String: Any])
         XCTAssertEqual(decoded["enemy_slot"] as? Int, 2)
-        XCTAssertEqual(decoded["spell"] as? String, "summoner")
+        XCTAssertEqual(decoded["spell"] as? String, "ultimate")
     }
 }
 

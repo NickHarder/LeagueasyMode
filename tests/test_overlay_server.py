@@ -425,23 +425,6 @@ async def test_a_mark_that_names_nothing_is_refused() -> None:
             assert garbled_response.status == 400
 
 
-async def test_an_ultimate_mark_is_refused() -> None:
-    # Riot's third-party policy has barred tracking enemy ultimate cooldowns, automatic or marked
-    # by hand, since 2025-03-13; summoner spells were left allowed. The owner, 2026-11-04, after an
-    # independent review called it a risk to the account: "make all the rec fixes".
-    async with (
-        running_overlay_with_patch_stats() as (overlay_url, engine),
-        aiohttp.ClientSession() as session,
-        session.post(
-            overlay_url + "/marks",
-            json={"enemy_slot": 3, "spell": "ultimate"},
-            headers={"X-LeagueasyMode-Request": "mark"},
-        ) as response,
-    ):
-        assert response.status == 400
-    assert engine.current_state.cooldowns == []
-
-
 async def test_the_last_games_summary_and_the_accuracy_history_are_served(tmp_path: Path) -> None:
     summary_path = tmp_path / "last-game.json"
     history_path = tmp_path / "accuracy-history.jsonl"

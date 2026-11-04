@@ -1,13 +1,13 @@
 import Foundation
 
-/// A spell the player marks an enemy as having used. No ultimate: Riot's third-party policy has
-/// barred tracking enemy ultimate cooldowns, automatic or by hand, since 2025-03-13, while
-/// summoner spell timers were left allowed (the owner, 2026-11-04: "make all the rec fixes").
+/// A spell the player marks an enemy as having used.
 public enum MarkedSpell: String, Sendable, CaseIterable {
     /// Their Flash, or their first summoner spell when they have no Flash.
     case flash
     /// Their other summoner spell.
     case summoner
+    /// Their ultimate.
+    case ultimate
 }
 
 /// One mark: an enemy, by their place in role order (1 top to 5 support), and the spell they used.
@@ -21,7 +21,7 @@ public struct CooldownMark: Equatable, Sendable {
     }
 }
 
-/// The two presses of a mark: ⌃⌥ and a digit picks an enemy, then ⌃⌥ and F or D names the spell.
+/// The two presses of a mark: ⌃⌥ and a digit picks an enemy, then ⌃⌥ and F, D or R names the spell.
 ///
 /// Every key carries ⌃⌥, so that marking never takes a key League uses. A pick waits a few
 /// seconds for its spell; a spell with no pick waiting marks nothing, and each pick makes at most

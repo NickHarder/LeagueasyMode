@@ -63,7 +63,7 @@ const CALLOUT_KINDS = new Set([
 const START_SIDES = new Set(["blue", "red"]);
 const MAP_HALVES = new Set(["top", "bot"]);
 const FOUR_MINUTE_HALVES = new Set(["top", "mid", "bot"]);
-const MARKED_SPELLS = new Set(["flash", "summoner"]);
+const MARKED_SPELLS = new Set(["flash", "summoner", "ultimate"]);
 /** Return whether a value is a plain object, so that its fields can be read. */
 function isRecord(value) {
     return typeof value === "object" && value !== null && !Array.isArray(value);

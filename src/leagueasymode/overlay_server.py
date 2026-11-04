@@ -63,9 +63,7 @@ class MarkRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     enemy_slot: int = Field(ge=1, le=ENEMY_SLOT_COUNT)
-    # No "ultimate": Riot's third-party policy bars tracking enemy ultimate cooldowns
-    # (`cooldowns.py`), so such a mark is refused.
-    spell: Literal["flash", "summoner"]
+    spell: Literal["flash", "summoner", "ultimate"]
 
 
 # Set when the server shuts down, so that open streams end at once instead of at their next

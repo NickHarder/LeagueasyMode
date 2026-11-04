@@ -73,7 +73,7 @@ const DESCRIPTIONS = {
     ],
     click_to_mark: [
         "Click to mark spells",
-        "Buttons on each enemy’s row that start their Flash or other summoner spell timer in one click, beside the ⌃⌥ shortcuts. The overlay takes the clicks on those buttons only. Off unless turned on.",
+        "Buttons on each enemy’s row that start their Flash, other summoner spell or ultimate timer in one click, beside the ⌃⌥ shortcuts. The overlay takes the clicks on those buttons only. Off unless turned on.",
     ],
 };
 function htmlElement(name, className, text) {
