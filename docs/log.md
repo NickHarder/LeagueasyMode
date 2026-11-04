@@ -15,6 +15,18 @@ skill has the format.
   game sends; those names are now the real format throughout the tests, and the parser no longer
   reads the invented ones. The accuracy thresholds now score both games, and an empty fixtures
   folder fails (audit ARCH-09) instead of passing having scored nothing.
+- Enemy ultimates are no longer marked: no ⌃⌥R, no R button, and `POST /marks` refuses
+  "ultimate". Riot's third-party policy has barred tracking enemy ultimate cooldowns, automatic or
+  by hand, since 2025-03-13; summoner spell timers were left allowed, so Flash and the other
+  summoner spell stay. An independent review called the ultimate marks a risk to the owner's
+  account, and the owner asked to "make all the rec fixes", reversing their "dont listen to
+  rumors" of 2026-10-28. The ultimate's rank from the level stays on each enemy's row: it is no
+  cooldown.
+- The README says what leaves the Mac: Data Dragon, GitHub releases for updates, the owner's
+  private recordings repository once a token is in the Keychain (games, crash and problem
+  reports), and the `claude` command when Claude's take is on. It had said Data Dragon was "the
+  one request beyond your Mac", which an independent review found untrue. KEY_METRICS says where
+  the scoring stands on 17 recorded games.
 
 ## 2026-11-03
 

@@ -4,7 +4,7 @@ title: Key metrics
 description: One north star, four drivers and two guardrails that prove LeagueasyMode's promise to the player, each scored from the owner's recorded games against League's post-game timeline or counted from what the app sends.
 tags: [metrics]
 status: draft
-generated: { by: claude-code/cloud, at: 2026-10-29T07:09:42Z }
+generated: { by: claude-code/cloud, at: 2026-11-04T06:53:46Z }
 ---
 
 # Key metrics
@@ -12,8 +12,11 @@ generated: { by: claude-code/cloud, at: 2026-10-29T07:09:42Z }
 The promise ([USERS.md](USERS.md), P-01): the player makes a better call because the overlay told
 them something true they could not see, and it never got in the way. Each metric below is scored
 from the owner's recorded games against League's post-game timeline (the accuracy history,
-`leagueasymode history`), or counted from what the app sends to the recordings repository. None
-has a scored value yet: no game the owner played had been scored on 2026-10-29.
+`leagueasymode history`), or counted from what the app sends to the recordings repository. On
+2026-11-04 the recordings repository held 17 games: 12 ARAM: Mayhem, 1 Swiftplay, 2 Draft Pick (one
+remade at 0:56) and 2 Practice Tool. They were scored by hand (`leagueasymode score`), on the Rift
+no estimator yet beat chance on that one full Draft Pick game and the Swiftplay, and no metric
+below has an attested value: too few Rift games for any.
 
 ## 1. North star
 
