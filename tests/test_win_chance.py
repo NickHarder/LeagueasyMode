@@ -139,9 +139,9 @@ def test_the_game_gives_the_structures_monsters_and_players_alive() -> None:
         dragon_kill_event(1, 400.0, "Jungle Diff"),
         dragon_kill_event(2, 800.0, "Gank Plz"),
         dragon_kill_event(3, 1100.0, "Jungle Diff"),
-        turret_killed_event(4, 900.0, "Turret_T2_R_03_A", "Bot Gap"),
-        turret_killed_event(5, 950.0, "Turret_T2_L_03_A", "Garen Main"),
-        turret_killed_event(6, 960.0, "Turret_T1_C_05_A", "Shadow Step"),
+        turret_killed_event(4, 900.0, "Turret_TChaos_L0_P3_1_0", "Bot Gap"),
+        turret_killed_event(5, 950.0, "Turret_TChaos_L2_P3_1_0", "Garen Main"),
+        turret_killed_event(6, 960.0, "Turret_TOrder_L1_P3_1_0", "Shadow Step"),
         baron_kill_event(7, 1250.0, "Jungle Diff"),
     ]
     players = tuple(

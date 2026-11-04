@@ -89,7 +89,7 @@ def test_the_elder_buff_lasts_two_and_a_half_minutes() -> None:
 
 
 def test_a_destroyed_inhibitor_respawns_five_minutes_later() -> None:
-    inhibitor_kill = inhibitor_killed_event(1, 1800.0, "Barracks_T2_L1", ALLY_TOP)
+    inhibitor_kill = inhibitor_killed_event(1, 1800.0, "Inhib_TChaos_L2_P1_1_0", ALLY_TOP)
     inhibitors = inhibitor_timers(snapshot_at(1900.0, inhibitor_kill))
     assert [
         (timer.side, timer.lane, timer.respawns_at_game_time_seconds) for timer in inhibitors
@@ -108,8 +108,8 @@ def test_an_inhibitor_named_as_the_game_names_it_is_timed() -> None:
 
 
 def test_a_respawned_inhibitor_is_no_longer_shown() -> None:
-    inhibitor_kill = inhibitor_killed_event(1, 1800.0, "Barracks_T1_C1", ENEMY_JUNGLER)
-    respawned = inhibitor_respawned_event(2, 2100.0, "Barracks_T1_C1")
+    inhibitor_kill = inhibitor_killed_event(1, 1800.0, "Inhib_TOrder_L1_P1_1_0", ENEMY_JUNGLER)
+    respawned = inhibitor_respawned_event(2, 2100.0, "Inhib_TOrder_L1_P1_1_0")
     assert inhibitor_timers(snapshot_at(2101.0, inhibitor_kill, respawned)) == []
     assert inhibitor_timers(snapshot_at(2101.0, inhibitor_kill)) == []
 

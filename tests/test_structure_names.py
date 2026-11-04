@@ -20,10 +20,8 @@ from leagueasymode.inference.structure_names import (
         ("Turret_TChaos_L0_P1_478290356_0", TurretName("CHAOS", "bot", "inhibitor")),
         ("Turret_TOrder_L1_P5_3625540808_0", TurretName("ORDER", "mid", "nexus")),
         ("Turret_TOrder_L1_P4_3675873665_0", TurretName("ORDER", "mid", "nexus")),
-        # The older names, as the tests have long built them.
-        ("Turret_T2_L_03_A", TurretName("CHAOS", "top", "outer")),
-        ("Turret_T1_C_01_A", TurretName("ORDER", "mid", "nexus")),
-        ("Turret_T1_C_06_A", None),
+        # The names open-source readers give, which no real game sends, are not read.
+        ("Turret_T2_L_03_A", None),
         ("Turret_TNeutral_L0_P3_1_0", None),
         (None, None),
     ],
@@ -43,7 +41,7 @@ def test_a_turrets_name_says_whose_it_is_its_lane_and_its_tier(
         ("Inhib_TOrder_L2_P1_2669080337_0", InhibitorName("ORDER", "top")),
         # ARAM's, in its one lane.
         ("Inhib_TChaos_L1_P1_2432143522_0", InhibitorName("CHAOS", "mid")),
-        ("Barracks_T2_L1", InhibitorName("CHAOS", "top")),
+        ("Barracks_T2_L1", None),
         ("Barracks_Something_New", None),
     ],
 )
