@@ -6,6 +6,13 @@ skill has the format.
 
 ## 2026-11-04
 
+- The win chance, the likely places and the jungle path are hidden unless "Show experimental
+  estimates" is on (off by default): an independent review scored them on the owner's recorded
+  Rift games no better than chance (a win chance Brier of 0.404 and 0.249 against a coin flip's
+  0.250, the likeliest region right 25% to 38%, the jungle path some 4,500 units off). They come
+  back once each beats its baseline on 20 or more Rift games. The gold and experience bands, which
+  held the truth 63% and 43% of the time there instead of 80%, are widened 1.7 and 2.55 times, the
+  80th percentile of the error over the band on those three games; 83% and 73% after.
 - The first real games in the repository's tests: trimmed, anonymized copies of the owner's
   Swiftplay and an ARAM of 2026-10-29 in `tests/fixtures/recorded-games/` (300 KB each; the other
   players' match histories, ranked stats and past timelines left out, every name checked to be a

@@ -97,6 +97,10 @@ const DESCRIPTIONS: Readonly<Record<PreferenceName, readonly [string, string]>> 
     "Details only while Tab or ⌥ is held",
     "At a glance, one short line an enemy and the newest two callouts; holding Tab or ⌥ Option shows the rest: win and fight chances, gold, the You panel, each enemy’s second line and the spell buttons. Off: always shown.",
   ],
+  show_experimental_estimates: [
+    "Show experimental estimates",
+    "The win chance, each enemy’s likely place and the jungler’s likely path. Off until each beats chance on 20 or more recorded Rift games: on the games so far, the win chance did no better than a coin flip and the likely place was right a third of the time.",
+  ],
   click_to_mark: [
     "Click to mark spells",
     "Buttons on each enemy’s row that start their Flash or other summoner spell timer in one click, beside the ⌃⌥ shortcuts. The overlay takes the clicks on those buttons only. Off unless turned on.",

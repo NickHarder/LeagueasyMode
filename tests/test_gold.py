@@ -17,6 +17,8 @@ from game_payloads import (
 from leagueasymode.engine import compute_overlay_state
 from leagueasymode.game_state import GameSnapshot
 from leagueasymode.inference.gold import (
+    GOLD_RULES,
+    GoldRules,
     GoldTracker,
     PlayerKey,
     base_bounty_gold,
@@ -187,6 +189,16 @@ def test_with_nothing_else_gold_grows_by_passive_gold() -> None:
     assert darius.total_gold == 500 + 1071
     assert darius.unspent_gold == darius.total_gold
     assert 0 < darius.band_gold < 200
+
+
+def test_the_band_is_as_wide_as_the_recorded_games_measured() -> None:
+    # The band held the truth 63% of 35 player-minutes on the owner's three Rift recordings of
+    # 2026-10-29, though meant to hold it 4 times in 5; widened by the measured 1.7 it holds 80%.
+    assert GOLD_RULES.band_width_scale == pytest.approx(1.7)
+    narrow = GoldTracker(rules=GoldRules(band_width_scale=1.0)).update(snapshot_at(600.0), CATALOG)
+    wide = GoldTracker(rules=GoldRules(band_width_scale=2.0)).update(snapshot_at(600.0), CATALOG)
+    assert wide[DARIUS].band_gold == pytest.approx(2 * narrow[DARIUS].band_gold, abs=1)
+    assert wide[DARIUS].total_gold == narrow[DARIUS].total_gold
 
 
 def test_creeps_pay_by_when_they_died() -> None:

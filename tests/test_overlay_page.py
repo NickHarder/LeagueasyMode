@@ -270,6 +270,13 @@ def vis_jungle_starts() -> list[tuple[str, JsonValue]]:
     return answers
 
 
+# The win chance, the likely places and the jungle path show only with "Show experimental
+# estimates" on (an independent review, 2026-11-04: none has beaten chance on the owner's recorded
+# Rift games). The tests of how they are drawn, and of the callouts built on the likely places
+# (a laner "missing"), turn it on for that reason; the rest run with the defaults.
+EXPERIMENTAL: Final = OverlayPreferences(show_experimental_estimates=True)
+
+
 @contextlib.asynccontextmanager
 async def open_overlay(
     tmp_path: Path,
@@ -499,7 +506,7 @@ async def test_a_new_callout_is_spoken_once_when_the_player_turned_speech_on(
         snapshot_count=60,
         speed=1.0,
         first_game_time_seconds=1110.0,
-        preferences=OverlayPreferences(speak_callouts=True),
+        preferences=OverlayPreferences(show_experimental_estimates=True, speak_callouts=True),
         init_script=APP_VOICE_STAND_IN,
     ) as page:
         callout = page.locator('#callouts .callout[data-kind="missing"]')
@@ -521,6 +528,7 @@ async def test_callouts_are_not_spoken_unless_the_player_turned_speech_on(tmp_pa
         speed=1.0,
         first_game_time_seconds=1110.0,
         init_script=APP_VOICE_STAND_IN,
+        preferences=EXPERIMENTAL,
     ) as page:
         callout = page.locator('#callouts .callout[data-kind="missing"]')
         await expect(callout).to_have_text(re.compile(r"^Vi missing "), timeout=5000)
@@ -564,7 +572,9 @@ async def test_an_enemy_who_buys_alive_has_gone_back(tmp_path: Path) -> None:
 
 
 async def test_an_enemy_seen_at_an_objective_shows_where_and_how_long_ago(tmp_path: Path) -> None:
-    async with open_overlay(tmp_path, snapshot_count=60, speed=1.0) as page:
+    async with open_overlay(
+        tmp_path, snapshot_count=60, speed=1.0, preferences=EXPERIMENTAL
+    ) as page:
         vi_seen = page.locator("#enemy-strip .enemy-row", has_text="Vi").locator(".enemy-seen")
         # Their jungler took the third dragon at 23:10, after Baron at 23:00.
         await expect(vi_seen).to_have_text(re.compile(r"^at Dragon 0:[0-4]\d ago$"), timeout=5000)
@@ -581,7 +591,11 @@ async def test_an_enemy_seen_at_an_objective_shows_where_and_how_long_ago(tmp_pa
 
 async def test_the_enemy_junglers_path_and_the_camps_down_show(tmp_path: Path) -> None:
     async with open_overlay(
-        tmp_path, snapshot_count=80, speed=1.0, vi_farms_at_seconds=(1412.0, 1422.0)
+        tmp_path,
+        snapshot_count=80,
+        speed=1.0,
+        vi_farms_at_seconds=(1412.0, 1422.0),
+        preferences=EXPERIMENTAL,
     ) as page:
         vi_path = page.locator("#enemy-strip .enemy-row", has_text="Vi").locator(
             ".enemy-jungle-path"
@@ -614,7 +628,7 @@ async def test_jungler_and_roamers_only_leaves_laners_in_lane_off_the_minimap(
         tmp_path,
         snapshot_count=60,
         speed=1.0,
-        preferences=OverlayPreferences(minimap_roamers_only=True),
+        preferences=OverlayPreferences(show_experimental_estimates=True, minimap_roamers_only=True),
     ) as page:
         minimap = page.locator("#minimap")
         # The jungler always shows.
@@ -639,7 +653,9 @@ async def test_jungler_and_roamers_only_leaves_laners_in_lane_off_the_minimap(
 
 
 async def test_the_minimap_layer_marks_where_each_enemy_likely_is(tmp_path: Path) -> None:
-    async with open_overlay(tmp_path, snapshot_count=60, speed=1.0) as page:
+    async with open_overlay(
+        tmp_path, snapshot_count=60, speed=1.0, preferences=EXPERIMENTAL
+    ) as page:
         minimap = page.locator("#minimap")
         # League's settings file is missing: the layer takes the default place.
         await expect(minimap).to_have_attribute("data-side", "right", timeout=5000)
@@ -653,7 +669,11 @@ async def test_the_minimap_layer_marks_where_each_enemy_likely_is(tmp_path: Path
 async def test_an_enemy_in_sight_has_no_mark_on_the_minimap(tmp_path: Path) -> None:
     # Vi's creep score rises at 23:20, which the game shows only while your team sees her.
     async with open_overlay(
-        tmp_path, snapshot_count=40, speed=1.0, vi_farms_at_seconds=(1400.0,)
+        tmp_path,
+        snapshot_count=40,
+        speed=1.0,
+        vi_farms_at_seconds=(1400.0,),
+        preferences=EXPERIMENTAL,
     ) as page:
         minimap = page.locator("#minimap")
         vi_mark = minimap.locator('circle[data-champion="Vi"]')
@@ -752,17 +772,21 @@ async def test_the_enemy_strip_shows_what_each_enemy_holds_and_the_gold_lead(
             re.compile(r"^0\.[23]k \u00b10\.3k unspent$"), timeout=5000
         )
         await expect(caitlyn_unspent).to_have_attribute("data-source", "estimate")
-        # The built game gives your Ahri 500 gold all game, so their team leads.
+        # The built game gives your Ahri 500 gold all game, so their team leads. The lead's band
+        # is \u00b11.3k since each player's band is 1.7 times as wide, as the owner's recorded Rift
+        # games measured it (it held the truth 63% of the time, not 80%); it was \u00b10.8k before.
         gold_lead = page.locator("#enemy-strip .gold-lead")
         await expect(gold_lead).to_have_text(
-            re.compile(rf"^Gold\s*{MINUS_SIGN}4\.\dk \u00b10\.8k$")
+            re.compile(rf"^Gold\s*{MINUS_SIGN}4\.\dk \u00b11\.[34]k$")
         )
         await expect(gold_lead).to_have_attribute("data-lead", "enemy")
         await keep_screenshot(page, "hidden-gold")
 
 
 async def test_the_enemy_strip_shows_the_win_chance_and_what_moves_it(tmp_path: Path) -> None:
-    async with open_overlay(tmp_path, snapshot_count=60, speed=1.0) as page:
+    async with open_overlay(
+        tmp_path, snapshot_count=60, speed=1.0, preferences=EXPERIMENTAL
+    ) as page:
         # At 23:15 their team leads on gold (your Ahri holds 500 all game) and holds Baron.
         win = page.locator("#enemy-strip .win-chance")
         await expect(win).to_have_text(
@@ -771,6 +795,19 @@ async def test_the_enemy_strip_shows_the_win_chance_and_what_moves_it(tmp_path: 
         )
         await expect(win).to_have_attribute("data-lead", "enemy")
         await keep_screenshot(page, "win-chance")
+
+
+async def test_by_default_no_estimate_that_has_not_beaten_chance_shows(tmp_path: Path) -> None:
+    # An independent review, 2026-11-04: on the owner's recorded Rift games the win chance did no
+    # better than a coin flip, the likely place was right 25% to 38% of the time and the jungle
+    # path some 4,500 units off. Without "Show experimental estimates", none of them shows; the
+    # fight chance, which stays, shows the page has drawn the strip.
+    async with open_overlay(tmp_path, snapshot_count=60, speed=1.0) as page:
+        await expect(page.locator("#enemy-strip .fight-chance")).to_be_visible(timeout=5000)
+        await expect(page.locator("#enemy-strip .win-chance")).to_have_count(0)
+        await expect(page.locator("#minimap circle[data-champion]")).to_have_count(0)
+        await expect(page.locator("#enemy-strip")).not_to_contain_text("likely ")
+        await expect(page.locator("#enemy-strip")).not_to_contain_text("path ")
 
 
 async def test_the_enemy_strip_shows_an_even_fights_chance(tmp_path: Path) -> None:
@@ -1011,7 +1048,12 @@ async def test_at_a_glance_only_callouts_to_act_on_now_show(tmp_path: Path) -> N
     # off fights, it needs to be wort while info". At 18:30 Vi has been missing since 11:50: that
     # shows at a glance.
     async with open_overlay(
-        tmp_path, snapshot_count=60, speed=1.0, first_game_time_seconds=1110.0, hold_details=False
+        tmp_path,
+        snapshot_count=60,
+        speed=1.0,
+        first_game_time_seconds=1110.0,
+        hold_details=False,
+        preferences=EXPERIMENTAL,
     ) as page:
         missing = page.locator('#callouts .callout[data-kind="missing"]')
         await expect(missing).to_have_text(re.compile(r"^Vi missing "), timeout=5000)
@@ -1022,7 +1064,12 @@ async def test_moments_and_team_calls_are_never_on_screen(tmp_path: Path) -> Non
     # during the end game screen. I don't want the extra clutter." At 18:30 the engine makes a team
     # call, Baron in 1:30, for ⌃⌥C; the overlay shows it neither at a glance nor with the key held.
     async with open_overlay(
-        tmp_path, snapshot_count=60, speed=1.0, first_game_time_seconds=1110.0, hold_details=False
+        tmp_path,
+        snapshot_count=60,
+        speed=1.0,
+        first_game_time_seconds=1110.0,
+        hold_details=False,
+        preferences=EXPERIMENTAL,
     ) as page:
         await expect(page.locator('#callouts .callout[data-kind="missing"]')).to_have_count(
             1, timeout=5000
@@ -1123,11 +1170,18 @@ async def test_the_overview_keeps_clear_of_leagues_scoreboard_in_the_middle(tmp_
         assert viewport is not None
         assert box["x"] >= 0.045 * viewport["width"]
         assert box["x"] + box["width"] <= 0.3 * viewport["width"] + 64
-        ally = await overview.locator('.overview-team[data-side="ally"]').bounding_box()
-        enemy = await overview.locator('.overview-team[data-side="enemy"]').bounding_box()
-        assert ally is not None
-        assert enemy is not None
-        assert enemy["y"] >= ally["y"] + ally["height"]
+        # Both columns are measured in one step: the overview is drawn again at each state, so a
+        # column found by one call can be replaced before the next measures it (the test failed
+        # now and then with no box at all).
+        ally_bottom, enemy_top = await page.evaluate(
+            """() => {
+              const box = (side) => document
+                .querySelector(`#overview .overview-team[data-side="${side}"]`)
+                .getBoundingClientRect();
+              return [box("ally").bottom, box("enemy").top];
+            }"""
+        )
+        assert enemy_top >= ally_bottom
 
 
 async def test_off_the_rift_no_one_has_a_role(tmp_path: Path) -> None:

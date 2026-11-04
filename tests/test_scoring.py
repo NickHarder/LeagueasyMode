@@ -174,9 +174,11 @@ def test_gold_off_by_more_than_the_band_is_scored_as_outside_it(tmp_path: Path) 
     )
     earned, unspent, band = score_gold(read_recorded_game(recording))
     assert (earned.value, unspent.value) == (100.0, 100.0)
-    # The band passes 100 gold from 11:00, when 9:30 of unseen income is that unsure.
-    assert band.value == pytest.approx(5 / 15)
-    assert band.describe() == "gold band: holds the truth 45/135 times (33%)"
+    # The band passes 100 gold once enough unseen income makes it that unsure: in 9 of the 15
+    # minutes since it is 1.7 times as wide, as the owner's recorded Rift games measured it (5 of
+    # 15, from 11:00, before; the band held the truth 63% of the time there, not 80%).
+    assert band.value == pytest.approx(9 / 15)
+    assert band.describe() == "gold band: holds the truth 81/135 times (60%)"
     assert earned.describe() == "gold earned: 135 player-minutes, 100 gold off on average"
 
 

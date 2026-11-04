@@ -652,6 +652,12 @@ class OverlayPreferences(BaseModel):
     # glance, one short line an enemy (the owner: "maybe extra details onyl show if i hit tab").
     # Off, they always show.
     details_on_hold: bool = True
+    # The estimates not yet shown to beat chance on the owner's recorded games: the win chance,
+    # each enemy's likely place (the minimap's marks, the row's "likely …", roaming and the "laner
+    # missing" callout) and the jungle path. Off until each beats its baseline on 20 or more Rift
+    # games (an independent review, 2026-11-04: a win chance no better than a coin flip, likely
+    # places right 25% to 38% of the time).
+    show_experimental_estimates: bool = False
 
 
 # The widgets the player can move; the minimap layer stays over League's minimap.

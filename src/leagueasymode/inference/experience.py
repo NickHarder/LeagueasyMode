@@ -64,6 +64,12 @@ class ExperienceRules(BaseModel):
     measured_rate_uncertainty: float = 0.2
     # A level-up's measured rate weighs this much against the rate before it.
     measured_rate_weight: float = 0.6
+    # The band, as wide as the uncertainties above give, is widened by this much: measured on the
+    # owner's three Rift recordings of 2026-10-29 (20-04-25Z, 04-00-16Z, 19-57-44Z), where it held
+    # the truth 47% of 51 player-minutes; 2.55 is the 80th percentile of the error over the band,
+    # so that it holds the truth 4 times in 5. Provisional on so few games: measure again as more
+    # Rift games are recorded.
+    band_width_scale: float = 2.55
 
 
 EXPERIENCE_RULES: Final = ExperienceRules()
@@ -269,9 +275,13 @@ class ExperienceTracker:
         alive_since_anchor_seconds = state.alive_seconds - state.anchor.alive_seconds
         grown_experience = state.anchor.experience + state.rate * alive_since_anchor_seconds
         experience = min(max(grown_experience, level_floor), level_ceiling - 1)
-        band_experience = BAND_STANDARD_DEVIATIONS * math.sqrt(
-            state.anchor.variance
-            + (state.rate_uncertainty * state.rate * alive_since_anchor_seconds) ** 2
+        band_experience = (
+            self.rules.band_width_scale
+            * BAND_STANDARD_DEVIATIONS
+            * math.sqrt(
+                state.anchor.variance
+                + (state.rate_uncertainty * state.rate * alive_since_anchor_seconds) ** 2
+            )
         )
         next_power_level = next((level for level in POWER_LEVELS if level > state.level), None)
         is_power_level_timed = next_power_level is not None and state.rate > 0
