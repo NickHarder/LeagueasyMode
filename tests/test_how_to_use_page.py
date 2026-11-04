@@ -37,10 +37,12 @@ async def test_the_page_names_each_shortcut_for_a_windows_keyboard() -> None:
         "Ctrl + Alt + 5",
         "Ctrl + Alt + F",
         "Ctrl + Alt + D",
-        "Ctrl + Alt + R",
         "Ctrl + Alt + C",
     ):
         assert f"<kbd>{windows_keys}</kbd>" in text
+    # Ctrl + Alt + R marked an enemy's ultimate; gone with Riot's third-party policy against
+    # tracking enemy ultimate cooldowns (the owner, 2026-11-04: "make all the rec fixes").
+    assert "<kbd>Ctrl + Alt + R</kbd>" not in text
 
 
 async def test_every_key_the_app_registers_is_on_the_page() -> None:

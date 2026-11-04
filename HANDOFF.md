@@ -93,10 +93,12 @@ In `AGENTS.md`. Also: a raw recording (it holds other players' names); only `ano
   so the overlay can say how sure it is. Restated 2026-10-28, when a session suggested dropping
   the ultimate marks over reports of Riot's 2025 rule on ultimate timers: "dont listen to rumors.
   if we can get the info from the local host server we can use it wither its manual or
-  automated". So the marks (⌃⌥1 to 5, then F, D or R) stay. They stay manual only because the
-  game's local API gives no enemy's spell casts or cooldowns: each player's two summoner spells
-  by name, and cooldowns for the player on this machine alone. If a recorded game ever shows a
-  field that changes when an enemy casts, the marks become automatic.
+  automated". Reversed for ultimates on 2026-11-04: an independent review flagged the ultimate
+  marks as a risk to the account, and the owner said "make all the rec fixes". Riot's
+  third-party policy has barred tracking enemy ultimate cooldowns, automatic or by hand, since
+  2025-03-13, while summoner spell timers were left allowed (gaming.news, 2025-03-11). So the
+  summoner spell marks (⌃⌥1 to 5, then F or D) stay and ⌃⌥R is gone. They stay manual only
+  because the game's local API gives no enemy's spell casts or cooldowns.
 - `truststore` as a dependency, for HTTPS to Data Dragon (the owner, 2026-10-08).
 - Pushing and opening pull requests need no asking; deletions on GitHub and force pushes stay off
   limits (the owner, 2026-10-08; `AGENTS.md`, rule 1).

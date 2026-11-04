@@ -56,25 +56,16 @@ def test_the_other_summoner_spell_is_the_one_that_is_not_flash() -> None:
     assert timer.ready_at_game_time_seconds == pytest.approx(780.0)
 
 
-def test_the_ultimates_cooldown_goes_by_its_rank_from_the_level() -> None:
-    patch_stats = fixture_patch_stats()
-    for level, cooldown_seconds in ((6, 120.0), (11, 100.0), (16, 80.0), (3, 120.0)):
-        zed = dataclasses.replace(ZED, level=level)
-        timer = marked_cooldown(snapshot_with(zed), MIDDLE_SLOT, "ultimate", patch_stats)
-        assert timer is not None
-        assert timer.label == "R"
-        assert timer.ready_at_game_time_seconds == pytest.approx(600.0 + cooldown_seconds), level
+# The ultimate's timer and its test of ability haste were removed with it: Riot's third-party
+# policy bars tracking enemy ultimate cooldowns (the owner, 2026-11-04: "make all the rec fixes").
+# The ultimate's rank from the level stays, as the tests below show; it is no cooldown.
 
 
 def test_haste_from_items_shortens_the_cooldown() -> None:
     zed = dataclasses.replace(ZED, level=6, items=(BLACK_CLEAVER, IONIAN_BOOTS))
-    patch_stats = fixture_patch_stats()
-    ultimate = marked_cooldown(snapshot_with(zed), MIDDLE_SLOT, "ultimate", patch_stats)
-    flash = marked_cooldown(snapshot_with(zed), MIDDLE_SLOT, "flash", patch_stats)
-    assert ultimate is not None
+    flash = marked_cooldown(snapshot_with(zed), MIDDLE_SLOT, "flash", fixture_patch_stats())
     assert flash is not None
-    # 35 ability haste from the two items; 10 summoner spell haste from the boots.
-    assert ultimate.ready_at_game_time_seconds == pytest.approx(600.0 + 120.0 * 100 / 135)
+    # 10 summoner spell haste from the boots; the cleaver's ability haste does not count.
     assert flash.ready_at_game_time_seconds == pytest.approx(600.0 + 300.0 * 100 / 110)
 
 
