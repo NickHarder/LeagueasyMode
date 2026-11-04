@@ -19,7 +19,7 @@ from leagueasymode.engine import OverlayEngine, compute_overlay_state
 from leagueasymode.game_api import GameApiClient
 from leagueasymode.league_client import LeagueClient
 from leagueasymode.overlay_server import create_overlay_application
-from leagueasymode.overlay_state import OverlayState
+from leagueasymode.overlay_state import OverlayPreferences, OverlayState
 from leagueasymode.scoring import EstimatorScore
 from local_servers import serve, unused_local_url
 
@@ -456,3 +456,43 @@ async def test_the_last_games_summary_and_the_accuracy_history_are_served(tmp_pa
     assert no_game_status == 404
     assert summary == {"recording_name": "game.jsonl.xz"}
     assert history["games"][0]["scores"][0]["estimator"] == "roles"
+
+
+async def test_the_summary_leaves_out_the_win_chance_unless_experimental_estimates_show(
+    tmp_path: Path,
+) -> None:
+    # The win chance has not beaten a coin flip on the owner's real games (an independent review,
+    # 2026-11-04), so the post-game window leaves out its chart and swings as the overlay does.
+    summary_path = tmp_path / "last-game.json"
+    summary_path.write_text(
+        json.dumps(
+            {
+                "recording_name": "game.jsonl.xz",
+                "win_chance": [{"minute": 1, "value": 0.5}],
+                "swings": [{"minute": 1, "change": 0.1, "moments": []}],
+                "gold_lead_true": [{"minute": 1, "value": 100}],
+            }
+        )
+    )
+    served_summaries: list[JsonValue] = []
+    async with aiohttp.ClientSession() as session:
+        for preferences in [
+            OverlayPreferences(),
+            OverlayPreferences(show_experimental_estimates=True),
+        ]:
+            engine = OverlayEngine(
+                GameApiClient(session, unused_local_url(), tls_context=None),
+                poll_interval_seconds=1,
+                preferences=preferences,
+            )
+            application = create_overlay_application(engine, summary_path=summary_path)
+            async with serve(application) as overlay_url:
+                async with session.get(overlay_url + "/summary") as response:
+                    served_summaries.append(await response.json())
+    hidden, shown = served_summaries
+    assert isinstance(hidden, dict)
+    assert isinstance(shown, dict)
+    assert hidden["win_chance"] == []
+    assert hidden["swings"] == []
+    assert hidden["gold_lead_true"] == [{"minute": 1, "value": 100}]
+    assert shown["win_chance"] == [{"minute": 1, "value": 0.5}]
