@@ -9,7 +9,7 @@ lost by it, since the recorder keeps every answer whole.
 import re
 from typing import Final
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, JsonValue, field_validator
 
 RIOT_ID_SEPARATOR: Final = "#"
 RAW_SUMMONER_SPELL_PATTERN: Final = re.compile(
@@ -204,6 +204,25 @@ class GameSnapshot(RiotPayloadModel):
     players: list[ScoreboardPlayer] = Field(alias="allPlayers")
     event_list: EventList = Field(alias="events")
     game_data: GameData = Field(alias="gameData")
+
+    @field_validator("active_player", mode="before")
+    @classmethod
+    def _no_player_for_an_error(cls, value: JsonValue) -> JsonValue:
+        """Read the API's refusal in place of the player on this machine as no player.
+
+        On the loading screen, and when spectating, the game answers `{"error": "Spectator mode
+        doesn't currently support this feature"}`, which would otherwise read as a level-1 player
+        with no name and no gold (audit DQ-03, ARCH-06).
+
+        Args:
+            value: The answer's `activePlayer`.
+
+        Returns:
+            None for an error, else the value as it came.
+        """
+        if isinstance(value, dict) and "error" in value:
+            return None
+        return value
 
     def team_of(self, name: str | None) -> str | None:
         """Return the team of the player the feed names, or None for a monster, a turret or nobody.

@@ -4,7 +4,7 @@ title: "Architecture"
 description: How the engine, the widgets and the macOS app are layered, where each file on the Mac is written, which League APIs the code relies on and which of them a real recording has confirmed, and how the engine-to-page contract is held.
 tags: [audit, architecture]
 status: draft
-generated: { by: claude-code/cloud, at: 2026-10-29T06:46:49Z }
+generated: { by: claude-code/cloud, at: 2026-11-04T13:52:54Z }
 ---
 
 # Architecture audit
@@ -119,6 +119,7 @@ The application directory is `~/Library/Application Support/LeagueasyMode`
 - **Impact on the project:** Suppose two `PUT /layout` requests overlap, such as a drag on the overlay and a slider on the settings page. The second rename then finds no partial file, the handler raises, and the page gets a 500. The engine already holds the new layout in memory, so memory and disk can disagree until the next save.
 - **Mitigation:** Use one shared `write_whole` helper with a unique temporary name (`mkstemp`), and serialize saves of one path with a lock. Add a test like the reproduction.
 
+- **Status:** fixed 2026-11-04: one `write_whole` (`atomic_write.py`, `mkstemp` beside the file, then moved over it) replaces the nine hand-written saves; two saves at once each have their own temporary file, so neither fails, and the last one stands. No lock: the last write wins, as before. `tests/test_atomic_write.py` saves one layout 40 times from 8 threads. The recording writer's compression keeps its own partial file: only one writer closes a recording.
 ### [ARCH-05] Of the APIs relied on, the one real recording confirms only the pre-game resources
 - **Severity:** high
 - **Location:** `game_api.py` (`/liveclientdata/allgamedata`); `league_client.py:39`; `patch_data.py:15-19`; `player_intel.py:34-44`; `recorder.py:48-55`; `scoring.py:114-115`
@@ -143,6 +144,7 @@ The application directory is `~/Library/Application Support/LeagueasyMode`
 - **Impact on the project:** Code that branches on `active_player is None` treats the API's refusal as a real player with empty names and level 1. Name matching fails closed today, because `is_named` rejects empty names. Status and any future `is not None` logic are still wrong. This shares a root with DQ-03.
 - **Mitigation:** Add a `model_validator` that maps a payload with `error` to `None`. Add a test built from this real snapshot.
 
+- **Status:** fixed 2026-11-04 with DQ-03: a `field_validator` maps the error object to `None`, so the status says "no player of yours" on the loading screen; `tests/test_loading_screen.py`.
 ### [ARCH-07] Enemy cooldowns are marked by the player, never read from the API
 - **Severity:** info
 - **Location:** `src/leagueasymode/game_state.py:63` ("its cooldown is never sent"); `inference/cooldowns.py:1-8`; `overlay_state.py:387` (`CooldownTimer`, "An estimate"); `overlay/macos/Sources/OverlayCore/CooldownMarking.swift`

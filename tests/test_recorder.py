@@ -16,6 +16,7 @@ from game_payloads import (
     champion_summary,
     game_start_event,
     gameflow_session,
+    loading_screen_answer,
     match_history,
     past_game_id,
     puuid_of,
@@ -346,3 +347,36 @@ async def test_the_end_of_game_stats_are_handed_on_before_the_timeline(tmp_path:
             on_end_of_game=on_end_of_game,
         )
     assert handed_on == [(END_OF_GAME_STATS, False)]
+
+
+async def test_champion_details_are_asked_for_when_the_first_answer_is_the_loading_screen(
+    tmp_path: Path,
+) -> None:
+    # Audit DQ-02: the owner's ARAM of 2026-10-29 18:07 first answered from the loading screen,
+    # with no players, and its recording got no champion details. The gameflow session names every
+    # champion already.
+    client_application = stand_in_client(timeline_misses=0)
+
+    async def summary_route(_request: web.Request) -> web.Response:
+        return web.json_response(champion_summary())
+
+    async def details_route(request: web.Request) -> web.Response:
+        return web.json_response({"id": int(request.match_info["champion_id"])})
+
+    client_application.router.add_get(
+        "/lol-game-data/assets/v1/champion-summary.json", summary_route
+    )
+    client_application.router.add_get(
+        "/lol-game-data/assets/v1/champions/{champion_id}.json", details_route
+    )
+    answers = [None, loading_screen_answer(), *a_game_of(3, ends_with_game_end=True)[2:]]
+    recording_path = await record(tmp_path, answers, client_application)
+    paths = {
+        line.path
+        for line in iter_recording_lines(recording_path)
+        if isinstance(line, ClientResource)
+    }
+    assert {
+        f"/lol-game-data/assets/v1/champions/{CHAMPION_IDS[seed.champion_name]}.json"
+        for seed in DEFAULT_PLAYERS
+    } <= paths

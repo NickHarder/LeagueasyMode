@@ -4,7 +4,7 @@ title: "Data quality"
 description: How much of what the estimators assume about the game's and the League client's answers is confirmed by real recordings, where the built test data disagrees with them, and what that leaves unproven.
 tags: [audit, data-quality]
 status: draft
-generated: { by: claude-code/cloud, at: 2026-10-29T06:44:31Z }
+generated: { by: claude-code/cloud, at: 2026-11-04T13:52:54Z }
 ---
 
 # Scope and timing
@@ -111,6 +111,7 @@ counted.
 - **Mitigation:** take the champions from the gameflow session's `playerChampionSelections` or
   wait for the first answer with players; add a test whose first answer is the real loading one.
 
+- **Status:** fixed 2026-11-04: the recorder also takes the champions' ids from the gameflow session's two teams, so a first answer from the loading screen (the owner's ARAM of 2026-10-29 18:07, 0 players, no champion details recorded) still gets every champion's details; `test_champion_details_are_asked_for_when_the_first_answer_is_the_loading_screen`.
 ### [DQ-03] The loading-screen `activePlayer` is an error object that validates as an empty player
 - **Severity:** medium
 - **Location:** `src/leagueasymode/game_state.py:163` (`ActivePlayer`, every field defaulted,
@@ -124,6 +125,7 @@ counted.
 - **Mitigation:** reject or map the error object to `None` at the boundary, and add the real
   loading payload as a fixture.
 
+- **Status:** fixed 2026-11-04 with ARCH-06: an `activePlayer` holding `error` reads as no player; `tests/test_loading_screen.py`, from the real loading answer.
 ### [DQ-04] Missing scoreboard fields become plausible values, so null rates cannot be measured downstream
 - **Severity:** medium
 - **Location:** `src/leagueasymode/game_state.py:100` (`creepScore` default 0), `:111`
@@ -195,6 +197,7 @@ counted.
 - **Impact on the project:** not an identity the anonymizer promises to remove, and stale after the
   game, but it is a per-game value in a committed file. Data quality is unaffected.
 - **Mitigation:** deferred to the security and compliance areas to decide.
+- **Status:** fixed 2026-11-04: the anonymizer blanks `serverIp`, `serverPort`, `observerServerIp`, `observerServerPort` and `spectatorKey` ("" or 0), keeping their shape; `test_the_sessions_server_address_and_spectator_key_are_left_out`.
 
 # Test-data defense
 

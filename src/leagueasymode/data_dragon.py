@@ -9,10 +9,8 @@ file, nothing about the player. Without Data Dragon, the newest patch on disk st
 """
 
 import logging
-import os
 import re
 import ssl
-import tempfile
 from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Final
@@ -21,6 +19,7 @@ import aiohttp
 import truststore
 from pydantic import Field, TypeAdapter, ValidationError
 
+from leagueasymode.atomic_write import write_whole
 from leagueasymode.game_state import RiotPayloadModel
 
 DEFAULT_DATA_DRAGON_BASE_URL: Final = "https://ddragon.leagueoflegends.com"
@@ -524,14 +523,14 @@ class PatchStatsStore:
             (ITEMS_FILE_NAME, patch_files.items),
             (SUMMONERS_FILE_NAME, patch_files.summoners),
         ):
-            _write_whole(patch_directory / file_name, file_bytes)
+            write_whole(patch_directory / file_name, file_bytes)
         growth_version = patch_files.growth_version
         if (
             patch_files.growth_champions is not None
             and growth_version is not None
             and DATA_DRAGON_VERSION_PATTERN.match(growth_version)
         ):
-            _write_whole(
+            write_whole(
                 patch_directory / f"{GROWTH_FILE_PREFIX}{growth_version}.json",
                 patch_files.growth_champions,
             )
@@ -816,20 +815,3 @@ def _version_numbers(version: str) -> tuple[int, ...]:
         Its numbers.
     """
     return tuple(int(number) for number in version.split("."))
-
-
-def _write_whole(path: Path, file_bytes: bytes) -> None:
-    """Write a file whole: to a temporary file beside it, then moved over it.
-
-    Args:
-        path: The file.
-        file_bytes: What it holds.
-    """
-    descriptor, temporary_name = tempfile.mkstemp(dir=path.parent, prefix=f".{path.name}.")
-    try:
-        with os.fdopen(descriptor, "wb") as temporary_file:
-            temporary_file.write(file_bytes)
-        Path(temporary_name).replace(path)
-    except BaseException:
-        Path(temporary_name).unlink(missing_ok=True)
-        raise

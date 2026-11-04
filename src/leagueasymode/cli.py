@@ -28,6 +28,7 @@ from leagueasymode.accuracy_thresholds import (
     save_thresholds,
     stricter_thresholds,
 )
+from leagueasymode.atomic_write import write_whole
 from leagueasymode.build_info import build_label, engine_log_path
 from leagueasymode.config import (
     REPOSITORY_ROOT,
@@ -668,7 +669,7 @@ async def after_the_game(
         game_accuracy_of(recording_path, game, scores, _now_text()),
     )
     summary = await asyncio.to_thread(game_summary, recording_path.name, game, scores)
-    await asyncio.to_thread(_write_whole, summary_path, summary.model_dump_json())
+    await asyncio.to_thread(write_whole, summary_path, summary.model_dump_json())
     await asyncio.to_thread(
         _keep_last_game_roast, game, summary_path, tuning or Tuning(), friend_riot_ids
     )
@@ -708,7 +709,7 @@ def _keep_quick_roast(
     """
     roast = quick_game_roast(end_of_game_stats, friend_riot_ids=friend_riot_ids)
     if roast is not None:
-        _write_whole(roast_path_beside(summary_path), roast.model_dump_json())
+        write_whole(roast_path_beside(summary_path), roast.model_dump_json())
 
 
 def _is_quick_roast_of(roast_path: Path, game_id: int | None) -> bool:
@@ -755,7 +756,7 @@ def _keep_last_game_roast(
         if not _is_quick_roast_of(roast_path, game_id):
             roast_path.unlink(missing_ok=True)
         return
-    _write_whole(roast_path, roast.model_dump_json())
+    write_whole(roast_path, roast.model_dump_json())
 
 
 def _tuning(settings: Settings, *, should_write: bool) -> int:
@@ -823,19 +824,6 @@ def _friends_path(settings: Settings) -> Path:
         The file.
     """
     return settings.friends or default_friends_path()
-
-
-def _write_whole(file_path: Path, file_text: str) -> None:
-    """Write a file whole: to a partial file first, then into place.
-
-    Args:
-        file_path: The file.
-        file_text: Its text.
-    """
-    file_path.parent.mkdir(parents=True, exist_ok=True)
-    partial_path = file_path.with_suffix(".partial")
-    partial_path.write_text(file_text)
-    partial_path.replace(file_path)
 
 
 def _now_text() -> str:

@@ -19,13 +19,12 @@ time the app opens. A file that cannot be read (a misspelled name, a value of th
 JSON at all) changes nothing, and the status page says where it went wrong.
 """
 
-import os
-import tempfile
 from pathlib import Path
 from typing import Final
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
+from leagueasymode.atomic_write import write_whole
 from leagueasymode.engine_status import StatusBoard
 from leagueasymode.inference.backs import BackRules
 from leagueasymode.inference.build_path import BuildRules
@@ -121,13 +120,7 @@ def write_tuning(tuning_path: Path, tuning: Tuning) -> None:
         tuning_path: The tuning file.
         tuning: The tuning.
     """
-    tuning_path.parent.mkdir(parents=True, exist_ok=True)
-    file_descriptor, temporary_name = tempfile.mkstemp(
-        dir=tuning_path.parent, prefix=".tuning-", suffix=".json"
-    )
-    with os.fdopen(file_descriptor, "w") as temporary_file:
-        temporary_file.write(tuning.model_dump_json(indent=2) + "\n")
-    Path(temporary_name).replace(tuning_path)
+    write_whole(tuning_path, tuning.model_dump_json(indent=2) + "\n")
 
 
 def note_tuning(

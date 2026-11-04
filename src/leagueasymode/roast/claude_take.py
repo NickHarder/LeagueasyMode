@@ -29,6 +29,7 @@ from typing import Final
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
+from leagueasymode.atomic_write import write_whole
 from leagueasymode.roast.safety import floor_problems, moderation_problems
 
 logger = logging.getLogger(__name__)
@@ -355,7 +356,4 @@ def save_claude_take_settings(settings_path: Path, settings: ClaudeTakeSettings)
         settings_path: The file.
         settings: The choices.
     """
-    settings_path.parent.mkdir(parents=True, exist_ok=True)
-    partial_path = settings_path.with_suffix(".partial")
-    partial_path.write_text(settings.model_dump_json(indent=2) + "\n")
-    partial_path.replace(settings_path)
+    write_whole(settings_path, settings.model_dump_json(indent=2) + "\n")

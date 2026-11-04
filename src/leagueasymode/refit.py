@@ -17,6 +17,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Final
 
+from leagueasymode.atomic_write import write_whole
 from leagueasymode.inference.fights import FIGHT_RULES, FightRules
 from leagueasymode.inference.fitting import brier_score, fit_logistic, logistic
 from leagueasymode.inference.win_chance import (
@@ -173,9 +174,8 @@ def save_model_weights(weights_path: Path, weights: ModelWeights) -> None:
         weights_path: The file.
         weights: The weights.
     """
-    weights_path.parent.mkdir(parents=True, exist_ok=True)
-    partial_path = weights_path.with_suffix(".partial")
-    partial_path.write_text(
+    write_whole(
+        weights_path,
         json.dumps(
             {
                 "version": WEIGHTS_FILE_VERSION,
@@ -184,9 +184,8 @@ def save_model_weights(weights_path: Path, weights: ModelWeights) -> None:
             },
             indent=2,
         )
-        + "\n"
+        + "\n",
     )
-    partial_path.replace(weights_path)
 
 
 def load_model_weights(weights_path: Path) -> ModelWeights | None:
