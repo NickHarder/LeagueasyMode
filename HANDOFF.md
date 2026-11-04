@@ -3,30 +3,29 @@
 If you are picking this work up, human or model: read this file top to bottom first. The `handoff` skill
 refreshes it; it describes the current state.
 
-Last updated: 2026-10-29, at `ff23895` on `main` (pull request #94 merged). No pull request of
+Last updated: 2026-11-04, at `f0c55ae` on `main` (pull request #126 merged). No pull request of
 this session is open. Another session (roasts, phase 11) merges into `main` too.
 
 ## Where things stand
 
-The owner plays with the app on an Apple silicon Mac (League windowed) and updates arrive by
-themselves: each green push to `main` publishes a prerelease `build-<n>` (latest `build-190`), and
-the app installs it when no game window is on screen. Every plan is approved; phases 0 to 10 are
-built, phase 11 (roasts) is the other session's. Since the owner's first real games (2026-10-28
-and 29) the work is field fixes and the approved layout plan
-([docs/plans/overlay-layout.md](docs/plans/overlay-layout.md), all five slices merged) tied to the
-use cases in [docs/USERS.md](docs/USERS.md).
+The owner plays with the app on an Apple silicon Mac (League windowed or borderless); each green
+push to `main` publishes a prerelease `build-<n>`, which the app installs by itself only while
+League's game is not running. Phases 0 to 10 are built; phase 11 (roasts) is the other session's.
+An independent review on 2026-11-04 rated the project 4.5/10; its fixes are merged (`docs/log.md`,
+2026-11-04), except that the enemy ultimate marks were restored on the owner's word (Settled).
 
 | Area | State | Proof |
 |---|---|---|
-| Gate | Green: lint, 1079 tests (and 80 in Chromium), secrets | `make gate`; `uv run pytest -m browser` |
-| CI and builds | 11 jobs, none may fail; each green `main` publishes `build-<n>` | `.github/workflows/ci.yml`; GitHub releases |
-| App on the owner's Mac | Runs over League, installs updates itself (seen 107 → 119, then to 176) | the owner's messages; `reports/` in the recordings repository |
-| Overlay at a glance | Timers, the newest two callouts that ask for an action now, one short line an enemy | `tests/test_overlay_page.py` (glance tests) |
-| Details on a key | Tab or Option held, and only then: everything else, the spell buttons and the Tab overview of both teams | `overlay/macos/Sources/OverlayCore/DetailsKey.swift`; `areDetailsShown`, `renderOverview` in `overlay/web/src/overlay.ts` |
-| Layout | Drag, resize (60–160%), sliders, opacity, hide, kept off League's HUD | `tests/test_layout_page.py`, `tests/test_settings_page.py` |
-| Off the Rift (ARAM, Arena) | No roles; inhibitor timers only, marked "~"; the Rift's models hidden | `tests/test_other_maps.py` |
-| Recording and sending | Records each game; recordings left open are closed after 20 minutes and sent | `tests/test_sender.py`, `tests/test_recording_file.py` |
-| Real game data | **One game** in the recordings repository (Practice Tool, cancelled at 0:00); the owner's ARAM and Swiftplay games were left open on the Mac and go with build 184 or later | `NickHarder/LeagueasyMode-recordings`, `games/` |
+| Gate | Green: lint, 1435 tests (83 more in Chromium), secrets; about 55 s | `make gate`; `uv run pytest -m browser` (run 2026-11-04) |
+| CI and builds | 11 jobs, none may fail; each green `main` publishes `build-<n>` (latest seen: `build-258`) | `.github/workflows/ci.yml`; GitHub releases |
+| Real game data | 17 games in the recordings repository: 12 ARAM: Mayhem, 1 Swiftplay, 2 Draft Pick (one remade at 0:56), 2 Practice Tool | `NickHarder/LeagueasyMode-recordings`, `games/` |
+| Tests on real games | Two trimmed, anonymized games replayed through the engine, scores pinned | `tests/test_real_recordings.py`, `tests/test_fixture_scores.py`, `tests/fixtures/recorded-games/` |
+| Accuracy | On the Rift no estimator has yet beaten chance (1 full Draft Pick, 1 Swiftplay); CI's thresholds are empty until 20 Rift games | `uv run leagueasymode score <recording>`; `tests/accuracy_thresholds.json` |
+| Experimental estimates | Win chance (in game and post-game), likely places, jungle path, estimated control wards: hidden unless "Show experimental estimates" is on | `tests/test_unproven_estimates.py` |
+| Structures | Turrets and inhibitors read by the names real games send; ARAM's inhibitors respawn 4:10 (all 9 seen) | `src/leagueasymode/inference/structure_names.py`; `tests/test_other_maps.py` |
+| Overlay | Quiet at a glance; details and the Tab overview only while Tab or Option is held | `tests/test_overlay_page.py` |
+| Recording and sending | Each game recorded and sent to the private repository; a leftover name no longer withholds a game; the server address and spectator key are blanked | `tests/test_sender.py`, `tests/test_anonymize.py` |
+| Updates | Never installed while League's game app runs | `AutomaticUpdate` in `overlay/macos/Sources/OverlayCore/BuildUpdate.swift` |
 
 ## How to check your work
 
@@ -45,22 +44,18 @@ In `AGENTS.md`, this project's own included: every session reads that file.
 
 ## Open, for the owner
 
-1. **Install build 184 or later** (it installs itself when no game is on screen). The games
-   already played then close and go to the recordings repository. The menu's "Status…", "Sending
-   games", says how many went. If none do, "Report a problem…" sends the log and now the
-   recordings folder's list.
-2. **Try the new overlay in a game** and say: whether holding **Tab** shows the details or only
-   **Option** does (reading Tab may need macOS's Input Monitoring permission; Option needs none);
-   whether the mouse now behaves; whether the shaded HUD regions in Edit layout sit on League's
-   HUD, and the minimap layer on League's minimap.
-3. **USERS.md's open fields**: games a day, when the owner plays, main role and rank.
-4. **Documents waiting for approval** (`make docs-status`): the phase 10 plan and the references
-   on recordings, the engine and the macOS app, all drafts.
-5. **Auto-merge settings** (10.7): "Allow auto-merge" and a branch rule on `main` requiring CI's
-   checks; until then sessions merge green pull requests themselves, as the owner allowed.
-6. **The first release**: tag `v0.1.0` when the owner wants; the prereleases need nothing.
-7. **Compare Riot's root certificate** once with Riot's own `riotgames.pem`: the SHA-256
-   fingerprint is in `src/leagueasymode/riot_tls.py`.
+1. **Play Rift games** if the Rift's estimates matter: CI's accuracy thresholds, the win chance's
+   fit and the turret weights wait for about 20 recorded Rift games (2 so far). Or say ARAM is the
+   main mode, and the next feature work goes there.
+2. **Say whether Tab shows the details** or only Option does (reading Tab may need Input
+   Monitoring), and whether the shaded HUD regions in Edit layout sit on League's HUD.
+3. **Roast work** (phase 11, the other session) goes on while the review asked to freeze it until
+   the core use case is settled: the owner's call.
+4. **Documents waiting for approval** (`make docs-status`): the references on the engine,
+   recordings and the macOS app, the executors, all drafts.
+5. **Auto-merge settings**: "Allow auto-merge" and a branch rule on `main` requiring CI's checks.
+6. **Compare Riot's root certificate** once with Riot's own `riotgames.pem` (fingerprint in
+   `src/leagueasymode/riot_tls.py`).
 
 ## Where everything is
 
@@ -144,16 +139,16 @@ In `AGENTS.md`. Also: a raw recording (it holds other players' names); only `ano
 
 ## Known limitations
 
+- The gold and experience bands are widened on three Rift games only; the experience band holds
+  the truth 73% of the time against the 80% it should. Measure again with more Rift games.
+- Turret gold and the win chance's turret weight were hand-set before any turret was ever read
+  (the names were wrong until 2026-10-30); they wait for Rift games to fit.
 - League's HUD regions (layout slice L.3) are a guess at its default HUD, as shares of the
   window; the shading in Edit layout shows them for the owner to check.
 - Whether macOS lets the app read Tab's state without Input Monitoring is not yet seen.
 
-- Nothing has met a real game: field names, the `KillerName` form, the lockfile path, the
-  certificate check and the timeline endpoint are from documentation and libraries, not seen.
 - The dragon rules (5:00 first spawn, 5:00 respawn, Elder 6:00 after the soul) are long-standing
   values, not yet checked against a recording of this season.
-- The overlay follows League's window (8.2) on the guess that the game's window is owned by
-  "League of Legends" and has a title bar when windowed; the test on a Mac confirms both.
 - The first try on a Mac (the owner, 2026-10-28, an Apple silicon MacBook Pro, League
   windowed): the overlay showed nothing, and with "Let clicks through" turned off and "Edit
   layout" on, its invisible layer caught every click until the app was stopped. The menu item is
