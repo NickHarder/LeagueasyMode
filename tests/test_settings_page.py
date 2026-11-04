@@ -66,8 +66,10 @@ async def test_each_switch_starts_as_its_default_and_a_change_is_kept(tmp_path: 
         # friends" (phase 11.6) and "Team calls" (11.9), on by default like the others, then
         # "Minimap: jungler and roamers only" and "Detailed enemy rows", off unless turned on, and
         # "Details only while Tab or ⌥ is held", on (the owner asked for details on a key; the
-        # count was 14 before it).
-        await expect(switches).to_have_count(15, timeout=5000)
+        # count was 14 before it), and "Show experimental estimates", off (16 since: an
+        # independent review, 2026-11-04, found the win chance and the likely places no better
+        # than chance on the owner's recorded Rift games).
+        await expect(switches).to_have_count(16, timeout=5000)
         # Everything shows; speaking the callouts and clicking to mark wait to be turned on.
         for index in range(10):
             await expect(switches.nth(index)).to_be_checked()
@@ -76,6 +78,7 @@ async def test_each_switch_starts_as_its_default_and_a_change_is_kept(tmp_path: 
         await expect(page.get_by_label("Minimap: jungler and roamers only")).not_to_be_checked()
         await expect(page.get_by_label("Detailed enemy rows")).not_to_be_checked()
         await expect(page.get_by_label("Details only while Tab or ⌥ is held")).to_be_checked()
+        await expect(page.get_by_label("Show experimental estimates")).not_to_be_checked()
         await page.get_by_label("Win chance").uncheck()
         await expect(page.locator(".settings-status")).to_have_text("Saved")
         assert not engine.preferences.show_win_chance

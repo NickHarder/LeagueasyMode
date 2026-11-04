@@ -4,6 +4,16 @@ What changed in this project and why, newest first. A commit shows the differenc
 gives the reason. The `handoff` skill adds to it at every checkpoint, and the `write-okf-concept`
 skill has the format.
 
+## 2026-11-04
+
+- The win chance, the likely places and the jungle path are hidden unless "Show experimental
+  estimates" is on (off by default): an independent review scored them on the owner's recorded
+  Rift games no better than chance (a win chance Brier of 0.404 and 0.249 against a coin flip's
+  0.250, the likeliest region right 25% to 38%, the jungle path some 4,500 units off). They come
+  back once each beats its baseline on 20 or more Rift games. The gold and experience bands, which
+  held the truth 63% and 43% of the time there instead of 80%, are widened 1.7 and 2.55 times, the
+  80th percentile of the error over the band on those three games; 83% and 73% after.
+
 ## 2026-11-03
 
 - The roasts get edge (the owner: "Stop being so tame. Have some edge to your roasts ... Make it

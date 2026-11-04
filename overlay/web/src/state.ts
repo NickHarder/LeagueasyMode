@@ -383,6 +383,7 @@ export interface OverlayPreferences {
   readonly minimap_roamers_only: boolean;
   readonly detailed_enemy_rows: boolean;
   readonly details_on_hold: boolean;
+  readonly show_experimental_estimates: boolean;
 }
 
 /** The preferences' names, in the settings page's order. */
@@ -402,6 +403,7 @@ export const PREFERENCE_NAMES = [
   "minimap_roamers_only",
   "detailed_enemy_rows",
   "details_on_hold",
+  "show_experimental_estimates",
 ] as const satisfies readonly (keyof OverlayPreferences)[];
 
 /** The widgets the player can move; the minimap layer stays over League's minimap. */

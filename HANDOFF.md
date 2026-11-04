@@ -79,6 +79,12 @@ In `AGENTS.md`. Also: a raw recording (it holds other players' names); only `ano
 
 ## Settled; do not reopen without the owner
 
+- The win chance, the likely places and the jungle path are hidden unless "Show experimental
+  estimates" is on, until each beats its baseline on 20 or more Rift games (an independent
+  review, 2026-11-04, which the owner asked to have acted on: "Make all the rec fixes"). The
+  gold and experience bands are widened 1.7 and 2.55 times, measured on three Rift recordings,
+  to measure again with more.
+
 - An overlay on the Mac, not a second screen; League's local APIs, plus each patch's champion and
   item stats from Riot's Data Dragon, fetched once a patch and kept on disk (the owner, 2026-10-08:
   "pull the info from an API and then store it and refresh on patches / updates"). The plan, and

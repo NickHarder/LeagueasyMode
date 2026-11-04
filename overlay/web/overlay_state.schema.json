@@ -1024,6 +1024,11 @@
           "default": true,
           "title": "Details On Hold",
           "type": "boolean"
+        },
+        "show_experimental_estimates": {
+          "default": false,
+          "title": "Show Experimental Estimates",
+          "type": "boolean"
         }
       },
       "title": "OverlayPreferences",

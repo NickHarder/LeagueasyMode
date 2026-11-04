@@ -6,7 +6,12 @@ import pytest
 from game_payloads import DEFAULT_PLAYERS, PlayerSeed, all_game_data
 from leagueasymode.engine import compute_overlay_state
 from leagueasymode.game_state import GameSnapshot
-from leagueasymode.inference.experience import ExperienceTracker, experience_to_reach
+from leagueasymode.inference.experience import (
+    EXPERIENCE_RULES,
+    ExperienceRules,
+    ExperienceTracker,
+    experience_to_reach,
+)
 from leagueasymode.inference.gold import PlayerKey
 from leagueasymode.overlay_state import LevelEstimate
 
@@ -79,7 +84,19 @@ def test_between_level_ups_experience_grows_at_the_players_own_rate() -> None:
     assert zed.experience == 280 + 9 * 20
     assert zed.progress_to_next_level == pytest.approx(180 / 380)
     assert zed.power_level_at_game_time_seconds == pytest.approx(140 + (2400 - 460) / 9)
-    assert zed.band_experience == round(1.2816 * 0.2 * 9 * 20)
+    # The band is widened 2.55 times, as the owner's recorded Rift games measured it (it held the
+    # truth 47% of the time, not 80%); it was the unwidened 1.2816 * 0.2 * 9 * 20 before.
+    assert zed.band_experience == round(2.55 * 1.2816 * 0.2 * 9 * 20)
+
+
+def test_the_band_is_as_wide_as_the_recorded_games_measured() -> None:
+    # The band held the truth 47% of 51 player-minutes on the owner's three Rift recordings of
+    # 2026-10-29, though meant to hold it 4 times in 5; widened by the measured 2.55 it holds 80%.
+    assert EXPERIENCE_RULES.band_width_scale == pytest.approx(2.55)
+    narrow = observe(ExperienceTracker(rules=ExperienceRules(band_width_scale=1.0)), 600.0)
+    wide = observe(ExperienceTracker(rules=ExperienceRules(band_width_scale=2.0)), 600.0)
+    assert wide[ZED].band_experience == pytest.approx(2 * narrow[ZED].band_experience, abs=1)
+    assert wide[ZED].experience == narrow[ZED].experience
 
 
 def test_a_dead_player_gains_no_experience() -> None:
@@ -105,7 +122,8 @@ def test_a_player_first_seen_mid_game_is_somewhere_in_their_level() -> None:
     zed = observe(ExperienceTracker(), 600.0, Zed={"level": 8})[ZED]
     # The prior's 8.5 a second from 1:30 lands inside level 8 (4060 to 5040).
     assert zed.experience == 4335
-    assert zed.band_experience == round(1.2816 * 980 / 12**0.5)
+    # Widened 2.55 times, as the recorded games measured (see the test of the band's width).
+    assert zed.band_experience == round(2.55 * 1.2816 * 980 / 12**0.5)
     assert zed.next_power_level == 11
     assert zed.power_level_at_game_time_seconds == pytest.approx(600 + (7300 - 4335) / 8.5)
 

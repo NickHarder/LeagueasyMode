@@ -21,6 +21,7 @@ export const PREFERENCE_NAMES = [
     "minimap_roamers_only",
     "detailed_enemy_rows",
     "details_on_hold",
+    "show_experimental_estimates",
 ];
 /** The widgets the player can move; the minimap layer stays over League's minimap. */
 export const MOVABLE_WIDGETS = ["objective_strip", "callouts", "enemy_strip", "you_panel", "overview"];

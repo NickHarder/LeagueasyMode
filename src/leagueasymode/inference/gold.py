@@ -139,6 +139,12 @@ class GoldRules(BaseModel):
     # stays within these bounds.
     tuning_gold_per_weight: float = 1000.0
     tuning_bounds: tuple[float, float] = (0.75, 1.33)
+    # The band, as wide as the uncertainties above give, is widened by this much: measured on the
+    # owner's three Rift recordings of 2026-10-29 (20-04-25Z, 04-00-16Z, 19-57-44Z), where it held
+    # the truth 63% of 35 player-minutes; 1.7 is the 80th percentile of the error over the band,
+    # so that it holds the truth 4 times in 5. Provisional on so few games: measure again as more
+    # Rift games are recorded.
+    band_width_scale: float = 1.7
 
 
 GOLD_RULES: Final = GoldRules()
@@ -715,7 +721,11 @@ class GoldTracker:
             source="estimate",
             total_gold=round(floored_mean),
             unspent_gold=round(floored_mean - owned_gold),
-            band_gold=round(BAND_STANDARD_DEVIATIONS * math.sqrt(measured_variance)),
+            band_gold=round(
+                self.rules.band_width_scale
+                * BAND_STANDARD_DEVIATIONS
+                * math.sqrt(measured_variance)
+            ),
         )
 
     def _carried_forward(

@@ -259,6 +259,35 @@ def compute_overlay_state(
     )
 
 
+def without_unproven_estimates(state: OverlayState) -> OverlayState:
+    """Return the state without the estimates not yet shown to beat chance on real games.
+
+    An independent review, 2026-11-04, scored the owner's recorded Rift games: the win chance
+    no better than a coin flip (Brier 0.404 and 0.249, a coin flip 0.250), the likeliest region
+    right 25% to 38% of the time, the jungle path some 4,500 units off. So the win chance, each
+    player's likely place (and whether they roam, read from it) and the jungle paths are left
+    out, until each beats its baseline on 20 or more Rift games (`leagueasymode thresholds`).
+    What is read from the game or has held on real games stays: timers, structures, items, item
+    gold, the fight, the players' records.
+
+    Args:
+        state: The overlay's state, every estimate in it.
+
+    Returns:
+        The state without those estimates.
+    """
+    return state.model_copy(
+        update={
+            "win_chance": None,
+            "jungle_paths": [],
+            "players": [
+                card.model_copy(update={"location": None, "is_roaming": False})
+                for card in state.players
+            ],
+        }
+    )
+
+
 def _locations_by_key(
     snapshot: GameSnapshot, cards: list[PlayerCard]
 ) -> dict[PlayerKey, PositionEstimate]:
@@ -542,7 +571,7 @@ class OverlayEngine:
         no_answer = self.game_api.last_no_answer
         if payload is None and no_answer is not None:
             self.status.note_no_answer(no_answer)
-        answer_state = compute_overlay_state(
+        computed_state = compute_overlay_state(
             payload,
             self._item_catalog,
             patch_stats=self._patch_stats,
@@ -562,6 +591,13 @@ class OverlayEngine:
             status=self.status,
             tuning=self.tuning,
             friend_riot_ids=self._friends.riot_id_keys,
+        )
+        # Hidden before the callouts and the team's calls are worked out, so that none of them is
+        # built on an estimate the overlay does not show (a laner "missing" reads the likely place).
+        answer_state = (
+            computed_state
+            if self._preferences.show_experimental_estimates
+            else without_unproven_estimates(computed_state)
         )
         self._last_payload = payload if answer_state.is_game_running else None
         if answer_state.is_game_running and not self._current_state.is_game_running:
