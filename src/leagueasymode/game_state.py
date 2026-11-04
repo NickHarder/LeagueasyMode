@@ -6,6 +6,7 @@ refusing one would stop the overlay in the middle of a game on the day a patch l
 lost by it, since the recorder keeps every answer whole.
 """
 
+import functools
 import re
 from typing import Final
 
@@ -141,11 +142,24 @@ class ScoreboardPlayer(RiotPayloadModel):
         Returns:
             Whether it names this player.
         """
+        return bool(name) and name in self.feed_names
+
+    @functools.cached_property
+    def feed_names(self) -> frozenset[str]:
+        """Return every name the feed may call this player by, worked out once per player.
+
+        Every event of the feed is matched against every player many times an answer (some 3.7
+        million calls while one recorded ARAM was read), so the names are kept rather than
+        rebuilt each time; the model is frozen, so they cannot go stale.
+
+        Returns:
+            The summoner name, the Riot ID, the game name, and each one's part before the `#`.
+        """
         own_names = {self.summoner_name, self.riot_id, self.riot_id_game_name}
         own_game_names = {
             own_name.partition(RIOT_ID_SEPARATOR)[0] for own_name in own_names if own_name
         }
-        return bool(name) and (name in own_names or name in own_game_names)
+        return frozenset(own_names | own_game_names)
 
 
 class ActiveChampionStats(RiotPayloadModel):
@@ -214,9 +228,8 @@ class GameSnapshot(RiotPayloadModel):
         Returns:
             `ORDER`, `CHAOS`, or None.
         """
-        if not name:
-            return None
-        return next((player.team for player in self.players if player.is_named(name)), None)
+        named_player = self.player_named(name)
+        return named_player.team if named_player is not None else None
 
     def player_named(self, name: str | None) -> ScoreboardPlayer | None:
         """Return the player the feed names, or None for a minion, a turret, a monster or nobody.
@@ -229,7 +242,25 @@ class GameSnapshot(RiotPayloadModel):
         """
         if not name:
             return None
-        return next((player for player in self.players if player.is_named(name)), None)
+        return self.players_by_feed_name.get(name)
+
+    @functools.cached_property
+    def players_by_feed_name(self) -> dict[str, ScoreboardPlayer]:
+        """Return each player by every name the feed may call them, worked out once per answer.
+
+        The feed's names are looked up for every event many times an answer (some 636,000 times
+        while one recorded ARAM was read); the answer is frozen, so the table cannot go stale. A
+        name two players share goes to the first on the scoreboard, as a search in order would.
+
+        Returns:
+            The players, by name.
+        """
+        table: dict[str, ScoreboardPlayer] = {}
+        for player in self.players:
+            for feed_name in player.feed_names:
+                if feed_name:
+                    table.setdefault(feed_name, player)
+        return table
 
     def is_active_player(self, player: ScoreboardPlayer) -> bool:
         """Return whether a player of the scoreboard is the one on this machine.

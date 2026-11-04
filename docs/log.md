@@ -6,6 +6,18 @@ skill has the format.
 
 ## 2026-11-04
 
+- Reading a recorded game is three to four times faster, scoring the same to the last digit: the
+  Swiftplay fixture from 7.3 s to 4.3 s, the ARAM from 16.7 s to 4.7 s, and the gate's tests from
+  about 80 s to about 45 s. A patch copies only the objects on its path instead of the whole
+  answer; each team's roles are worked out once for each set of spells, support items, given
+  positions and least-CS player instead of four times an answer; and a feed name's player is
+  looked up in a table kept with the answer. `tests/fixtures/recorded-games/expected-scores.json`
+  holds what `main` scored on both fixtures before, and `test_fixture_scores.py` holds every
+  estimator to it. The scoring after each game (audit PERF-06, some 52 s of CPU) runs the same
+  code, and the live engine shares the roles and name lookups.
+- The post-game window's win chance and "What swung it", and the control wards (each put where
+  its owner likely was), follow "Show experimental estimates" too: they were the two places the
+  hidden win chance and likely places still showed.
 - Enemy ultimates can be marked again (⌃⌥R, the R button, `POST /marks` "ultimate"): the owner,
   2026-11-04, "I can confirm this is allowed. I asked riot support", after the marks were removed
   the same day on secondary reports of Riot's 2025 policy. Pull request #121 is reverted.

@@ -486,9 +486,11 @@ async def test_the_summary_leaves_out_the_win_chance_unless_experimental_estimat
                 preferences=preferences,
             )
             application = create_overlay_application(engine, summary_path=summary_path)
-            async with serve(application) as overlay_url:
-                async with session.get(overlay_url + "/summary") as response:
-                    served_summaries.append(await response.json())
+            async with (
+                serve(application) as overlay_url,
+                session.get(overlay_url + "/summary") as response,
+            ):
+                served_summaries.append(await response.json())
     hidden, shown = served_summaries
     assert isinstance(hidden, dict)
     assert isinstance(shown, dict)

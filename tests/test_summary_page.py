@@ -141,9 +141,7 @@ async def test_by_default_the_window_leaves_out_the_win_chance(tmp_path: Path) -
     # The win chance has not beaten a coin flip on the owner's real games (an independent review,
     # 2026-11-04): without "Show experimental estimates" neither its chart nor what swung it shows.
     summary_path, history_path = write_summary_and_history(tmp_path)
-    async with open_summary(
-        summary_path, history_path, shows_experimental_estimates=False
-    ) as page:
+    async with open_summary(summary_path, history_path, shows_experimental_estimates=False) as page:
         await expect(page.locator(".summary-result")).to_have_text("Victory", timeout=5000)
         await expect(page.locator(".chart")).to_have_count(1)
         await expect(page.locator(".chart-plot").first).to_have_attribute(

@@ -612,8 +612,14 @@ async def test_the_enemy_junglers_path_and_the_camps_down_show(tmp_path: Path) -
 
 
 async def test_an_enemy_control_ward_shows_where_it_likely_is(tmp_path: Path) -> None:
+    # A control ward is put where its owner likely was, so it shows only with "Show experimental
+    # estimates" on, like the likely places it is read from (2026-11-04); this test turns it on.
     async with open_overlay(
-        tmp_path, snapshot_count=60, speed=1.0, vi_wards_at_seconds=1410.0
+        tmp_path,
+        snapshot_count=60,
+        speed=1.0,
+        vi_wards_at_seconds=1410.0,
+        preferences=OverlayPreferences(show_experimental_estimates=True),
     ) as page:
         await expect(page.locator("#enemy-strip .ward-list")).to_have_text(
             re.compile(r"^Wards: Vi likely .+ \d+% \u00b7 0:\d\d ago$"), timeout=20000

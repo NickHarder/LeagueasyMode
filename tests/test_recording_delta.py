@@ -116,6 +116,29 @@ def test_applying_a_patch_leaves_the_original_alone() -> None:
     assert previous == snapshot
 
 
+def test_only_the_path_a_patch_changes_is_copied() -> None:
+    # A patch copies the objects on its path and shares the rest with the answer it started from:
+    # copying each answer whole took most of the time a recorded game took to read.
+    previous: JsonValue = {"scores": {"kills": 1}, "items": [{"id": 1}], "name": "Ahri"}
+    patched = apply_patch(previous, [PatchOperation(op="replace", path="/scores/kills", value=2)])
+    assert isinstance(patched, dict)
+    assert isinstance(previous, dict)
+    assert patched["scores"] == {"kills": 2}
+    assert patched["scores"] is not previous["scores"]
+    assert patched["items"] is previous["items"]
+
+
+@pytest.mark.parametrize("seed", range(300))
+def test_any_change_leaves_the_original_alone(seed: int) -> None:
+    generator = random.Random(seed)  # noqa: S311  seeded, so that every case can be reproduced
+    previous = random_json(generator, depth=4)
+    snapshot = copy.deepcopy(previous)
+    current = mutate(generator, copy.deepcopy(previous), depth=4)
+    patched = apply_patch(previous, compute_patch(previous, current))
+    assert canonical(previous) == canonical(snapshot)
+    assert canonical(patched) == canonical(current)
+
+
 def test_a_path_that_does_not_exist_is_an_error() -> None:
     with pytest.raises(ValueError, match="/missing"):
         apply_patch({"a": 1}, [PatchOperation(op="replace", path="/missing/b", value=2)])
