@@ -13,6 +13,11 @@ skill has the format.
   account, and the owner asked to "make all the rec fixes", reversing their "dont listen to
   rumors" of 2026-10-28. The ultimate's rank from the level stays on each enemy's row: it is no
   cooldown.
+- The README says what leaves the Mac: Data Dragon, GitHub releases for updates, the owner's
+  private recordings repository once a token is in the Keychain (games, crash and problem
+  reports), and the `claude` command when Claude's take is on. It had said Data Dragon was "the
+  one request beyond your Mac", which an independent review found untrue. KEY_METRICS says where
+  the scoring stands on 17 recorded games.
 
 ## 2026-11-03
 
