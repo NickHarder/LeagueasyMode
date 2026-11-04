@@ -6,6 +6,9 @@ skill has the format.
 
 ## 2026-11-04
 
+- HANDOFF.md refreshed after the review's fixes (#120 to #126): the gate's 1435 tests, the 17
+  recorded games, the estimates now hidden, and what waits for Rift games. The review had found it
+  saying one game and 1079 tests.
 - Reading a recorded game is three to four times faster, scoring the same to the last digit: the
   Swiftplay fixture from 7.3 s to 4.3 s, the ARAM from 16.7 s to 4.7 s, and the gate's tests from
   about 80 s to about 45 s. A patch copies only the objects on its path instead of the whole
