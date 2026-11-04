@@ -13,6 +13,27 @@ skill has the format.
   back once each beats its baseline on 20 or more Rift games. The gold and experience bands, which
   held the truth 63% and 43% of the time there instead of 80%, are widened 1.7 and 2.55 times, the
   80th percentile of the error over the band on those three games; 83% and 73% after.
+- The first real games in the repository's tests: trimmed, anonymized copies of the owner's
+  Swiftplay and an ARAM of 2026-10-29 in `tests/fixtures/recorded-games/` (300 KB each; the other
+  players' match histories, ranked stats and past timelines left out, every name checked to be a
+  pseudonym). `test_real_recordings.py` replays both through the engine: turrets per lane,
+  the Rift's 5:00 and ARAM's 4:10 inhibitor timers, ten players throughout. An independent review
+  found every other test built on invented payloads, whose turret and inhibitor names no real
+  game sends; those names are now the real format throughout the tests, and the parser no longer
+  reads the invented ones. The accuracy thresholds now score both games, and an empty fixtures
+  folder fails (audit ARCH-09) instead of passing having scored nothing.
+- Enemy ultimates are no longer marked: no ⌃⌥R, no R button, and `POST /marks` refuses
+  "ultimate". Riot's third-party policy has barred tracking enemy ultimate cooldowns, automatic or
+  by hand, since 2025-03-13; summoner spell timers were left allowed, so Flash and the other
+  summoner spell stay. An independent review called the ultimate marks a risk to the owner's
+  account, and the owner asked to "make all the rec fixes", reversing their "dont listen to
+  rumors" of 2026-10-28. The ultimate's rank from the level stays on each enemy's row: it is no
+  cooldown.
+- The README says what leaves the Mac: Data Dragon, GitHub releases for updates, the owner's
+  private recordings repository once a token is in the Keychain (games, crash and problem
+  reports), and the `claude` command when Claude's take is on. It had said Data Dragon was "the
+  one request beyond your Mac", which an independent review found untrue. KEY_METRICS says where
+  the scoring stands on 17 recorded games.
 
 ## 2026-11-03
 

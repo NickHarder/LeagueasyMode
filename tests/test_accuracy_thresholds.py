@@ -2,8 +2,8 @@
 
 The plan: "CI fails if any estimator drops below its threshold on the recorded games. The
 thresholds get set from the first batch of recordings and are never lowered to make a test pass."
-Until the first anonymized recordings land in `tests/fixtures/recorded-games/`, there is nothing
-to hold.
+The first anonymized recordings landed in `tests/fixtures/recorded-games/` on 2026-11-04; until
+then this held nothing and passed (audit ARCH-09), so an empty folder now fails.
 """
 
 import asyncio
@@ -31,6 +31,11 @@ THRESHOLDS_PATH: Final = Path(__file__).parent / "accuracy_thresholds.json"
 
 def recordings_in_the_repository() -> list[Path]:
     return sorted(RECORDINGS_DIRECTORY.glob("*.jsonl.xz"))
+
+
+def test_the_repository_holds_recorded_games_to_score() -> None:
+    # Without them every threshold below passes having scored nothing.
+    assert len(recordings_in_the_repository()) >= 2
 
 
 def test_every_recording_in_the_repository_meets_its_thresholds() -> None:

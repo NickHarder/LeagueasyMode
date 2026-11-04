@@ -508,7 +508,7 @@ class OverlayEngine:
 
         Args:
             enemy_slot: The enemy's place in role order, 1 for top to 5 for support.
-            spell: "flash", "summoner" for their other summoner spell, or "ultimate".
+            spell: "flash", or "summoner" for their other summoner spell.
 
         Returns:
             The timer, or None when no game runs, there is no such enemy, or the patch's

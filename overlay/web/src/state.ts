@@ -114,7 +114,7 @@ export interface PlayerIntel {
 export interface CooldownTimer {
   readonly cooldown_id: string;
   readonly champion_name: string;
-  readonly spell: "flash" | "summoner" | "ultimate";
+  readonly spell: "flash" | "summoner";
   readonly spell_name: string;
   readonly label: string;
   readonly marked_at_game_time_seconds: number;
@@ -503,7 +503,7 @@ const CALLOUT_KINDS: ReadonlySet<string> = new Set([
 const START_SIDES: ReadonlySet<string> = new Set(["blue", "red"]);
 const MAP_HALVES: ReadonlySet<string> = new Set(["top", "bot"]);
 const FOUR_MINUTE_HALVES: ReadonlySet<string> = new Set(["top", "mid", "bot"]);
-const MARKED_SPELLS: ReadonlySet<string> = new Set(["flash", "summoner", "ultimate"]);
+const MARKED_SPELLS: ReadonlySet<string> = new Set(["flash", "summoner"]);
 
 /** Return whether a value is a plain object, so that its fields can be read. */
 function isRecord(value: unknown): value is Record<string, unknown> {

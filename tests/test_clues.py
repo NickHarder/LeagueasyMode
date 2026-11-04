@@ -54,7 +54,7 @@ def latest(clues: dict[PlayerKey, list[PositionClue]], key: PlayerKey) -> Positi
 
 
 def test_a_turret_taken_puts_the_champions_credited_with_it_there() -> None:
-    turret = turret_killed_event(1, 600.0, "Turret_T1_L_03_A", "Top Dog", ["Gank Plz"])
+    turret = turret_killed_event(1, 600.0, "Turret_TOrder_L2_P3_1_0", "Top Dog", ["Gank Plz"])
     clues = observe(ClueTracker(), 610.0, [game_start_event(), turret])
     assert latest(clues, DARIUS) == PositionClue(
         kind="turret",
@@ -76,7 +76,7 @@ def test_a_turret_named_as_the_game_names_it_places_its_takers() -> None:
 
 
 def test_an_inhibitor_taken_puts_its_takers_at_it() -> None:
-    inhibitor = inhibitor_killed_event(1, 1500.0, "Barracks_T2_C1", "Ahri")
+    inhibitor = inhibitor_killed_event(1, 1500.0, "Inhib_TChaos_L1_P1_1_0", "Ahri")
     clue = latest(observe(ClueTracker(), 1510.0, [game_start_event(), inhibitor]), AHRI)
     assert (clue.kind, clue.point_name, clue.place) == (
         "turret",
@@ -105,7 +105,7 @@ def test_epic_monsters_put_their_takers_at_their_pit() -> None:
 
 
 def test_a_champion_a_turret_kills_was_at_that_turret() -> None:
-    executed = champion_kill_event(1, 700.0, "Turret_T2_C_05_A", "Ahri", [])
+    executed = champion_kill_event(1, 700.0, "Turret_TChaos_L1_P3_1_0", "Ahri", [])
     clue = latest(observe(ClueTracker(), 710.0, [game_start_event(), executed]), AHRI)
     assert (clue.point_name, clue.region) == ("chaos_mid_outer_turret", "mid_lane")
 
@@ -159,7 +159,7 @@ def test_a_junglers_creep_score_puts_them_in_the_jungle() -> None:
 def test_clues_come_in_time_order() -> None:
     tracker = ClueTracker()
     observe(tracker, 490.0, Zed={"creep_score": 10})
-    turret = turret_killed_event(1, 495.0, "Turret_T1_C_05_A", "Shadow Step")
+    turret = turret_killed_event(1, 495.0, "Turret_TOrder_L1_P3_1_0", "Shadow Step")
     clues = observe(tracker, 500.0, [game_start_event(), turret], Zed={"creep_score": 20})
     assert [clue.kind for clue in clues[ZED]] == ["turret", "lane"]
 
@@ -173,7 +173,7 @@ def test_a_new_game_starts_the_tracker_over() -> None:
 
 def test_the_overlay_shows_each_players_latest_clue() -> None:
     tracker = ClueTracker()
-    turret = turret_killed_event(1, 600.0, "Turret_T1_L_03_A", "Top Dog")
+    turret = turret_killed_event(1, 600.0, "Turret_TOrder_L2_P3_1_0", "Top Dog")
     state = compute_overlay_state(
         all_game_data(610.0, events=[game_start_event(), turret]), clue_tracker=tracker
     )

@@ -37,8 +37,8 @@ def write_source_recording(directory: Path, extra_payload: JsonValue = None) -> 
             "EventID": 3,
             "EventName": "TurretKilled",
             "EventTime": 600.0,
-            "TurretKilled": "Turret_T2_L_03_A",
-            "KillerName": "Turret_T1_L_03_A",
+            "TurretKilled": "Turret_TChaos_L2_P3_1_0",
+            "KillerName": "Turret_TOrder_L2_P3_1_0",
             "Assisters": [],
         },
     ]
@@ -129,7 +129,7 @@ def test_game_content_is_left_as_it_was(tmp_path: Path) -> None:
     assert isinstance(event_list, list)
     turret_kill = event_list[3]
     assert isinstance(turret_kill, dict)
-    assert turret_kill["KillerName"] == "Turret_T1_L_03_A"
+    assert turret_kill["KillerName"] == "Turret_TOrder_L2_P3_1_0"
     assert last_frame["gameData"] == {
         "gameMode": "CLASSIC",
         "gameTime": 610.0,

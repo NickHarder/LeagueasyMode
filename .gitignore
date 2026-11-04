@@ -21,3 +21,4 @@ overlay/macos/.build/
 # Raw recordings hold other players' names: only anonymized copies are committed (tests/fixtures/)
 recordings/
 *.lgrec
+.claude/worktrees/

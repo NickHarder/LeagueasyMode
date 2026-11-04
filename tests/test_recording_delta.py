@@ -28,7 +28,7 @@ def random_json(generator: random.Random, depth: int) -> JsonValue:
     if kind == "list":
         return [random_json(generator, depth - 1) for _ in range(generator.randint(0, 4))]
     if kind == "str":
-        return generator.choice(["Ahri", "Turret_T1_L_03_A", "", "#", "~1"])
+        return generator.choice(["Ahri", "Turret_TOrder_L2_P3_1_0", "", "#", "~1"])
     if kind == "int":
         return generator.choice([0, 1, 2, 300])
     if kind == "float":

@@ -45,7 +45,7 @@ pytestmark = pytest.mark.browser
 SCORED_AT: Final = "2026-10-09T00:00:00+00:00"
 FEED: Final = [
     champion_kill_event(1, 400.0, "Shadow Step", "Ahri", []),
-    turret_killed_event(2, 610.0, "Turret_T2_L_03_A", "Garen Main"),
+    turret_killed_event(2, 610.0, "Turret_TChaos_L2_P3_1_0", "Garen Main"),
 ]
 
 

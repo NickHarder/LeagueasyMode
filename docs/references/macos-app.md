@@ -4,7 +4,7 @@ title: The macOS overlay app
 description: What the menu bar app does, how to run it from a clone, how to build, release and open the app that carries its own engine, its update check and open at login, and the steps for the tracer bullet's test on a Mac over League in each display mode.
 tags: [macos, overlay, tracer-bullet]
 status: draft
-generated: { by: claude-code/cloud, at: 2026-10-29T22:59:03Z }
+generated: { by: claude-code/cloud, at: 2026-11-04T06:56:36Z }
 sources:
   - id: build-update
     resource: ../../overlay/macos/Sources/OverlayCore/BuildUpdate.swift
@@ -72,8 +72,10 @@ shortcut ⌃⌥⌘L shows and hides the overlay through Carbon's hot keys, which
 Each hot key checks that a press is its own, since every one hears all of the app's.
 
 **Marking an enemy's spell:** hold ⌃⌥, press 1 to 5 for an enemy in role order (1 top, 2 jungle,
-3 mid, 4 bottom, 5 support), then F for their Flash, D for their other summoner spell or R for
-their ultimate, within three seconds. Every key carries ⌃⌥, so marking never takes a key League
+3 mid, 4 bottom, 5 support), then F for their Flash or D for their other summoner spell, within
+three seconds. There is no R for their ultimate: Riot's third-party policy has barred tracking
+enemy ultimate cooldowns, automatic or by hand, since 2025-03-13, while summoner spell timers were
+left allowed, so ⌃⌥R was removed on 2026-11-04 (the owner: "make all the rec fixes"). Every key carries ⌃⌥, so marking never takes a key League
 uses. The app posts the mark to the engine's `/marks`, which starts the timer shown on that
 enemy's row.[^cooldown-marking]
 
