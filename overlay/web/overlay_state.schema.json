@@ -216,7 +216,8 @@
         "spell": {
           "enum": [
             "flash",
-            "summoner"
+            "summoner",
+            "ultimate"
           ],
           "title": "Spell",
           "type": "string"

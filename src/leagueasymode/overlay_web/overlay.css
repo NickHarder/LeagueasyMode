@@ -234,6 +234,11 @@ body {
   font-size: 10px;
 }
 
+.cooldown-badge[data-spell="ultimate"] {
+  background: rgb(240 199 94 / 0.22);
+  color: var(--widget-alive);
+}
+
 .enemy-intel {
   grid-column: 2 / -1;
   color: var(--widget-muted);

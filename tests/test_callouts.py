@@ -173,15 +173,13 @@ def test_a_marked_spell_coming_back_is_called_out_once() -> None:
     assert [callout.text for callout in tracker.update(state_at(900.5))] == ["Zed's Flash is up"]
 
 
-def test_a_marked_summoner_spell_coming_back_is_called_out_by_name() -> None:
-    # It was an ultimate's: no longer marked, since Riot's third-party policy bars tracking enemy
-    # ultimate cooldowns (the owner, 2026-11-04: "make all the rec fixes").
+def test_a_marked_ultimate_coming_back_is_called_out_by_name() -> None:
     tracker = CalloutTracker()
-    ignite = zed_flash_timer().model_copy(
-        update={"cooldown_id": "Zed-summoner-600.0", "spell": "summoner", "spell_name": "Ignite"}
+    ultimate = zed_flash_timer().model_copy(
+        update={"cooldown_id": "Zed-ultimate-600.0", "spell": "ultimate", "spell_name": "ultimate"}
     )
-    tracker.update(state_at(899.5).model_copy(update={"cooldowns": [ignite]}))
-    assert [callout.text for callout in tracker.update(state_at(900.0))] == ["Zed's Ignite is up"]
+    tracker.update(state_at(899.5).model_copy(update={"cooldowns": [ultimate]}))
+    assert [callout.text for callout in tracker.update(state_at(900.0))] == ["Zed's ultimate is up"]
 
 
 def enemy_close_to_six(

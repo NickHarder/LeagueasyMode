@@ -6,6 +6,9 @@ skill has the format.
 
 ## 2026-11-04
 
+- Enemy ultimates can be marked again (⌃⌥R, the R button, `POST /marks` "ultimate"): the owner,
+  2026-11-04, "I can confirm this is allowed. I asked riot support", after the marks were removed
+  the same day on secondary reports of Riot's 2025 policy. Pull request #121 is reverted.
 - The win chance, the likely places and the jungle path are hidden unless "Show experimental
   estimates" is on (off by default): an independent review scored them on the owner's recorded
   Rift games no better than chance (a win chance Brier of 0.404 and 0.249 against a coin flip's

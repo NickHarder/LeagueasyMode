@@ -8,8 +8,7 @@ any callout. The wording is a first draft for the owner to tune, and it is text 
   least 20 more seconds: take it.
 - Their jungler dead for at least 20 more seconds: take an objective that is up or spawning within a
   minute, or else invade or push.
-- A Flash the player has just marked: punish it. (Ultimates are not marked: Riot's third-party
-  policy bars tracking them, `cooldowns.py`.)
+- A Flash or an ultimate the player has just marked: punish it, or fight now.
 - A Baron or Elder buff just taken: push or defend, force a fight or avoid one.
 """
 
@@ -162,7 +161,7 @@ def _jungler_down(
 def _spells_down(
     previous_state: OverlayState, state: OverlayState, game_time_seconds: float
 ) -> list[Callout]:
-    """Suggest using a Flash the player has just marked an enemy as having used.
+    """Suggest using a Flash or an ultimate the player has just marked an enemy as having used.
 
     Args:
         previous_state: The last state.
@@ -170,18 +169,19 @@ def _spells_down(
         game_time_seconds: Its game time.
 
     Returns:
-        One suggestion per new mark of a Flash.
+        One suggestion per new mark of a Flash or an ultimate.
     """
     previous_ids = {timer.cooldown_id for timer in previous_state.cooldowns}
     return [
         _suggestion(
             f"suggest:spell:{timer.cooldown_id}",
             f"{timer.champion_name} has no {timer.spell_name} for "
-            f"{_clock_text(timer.ready_at_game_time_seconds - game_time_seconds)}: punish it",
+            f"{_clock_text(timer.ready_at_game_time_seconds - game_time_seconds)}: "
+            + ("punish it" if timer.spell == "flash" else "fight now"),
             game_time_seconds,
         )
         for timer in state.cooldowns
-        if timer.cooldown_id not in previous_ids and timer.spell == "flash"
+        if timer.cooldown_id not in previous_ids and timer.spell in {"flash", "ultimate"}
     ]
 
 

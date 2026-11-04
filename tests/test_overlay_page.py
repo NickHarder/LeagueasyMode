@@ -968,9 +968,7 @@ async def test_a_click_on_an_enemys_spell_button_marks_it(tmp_path: Path) -> Non
         await page.set_viewport_size({"width": 1280, "height": 900})
         zed_row = page.locator("#enemy-strip .enemy-row", has_text="Zed")
         zed_buttons = zed_row.locator(".mark-button")
-        # No "R" button since Riot's third-party policy bars tracking enemy ultimate cooldowns
-        # (the owner, 2026-11-04: "make all the rec fixes").
-        await expect(zed_buttons).to_have_text(["Flash", "Ignite"], timeout=5000)
+        await expect(zed_buttons).to_have_text(["Flash", "Ignite", "R"], timeout=5000)
         # The page tells the app where each button is, so that it takes those clicks only.
         regions = await page.evaluate("window.reportedClickRegions.at(-1)")
         assert len(regions) == await page.locator(".mark-button").count()
