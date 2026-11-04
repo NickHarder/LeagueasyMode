@@ -6,6 +6,15 @@ skill has the format.
 
 ## 2026-11-04
 
+- The first real games in the repository's tests: trimmed, anonymized copies of the owner's
+  Swiftplay and an ARAM of 2026-10-29 in `tests/fixtures/recorded-games/` (300 KB each; the other
+  players' match histories, ranked stats and past timelines left out, every name checked to be a
+  pseudonym). `test_real_recordings.py` replays both through the engine: turrets per lane,
+  the Rift's 5:00 and ARAM's 4:10 inhibitor timers, ten players throughout. An independent review
+  found every other test built on invented payloads, whose turret and inhibitor names no real
+  game sends; those names are now the real format throughout the tests, and the parser no longer
+  reads the invented ones. The accuracy thresholds now score both games, and an empty fixtures
+  folder fails (audit ARCH-09) instead of passing having scored nothing.
 - Enemy ultimates are no longer marked: no ⌃⌥R, no R button, and `POST /marks` refuses
   "ultimate". Riot's third-party policy has barred tracking enemy ultimate cooldowns, automatic or
   by hand, since 2025-03-13; summoner spell timers were left allowed, so Flash and the other

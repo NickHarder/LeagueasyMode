@@ -39,7 +39,7 @@ FEED: Final = [
     dragon_kill_event(1, 330.0, "Jungle Diff"),
     champion_kill_event(2, 400.0, "Shadow Step", "Ahri", []),
     horde_kill_event(3, 500.0, "Gank Plz"),
-    turret_killed_event(4, 610.0, "Turret_T2_L_03_A", "Garen Main"),
+    turret_killed_event(4, 610.0, "Turret_TChaos_L2_P3_1_0", "Garen Main"),
 ]
 
 

@@ -7,9 +7,8 @@ each one's lane and tier at the same second: lane 0 is bot, 1 mid and 2 top; pla
 turret, 2 the inner, 1 the inhibitor turret (and the inhibitor), 4 and 5 the nexus turrets, which
 stand in lane 1. ARAM's single lane is lane 1.
 
-The older names that open-source readers of the game's API give (`Turret_T1_L_03_A`,
-`Barracks_T1_L1`) never came in a recorded game; they are still read, the way they were, so that
-nothing that once read them stops.
+The names that open-source readers of the game's API give (`Turret_T1_L_03_A`, `Barracks_T1_L1`),
+which the code read until 2026-10-30, never came in a recorded game, and are not read.
 """
 
 import re
@@ -35,26 +34,6 @@ TURRET_NAME_PATTERN: Final = re.compile(
 INHIBITOR_NAME_PATTERN: Final = re.compile(
     r"^Inhib_T(?P<team>Order|Chaos)_L(?P<lane>[012])_P1(_|$)"
 )
-
-OLD_TEAM_BY_NUMBER: Final[dict[str, Team]] = {"1": "ORDER", "2": "CHAOS"}
-OLD_LANE_BY_LETTER: Final[dict[str, Lane]] = {"L": "top", "C": "mid", "R": "bot"}
-OLD_TIER_BY_LANE_AND_PLACE: Final[dict[tuple[str, int], TurretTier]] = {
-    ("L", 3): "outer",
-    ("C", 5): "outer",
-    ("R", 3): "outer",
-    ("L", 2): "inner",
-    ("C", 4): "inner",
-    ("R", 2): "inner",
-    ("L", 1): "inhibitor",
-    ("C", 3): "inhibitor",
-    ("R", 1): "inhibitor",
-    ("C", 2): "nexus",
-    ("C", 1): "nexus",
-}
-OLD_TURRET_NAME_PATTERN: Final = re.compile(
-    r"^Turret_T(?P<team>[12])_(?P<lane>[LCR])_(?P<place>\d{2})_A$"
-)
-OLD_INHIBITOR_NAME_PATTERN: Final = re.compile(r"^Barracks_T(?P<team>[12])_(?P<lane>[LCR])1$")
 
 
 @dataclass(frozen=True)
@@ -84,23 +63,13 @@ def read_turret_name(name: str | None) -> TurretName | None:
     Returns:
         The turret, or None for a name not understood.
     """
-    new_match = TURRET_NAME_PATTERN.match(name or "")
-    if new_match is not None:
-        return TurretName(
-            team=TEAM_BY_NAME[new_match["team"]],
-            lane=LANE_BY_NUMBER[new_match["lane"]],
-            tier=TIER_BY_PLACE[new_match["place"]],
-        )
-    old_match = OLD_TURRET_NAME_PATTERN.match(name or "")
-    if old_match is None:
-        return None
-    tier = OLD_TIER_BY_LANE_AND_PLACE.get((old_match["lane"], int(old_match["place"])))
-    if tier is None:
+    name_match = TURRET_NAME_PATTERN.match(name or "")
+    if name_match is None:
         return None
     return TurretName(
-        team=OLD_TEAM_BY_NUMBER[old_match["team"]],
-        lane=OLD_LANE_BY_LETTER[old_match["lane"]],
-        tier=tier,
+        team=TEAM_BY_NAME[name_match["team"]],
+        lane=LANE_BY_NUMBER[name_match["lane"]],
+        tier=TIER_BY_PLACE[name_match["place"]],
     )
 
 
@@ -113,14 +82,9 @@ def read_inhibitor_name(name: str | None) -> InhibitorName | None:
     Returns:
         The inhibitor, or None for a name not understood.
     """
-    new_match = INHIBITOR_NAME_PATTERN.match(name or "")
-    if new_match is not None:
-        return InhibitorName(
-            team=TEAM_BY_NAME[new_match["team"]], lane=LANE_BY_NUMBER[new_match["lane"]]
-        )
-    old_match = OLD_INHIBITOR_NAME_PATTERN.match(name or "")
-    if old_match is None:
+    name_match = INHIBITOR_NAME_PATTERN.match(name or "")
+    if name_match is None:
         return None
     return InhibitorName(
-        team=OLD_TEAM_BY_NUMBER[old_match["team"]], lane=OLD_LANE_BY_LETTER[old_match["lane"]]
+        team=TEAM_BY_NAME[name_match["team"]], lane=LANE_BY_NUMBER[name_match["lane"]]
     )

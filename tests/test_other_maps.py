@@ -29,8 +29,8 @@ def answer(map_number: int, game_mode: str) -> JsonValue:
     events = [
         game_start_event(),
         dragon_kill_event(1, 300.0, ENEMY_KILLER),
-        turret_killed_event(2, 400.0, "Turret_T1_L_03_A", ENEMY_KILLER),
-        inhibitor_killed_event(3, 500.0, "Barracks_T1_C1", ENEMY_KILLER),
+        turret_killed_event(2, 400.0, "Turret_TOrder_L2_P3_1_0", ENEMY_KILLER),
+        inhibitor_killed_event(3, 500.0, "Inhib_TOrder_L1_P1_1_0", ENEMY_KILLER),
     ]
     return all_game_data(600.0, events, map_number=map_number, game_mode=game_mode)
 

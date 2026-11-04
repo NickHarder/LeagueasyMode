@@ -136,7 +136,7 @@ def test_kills_since_the_last_death_raise_a_bounty_that_is_paid_once() -> None:
 
 
 def test_a_turret_pays_its_destroyers_globally_and_its_takers_locally() -> None:
-    outer_top = turret_killed_event(1, 600.0, "Turret_T1_L_03_A", "Top Dog", ["Gank Plz"])
+    outer_top = turret_killed_event(1, 600.0, "Turret_TOrder_L2_P3_1_0", "Top Dog", ["Gank Plz"])
     gold = feed_gold(snapshot_at(610.0, events=[game_start_event(), outer_top]))
     assert gold[DARIUS].objective_gold == 50.0 + 125.0
     assert gold[VI_JUNGLER].objective_gold == 50.0 + 125.0
@@ -157,8 +157,8 @@ def test_a_turret_named_as_the_game_names_it_pays_too() -> None:
 def test_inner_turrets_inhibitors_and_baron_pay_their_own_amounts() -> None:
     events = [
         game_start_event(),
-        turret_killed_event(1, 1300.0, "Turret_T2_C_04_A", "Ahri"),
-        inhibitor_killed_event(2, 1400.0, "Barracks_T2_C1", "Ahri"),
+        turret_killed_event(1, 1300.0, "Turret_TChaos_L1_P2_1_0", "Ahri"),
+        inhibitor_killed_event(2, 1400.0, "Inhib_TChaos_L1_P1_1_0", "Ahri"),
         baron_kill_event(3, 1500.0, "Jungle Diff"),
     ]
     gold = feed_gold(snapshot_at(1510.0, events=events))
@@ -168,7 +168,7 @@ def test_inner_turrets_inhibitors_and_baron_pay_their_own_amounts() -> None:
 
 
 def test_a_turret_a_minion_takes_alone_pays_only_the_global_gold() -> None:
-    turret = turret_killed_event(1, 700.0, "Turret_T1_R_03_A", "Minion_T200L1S04N0007")
+    turret = turret_killed_event(1, 700.0, "Turret_TOrder_L0_P3_1_0", "Minion_T200L1S04N0007")
     gold = feed_gold(snapshot_at(710.0, events=[game_start_event(), turret]))
     assert [gold[key].objective_gold for key in CHAOS_TEAM] == [50.0] * 5
 

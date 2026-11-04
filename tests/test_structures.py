@@ -59,10 +59,10 @@ def test_each_sides_turrets_down_are_counted_by_lane() -> None:
     structures = lane_structures(
         snapshot_at(
             1500.0,
-            enemy_turret(1, "Turret_T2_L_03_A"),
-            enemy_turret(2, "Turret_T2_L_02_A"),
-            enemy_turret(3, "Turret_T2_R_03_A"),
-            turret_killed_event(4, 900.0, "Turret_T1_C_05_A", ENEMY_JUNGLER),
+            enemy_turret(1, "Turret_TChaos_L2_P3_1_0"),
+            enemy_turret(2, "Turret_TChaos_L2_P2_1_0"),
+            enemy_turret(3, "Turret_TChaos_L0_P3_1_0"),
+            turret_killed_event(4, 900.0, "Turret_TOrder_L1_P3_1_0", ENEMY_JUNGLER),
         )
     )
     assert structures == [
@@ -76,9 +76,9 @@ def test_the_inhibitor_turret_down_opens_the_inhibitor() -> None:
     structures = lane_structures(
         snapshot_at(
             1500.0,
-            enemy_turret(1, "Turret_T2_C_05_A"),
-            enemy_turret(2, "Turret_T2_C_04_A"),
-            enemy_turret(3, "Turret_T2_C_03_A"),
+            enemy_turret(1, "Turret_TChaos_L1_P3_1_0"),
+            enemy_turret(2, "Turret_TChaos_L1_P2_1_0"),
+            enemy_turret(3, "Turret_TChaos_L1_P1_1_0"),
         )
     )
     assert structures == [
@@ -88,18 +88,18 @@ def test_the_inhibitor_turret_down_opens_the_inhibitor() -> None:
 
 def test_an_inhibitor_down_is_not_open_until_it_is_back() -> None:
     turrets = [
-        enemy_turret(1, "Turret_T2_R_03_A"),
-        enemy_turret(2, "Turret_T2_R_02_A"),
-        enemy_turret(3, "Turret_T2_R_01_A"),
+        enemy_turret(1, "Turret_TChaos_L0_P3_1_0"),
+        enemy_turret(2, "Turret_TChaos_L0_P2_1_0"),
+        enemy_turret(3, "Turret_TChaos_L0_P1_1_0"),
     ]
-    inhibitor_down = inhibitor_killed_event(4, 1400.0, "Barracks_T2_R1", ALLY_TOP)
+    inhibitor_down = inhibitor_killed_event(4, 1400.0, "Inhib_TChaos_L0_P1_1_0", ALLY_TOP)
     while_down = lane_structures(snapshot_at(1500.0, *turrets, inhibitor_down))
     back = lane_structures(
         snapshot_at(
             1701.0,
             *turrets,
             inhibitor_down,
-            inhibitor_respawned_event(5, 1700.0, "Barracks_T2_R1"),
+            inhibitor_respawned_event(5, 1700.0, "Inhib_TChaos_L0_P1_1_0"),
         )
     )
     assert [lane.is_inhibitor_exposed for lane in while_down] == [False]
@@ -110,8 +110,8 @@ def test_nexus_turrets_and_names_never_seen_are_left_out() -> None:
     structures = lane_structures(
         snapshot_at(
             2000.0,
-            enemy_turret(1, "Turret_T2_C_01_A"),
-            enemy_turret(2, "Turret_T2_C_02_A"),
+            enemy_turret(1, "Turret_TChaos_L1_P5_1_0"),
+            enemy_turret(2, "Turret_TChaos_L1_P4_1_0"),
             enemy_turret(3, "Turret_Something_New"),
         )
     )
@@ -121,7 +121,9 @@ def test_nexus_turrets_and_names_never_seen_are_left_out() -> None:
 def test_a_turret_announced_twice_counts_once() -> None:
     structures = lane_structures(
         snapshot_at(
-            1500.0, enemy_turret(1, "Turret_T2_L_03_A"), enemy_turret(2, "Turret_T2_L_03_A")
+            1500.0,
+            enemy_turret(1, "Turret_TChaos_L2_P3_1_0"),
+            enemy_turret(2, "Turret_TChaos_L2_P3_1_0"),
         )
     )
     assert [lane.turrets_down for lane in structures] == [1]

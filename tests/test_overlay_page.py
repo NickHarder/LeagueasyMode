@@ -162,7 +162,7 @@ def write_recording(
             dragon_kill_event(2, 800.0, DEFAULT_PLAYERS[1].riot_id_game_name, "Water"),
             dragon_kill_event(3, 1390.0, ENEMY_JUNGLER, "Fire"),
             inhibitor_killed_event(
-                5, 1385.0, "Barracks_T2_L1", DEFAULT_PLAYERS[0].riot_id_game_name
+                5, 1385.0, "Inhib_TChaos_L2_P1_1_0", DEFAULT_PLAYERS[0].riot_id_game_name
             ),
         ]
         if is_baron_taken:
@@ -403,11 +403,11 @@ async def test_the_strip_shows_each_sides_turrets_down_and_an_inhibitor_opening(
     tmp_path: Path,
 ) -> None:
     turret_kills = (
-        (20, 1000.0, "Turret_T2_R_03_A"),
-        (21, 1200.0, "Turret_T2_R_02_A"),
-        (22, 1300.0, "Turret_T1_C_05_A"),
+        (20, 1000.0, "Turret_TChaos_L0_P3_1_0"),
+        (21, 1200.0, "Turret_TChaos_L0_P2_1_0"),
+        (22, 1300.0, "Turret_TOrder_L1_P3_1_0"),
         # Their bot inhibitor turret falls a few seconds into the replay, opening the inhibitor.
-        (23, 1398.0, "Turret_T2_R_01_A"),
+        (23, 1398.0, "Turret_TChaos_L0_P1_1_0"),
     )
     async with open_overlay(
         tmp_path, snapshot_count=60, speed=1.0, turret_kills=turret_kills
