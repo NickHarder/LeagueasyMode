@@ -14,6 +14,8 @@ from typing import Final
 
 from pydantic import BaseModel, ConfigDict, ValidationError, field_validator
 
+from leagueasymode.atomic_write import write_whole
+
 logger = logging.getLogger(__name__)
 
 MOST_FRIENDS: Final = 50
@@ -87,7 +89,4 @@ def save_friends(friends_path: Path, friends: FriendsList) -> None:
         friends_path: The friends file.
         friends: The list.
     """
-    friends_path.parent.mkdir(parents=True, exist_ok=True)
-    partial_path = friends_path.with_suffix(".partial")
-    partial_path.write_text(friends.model_dump_json(indent=2) + "\n")
-    partial_path.replace(friends_path)
+    write_whole(friends_path, friends.model_dump_json(indent=2) + "\n")

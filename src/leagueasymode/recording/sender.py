@@ -21,7 +21,6 @@ import base64
 import json
 import logging
 import lzma
-import os
 import ssl
 import subprocess
 import sys
@@ -34,6 +33,7 @@ from typing import Final
 import aiohttp
 from pydantic import BaseModel, ConfigDict, Field
 
+from leagueasymode.atomic_write import write_whole
 from leagueasymode.crash_reports import CRASH_REPORTS_FOLDER
 from leagueasymode.engine_status import PartState, StatusBoard
 from leagueasymode.problem_report import REPORTS_FOLDER
@@ -487,9 +487,4 @@ def _write_sent_log(log_path: Path, sent_log: SentLog) -> None:
         log_path: The log.
         sent_log: What it holds.
     """
-    file_descriptor, temporary_name = tempfile.mkstemp(
-        dir=log_path.parent, prefix=".sent-games-", suffix=".json"
-    )
-    with os.fdopen(file_descriptor, "w") as temporary_file:
-        temporary_file.write(json.dumps(sent_log.model_dump()) + "\n")
-    Path(temporary_name).replace(log_path)
+    write_whole(log_path, json.dumps(sent_log.model_dump()) + "\n")

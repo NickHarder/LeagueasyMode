@@ -18,6 +18,13 @@ skill has the format.
 - The post-game window's win chance and "What swung it", and the control wards (each put where
   its owner likely was), follow "Show experimental estimates" too: they were the two places the
   hidden win chance and likely places still showed.
+- Four audit findings fixed, the owner approving the list ("Go with your recs. Approved"):
+  champion details are asked for even when the game first answers from the loading screen, from
+  the gameflow session's teams (DQ-02; the owner's ARAM of 2026-10-29 18:07 had recorded none);
+  the loading screen's `activePlayer` error reads as no player, not a nameless level-1 one (DQ-03,
+  ARCH-06); every whole-file save goes through one `write_whole` with a temporary file of its
+  own, so two saves at once no longer collide (ARCH-04); and the anonymizer blanks the session's
+  game server address and spectator key (DQ-08).
 - Enemy ultimates can be marked again (⌃⌥R, the R button, `POST /marks` "ultimate"): the owner,
   2026-11-04, "I can confirm this is allowed. I asked riot support", after the marks were removed
   the same day on secondary reports of Riot's 2025 policy. Pull request #121 is reverted.

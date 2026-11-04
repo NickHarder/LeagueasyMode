@@ -211,3 +211,27 @@ def test_each_players_looked_up_record_is_anonymized_path_and_all(tmp_path: Path
     ]
     assert any(path.startswith("/lol-ranked/v1/ranked-stats/anonymous-puuid-") for path in paths)
     assert any("/matches?begIndex=0&endIndex=20" in path for path in paths)
+
+
+def test_the_sessions_server_address_and_spectator_key_are_left_out(tmp_path: Path) -> None:
+    # Audit DQ-08: the gameflow session carries the game server's address and the key to spectate
+    # it, per-game values the copies kept (the anonymizer promised only names). They are blanked,
+    # keeping their shape.
+    session_secrets: JsonValue = {
+        "gameClient": {
+            "serverIp": "192.0.2.10",
+            "serverPort": 5123,
+            "observerServerIp": "192.0.2.20",
+            "observerServerPort": 8088,
+            "running": True,
+        },
+        "gameData": {"spectatorKey": "stand-in-spectator-key", "gameId": GAME_ID},
+    }
+    source_path = write_source_recording(tmp_path, extra_payload=session_secrets)
+    copy_path = anonymize_recording(source_path, tmp_path / "anonymized.jsonl")
+    copy_text = lzma.decompress(copy_path.read_bytes()).decode().replace(" ", "")
+    for secret in ["192.0.2.10", "192.0.2.20", "5123", "8088", "stand-in-spectator-key"]:
+        assert secret not in copy_text
+    assert '"serverIp":""' in copy_text
+    assert '"serverPort":0' in copy_text
+    assert '"running":true' in copy_text

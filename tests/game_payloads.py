@@ -508,3 +508,20 @@ def turret_killed_event(
         "KillerName": killer_name,
         "Assisters": list[JsonValue](assisters or []),
     }
+
+
+def loading_screen_answer(map_number: int = 12, game_mode: str = "KIWI") -> JsonValue:
+    """The game's first answer on the loading screen, as the owner's ARAM of 2026-10-29 18:07 gave
+    it: no players yet, and an error in place of the player on this machine."""
+    return {
+        "activePlayer": {"error": "Spectator mode doesn't currently support this feature"},
+        "allPlayers": [],
+        "events": {"Events": []},
+        "gameData": {
+            "gameMode": game_mode,
+            "gameTime": 0.0,
+            "mapName": f"Map{map_number}",
+            "mapNumber": map_number,
+            "mapTerrain": "Default",
+        },
+    }
