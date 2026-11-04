@@ -4,6 +4,14 @@ What changed in this project and why, newest first. A commit shows the differenc
 gives the reason. The `handoff` skill adds to it at every checkpoint, and the `write-okf-concept`
 skill has the format.
 
+## 2026-11-04
+
+- The README says what leaves the Mac: Data Dragon, GitHub releases for updates, the owner's
+  private recordings repository once a token is in the Keychain (games, crash and problem
+  reports), and the `claude` command when Claude's take is on. It had said Data Dragon was "the
+  one request beyond your Mac", which an independent review found untrue. KEY_METRICS says where
+  the scoring stands on 17 recorded games.
+
 ## 2026-11-03
 
 - The roasts get edge (the owner: "Stop being so tame. Have some edge to your roasts ... Make it
