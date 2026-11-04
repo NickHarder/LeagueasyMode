@@ -12,6 +12,7 @@ is ahead of the cheapest one that gives a player another role says how sure that
 The costs are a hand-set prior, to be fitted on the roles the post-game timeline records.
 """
 
+import functools
 import itertools
 from dataclasses import dataclass
 from typing import Final, Literal
@@ -82,6 +83,15 @@ def assign_roles(snapshot: GameSnapshot) -> list[RoleGuess]:
     return [guesses_by_index[index] for index in range(len(snapshot.players))]
 
 
+@dataclass(frozen=True)
+class RoleClues:
+    """What a player's role is read from: all `_role_cost` looks at but who has the least CS."""
+
+    position: str
+    spell_names: tuple[str, ...]
+    has_support_item: bool
+
+
 def _assign_team(snapshot: GameSnapshot, team_indexes: list[int]) -> dict[int, RoleGuess]:
     """Return the roles of one team's players, by their index on the scoreboard.
 
@@ -92,41 +102,79 @@ def _assign_team(snapshot: GameSnapshot, team_indexes: list[int]) -> dict[int, R
     Returns:
         Each player's guess.
     """
-    players = snapshot.players
-    given_indexes = [index for index in team_indexes if players[index].position in ROLES]
-    open_indexes = [index for index in team_indexes if index not in given_indexes]
+    team_clues = tuple(_role_clues(snapshot.players[index]) for index in team_indexes)
+    least_cs_index = _least_cs_index(snapshot, team_indexes)
+    least_cs_place = None if least_cs_index is None else team_indexes.index(least_cs_index)
+    guesses_by_place = _assign_from_clues(team_clues, least_cs_place)
+    return {team_indexes[place]: guess for place, guess in guesses_by_place.items()}
+
+
+def _role_clues(player: ScoreboardPlayer) -> RoleClues:
+    """Return what a player's role is read from.
+
+    Args:
+        player: The player.
+
+    Returns:
+        Their position, summoner spells and whether they carry the support item.
+    """
+    return RoleClues(
+        position=player.position,
+        spell_names=tuple(player.summoner_spells.names()),
+        has_support_item=any(item.display_name in SUPPORT_ITEM_NAMES for item in player.items),
+    )
+
+
+# The assignment changes only when a team's spells, support item, given positions or least-CS
+# player do, which is rare; worked out again for every answer, it took most of a recorded game's
+# scoring (some 9,600 calls for one ARAM). Two teams over a game's few changes fit easily.
+@functools.lru_cache(maxsize=1024)
+def _assign_from_clues(
+    team_clues: tuple[RoleClues, ...], least_cs_place: int | None
+) -> dict[int, RoleGuess]:
+    """Return the roles of one team's players, by their place in the team.
+
+    Args:
+        team_clues: Each player's clues, in the scoreboard's order.
+        least_cs_place: The place of the player with the least CS, or None before CS says anything.
+
+    Returns:
+        Each player's guess. The dict is shared between calls: it is never to be changed.
+    """
+    team_places = list(range(len(team_clues)))
+    given_places = [place for place in team_places if team_clues[place].position in ROLES]
+    open_places = [place for place in team_places if place not in given_places]
     given_guesses = {
-        index: RoleGuess(role=players[index].position, is_inferred=False, confidence="given")
-        for index in given_indexes
+        place: RoleGuess(role=team_clues[place].position, is_inferred=False, confidence="given")
+        for place in given_places
     }
     open_roles = [
-        role for role in ROLES if role not in {players[index].position for index in given_indexes}
+        role for role in ROLES if role not in {team_clues[place].position for place in given_places}
     ]
-    if not open_indexes or len(open_roles) < len(open_indexes):
+    if not open_places or len(open_roles) < len(open_places):
         return given_guesses
-    least_cs_index = _least_cs_index(snapshot, team_indexes)
     costs = {
-        (index, role): _role_cost(players[index], role, index == least_cs_index, least_cs_index)
-        for index in open_indexes
+        (place, role): _role_cost(team_clues[place], role, place == least_cs_place, least_cs_place)
+        for place in open_places
         for role in open_roles
     }
     ranked_assignments = sorted(
         (
-            sum(costs[index, role] for index, role in zip(open_indexes, roles, strict=True)),
+            sum(costs[place, role] for place, role in zip(open_places, roles, strict=True)),
             roles,
         )
-        for roles in itertools.permutations(open_roles, len(open_indexes))
+        for roles in itertools.permutations(open_roles, len(open_places))
     )
     best_cost, best_roles = ranked_assignments[0]
     inferred_guesses = {
-        index: RoleGuess(
+        place: RoleGuess(
             role=role,
             is_inferred=True,
             confidence=_confidence(
                 best_cost, ranked_assignments, position_in_team=position, best_role=role
             ),
         )
-        for position, (index, role) in enumerate(zip(open_indexes, best_roles, strict=True))
+        for position, (place, role) in enumerate(zip(open_places, best_roles, strict=True))
     }
     return {**given_guesses, **inferred_guesses}
 
@@ -174,20 +222,20 @@ def _least_cs_index(snapshot: GameSnapshot, team_indexes: list[int]) -> int | No
 
 
 def _role_cost(
-    player: ScoreboardPlayer, role: str, has_least_cs: bool, least_cs_index: int | None
+    clues: RoleClues, role: str, has_least_cs: bool, least_cs_place: int | None
 ) -> float:
     """Return how unlikely a role is for a player, as a cost: lower is likelier.
 
     Args:
-        player: The player.
+        clues: What the player's role is read from.
         role: The role.
         has_least_cs: Whether the player has the least CS on the team.
-        least_cs_index: The least-CS player's index, or None before CS says anything.
+        least_cs_place: The least-CS player's place in the team, or None before CS says anything.
 
     Returns:
         The cost.
     """
-    spell_names = player.summoner_spells.names()
+    spell_names = clues.spell_names
     spell_cost = sum(
         role_costs.get(role, default_cost)
         for spell_key, (role_costs, default_cost) in SPELL_ROLE_COSTS.items()
@@ -195,7 +243,7 @@ def _role_cost(
     )
     has_smite = any("Smite" in spell_name for spell_name in spell_names)
     smite_cost = JUNGLE_WITHOUT_SMITE_COST if role == "JUNGLE" and not has_smite else 0.0
-    has_support_item = any(item.display_name in SUPPORT_ITEM_NAMES for item in player.items)
+    has_support_item = clues.has_support_item
     support_item_cost = (
         SUPPORT_ITEM_ELSEWHERE_COST
         if has_support_item and role != "UTILITY"
@@ -205,7 +253,7 @@ def _role_cost(
     )
     cs_cost = (
         0.0
-        if least_cs_index is None
+        if least_cs_place is None
         else LEAST_CS_ELSEWHERE_COST
         if has_least_cs and role != "UTILITY"
         else MORE_CS_AS_SUPPORT_COST

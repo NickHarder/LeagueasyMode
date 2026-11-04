@@ -282,16 +282,25 @@ export function renderSummary(root, summary) {
         },
     ];
     const ticks = goldTicks(goldSeries.flatMap((series) => series.points.map((point) => point.value)));
-    root.replaceChildren(headerElement(summary), caseSectionElement(fetchJson), sectionElement("Your win chance", lineChartElement({
-        label: "Your team's win chance at the start of each minute",
-        series: [winSeries],
-        lowest: 0,
-        highest: 1,
-        ticks: [0, 0.25, 0.5, 0.75, 1],
-        formatValue: formatPercent,
-        reference: 0.5,
-        markedMinutes: summary.swings.map((swing) => swing.minute),
-    })), sectionElement("Gold lead", lineChartElement({
+    // The server leaves the win chance out unless "Show experimental estimates" is on: it has not
+    // beaten a coin flip on real games yet. Without it, neither its chart nor what swung it shows.
+    const hasWinChance = summary.win_chance.length > 0;
+    const winChanceSections = hasWinChance
+        ? [
+            sectionElement("Your win chance", lineChartElement({
+                label: "Your team's win chance at the start of each minute",
+                series: [winSeries],
+                lowest: 0,
+                highest: 1,
+                ticks: [0, 0.25, 0.5, 0.75, 1],
+                formatValue: formatPercent,
+                reference: 0.5,
+                markedMinutes: summary.swings.map((swing) => swing.minute),
+            })),
+        ]
+        : [];
+    const swingSections = hasWinChance ? [sectionElement("What swung it", swingsElement(summary))] : [];
+    root.replaceChildren(headerElement(summary), caseSectionElement(fetchJson), ...winChanceSections, sectionElement("Gold lead", lineChartElement({
         label: "Your team's gold lead each minute",
         series: goldSeries,
         lowest: ticks[0] ?? -1,
@@ -300,7 +309,7 @@ export function renderSummary(root, summary) {
         formatValue: formatGoldLead,
         reference: 0,
         markedMinutes: [],
-    })), sectionElement("What swung it", swingsElement(summary)), sectionElement("Key moments", momentsLegendElement(), momentsElement(summary.moments)));
+    })), ...swingSections, sectionElement("Key moments", momentsLegendElement(), momentsElement(summary.moments)));
 }
 /** Show that no game has been recorded yet. */
 function renderNoGame(root) {

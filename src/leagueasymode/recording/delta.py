@@ -8,7 +8,6 @@ Only `add`, `remove` and `replace` are used, with paths written as JSON Pointers
 JSON Patch library can read what this module writes.
 """
 
-import copy
 from collections.abc import Sequence
 from typing import Final, Literal
 
@@ -73,23 +72,32 @@ def compute_patch(previous: JsonValue, current: JsonValue) -> list[PatchOperatio
 
 
 def apply_patch(document: JsonValue, operations: Sequence[PatchOperation]) -> JsonValue:
-    """Return a copy of `document` with the operations applied in order; the original is unchanged.
+    """Return `document` with the operations applied in order; the original is unchanged.
+
+    Only the objects and arrays on an operation's path are copied: everything the operations do
+    not touch is shared with `document` (and an added value with its operation). A whole copy of
+    every answer took most of the time a recorded game took to read (a deep copy of some 2,400
+    answers of 30 KB each), and neither the reader, the replay nor the anonymizer changes an
+    answer in place. Nothing may: a change to the result could show in `document` too.
 
     Args:
         document: The document to start from.
         operations: The operations, as `compute_patch` returns them.
 
     Returns:
-        The patched copy.
+        The patched document.
 
     Raises:
         ValueError: An operation names a path that does not exist, or one it cannot apply to.
     """
     # The root is held as the only item of a list, so that replacing it is the same as replacing any
     # other value: its path is the holder's first item.
-    root_holder: list[JsonValue] = [copy.deepcopy(document)]
+    root_holder: list[JsonValue] = [document]
+    # The containers this patch has copied already, by identity, and kept alive so that no
+    # identity is reused while the patch runs: they are the patch's own, to change in place.
+    own_containers: dict[int, JsonValue] = {id(root_holder): root_holder}
     for operation in operations:
-        _apply_operation(root_holder, operation)
+        _apply_operation(root_holder, operation, own_containers)
     return root_holder[0]
 
 
@@ -184,12 +192,18 @@ def _pointer_tokens(path: str) -> list[str]:
     return [token.replace("~1", "/").replace("~0", "~") for token in path[1:].split("/")]
 
 
-def _apply_operation(root_holder: list[JsonValue], operation: PatchOperation) -> None:
-    """Apply one operation in place, below the list that holds the root.
+def _apply_operation(
+    root_holder: list[JsonValue],
+    operation: PatchOperation,
+    own_containers: dict[int, JsonValue],
+) -> None:
+    """Apply one operation below the list that holds the root, copying each container on its path.
 
     Args:
         root_holder: A one-item list whose item is the document.
         operation: The operation to apply.
+        own_containers: The containers the patch copied already, by identity; those it copies now
+            are added.
 
     Raises:
         ValueError: The path does not exist, or the operation cannot apply to what is there.
@@ -197,9 +211,9 @@ def _apply_operation(root_holder: list[JsonValue], operation: PatchOperation) ->
     tokens = [ROOT_HOLDER_INDEX, *_pointer_tokens(operation.path)]
     parent: JsonValue = root_holder
     for token in tokens[:-1]:
-        parent = _child_value(parent, token, operation.path)
+        parent = _own_child(parent, token, operation.path, own_containers)
     last_token = tokens[-1]
-    new_value = copy.deepcopy(operation.value)
+    new_value = operation.value
     if isinstance(parent, dict):
         if operation.op != "add" and last_token not in parent:
             raise ValueError(f"no value at {operation.path!r} to {operation.op}")
@@ -221,6 +235,36 @@ def _apply_operation(root_holder: list[JsonValue], operation: PatchOperation) ->
             parent[index] = new_value
         return
     raise ValueError(f"no object or array to hold {operation.path!r}")
+
+
+def _own_child(
+    container: JsonValue, token: str, path: str, own_containers: dict[int, JsonValue]
+) -> JsonValue:
+    """Return the value under `token` in `container`, copied into it first if it is shared.
+
+    `container` is the patch's own already. A child object or array not yet the patch's own is
+    replaced by a shallow copy, so that the next step may change it without changing the document
+    the patch started from.
+
+    Args:
+        container: An object or an array the patch may change.
+        token: A key, or an index written as text.
+        path: The whole pointer, for the error message.
+        own_containers: The containers the patch copied already, by identity.
+
+    Returns:
+        The value under the token, the patch's own when it is an object or an array.
+    """
+    child = _child_value(container, token, path)
+    if not isinstance(child, dict | list) or id(child) in own_containers:
+        return child
+    own_child: JsonValue = dict(child) if isinstance(child, dict) else list(child)
+    own_containers[id(own_child)] = own_child
+    if isinstance(container, dict):
+        container[token] = own_child
+    elif isinstance(container, list):
+        container[_list_index(token, path)] = own_child
+    return own_child
 
 
 def _child_value(container: JsonValue, token: str, path: str) -> JsonValue:

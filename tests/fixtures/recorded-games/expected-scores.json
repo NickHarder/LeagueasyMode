@@ -1,0 +1,53 @@
+{
+ "game-2026-10-29T04-00-16Z-anonymized.jsonl.xz": [
+  [
+   "roles",
+   10,
+   1.0,
+   "share_correct"
+  ],
+  [
+   "experience",
+   20,
+   253.45,
+   "mean_absolute_error_experience"
+  ],
+  [
+   "experience band",
+   20,
+   0.85,
+   "share_within_band"
+  ],
+  [
+   "positions (likeliest region)",
+   16,
+   0.375,
+   "share_correct"
+  ],
+  [
+   "positions (chance on the truth)",
+   16,
+   0.2357312456675887,
+   "mean_chance"
+  ],
+  [
+   "jungle path",
+   3,
+   4511.740472807734,
+   "mean_distance_units"
+  ],
+  [
+   "map",
+   220,
+   268.1840585571827,
+   "mean_distance_units"
+  ],
+  [
+   "win chance",
+   21,
+   0.40239615823079544,
+   "brier_score"
+  ]
+ ],
+ "game-2026-10-29T21-09-39Z-anonymized.jsonl.xz": []
+}

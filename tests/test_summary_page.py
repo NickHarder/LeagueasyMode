@@ -31,6 +31,7 @@ from leagueasymode.engine import OverlayEngine
 from leagueasymode.game_api import GameApiClient
 from leagueasymode.game_summary import game_summary
 from leagueasymode.overlay_server import create_overlay_application
+from leagueasymode.overlay_state import OverlayPreferences
 from leagueasymode.patch_data import CHAMPION_SUMMARY_PATH
 from leagueasymode.roast.claude_take import ClaudeTake, ClaudeTakeSettings
 from leagueasymode.roast.end_of_game import quick_game_roast
@@ -74,13 +75,22 @@ def write_summary_and_history(tmp_path: Path) -> tuple[Path, Path]:
 
 @contextlib.asynccontextmanager
 async def open_summary(
-    summary_path: Path, history_path: Path, claude_take: ClaudeTake | None = None
+    summary_path: Path,
+    history_path: Path,
+    claude_take: ClaudeTake | None = None,
+    *,
+    shows_experimental_estimates: bool = True,
 ) -> AsyncIterator[Page]:
+    # The window's win chance shows only with "Show experimental estimates" on; these tests turn
+    # it on, as they were written before it was hidden, but for the one that checks it is not.
     async with aiohttp.ClientSession() as session:
         engine = OverlayEngine(
             GameApiClient(session, unused_local_url(), tls_context=None),
             poll_interval_seconds=1,
             claude_take=claude_take,
+            preferences=OverlayPreferences(
+                show_experimental_estimates=shows_experimental_estimates
+            ),
         )
         application = create_overlay_application(
             engine, summary_path=summary_path, history_path=history_path
@@ -125,6 +135,20 @@ async def test_the_window_shows_the_last_game_reconstructed(tmp_path: Path) -> N
             ]
         )
         await keep_screenshot(page, "post-game-window")
+
+
+async def test_by_default_the_window_leaves_out_the_win_chance(tmp_path: Path) -> None:
+    # The win chance has not beaten a coin flip on the owner's real games (an independent review,
+    # 2026-11-04): without "Show experimental estimates" neither its chart nor what swung it shows.
+    summary_path, history_path = write_summary_and_history(tmp_path)
+    async with open_summary(summary_path, history_path, shows_experimental_estimates=False) as page:
+        await expect(page.locator(".summary-result")).to_have_text("Victory", timeout=5000)
+        await expect(page.locator(".chart")).to_have_count(1)
+        await expect(page.locator(".chart-plot").first).to_have_attribute(
+            "aria-label", re.compile("gold lead")
+        )
+        await expect(page.locator(".summary-swings")).to_have_count(0)
+        await expect(page.locator(".summary-moments li")).to_have_count(2)
 
 
 async def test_the_crosshair_reads_out_a_minute(tmp_path: Path) -> None:

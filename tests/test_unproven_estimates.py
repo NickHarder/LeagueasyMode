@@ -25,6 +25,7 @@ from leagueasymode.overlay_state import (
     OverlayState,
     PositionEstimate,
     RegionChance,
+    WardEstimate,
 )
 from local_servers import serve
 
@@ -79,6 +80,23 @@ def test_the_win_chance_likely_places_and_jungle_paths_are_left_out() -> None:
     assert [card.champion_name for card in hidden.players] == [
         card.champion_name for card in state.players
     ]
+
+
+def test_control_wards_placed_at_a_likely_place_are_left_out_too() -> None:
+    # A control ward's place is its owner's likely place when their count dropped
+    # (`inference/wards.py`): an estimate no better than that one, so it hides with it.
+    ward = WardEstimate(
+        champion_name="Vi",
+        side="enemy",
+        placed_at_game_time_seconds=590.0,
+        region="bot_lane",
+        label="bot lane",
+        chance=0.6,
+        x_position=12000.0,
+        y_position=2000.0,
+    )
+    state = rift_state_with_every_estimate().model_copy(update={"control_wards": [ward]})
+    assert without_unproven_estimates(state).control_wards == []
 
 
 def test_by_default_they_are_hidden() -> None:

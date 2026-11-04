@@ -267,8 +267,9 @@ def without_unproven_estimates(state: OverlayState) -> OverlayState:
     right 25% to 38% of the time, the jungle path some 4,500 units off. So the win chance, each
     player's likely place (and whether they roam, read from it) and the jungle paths are left
     out, until each beats its baseline on 20 or more Rift games (`leagueasymode thresholds`).
-    What is read from the game or has held on real games stays: timers, structures, items, item
-    gold, the fight, the players' records.
+    The control wards go with the likely places: each is put where its owner likely was when
+    their count dropped. What is read from the game or has held on real games stays: timers,
+    structures, items, item gold, the fight, the players' records.
 
     Args:
         state: The overlay's state, every estimate in it.
@@ -280,6 +281,7 @@ def without_unproven_estimates(state: OverlayState) -> OverlayState:
         update={
             "win_chance": None,
             "jungle_paths": [],
+            "control_wards": [],
             "players": [
                 card.model_copy(update={"location": None, "is_roaming": False})
                 for card in state.players

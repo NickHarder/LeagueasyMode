@@ -7,13 +7,14 @@ refused, so that a web page elsewhere cannot reach it by pointing its own domain
 
 import asyncio
 import dataclasses
+import json
 from collections.abc import Awaitable, Callable
 from importlib import resources
 from pathlib import Path
 from typing import Final, Literal
 
 from aiohttp import web
-from pydantic import BaseModel, ConfigDict, Field, ValidationError
+from pydantic import BaseModel, ConfigDict, Field, JsonValue, ValidationError
 
 from leagueasymode.accuracy_history import read_accuracy_history
 from leagueasymode.engine import OverlayEngine
@@ -165,7 +166,9 @@ def create_overlay_application(
         summary_text = await asyncio.to_thread(_text_or_none, summary_path)
         if summary_text is None:
             return web.json_response({"message": "no game recorded yet"}, status=404)
-        return web.json_response(text=summary_text)
+        if engine.preferences.show_experimental_estimates:
+            return web.json_response(text=summary_text)
+        return web.json_response(_without_the_win_chance(summary_text))
 
     async def history(_request: web.Request) -> web.Response:
         games = (
@@ -605,6 +608,28 @@ def _text_or_none(file_path: Path | None) -> str | None:
         return file_path.read_text()
     except FileNotFoundError:
         return None
+
+
+def _without_the_win_chance(summary_text: str) -> JsonValue:
+    """Return the last game's summary with its win chance and the swings read from it emptied.
+
+    The win chance has not beaten a coin flip on the owner's recorded games (an independent
+    review, 2026-11-04), so the post-game window hides it as the overlay does, unless "Show
+    experimental estimates" is on. The file keeps it, so turning the setting on shows it again.
+
+    Args:
+        summary_text: The summary, as `last-game.json` holds it.
+
+    Returns:
+        The summary, the win chance and the swings empty where it has them.
+    """
+    summary: JsonValue = json.loads(summary_text)
+    if not isinstance(summary, dict):
+        return summary
+    return {
+        **summary,
+        **{field_name: [] for field_name in ("win_chance", "swings") if field_name in summary},
+    }
 
 
 def _asset_handler(file_name: str, content_type: str) -> Handler:
