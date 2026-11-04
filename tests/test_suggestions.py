@@ -144,14 +144,6 @@ def test_a_marked_flash_is_a_chance_to_punish() -> None:
     ]
 
 
-def test_a_marked_ultimate_is_a_window_to_fight() -> None:
-    tracker = CalloutTracker()
-    tracker.update(state_at(1399.0))
-    assert suggestion_texts(tracker, state_at(1400.0, cooldowns=[flash_timer("ultimate")])) == [
-        "Zed has no ultimate for 2:00: fight now"
-    ]
-
-
 def test_a_baron_buff_says_whether_to_push_or_defend() -> None:
     tracker = CalloutTracker()
     tracker.update(state_at(1399.0))

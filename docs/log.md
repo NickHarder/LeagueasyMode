@@ -4,6 +4,16 @@ What changed in this project and why, newest first. A commit shows the differenc
 gives the reason. The `handoff` skill adds to it at every checkpoint, and the `write-okf-concept`
 skill has the format.
 
+## 2026-11-04
+
+- Enemy ultimates are no longer marked: no ⌃⌥R, no R button, and `POST /marks` refuses
+  "ultimate". Riot's third-party policy has barred tracking enemy ultimate cooldowns, automatic or
+  by hand, since 2025-03-13; summoner spell timers were left allowed, so Flash and the other
+  summoner spell stay. An independent review called the ultimate marks a risk to the owner's
+  account, and the owner asked to "make all the rec fixes", reversing their "dont listen to
+  rumors" of 2026-10-28. The ultimate's rank from the level stays on each enemy's row: it is no
+  cooldown.
+
 ## 2026-11-03
 
 - The roasts get edge (the owner: "Stop being so tame. Have some edge to your roasts ... Make it

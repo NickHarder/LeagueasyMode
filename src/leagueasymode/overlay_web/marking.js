@@ -1,7 +1,8 @@
 /**
  * Marking a spell with a click, the "Click to mark spells" setting. Each enemy's row gets a button
- * for their Flash, their other summoner spell and their ultimate; a press posts the mark to the
- * engine as the app's ⌃⌥ shortcuts do, naming the enemy by the same place in role order.
+ * for their Flash and their other summoner spell; a press posts the mark to the engine as the
+ * app's ⌃⌥ shortcuts do, naming the enemy by the same place in role order. No ultimate: Riot's
+ * third-party policy bars tracking enemy ultimate cooldowns.
  *
  * The overlay lets every click through to the game. Inside the macOS app the page tells the app
  * where the buttons are (`ClickRegions` in the app), and the app takes the clicks on them only,
@@ -12,7 +13,6 @@ const MARKS_PATH = "/marks";
 const REQUEST_HEADER = "X-LeagueasyMode-Request";
 const MARK_REQUEST_VALUE = "mark";
 const BUTTON_CLASS = "mark-button";
-const ULTIMATE_LABEL = "R";
 // How long a pressed button shows it was taken, before the engine's timer replaces it.
 const PRESSED_MILLISECONDS = 600;
 /** Return the buttons that mark one enemy's spells, or null when the enemy has no place to mark. */
@@ -25,7 +25,6 @@ export function markButtonsElement(card) {
     const buttons = [
         ["flash", flashName, flashName],
         ["summoner", summonerName, summonerName],
-        ["ultimate", ULTIMATE_LABEL, "Ultimate"],
     ];
     const element = document.createElement("span");
     element.className = "mark-buttons";
@@ -55,7 +54,7 @@ async function postMark(enemySlot, spell) {
     }
 }
 function isMarkedSpell(value) {
-    return value === "flash" || value === "summoner" || value === "ultimate";
+    return value === "flash" || value === "summoner";
 }
 /**
  * Mark on a press of any button in a container, which stays while its rows are drawn again: a

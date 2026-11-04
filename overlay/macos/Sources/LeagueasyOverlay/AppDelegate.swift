@@ -16,7 +16,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private static let copyHotKeyIdentifier: UInt32 = 3
     // How long the app waits before starting a stopped engine again, so its port is free.
     private static let engineRestartDelaySeconds: TimeInterval = 3
-    // ⌃⌥1 to ⌃⌥5 pick an enemy in role order; ⌃⌥F, ⌃⌥D and ⌃⌥R name the spell they used.
+    // ⌃⌥1 to ⌃⌥5 pick an enemy in role order; ⌃⌥F and ⌃⌥D name the summoner spell they used.
+    // No ⌃⌥R: Riot's third-party policy bars tracking enemy ultimate cooldowns.
     private static let firstPickHotKeyIdentifier: UInt32 = 10
     private static let firstSpellHotKeyIdentifier: UInt32 = 20
     private static let markModifiers = UInt32(controlKey | optionKey)
@@ -30,7 +31,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private static let spellKeys: [(keyCode: UInt32, spell: MarkedSpell)] = [
         (UInt32(kVK_ANSI_F), .flash),
         (UInt32(kVK_ANSI_D), .summoner),
-        (UInt32(kVK_ANSI_R), .ultimate),
     ]
     // The update check: whether the player wants it (on unless turned off), and when it last asked.
     private static let checksForUpdatesKey = "checksForUpdates"

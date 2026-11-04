@@ -396,8 +396,8 @@ class CooldownTimer(BaseModel):
     # Stable for one mark, so that the widget and the callouts can tell marks apart.
     cooldown_id: str
     champion_name: str
-    spell: Literal["flash", "summoner", "ultimate"]
-    # The spell's name ("Flash", "Teleport", or "ultimate"), and the widget's short label for it.
+    spell: Literal["flash", "summoner"]
+    # The spell's name ("Flash", "Teleport"), and the widget's short label for it.
     spell_name: str
     label: str
     marked_at_game_time_seconds: float
