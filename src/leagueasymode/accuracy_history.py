@@ -18,6 +18,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Final
 
+from leagueasymode.atomic_write import write_whole
 from leagueasymode.patch_data import GAME_VERSION_PATH, game_version_of
 from leagueasymode.scoring import (
     GAME_DETAILS_PATH_PREFIX,
@@ -102,12 +103,10 @@ def append_game_accuracy(history_path: Path, accuracy: GameAccuracy) -> None:
         for game in read_accuracy_history(history_path)
         if game.recording_name != accuracy.recording_name
     ]
-    history_path.parent.mkdir(parents=True, exist_ok=True)
-    partial_path = history_path.with_suffix(".partial")
-    partial_path.write_text(
-        "".join(json.dumps(dataclasses.asdict(game)) + "\n" for game in [*kept, accuracy])
+    write_whole(
+        history_path,
+        "".join(json.dumps(dataclasses.asdict(game)) + "\n" for game in [*kept, accuracy]),
     )
-    partial_path.replace(history_path)
 
 
 def read_accuracy_history(history_path: Path) -> list[GameAccuracy]:

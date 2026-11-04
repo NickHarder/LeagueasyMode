@@ -15,6 +15,7 @@ from pathlib import Path
 
 from pydantic import ValidationError
 
+from leagueasymode.atomic_write import write_whole
 from leagueasymode.overlay_state import OverlayLayout, OverlayPreferences
 
 logger = logging.getLogger(__name__)
@@ -45,7 +46,7 @@ def save_preferences(preferences_path: Path, preferences: OverlayPreferences) ->
         preferences_path: The preferences file.
         preferences: The preferences.
     """
-    _write_whole(preferences_path, preferences.model_dump_json(indent=2) + "\n")
+    write_whole(preferences_path, preferences.model_dump_json(indent=2) + "\n")
 
 
 def load_layout(layout_path: Path) -> OverlayLayout:
@@ -73,17 +74,4 @@ def save_layout(layout_path: Path, layout: OverlayLayout) -> None:
         layout_path: The layout file.
         layout: The layout.
     """
-    _write_whole(layout_path, layout.model_dump_json(indent=2) + "\n")
-
-
-def _write_whole(file_path: Path, file_text: str) -> None:
-    """Write a file whole: to a partial file first, then into place.
-
-    Args:
-        file_path: The file.
-        file_text: Its text.
-    """
-    file_path.parent.mkdir(parents=True, exist_ok=True)
-    partial_path = file_path.with_suffix(".partial")
-    partial_path.write_text(file_text)
-    partial_path.replace(file_path)
+    write_whole(layout_path, layout.model_dump_json(indent=2) + "\n")

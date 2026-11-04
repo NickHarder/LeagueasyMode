@@ -44,6 +44,11 @@ PUUID_FIELDS: Final = frozenset({"puuid"})
 NUMBER_ID_FIELDS: Final = frozenset(
     {"summonerId", "accountId", "currentAccountId", "gameId", "matchId"}
 )
+# The gameflow session's game server address and the key to spectate the game: no one's name, but
+# per-game values the copy has no use for (audit DQ-08). Their values become "" or 0.
+SESSION_SECRET_FIELDS: Final = frozenset(
+    {"serverIp", "serverPort", "observerServerIp", "observerServerPort", "spectatorKey"}
+)
 # Text that Riot writes about the game itself. It is neither changed nor searched: a champion
 # called like a player is still that champion.
 GAME_CONTENT_FIELDS: Final = frozenset(
@@ -252,6 +257,8 @@ def anonymize_value(
         }
     if isinstance(value, list):
         return [anonymize_value(item, field_name, identity_map) for item in value]
+    if field_name in SESSION_SECRET_FIELDS and isinstance(value, str | int):
+        return "" if isinstance(value, str) else 0
     if isinstance(value, str) and field_name not in GAME_CONTENT_FIELDS:
         return identity_map.replace_text(value)
     if isinstance(value, int) and not isinstance(value, bool):

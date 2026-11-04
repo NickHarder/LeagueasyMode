@@ -396,7 +396,7 @@ async def _record_client_data_at_start(
         path: await _record_client_resource(recording, client, path) for path in STATIC_CLIENT_PATHS
     }
     for champion_id in _champion_ids_in_game(
-        static_resources[CHAMPION_SUMMARY_PATH], first_payload
+        static_resources[CHAMPION_SUMMARY_PATH], first_payload, session
     ):
         await _record_client_resource(
             recording, client, CHAMPION_DETAILS_PATH_TEMPLATE.format(champion_id=champion_id)
@@ -559,22 +559,26 @@ def _has_game_ended(payload: JsonValue) -> bool:
 
 
 def _champion_ids_in_game(
-    champion_summary: JsonValue | None, first_payload: JsonValue
+    champion_summary: JsonValue | None, first_payload: JsonValue, session: JsonValue | None
 ) -> list[int]:
     """Return the client's ids of the champions in a game.
 
     The game names a champion by its alias inside `rawChampionName`; the client's champion summary
-    pairs each alias with an id.
+    pairs each alias with an id. A first answer from the loading screen has no players yet (the
+    owner's ARAM of 2026-10-29 18:07, audit DQ-02), so the gameflow session's teams, which give
+    each champion's id, add any the scoreboard does not name.
 
     Args:
         champion_summary: The answer of `champion-summary.json`, or None.
         first_payload: The game's first answer.
+        session: The gameflow session, or None.
 
     Returns:
-        The ids, in the scoreboard's order, without repeats.
+        The ids, in the scoreboard's order then the session's, without repeats.
     """
+    session_ids = _session_champion_ids(session)
     if not isinstance(champion_summary, list) or not isinstance(first_payload, dict):
-        return []
+        return session_ids
     id_by_alias = {
         str(champion.get("alias")).lower(): champion["id"]
         for champion in champion_summary
@@ -591,11 +595,45 @@ def _champion_ids_in_game(
         for raw_name in raw_names
         if isinstance(raw_name, str)
     ]
-    champion_ids = [id_by_alias[alias] for alias in aliases if alias in id_by_alias]
+    champion_ids = [
+        *(id_by_alias[alias] for alias in aliases if alias in id_by_alias),
+        *session_ids,
+    ]
     return [
         champion_id
         for position, champion_id in enumerate(champion_ids)
         if isinstance(champion_id, int) and champion_id not in champion_ids[:position]
+    ]
+
+
+def _session_champion_ids(session: JsonValue | None) -> list[int]:
+    """Return the ids of the champions the gameflow session's two teams play.
+
+    Args:
+        session: The gameflow session, or None.
+
+    Returns:
+        The ids, team one then team two, without repeats; none for an id of 0 or less (not yet
+        picked).
+    """
+    game_data = session.get("gameData") if isinstance(session, dict) else None
+    if not isinstance(game_data, dict):
+        return []
+    team_ids = [
+        player.get("championId")
+        for team_key in ("teamOne", "teamTwo")
+        for team in [game_data.get(team_key)]
+        if isinstance(team, list)
+        for player in team
+        if isinstance(player, dict)
+    ]
+    champion_ids = [
+        champion_id for champion_id in team_ids if isinstance(champion_id, int) and champion_id > 0
+    ]
+    return [
+        champion_id
+        for position, champion_id in enumerate(champion_ids)
+        if champion_id not in champion_ids[:position]
     ]
 
 
